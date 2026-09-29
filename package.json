@@ -9,7 +9,7 @@
     "packages/canvas/web"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core && npm run build -w packages/runtime && npm run build -w packages/canvas && npm run build -w packages/cli && npm run build -w packages/canvas/web",
+    "build": "npm run build -w @awd/core && npm run build -w @awd/runtime && npm run build -w @awd/canvas && npm run build -w @awd/cli && npm run build -w @awd/canvas-web",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "start": "node scripts/start.mjs",
@@ -165,7 +165,10 @@
     "zod-to-json-schema": "^3.25.2",
     "zustand": "^4.5.7"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "vite": "^7.1.0",
+    "@vitejs/plugin-react": "^5.0.0"
+  },
   "keywords": [],
   "author": "",
   "type": "commonjs"

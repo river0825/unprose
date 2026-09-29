@@ -9,8 +9,10 @@ import { blockDetails, keyLines, keyRanges, workflowFiles, loadWorkflow, resolve
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const readFs = (p: string) => (fs.existsSync(p) && fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : undefined)
+// dev/ is this repository's own development workflow; the public export leaves it out.
+const devSkip = fs.existsSync(path.join(repo, 'dev/workflow.yaml')) ? false : 'dev/ is not in this checkout'
 
-test('dev/workflow.yaml: ai, script, human, trigger and agent details', () => {
+test('dev/workflow.yaml: ai, script, human, trigger and agent details', { skip: devSkip }, () => {
   const wf = loadWorkflow(path.join(repo, 'dev/workflow.yaml'))
   const yaml = fs.readFileSync(wf.file, 'utf8').split('\n')
   const d = blockDetails(wf, { readFile: readFs, root: repo })
@@ -116,7 +118,7 @@ test('keyRanges: a block ends before its next sibling, trailing blanks and banne
   assert.deepEqual(r, { steps: { a: { start: 2, end: 3 }, b: { start: 6, end: 7 } }, agents: { c: { start: 9, end: 9 } } })
 })
 
-test('dev/workflow.yaml: detail.yaml is the block range; workflowFiles has every file behind the workflow', () => {
+test('dev/workflow.yaml: detail.yaml is the block range; workflowFiles has every file behind the workflow', { skip: devSkip }, () => {
   const wf = loadWorkflow(path.join(repo, 'dev/workflow.yaml'))
   const yaml = fs.readFileSync(wf.file, 'utf8').split('\n')
   const d = blockDetails(wf, { readFile: readFs, root: repo })
