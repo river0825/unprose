@@ -15,6 +15,7 @@ import { timeAgo } from '../time'
 import type { DiscussArg } from '../inspector/diff'
 import { DiagramElementPanel, DiagramFramePanel } from './DiagramInspector'
 import { diagramData, diagramOf } from '../diagrams/frame'
+import { Linkified } from '../flow/Linkified'
 
 interface Props {
   board: Board
@@ -447,7 +448,7 @@ function DataRow({ k, v }: { k: string; v: unknown }) {
   return (
     <>
       <dt>{k}</dt>
-      <dd className={typeof v === 'string' ? '' : 'mono'}>{s}</dd>
+      <dd className={typeof v === 'string' ? '' : 'mono'}>{typeof v === 'string' ? <Linkified text={s} /> : s}</dd>
     </>
   )
 }

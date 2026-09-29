@@ -858,3 +858,8 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .all-chats-row > * { min-width: 0; }
 .all-chats-row .chat-list { margin: 0; padding: 0; }
 .all-chats .chat-bubble, .all-chats .chat-msgs li { overflow-wrap: anywhere; }
+
+/* ── Links inside item text and descriptions ─────────────────────────────── */
+.item-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; cursor: pointer; overflow-wrap: anywhere; }
+.item-link:hover { text-decoration-thickness: 2px; }
+.item-link:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; border-radius: 2px; }

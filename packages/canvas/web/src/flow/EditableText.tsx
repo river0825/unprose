@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Linkified } from './Linkified'
 
 interface Props {
   text: string
@@ -30,7 +31,7 @@ export function EditableText({ text, editing, onCommit, onCancel, className, pla
   if (!editing) {
     return (
       <div className={`text ${className ?? ''}`}>
-        {text || <span className="placeholder">{placeholder ?? ''}</span>}
+        {text ? <Linkified text={text} /> : <span className="placeholder">{placeholder ?? ''}</span>}
       </div>
     )
   }
