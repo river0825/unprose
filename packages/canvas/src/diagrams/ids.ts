@@ -26,19 +26,26 @@ export function idAllocator() {
 /** A diagram key: lower-case letters, digits and dashes, 1–40 chars ('studio-es'). */
 export const DIAGRAM_KEY = /^[a-z0-9][a-z0-9-]{0,39}$/
 
-/** Trace link from an element to an element of another diagram: `from` = '<diagram key>/<element id>'. */
-export type TraceRel = 'derived-from' | 'groups' | 'shows'
+/**
+ * Trace link from an element to an element of a diagram (another one, or its own):
+ * `from` = '<diagram key>/<element id>', or just '<diagram key>' for the whole diagram (its frame).
+ * `relates` is the general link (相關) when none of the others fits.
+ */
+export const TRACE_RELS = ['derived-from', 'groups', 'shows', 'relates'] as const
+export type TraceRel = (typeof TRACE_RELS)[number]
 export interface Trace {
   from: string
   rel: TraceRel
 }
 /** A trace in a diagram file: `{ from: '<diagram key>/<element id>', rel }`. */
-export const traceSchema = z.object({ from: z.string(), rel: z.enum(['derived-from', 'groups', 'shows']) })
+export const traceSchema = z.object({ from: z.string().min(1), rel: z.enum(TRACE_RELS) })
 
-export const TRACE_LABEL: Record<TraceRel, string> = { 'derived-from': '來自', groups: '組成', shows: '畫面' }
+export const TRACE_LABEL: Record<TraceRel, string> = { 'derived-from': '來自', groups: '組成', shows: '畫面', relates: '相關' }
 
-export function parseTraceRef(ref: string): { key: string; element: string } | undefined {
+/** '<key>/<element>' → both; '<key>' → the whole diagram (element undefined). */
+export function parseTraceRef(ref: string): { key: string; element?: string } | undefined {
   const i = ref.indexOf('/')
-  if (i <= 0 || i === ref.length - 1) return undefined
+  if (i < 0) return DIAGRAM_KEY.test(ref) ? { key: ref } : undefined
+  if (i === 0 || i === ref.length - 1) return undefined
   return { key: ref.slice(0, i), element: ref.slice(i + 1) }
 }

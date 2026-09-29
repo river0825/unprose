@@ -18,8 +18,7 @@
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
-npm install && npm run build
-npm start                     # board 會開在 http://localhost:4400
+node scripts/canvas.mjs       # board 會開在 http://localhost:4400（board 存在 ~/.awd/boards）
 ```
 
 讓它繼續跑著。在另一個終端機把 Claude Code 連到 board：
@@ -38,7 +37,8 @@ claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/
   /plugin marketplace add river0825/unprose
   /plugin install unprose@unprose
   ```
-  然後在安裝好的 plugin 資料夾裡執行一次 `npm install && npm run build`。
+  裝好就能用，不需要 build。啟動 board：
+  `node ~/.claude/plugins/cache/unprose/unprose/<version>/scripts/canvas.mjs`，或直接請 Claude「啟動 Unprose canvas」，skill 知道怎麼做。
 - **Codex**：加到 `~/.codex/config.toml`，並把 [AGENTS.md](AGENTS.md) 複製到你的專案：
   ```toml
   [mcp_servers.awd-canvas]
@@ -123,7 +123,7 @@ Event、command、system、policy 依時間由左到右排列。
 | **Proposal（提案）** | 你在 board 上做的修改，還沒寫進檔案。 |
 | **Studio** | 選用功能。讓每張 board 有自己的 agent session，一般留言也會有人回覆。見 [docs/studio.md](docs/studio.md)。 |
 | **herdr** | Studio 用來在 pane 中執行 agent session 的終端機工作區。[herdr.dev](https://herdr.dev) |
-| **awd** | 命令列工具：`node packages/cli/bin/awd.js design draw …`、`lint`、`run`、`studio`。 |
+| **awd** | 命令列工具：`node scripts/awd.mjs design draw …`、`lint`、`run`、`studio`。 |
 
 ## 目前狀態
 

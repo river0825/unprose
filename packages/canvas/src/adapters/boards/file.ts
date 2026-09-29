@@ -6,11 +6,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Board, Change } from '../../model.js'
 import { BoardRepositoryBase } from './base.js'
+import { defaultBoardsDir } from './location.js'
 
 export class FileBoardRepository extends BoardRepositoryBase {
   readonly dir: string
 
-  constructor(dir = process.env.AWD_CANVAS_DIR ?? './boards') {
+  constructor(dir = defaultBoardsDir()) {
     super()
     this.dir = path.resolve(dir)
     fs.mkdirSync(this.dir, { recursive: true })
@@ -37,6 +38,13 @@ export class FileBoardRepository extends BoardRepositoryBase {
   }
   private logPath(id: string) {
     return path.join(this.dir, `${id}.changes.ndjson`)
+  }
+
+  /** The directory vanished (e.g. a plugin reinstall deleted it): make it again, so the retry can write. */
+  protected override recover(error: unknown): boolean {
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') return false
+    fs.mkdirSync(this.dir, { recursive: true })
+    return true
   }
 
   protected persist(board: Board): void {

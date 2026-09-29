@@ -863,3 +863,6 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .item-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; cursor: pointer; overflow-wrap: anywhere; }
 .item-link:hover { text-decoration-thickness: 2px; }
 .item-link:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; border-radius: 2px; }
+
+/* ── Saving failed (the server could not write this board) ───────────────── */
+.storage-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20; max-width: min(640px, 90%); padding: 8px 14px; border-radius: 8px; background: var(--c-red); color: #1b1b1b; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lift); }

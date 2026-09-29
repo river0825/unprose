@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { eventStormingSchema, userStoryMapSchema, checkEventStorming, proposeStories, type StoryCandidate } from '@awd/canvas/diagrams'
+import { checkEventStorming, contentSchemaFor, proposeStories, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
@@ -47,7 +47,14 @@ export interface DesignFile {
  * Top-level `key:` / `kind:` / `title:` in the file win over the filename.
  */
 export function parseDesignFile(file: string, text: string): DesignFile {
-  const raw = (YAML.parse(text) ?? {}) as Record<string, unknown>
+  let raw: Record<string, unknown>
+  try {
+    raw = (YAML.parse(text) ?? {}) as Record<string, unknown>
+  } catch (err) {
+    const line = (err as { linePos?: Array<{ line: number }> }).linePos?.[0]?.line
+    const hint = yamlCommentHint(text, line)
+    throw new Error(`${file}: ${(err as Error).message}${hint ? `\n${hint}` : ''}`)
+  }
   if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${file}: expected a YAML mapping`)
   const base = path.basename(file).replace(/\.ya?ml$/i, '')
   const dot = base.lastIndexOf('.')
@@ -69,6 +76,27 @@ export function parseDesignFile(file: string, text: string): DesignFile {
   return { key, kind, title: typeof title === 'string' ? title : undefined, level, content }
 }
 
+/**
+ * A `#` after a space starts a YAML comment — inside a flow sequence (`labels: [PR #1113, issue #1112]`)
+ * that drops the closing `]` and the parse error only points at a caret. Find such a line at or before
+ * the failing one and say why (river0825/unprose#9).
+ */
+export function yamlCommentHint(text: string, failingLine?: number): string | undefined {
+  const lines = text.split('\n')
+  const last = Math.min(lines.length, failingLine ?? lines.length)
+  for (let i = last - 1; i >= Math.max(0, last - 20); i--) {
+    // strip quoted strings, then look for an unclosed [ followed by ' #'
+    const bare = lines[i].replace(/"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g, '""')
+    const open = bare.indexOf('[')
+    const hash = open >= 0 ? bare.slice(open).search(/\s#/) : -1
+    // the `]` that should close it sits after the # — i.e. inside the comment
+    if (hash > 0 && !bare.slice(open, open + hash).includes(']')) {
+      return `hint: line ${i + 1} has an unquoted "#" inside [ … ] — a "#" after a space starts a YAML comment, so the rest of the line is dropped. Quote values containing # (e.g. "PR #1113").`
+    }
+  }
+  return undefined
+}
+
 // ── lint ─────────────────────────────────────────────────────────────────────
 
 export interface DesignFinding {
@@ -86,12 +114,14 @@ export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
     const r = lintWorkflow(loadWorkflow(file).def)
     return [...r.errors.map((e) => ({ severity: 'error' as const, message: `${e.where}: ${e.message}` })), ...r.warnings.map((w) => ({ severity: 'warning' as const, message: `${w.where}: ${w.message}` }))]
   }
-  const schema = d.kind === 'event-storming' ? eventStormingSchema : d.kind === 'user-story-map' ? userStoryMapSchema : undefined
-  if (!schema) return [{ severity: 'info', message: `${d.kind}: no offline check yet — the canvas validates it on draw` }]
+  const schema = contentSchemaFor(d.kind)
+  if (!schema) return [{ severity: 'info', message: `${d.kind}: no schema for this kind — the canvas validates it on draw` }]
+  // a field the schema does not know would be dropped silently on draw: say so (river0825/unprose#8)
+  const unknown: DesignFinding[] = unknownContentFields(d.kind, d.content).map((u) => ({ severity: 'warning', message: `unknown field \`${u.field}\` at ${u.path} — it is not part of ${d.kind} and will be ignored` }))
   const parsed = schema.safeParse(d.content)
-  if (!parsed.success) return parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.join('.') || '(root)'}: ${i.message}` }))
-  if (d.kind !== 'event-storming') return []
-  return checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))
+  if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
+  if (d.kind !== 'event-storming') return unknown
+  return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
 }
 
 export function cmdDesignLint(file: string): boolean {
@@ -137,7 +167,9 @@ export function frameOf(board: Pick<Board, 'items'>, key: string): BoardItem | u
 export interface DrawOptions { board: string; canvas?: string; /** where a NEW frame goes (board coordinates); an existing frame stays where it is */ at?: { x: number; y: number } }
 
 /** Draw or refresh one diagram frame from its file (docs/diagrams.md §2). */
-export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string }> {
+export interface UnresolvedTrace { item: string; trace: { from: string; rel: string }; reason: string }
+
+export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[] }> {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
   const api = canvasApi(base)
   const abs = path.resolve(file)
@@ -149,7 +181,7 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   // A workflow is drawn with the runner's own projection (graph + block details); the files behind it
   // (agent prompts, scripts) go into the snapshot so the Inspector and Files tab can show them.
   const wf = d.kind === 'workflow' ? withDetails(toGraph(loadWorkflow(abs).def), abs) : undefined
-  const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, {
+  const { items: drawn, unresolvedTraces = [] } = await api<{ items: BoardItem[]; unresolvedTraces?: UnresolvedTrace[] }>('POST', `/api/boards/${board.id}/template`, {
     kind: d.kind,
     content: wf ? wf.graph : d.content,
     frame: { key: d.key, title: d.title, source, level: d.level, ...(opts.at ? { at: opts.at } : {}) },
@@ -165,7 +197,14 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   // PUT replaces meta whole: keep every other key, and every other diagram's entry.
   const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text } } }
   await api('PUT', `/api/boards/${board.id}`, { meta: { ...current.meta, project: { root }, diagrams } })
-  return { base, boardId: board.id, seq, key: d.key }
+  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces }
+}
+
+/** "N trace(s) not drawn" lines for a draw, so a link to a missing target is not lost silently (river0825/unprose#6). */
+export function unresolvedReport(list: UnresolvedTrace[]): string[] {
+  if (!list.length) return []
+  const why = (u: UnresolvedTrace) => (u.reason === 'bad-ref' ? 'not a <diagram key>/<element id> ref' : 'target not found on the board')
+  return [`⚠ ${list.length} trace(s) not drawn:`, ...list.map((u) => `  ${u.item} —${u.trace.rel}→ ${u.trace.from}: ${why(u)}`)]
 }
 
 // ── proposals: stories from EventStorming (docs/diagrams.md §4) ─────────────────
@@ -258,9 +297,11 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
       for (const e of errors) console.error(`✖ ${e.message}`)
       return false
     }
+    for (const w of findings.filter((f) => f.severity === 'warning' && f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.message}`)
     const at = str(flags.at)?.split(',').map(Number)
     const r = await drawDesign(file, { board: boardRef, canvas, ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
     console.log(`✔ ${path.basename(file)} → frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== 'error').length} note(s) — awd design lint ${file})`)
+    for (const line of unresolvedReport(r.unresolvedTraces)) console.warn(line)
     return true
   }
   if (sub === 'propose-stories') {

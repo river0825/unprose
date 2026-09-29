@@ -14,12 +14,12 @@
 
 ## Try it in 5 minutes
 
-You need **Node.js 20+**, **git**, and **Claude Code** (other agents: see below).
+You need **Node.js 20+**, **git**, and **Claude Code** (other agents: see below). No `npm install`:
+the repository ships a ready-to-run build in `dist/`.
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
-npm install && npm run build
-npm start                     # the board opens at http://localhost:4400
+node scripts/canvas.mjs       # the board opens at http://localhost:4400 (boards are kept in ~/.awd/boards)
 ```
 
 Keep that running. In a second terminal, connect Claude Code to the board:
@@ -38,7 +38,9 @@ That's it. Open Claude Code in any project and follow **Your first session** bel
   /plugin marketplace add river0825/unprose
   /plugin install unprose@unprose
   ```
-  Then run `npm install && npm run build` once inside the installed plugin folder.
+  It runs as installed (no build step). Start the board with
+  `node ~/.claude/plugins/cache/unprose/unprose/<version>/scripts/canvas.mjs`, or just ask Claude to
+  "start the Unprose canvas" — the skill knows how.
 - **Codex:** add to `~/.codex/config.toml`, and copy [AGENTS.md](AGENTS.md) into your project:
   ```toml
   [mcp_servers.awd-canvas]
@@ -50,6 +52,7 @@ That's it. Open Claude Code in any project and follow **Your first session** bel
   environment `AWD_CANVAS_URL=http://localhost:4400`.
 
 Details and caveats: [docs/agents-setup.md](docs/agents-setup.md).
+Working on Unprose itself: `npm install && npm run build`; the launchers in `scripts/` then use your build.
 </details>
 
 ## Your first session
@@ -125,7 +128,7 @@ More views of the same ideas:
 | **Proposal** | A change you made on the board that is not in the file yet. |
 | **Studio** | Optional. Gives each board its own agent session, so plain comments get answers. See [docs/studio.md](docs/studio.md). |
 | **herdr** | The terminal workspace Studio uses to run agent sessions in panes. [herdr.dev](https://herdr.dev) |
-| **awd** | The command-line tool: `node packages/cli/bin/awd.js design draw …`, `lint`, `run`, `studio`. |
+| **awd** | The command-line tool: `node scripts/awd.mjs design draw …`, `lint`, `run`, `studio`. |
 
 ## Status
 

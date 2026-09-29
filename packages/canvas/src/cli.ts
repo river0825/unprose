@@ -6,7 +6,7 @@ import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { startServer, type StudioConfig } from './server.js'
-import { createBoardRepository } from './adapters/boards/index.js'
+import { createBoardRepository, defaultBoardsDir, isInsidePluginCache } from './adapters/boards/index.js'
 import { SpawnSupervisor } from './adapters/process/index.js'
 import { runMcp } from './mcp.js'
 import { CanvasClient } from './client.js'
@@ -16,7 +16,8 @@ import type { DiagramKind } from './model.js'
 
 const USAGE = `awd-canvas — a shared canvas for agents and humans
 
-  awd-canvas serve [--port 4400] [--dir ./boards] [--store file|memory]   start the HTTP/WS server (+ web UI if built)
+  awd-canvas serve [--port 4400] [--dir <boards dir>] [--store file|memory]   start the HTTP/WS server (+ web UI if built)
+        boards dir: --dir, else $AWD_BOARDS_DIR, else $XDG_DATA_HOME/awd/boards, else ~/.awd/boards
         [--studio-project <dir>]... [--studio-cmd "<command with {project}>"]   let the web start/stop "awd studio" for these projects only
         (--studio <workflow.yaml> still works: it means that file's repo)
   awd-canvas mcp                                    MCP stdio server over a running canvas server (AWD_CANVAS_URL)
@@ -51,7 +52,9 @@ function studioConfig(args: string[]): StudioConfig | undefined {
   const roots = [...new Set(dirs.map((d) => fs.realpathSync(path.resolve(d))))] // fails loudly on a typo, at startup
   const projects = roots.map((root) => ({ root, name: path.basename(root) }))
   // Default: this checkout's awd CLI (absolute), so any project can use it.
-  const awd = fileURLToPath(new URL('../../cli/bin/awd.js', import.meta.url))
+  // the bundled CLI next to this file (published plugin, unprose#4), else the workspace one
+  const bundled = fileURLToPath(new URL('./awd.mjs', import.meta.url))
+  const awd = fs.existsSync(bundled) ? bundled : fileURLToPath(new URL('../../cli/bin/awd.js', import.meta.url))
   const command = flag(args, '--studio-cmd') ?? `${process.execPath} ${awd} studio --project {project}`
   if (!command.includes('{project}') && !command.includes('{file}')) console.warn('awd-canvas: --studio-cmd has no {project}; every project runs the same command')
   return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path.join(os.homedir(), 'Library', 'Logs', 'awd') }
@@ -68,8 +71,10 @@ async function main() {
   switch (cmd) {
     case 'serve': {
       const port = Number(flag(args, '--port') ?? process.env.PORT ?? 4400)
-      const dir = flag(args, '--dir') ?? process.env.AWD_CANVAS_DIR ?? './boards'
+      const dir = path.resolve(flag(args, '--dir') ?? defaultBoardsDir())
       const storeKind = flag(args, '--store') ?? process.env.AWD_CANVAS_STORE ?? 'file'
+      if (storeKind !== 'memory' && isInsidePluginCache(dir))
+        console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install — reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`)
       const studio = studioConfig(args)
       const s = await startServer({ port, store: createBoardRepository(storeKind, dir), studio })
       const where = storeKind === 'memory' ? 'in memory' : `in ${(s.store as { dir?: string }).dir ?? dir}`

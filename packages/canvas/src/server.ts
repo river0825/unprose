@@ -8,7 +8,7 @@ import { NotFound, type BoardRepository } from './ports/boardRepository.js'
 import type { ProcessInfo, ProcessSupervisor } from './ports/processSupervisor.js'
 import { createBoardRepository } from './adapters/boards/index.js'
 import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
-import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, traceWires, type FrameRequest } from './templates/index.js'
+import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, resolveTraces, type FrameRequest } from './templates/index.js'
 import { DIAGRAM_KEY } from './diagrams/ids.js'
 import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
 import { renderThumb } from './thumb.js'
@@ -16,7 +16,8 @@ import { autoPlaceComments } from './place.js'
 import { isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const WEB_DIST = path.resolve(__dirname, '../web/dist')
+// The web UI: next to the bundled server (`dist/web`, the published plugin — unprose#4), else the workspace build.
+const WEB_DIST = [path.join(__dirname, 'web'), path.resolve(__dirname, '../web/dist')].find((d) => fs.existsSync(path.join(d, 'index.html'))) ?? path.resolve(__dirname, '../web/dist')
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -346,9 +347,11 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const now = new Date().toISOString()
         const rendered = render(kind, parsed.data, request ? { at: frameOrigin(board.items, request), scope: request.key, now } : { at: body.at, scope: body.scope, now })
         const drawn = request ? placeInFrame(board.items, request, rendered, now).items : rendered
-        const items = [...drawn, ...traceWires(drawn, board.items, now)]
+        // traces whose target is not on the board are reported, not silently dropped (river0825/unprose#6)
+        const traces = resolveTraces(drawn, board.items, now)
+        const items = [...drawn, ...traces.wires]
         const ops: Op[] = items.map((item) => (board.items[item.id] ? { kind: 'update', id: item.id, patch: item } : { kind: 'add', item }))
-        return json(res, 200, { items, ops })
+        return json(res, 200, { items, ops, unresolvedTraces: traces.unresolved })
       }
       if (sub === 'studio') {
         const studio = opts.studio
@@ -460,9 +463,14 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       const offPresence = store.onPresence((id, n) => {
         if (id === board.id) send({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: n > 0 })
       })
+      // Saving this board failed or recovered: the page shows "changes are not being saved" (unprose#1).
+      const offStorage = store.onStorage((e) => {
+        if (e.boardId === board.id) send({ type: 'storage', ok: e.ok, message: e.message, at: e.at })
+      })
       const off = () => {
         offChange()
         offPresence()
+        offStorage()
       }
       ws.on('close', off)
       ws.on('error', off)

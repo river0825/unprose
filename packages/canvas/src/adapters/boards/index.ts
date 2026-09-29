@@ -4,6 +4,7 @@ import { MemoryBoardRepository } from './memory.js'
 
 export { BoardRepositoryBase } from './base.js'
 export { FileBoardRepository, MemoryBoardRepository }
+export { defaultBoardsDir, isInsidePluginCache } from './location.js'
 
 export type BoardStoreKind = 'file' | 'memory'
 

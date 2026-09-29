@@ -2,9 +2,36 @@
 import type { Author, Board, Change, DiagramKind, Item, Op, Wake } from './model.js'
 import type { CardMove } from './diff.js'
 
+/**
+ * The canvas origin from what a person pastes: `http://localhost:4400`, `https://canvas.example.com/`,
+ * or a board link `https://canvas.example.com/b/<id>?focus=…` — anything after the origin is dropped
+ * (river0825/unprose#5). A path prefix before `/b/` or `/api/` is kept, for canvases behind a proxy path.
+ */
+export function canvasOrigin(url: string): string {
+  const u = new URL(url.trim())
+  const cut = u.pathname.search(/\/(b|api|docs)(\/|$)/)
+  const prefix = (cut >= 0 ? u.pathname.slice(0, cut) : u.pathname).replace(/\/+$/, '')
+  return `${u.origin}${prefix}`
+}
+
+/** Can the canvas be reached? `GET /api/boards` within `timeoutMs`; the reason when it cannot. */
+export async function probeCanvas(base: string, timeoutMs = 4000): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status} ${res.statusText}` }
+    const body = await res.json().catch(() => undefined)
+    if (!body || typeof body !== 'object') return { ok: false, reason: 'the answer is not the canvas API (is this the canvas URL?)' }
+    return { ok: true }
+  } catch (e) {
+    const err = e as Error & { cause?: { code?: string } }
+    return { ok: false, reason: err.name === 'TimeoutError' ? `no answer within ${timeoutMs / 1000}s` : (err.cause?.code ?? err.message) }
+  }
+}
+
 export class CanvasClient {
-  constructor(readonly baseUrl = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400') {
-    this.baseUrl = this.baseUrl.replace(/\/$/, '')
+  readonly baseUrl: string
+  constructor(baseUrl = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400') {
+    this.baseUrl = canvasOrigin(baseUrl)
   }
 
   private async req<T>(method: string, p: string, body?: unknown): Promise<T> {

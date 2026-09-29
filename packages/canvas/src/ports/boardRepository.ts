@@ -19,6 +19,9 @@ export interface ChangesQuery {
 
 export type ChangeListener = (change: Change) => void
 export type PresenceListener = (boardId: string, watchers: number) => void
+/** Saving a board failed (`ok: false`), or works again after a failure (`ok: true`). */
+export interface StorageEvent { boardId: string; ok: boolean; message: string; at: string }
+export type StorageListener = (e: StorageEvent) => void
 
 /** The note a user change carries when they press "Hand to agent". */
 export const HANDOFF_NOTE = 'handoff'
@@ -44,6 +47,8 @@ export interface BoardRepository {
   /** How many agent waits are currently pending on this board. */
   watchers(id: string): number
   onPresence(fn: PresenceListener): () => void
+  /** Hear about saves that fail (and recover), so clients can say "changes are not being saved". */
+  onStorage(fn: StorageListener): () => void
   delete(id: string): boolean
 }
 

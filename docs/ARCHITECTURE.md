@@ -625,7 +625,7 @@ canvas 和 runtime 都是單一個 node 程序，放在一台常開的機器上�
 
 | 服務 | 指令 | 預設 port |
 | --- | --- | --- |
-| canvas（UI · API · MCP · 文件） | `node packages/canvas/dist/cli.js serve --port 4400 --dir boards --studio-project .` | 4400 |
+| canvas（UI · API · MCP · 文件） | `node packages/canvas/dist/cli.js serve --port 4400 --studio-project .`（board 預設存在 `~/.awd/boards`；`--dir` / `AWD_BOARDS_DIR` 可改） | 4400 |
 | workflow runtime | `node packages/cli/bin/awd.js run <workflow.yaml> --port 4311 --worker claude-code` | 4311 |
 
 **常駐。** macOS 用 launchd（`~/Library/LaunchAgents/<label>.plist`，`KeepAlive` 為 true），Linux 用 systemd user service：
@@ -634,7 +634,7 @@ canvas 和 runtime 都是單一個 node 程序，放在一台常開的機器上�
 # ~/.config/systemd/user/unprose-canvas.service
 [Service]
 WorkingDirectory=%h/code/unprose
-ExecStart=/usr/bin/env node packages/canvas/dist/cli.js serve --port 4400 --dir boards --studio-project %h/code/unprose
+ExecStart=/usr/bin/env node packages/canvas/dist/cli.js serve --port 4400 --dir %h/.awd/boards --studio-project %h/code/unprose
 Restart=always
 [Install]
 WantedBy=default.target

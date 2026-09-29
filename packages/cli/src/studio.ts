@@ -78,6 +78,8 @@ export async function cmdStudio(file: string | undefined, flags: Flags) {
 
 /** How the session should call this CLI from the repo root: `node <bin>` — `awd` is usually not on PATH. */
 function awdCommand(root: string): string {
-  const bin = fileURLToPath(new URL('../bin/awd.js', import.meta.url))
+  // bundled (dist/awd.mjs in the published plugin, unprose#4): this very file; else the workspace launcher
+  const self = fileURLToPath(import.meta.url)
+  const bin = self.endsWith('.mjs') ? self : fileURLToPath(new URL('../bin/awd.js', import.meta.url))
   return `node ${path.relative(root, bin) || bin}`
 }

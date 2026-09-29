@@ -14,22 +14,26 @@ Unprose to discuss designs with a person on a shared canvas.
 ## Setup
 
 ```bash
-npm install && npm run build
-npm start                     # canvas on http://localhost:4400 (+ an example workflow runtime)
+node scripts/canvas.mjs       # canvas on http://localhost:4400 — runs as shipped (dist/), no build
+# working on Unprose itself: npm install && npm run build; `npm start` also runs an example workflow
 ```
 
 Register the MCP server `awd-canvas` in your agent (see `docs/agents-setup.md`): it runs
 `node scripts/mcp.mjs` and talks to the canvas at `AWD_CANVAS_URL` (default `http://localhost:4400`).
+For a canvas elsewhere (tunnel, another host) set `AWD_CANVAS_URL=https://canvas.example.com` — a pasted
+board link works too. If it cannot be reached, the MCP server exits with
+`awd-canvas MCP: cannot reach <url> (<reason>)` instead of a bare "Connection closed". The CLI takes
+`--canvas <url>`.
 
 ## Commands
 
 | Goal | Command |
 |---|---|
-| Draw / refresh a diagram frame | `node packages/cli/bin/awd.js design draw design/<file>.yaml --board "title:<board>"` |
-| Check a diagram (schema + EventStorming grammar) | `node packages/cli/bin/awd.js design lint design/<file>.yaml` |
-| Story candidates from EventStorming | `node packages/cli/bin/awd.js design propose-stories design/x.es.yaml --into design/x.story-map.yaml --board …` |
-| A workflow as a board | `node packages/cli/bin/awd.js graph <workflow.yaml> --canvas` |
-| Lint / golden-test a workflow | `node packages/cli/bin/awd.js lint <wf>` · `… test <wf>` |
+| Draw / refresh a diagram frame | `node scripts/awd.mjs design draw design/<file>.yaml --board "title:<board>"` |
+| Check a diagram (schema + EventStorming grammar) | `node scripts/awd.mjs design lint design/<file>.yaml` |
+| Story candidates from EventStorming | `node scripts/awd.mjs design propose-stories design/x.es.yaml --into design/x.story-map.yaml --board …` |
+| A workflow as a board | `node scripts/awd.mjs graph <workflow.yaml> --canvas` |
+| Lint / golden-test a workflow | `node scripts/awd.mjs lint <wf>` · `… test <wf>` |
 
 ## The loop
 

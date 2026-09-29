@@ -748,6 +748,11 @@ function BoardInner({ id }: { id: string }) {
         </EditContext.Provider>
         <RunOverlay board={board} />
         {tool === 'comment' && <div className="hint">Click an item to comment on it. Esc cancels.</div>}
+        {store.storageError && (
+          <div className="storage-banner" role="alert">
+            Changes are not being saved: {store.storageError}. Keep this tab open and check the canvas server's boards folder.
+          </div>
+        )}
         <div className="toasts" aria-live="polite">
           {store.toasts.map((t) => (
             <div key={t.id} className={`toast ${t.kind === 'error' ? 'error' : ''}`}>

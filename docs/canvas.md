@@ -21,11 +21,11 @@ packages/canvas/
 ```bash
 npm install
 npm run build -w @awd/canvas          # → packages/canvas/dist
-node packages/canvas/dist/cli.js serve --port 4400 --dir ./boards   # http://localhost:4400
+node packages/canvas/dist/cli.js serve --port 4400   # http://localhost:4400 · boards in ~/.awd/boards
 node packages/canvas/dist/cli.js demo  # seven sample boards (one per kind) drawn from the card-pipeline example
 ```
 
-`AWD_CANVAS_DIR` sets the board directory, `AWD_CANVAS_URL` tells the MCP server / CLI where the server is (default `http://localhost:4400`). If `packages/canvas/web/dist` exists it is served at `/` and `/b/:id`; otherwise a plain page lists the boards.
+Boards are stored in `--dir`, else `$AWD_BOARDS_DIR` (the older `AWD_CANVAS_DIR` also works), else `$XDG_DATA_HOME/awd/boards`, else `~/.awd/boards` — never inside a checkout or plugin install by default, because a plugin reinstall replaces its directory (the server warns if `--dir` points into a `plugins/cache` folder, and a board whose save fails shows "Changes are not being saved" in the page). `AWD_CANVAS_URL` tells the MCP server / CLI where the server is (default `http://localhost:4400`). If `packages/canvas/web/dist` exists it is served at `/` and `/b/:id`; otherwise a plain page lists the boards.
 
 Claude Code in this repo gets the tools automatically through `.mcp.json` (`node packages/canvas/dist/cli.js mcp`). The MCP server needs the HTTP server running — it does not own a store of its own, so the browser and the agent always see the same board.
 
@@ -238,7 +238,7 @@ Semantics the trigger can rely on: one change = at most one move per card; `from
 ## CLI
 
 ```
-awd-canvas serve [--port 4400] [--dir ./boards] [--store file|memory] [--open]
+awd-canvas serve [--port 4400] [--dir <boards dir, default ~/.awd/boards>] [--store file|memory] [--open]
                  [--studio <workflow.yaml>]... [--studio-cmd "<command with {file}>"]
 awd-canvas mcp
 awd-canvas render <kind> <content.json>      # print the items a template produces (no server needed)

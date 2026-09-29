@@ -14,7 +14,7 @@ export { userStoryMapSchema, renderUserStoryMap } from './user-story-map.js'
 export { userJourneySchema, renderUserJourney } from './user-journey.js'
 export { wireframeSchema, renderWireframe } from './wireframe.js'
 export { workflowSchema, renderWorkflow } from './workflow.js'
-export { frameOrigin, placeInFrame, traceWires, type FrameRequest } from './frame.js'
+export { frameOrigin, placeInFrame, traceWires, resolveTraces, traceTarget, type FrameRequest, type UnresolvedTrace } from './frame.js'
 export { kanbanSchema, renderKanban, cardHeight, columnsOf, cardsIn, bottomOf, columnId, cardId, CARD_SIZES, CARD_W, COLUMN_W } from './kanban.js'
 
 const itemTypes = ['sticky', 'text', 'frame', 'lane', 'arrow', 'comment', 'wireframe', 'card'] as const

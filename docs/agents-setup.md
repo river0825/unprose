@@ -5,8 +5,9 @@ server needs a running canvas server; start one first:
 
 ```bash
 git clone <this repo> unprose && cd unprose
-npm install && npm run build
-npm start          # or: node packages/canvas/dist/cli.js serve --port 4400 --dir boards
+node scripts/canvas.mjs   # http://localhost:4400; boards in ~/.awd/boards (AWD_BOARDS_DIR moves them)
+# the published repository and plugin ship a bundled runtime in dist/ — no npm install or build needed;
+# in a dev checkout without dist/, run `npm install && npm run build` first
 ```
 
 Below, `<unprose>` is the absolute path of that checkout.
@@ -21,8 +22,8 @@ Below, `<unprose>` is the absolute path of that checkout.
 /plugin install unprose@unprose
 ```
 
-The plugin's `.mcp.json` starts `node ${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs`. Run `npm install && npm
-run build` once inside the installed plugin directory (or point it at your checkout) so `dist/` exists.
+The plugin's `.mcp.json` starts `node ${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs`, which runs the bundled server in
+`dist/` — nothing to install or build. Start the canvas with `node <plugin dir>/scripts/canvas.mjs`.
 
 **As a project MCP server** (no plugin): the repository's own `.mcp.json` works when Claude Code is started
 in the checkout (`${CLAUDE_PLUGIN_ROOT:-.}` falls back to the current directory). From another project:
@@ -30,6 +31,15 @@ in the checkout (`${CLAUDE_PLUGIN_ROOT:-.}` falls back to the current directory)
 ```bash
 claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node <unprose>/scripts/mcp.mjs
 ```
+
+### A canvas that is not on localhost
+
+Run the canvas anywhere (a tunnel, a server, another machine) and point the agent at it with
+`AWD_CANVAS_URL`, e.g. `https://canvas.example.com`. A board link (`https://canvas.example.com/b/<id>`)
+also works: the MCP server takes the origin from it. On startup the MCP server checks
+`GET <url>/api/boards`; if that fails it exits with `awd-canvas MCP: cannot reach <url> (<reason>). Start
+the canvas (npm start) or set AWD_CANVAS_URL` — in Claude Code that shows up in `/mcp` as a failed
+server with this message. Keep a remote canvas behind an access proxy: it has no authentication yet.
 
 ## Codex
 
@@ -54,7 +64,7 @@ Stdio server: command `node`, args `["<unprose>/scripts/mcp.mjs"]`, environment
 { "mcpServers": { "awd-canvas": { "command": "node", "args": ["<unprose>/scripts/mcp.mjs"], "env": { "AWD_CANVAS_URL": "http://localhost:4400" } } } }
 ```
 
-Agents without MCP can still use the CLI (`node <unprose>/packages/cli/bin/awd.js design …`) and the
+Agents without MCP can still use the CLI (`node <unprose>/scripts/awd.mjs design …`) and the
 canvas HTTP API (`docs/canvas.md`).
 
 ## Not verified yet

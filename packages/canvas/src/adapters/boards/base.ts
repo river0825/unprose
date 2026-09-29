@@ -3,7 +3,7 @@
 // Adapters implement the four persistence hooks.
 
 import { applyOps, isBookkeeping, isLayoutOnly, newId, type Author, type Board, type Change, type Op, type Wake } from '../../model.js'
-import { HANDOFF_NOTE, NotFound, type BoardRepository, type ChangeListener, type ChangesQuery, type CreateBoardInput, type PresenceListener } from '../../ports/boardRepository.js'
+import { HANDOFF_NOTE, NotFound, type BoardRepository, type ChangeListener, type ChangesQuery, type CreateBoardInput, type PresenceListener, type StorageListener } from '../../ports/boardRepository.js'
 
 function wakes(c: Change, wake: Wake): boolean {
   if (c.note === HANDOFF_NOTE) return true
@@ -16,6 +16,9 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   private subs = new Map<string, Set<ChangeListener>>()
   private watching = new Map<string, number>()
   private presenceSubs = new Set<PresenceListener>()
+  private storageSubs = new Set<StorageListener>()
+  /** Boards whose last save failed: the next good save announces the recovery. */
+  private unsaved = new Set<string>()
 
   // ---- persistence hooks ----
   /** Save the current snapshot of a board. */
@@ -26,6 +29,57 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   protected abstract readLog(id: string): Change[]
   /** Forget a board's snapshot and log. */
   protected abstract remove(id: string): void
+
+  /** Called once when a save throws; an adapter may repair its storage (e.g. recreate a deleted directory) and return true to retry. */
+  protected recover(_error: unknown): boolean {
+    return false
+  }
+
+  /**
+   * Run a save; on failure let the adapter repair and retry once. A failure that stays is logged,
+   * announced to storage listeners and rethrown (the writer gets the error, the UI gets a banner).
+   */
+  private save(boardId: string, write: () => void): void {
+    try {
+      write()
+    } catch (first) {
+      let err: unknown = first
+      let retried = false
+      try {
+        if (this.recover(first)) {
+          retried = true
+          write()
+          console.warn(`awd-canvas: board ${boardId}: storage was repaired after "${(first as Error).message}"; earlier history may be lost`)
+          this.announce(boardId, true, `Saving works again (storage was repaired after: ${(first as Error).message})`)
+          return
+        }
+      } catch (second) {
+        err = second
+      }
+      const message = (err as Error)?.message ?? String(err)
+      console.error(`awd-canvas: board ${boardId}: could not save${retried ? ' (after a repair attempt)' : ''}: ${message}`)
+      this.unsaved.add(boardId)
+      this.announce(boardId, false, message)
+      throw err
+    }
+    if (this.unsaved.delete(boardId)) this.announce(boardId, true, 'Saving works again')
+  }
+
+  private announce(boardId: string, ok: boolean, message: string) {
+    const e = { boardId, ok, message, at: new Date().toISOString() }
+    for (const fn of this.storageSubs) {
+      try {
+        fn(e)
+      } catch {
+        // a listener never breaks a save
+      }
+    }
+  }
+
+  onStorage(fn: StorageListener): () => void {
+    this.storageSubs.add(fn)
+    return () => void this.storageSubs.delete(fn)
+  }
 
   /** Rebuild a board from its log alone (a missing or torn snapshot). */
   protected rebuild(id: string): Board | null {
@@ -50,8 +104,8 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     const id = input.id ?? newId('b')
     if (this.boards.has(id)) throw new Error(`board ${id} already exists`)
     let board: Board = { id, title: input.title, kind: input.kind, seq: 0, createdAt: now, updatedAt: now, items: {}, meta: input.meta }
+    this.save(id, () => this.persist(board))
     this.boards.set(id, board)
-    this.persist(board)
     if (input.items?.length) {
       this.apply(id, input.items.map((item) => ({ kind: 'add', item }) as Op), author, `create: ${input.title}`)
       board = this.boards.get(id)!
@@ -66,9 +120,11 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     const { board: next, before } = applyOps(board, ops, author, now)
     const change: Change = { seq: board.seq + 1, ts: now, author, boardId: id, ops, before, note }
     const updated: Board = { ...next, seq: change.seq }
+    this.save(id, () => {
+      this.appendLog(change)
+      this.persist(updated)
+    })
     this.boards.set(id, updated)
-    this.appendLog(change)
-    this.persist(updated)
     for (const fn of this.subs.get(id) ?? []) {
       try {
         fn(change)
@@ -83,8 +139,8 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     const board = this.boards.get(id)
     if (!board) throw new NotFound(`board ${id} not found`)
     const updated = { ...board, ...patch, updatedAt: new Date().toISOString() }
+    this.save(id, () => this.persist(updated))
     this.boards.set(id, updated)
-    this.persist(updated)
     return updated
   }
 

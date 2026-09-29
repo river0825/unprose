@@ -73,3 +73,14 @@ test('legacy boards: the whole board is one diagram of its kind', () => {
   assert.deepEqual(diagramOf(legacy, legacy.items.c), { kind: 'kanban', key: 'kanban' })
   assert.equal(diagramOf({ kind: 'freeform', items: legacy.items }, legacy.items.c), undefined)
 })
+
+test('the template route reports traces it could not draw (river0825/unprose#6)', async () => {
+  const { board: b } = (await call('POST', '/api/boards', { title: 'unresolved', kind: 'freeform' })).body
+  const t = await call('POST', `/api/boards/${b.id}/template`, {
+    kind: 'kanban',
+    content: { columns: [{ name: 'A' }], cards: [{ id: 'c', title: 'C', column: 'A', traces: [{ from: 'elsewhere/x', rel: 'groups' }] }] },
+    frame: { key: 'kb' },
+  })
+  assert.equal(t.status, 200)
+  assert.deepEqual(t.body.unresolvedTraces, [{ item: 'kb.card.c', trace: { from: 'elsewhere/x', rel: 'groups' }, reason: 'not-found' }])
+})

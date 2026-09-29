@@ -33,7 +33,9 @@ test('lint: schema errors stop a draw; the EventStorming grammar comes back as n
   assert.ok(notes.some((f) => /open hotspot/.test(f.message) && f.page?.includes('p.199')))
   const broken = lintDesign({ ...es, content: { level: 'process', events: 'nope' } })
   assert.ok(broken.some((f) => f.severity === 'error' && f.message.startsWith('events')))
-  assert.equal(lintDesign({ key: 'k', kind: 'wireframe', content: {} })[0].severity, 'info')
+  // every kind with a schema is checked offline now (river0825/unprose#9): an empty wireframe is an error
+  assert.ok(lintDesign({ key: 'k', kind: 'wireframe', content: {} }).some((f) => f.severity === 'error' && f.message.startsWith('screens')))
+  assert.equal(lintDesign({ key: 'k', kind: 'domain-story', content: {} })[0].severity, 'info', 'a kind without a schema still says so')
 })
 
 // A board after `awd design draw` of both files (the parts the proposal needs).
@@ -116,4 +118,40 @@ test('lintDesign runs the workflow linter on workflow files', async () => {
   const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../design/runner-example.workflow.yaml')
   const d = parseDesignFile(file, fs.readFileSync(file, 'utf8'))
   assert.deepEqual(lintDesign(d, file).filter((f) => f.severity === 'error'), [])
+})
+
+// ── river0825/unprose#6 #8 #9 ────────────────────────────────────────────────
+
+test('#9: kanban (and every kind with a schema) is linted offline', async () => {
+  const { lintDesign, parseDesignFile } = await import('../src/design.js')
+  const ok = parseDesignFile('/r/design/work.kanban.yaml', 'columns:\n  - { name: Backlog }\ncards:\n  - { title: A, column: Backlog }\n')
+  assert.deepEqual(lintDesign(ok), [])
+  const bad = parseDesignFile('/r/design/work.kanban.yaml', 'columns: []\ncards:\n  - { column: Backlog }\n')
+  const errors = lintDesign(bad).filter((f) => f.severity === 'error').map((f) => f.message)
+  assert.ok(errors.some((m) => m.startsWith('columns:')), errors.join(' | '))
+  assert.ok(errors.some((m) => m.startsWith('cards[0].title:')), errors.join(' | '))
+  assert.ok(!lintDesign(ok).some((f) => /no offline check/.test(f.message)))
+})
+
+test('#9: an unquoted # inside [ ] gets a hint instead of only a caret', async () => {
+  const { parseDesignFile, yamlCommentHint } = await import('../src/design.js')
+  const text = 'columns:\n  - { name: Backlog }\ncards:\n  - title: Fix\n    column: Backlog\n    labels: [PR #1113, issue #1112]\n'
+  assert.throws(() => parseDesignFile('/r/design/w.kanban.yaml', text), /line 6 has an unquoted "#" inside \[ … \].*Quote values containing #/s)
+  assert.equal(yamlCommentHint('labels: ["PR #1113", "issue #1112"]\n'), undefined, 'quoted values are fine')
+})
+
+test('#8: fields the schema does not know are warnings, not silence', async () => {
+  const { lintDesign, parseDesignFile } = await import('../src/design.js')
+  const d = parseDesignFile('/r/design/w.kanban.yaml', 'columns:\n  - { name: A }\ncards:\n  - { title: x, column: A }\n  - { title: y, column: A, link: "https://x" }\n')
+  const w = lintDesign(d).filter((f) => f.severity === 'warning').map((f) => f.message)
+  assert.deepEqual(w, ['unknown field `link` at cards[1] — it is not part of kanban and will be ignored'])
+})
+
+test('#6: a draw lists the traces it could not draw', async () => {
+  const { unresolvedReport } = await import('../src/design.js')
+  assert.deepEqual(unresolvedReport([]), [])
+  assert.deepEqual(unresolvedReport([{ item: 'kb.card.c', trace: { from: 'old/x', rel: 'groups' }, reason: 'not-found' }]), [
+    '⚠ 1 trace(s) not drawn:',
+    '  kb.card.c —groups→ old/x: target not found on the board',
+  ])
 })

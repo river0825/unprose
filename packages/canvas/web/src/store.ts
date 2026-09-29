@@ -21,6 +21,8 @@ export interface BoardStore {
   connected: boolean
   /** true while an agent is blocked in canvas_wait on this board */
   agentWatching: boolean
+  /** Set while the server cannot save this board (disk gone, permissions…); cleared when saving works again. */
+  storageError: string | null
   changes: Change[]
   toasts: Toast[]
   /** ids of items the agent touched recently, for the highlight wash */
@@ -80,6 +82,7 @@ export function useBoard(id: string): BoardStore {
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [agentWatching, setAgentWatching] = useState(false)
+  const [storageError, setStorageError] = useState<string | null>(null)
   const [changes, setChanges] = useState<Change[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [pulse, setPulse] = useState<Set<string>>(new Set())
@@ -170,6 +173,9 @@ export function useBoard(id: string): BoardStore {
           foldChange(m.change)
         } else if (m.type === 'presence') {
           if (m.author === 'agent') setAgentWatching(Boolean(m.watching))
+        } else if (m.type === 'storage') {
+          setStorageError(m.ok ? null : m.message)
+          toast(m.ok ? m.message : `Changes are not being saved: ${m.message}`, m.ok ? 'info' : 'error')
         }
       },
     })
@@ -177,7 +183,7 @@ export function useBoard(id: string): BoardStore {
       cancelled = true
       stop()
     }
-  }, [id, foldChange])
+  }, [id, foldChange, toast])
 
   const post = useCallback(
     async (ops: Op[], note: string): Promise<Change | undefined> => {
@@ -259,6 +265,7 @@ export function useBoard(id: string): BoardStore {
     error,
     connected,
     agentWatching,
+    storageError,
     changes,
     toasts,
     pulse,

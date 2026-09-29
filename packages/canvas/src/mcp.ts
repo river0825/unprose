@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { CanvasClient } from './client.js'
+import { CanvasClient, canvasOrigin, probeCanvas } from './client.js'
 import { diagramKinds } from './templates/index.js'
 import type { Author, DiagramKind, Op } from './model.js'
 
@@ -24,7 +24,7 @@ const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_ite
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
 export function createMcpServer(client = new CanvasClient()): McpServer {
-  const server = new McpServer({ name: 'awd-canvas', version: '0.1.0' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
+  const server = new McpServer({ name: 'awd-canvas', version: '0.2.0' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
 
   server.registerTool(
     'canvas_list_boards',
@@ -162,6 +162,21 @@ export function createMcpServer(client = new CanvasClient()): McpServer {
 }
 
 export async function runMcp(): Promise<void> {
+  // Fail with the reason, not as a bare "Connection closed" in the agent (river0825/unprose#5).
+  const raw = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400'
+  let base: string
+  try {
+    base = canvasOrigin(raw)
+  } catch {
+    process.stderr.write(`awd-canvas MCP: AWD_CANVAS_URL "${raw}" is not a URL. Set it to the canvas address, e.g. http://localhost:4400 or https://canvas.example.com\n`)
+    process.exit(2)
+  }
+  const probe = await probeCanvas(base)
+  if (!probe.ok) {
+    process.stderr.write(`awd-canvas MCP: cannot reach ${base} (${probe.reason}). Start the canvas (\`npm start\`) or set AWD_CANVAS_URL to where it runs.\n`)
+    process.exit(1)
+  }
+  process.env.AWD_CANVAS_URL = base
   const server = createMcpServer()
   await server.connect(new StdioServerTransport())
 }

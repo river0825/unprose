@@ -18,9 +18,16 @@ and annotate, and a rule set that keeps it honest:
 
 - MCP server `awd-canvas` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
   `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
-  It needs a running canvas server: `npm start` (or `node packages/canvas/dist/cli.js serve --port 4400`)
-  in the plugin/repo directory, after `npm install && npm run build`.
-- CLI `awd` (`node packages/cli/bin/awd.js …`):
+  It needs a running canvas server. Start it in the background from the plugin (or repo) root — two
+  directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400,
+  boards in `~/.awd/boards`). No install or build is needed: the plugin ships its runtime in `dist/`.
+
+**Canvas somewhere else** (a tunnel, another machine, `https://canvas.example.com`): set
+`AWD_CANVAS_URL` to its address before the agent starts — a pasted board link (`…/b/<id>`) works too, the
+origin is taken from it. If the MCP server cannot reach the canvas it exits with
+`awd-canvas MCP: cannot reach <url> (<reason>)`; fix the URL or start the canvas, then restart the agent.
+For the CLI, pass `--canvas <url>`.
+- CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).
   - `awd design lint <file>` — schema + EventStorming grammar (with book page references).

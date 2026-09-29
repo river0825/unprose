@@ -1,7 +1,7 @@
 // `@awd/canvas/diagrams` — the pure diagram layer (docs/diagrams.md): content schemas with stable element
 // ids, the EventStorming grammar check, and the EventStorming → story map proposer. No node builtins, so
 // the CLI and the web share it.
-export { slugify, idAllocator, parseTraceRef, DIAGRAM_KEY, TRACE_LABEL, type Trace, type TraceRel } from './ids.js'
+export { slugify, idAllocator, parseTraceRef, DIAGRAM_KEY, TRACE_LABEL, TRACE_RELS, traceSchema, type Trace, type TraceRel } from './ids.js'
 export {
   eventStormingSchema,
   normalizeEventStorming,
@@ -23,3 +23,4 @@ export { userStoryMapSchema, normalizeUserStoryMap, type UserStoryMapContent, ty
 export { checkEventStorming, openHotspotCount, type GrammarFinding, type GrammarRule } from './grammar.js'
 export { proposeStories, type StoryCandidate, type StoryProposal, type ProposeOptions } from './proposeStories.js'
 export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSpec, type DiagramInfo, type DiagramFrameKind } from '../model.js'
+export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'

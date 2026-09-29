@@ -46,14 +46,20 @@ content is the template's schema (zod-validated), extended with **stable element
   `key:` stays the run-key template, and `awd design lint` runs `awd lint` on it. `--at x,y` places a new frame.
 - Every element has `id` (optional in the file; default = slug of its text). References between
   elements use ids; a text reference still works when unambiguous (older content).
-- `traces: [{ from: '<diagram key>/<element id>', rel: 'derived-from' | 'groups' | 'shows' }]` on any
-  element points into another diagram (usually on the same board). Drawn as dotted trace wires
-  (`role: 'trace'`, label 來自 / 組成 / 畫面), never as flow.
+- `traces: [{ from: '<diagram key>/<element id>' | '<diagram key>', rel: 'derived-from' | 'groups' | 'shows' | 'relates' }]`
+  on any element points at an element of another diagram (usually on the same board), at an element of its
+  own diagram, or — with just `'<diagram key>'` — at a whole diagram (its frame; e.g. a kanban card standing
+  for a sub-board). `relates` (相關) is the general link when none of the others fits. Drawn as dotted trace
+  wires (`role: 'trace'`, label 來自 / 組成 / 畫面 / 相關), never as flow. A target is found by
+  `data.element`, else by the id convention `<key>.<role>.<element id>` (items drawn before a template set
+  `data.element`); `awd design draw` lists every trace it could not draw instead of dropping it.
 - `awd design draw <file> --board <id | title:…> [--canvas URL]` draws or refreshes the frame. A redraw keeps
   what the person placed, keeps receipts, removes stale items **inside that frame only**, and keeps items
   holding a pending proposal until the file explains them (the workflow redraw rules, scoped to the frame).
-- `awd design lint <file>` validates the schema and the diagram's grammar (§3); the board shows the same
-  findings on the frame.
+- `awd design lint <file>` validates every kind that has a schema, offline (EventStorming also gets its grammar,
+  §3; the board shows the same findings on the frame). Fields the schema does not know are warnings
+  (`unknown field \`x\` at cards[2]`), on lint and on draw, instead of being dropped silently. A YAML parse
+  error caused by an unquoted `#` inside `[ … ]` says so (quote values containing `#`).
 - Board meta records the project: `meta.project = { root: <abs repo root> }`, and per frame the files
   snapshot as for workflows (`meta.diagrams[<key>] = { source, files }`).
 

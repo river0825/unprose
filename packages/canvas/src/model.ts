@@ -99,6 +99,8 @@ export type WsMessage =
   | { type: 'hello'; board: Board }
   | { type: 'change'; change: Change }
   | { type: 'presence'; author: Author; at: string; watching: boolean }
+  /** Saving this board failed (`ok: false`, keep showing it) or works again (`ok: true`). */
+  | { type: 'storage'; ok: boolean; message: string; at: string }
 
 /** Default sticky colour per event-storming role — the book's palette (hotspots are purple, p.307). */
 export const EVENT_STORMING_COLORS: Record<string, ColorToken> = {

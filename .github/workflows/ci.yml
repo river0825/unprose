@@ -1,0 +1,38 @@
+# Build and test on Linux and macOS, and keep releases honest (river0825/unprose#2, #3).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci                # fails if the lockfile misses a platform (e.g. fsevents on Linux)
+      - run: npm run build
+      - run: npm test              # includes scripts/check-version.mjs
+
+  release-version:
+    # A PR that changes what ships (packages/, skills/, plugin files) must bump the version, or
+    # `claude plugin update` keeps the old code. See docs/releasing.md.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0           # tags are needed to compare with the last release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-version.mjs --since-tag
