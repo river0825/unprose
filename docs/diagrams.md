@@ -108,7 +108,9 @@ column, labels? }`. Adapters now: **canvas kanban frame** (the existing kanban /
 kanban frame and passed to the server by id, so two kanbans with a "Backlog" each never mix) and a **text
 file** (`design/<key>.tasks.md`: `<!-- columns: … -->` under the title, then one `##` per card with
 `<!-- card: <id> · column: <name> · labels: … -->` and an optional `stories:` line; the rest is the description). Trello, Jira, Linear later — same port. A card's
-`stories` are `groups` traces back to the story map.
+`stories` are `groups` traces back to the story map. In a kanban diagram file (`design/<name>.kanban.yaml`) a
+card takes `stories: ['<story map key>/<story id>']` (→ `groups` traces) and/or explicit `traces`, and every card
+carries `data.element` (its `id`, else the slug of its title) so other diagrams can trace to it.
 
 ## 7. Board triggers point at a frame key
 

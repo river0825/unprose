@@ -3,11 +3,11 @@
 // element id once, so the renderer, the grammar check and the story proposer read the same model.
 // Pure and builtin-free (the web imports it for the grammar panel).
 import { z } from 'zod'
-import { idAllocator, type Trace } from './ids.js'
+import { idAllocator, traceSchema, type Trace } from './ids.js'
 
 const ref = z.string()
 const refs = z.union([ref, z.array(ref)])
-const trace = z.object({ from: z.string(), rel: z.enum(['derived-from', 'groups', 'shows']) })
+const trace = traceSchema
 const traces = z.array(trace).optional()
 
 export const eventStormingSchema = z.object({

@@ -1,5 +1,6 @@
 // Element ids inside a diagram file (docs/diagrams.md §2): explicit `id`, else the slug of the text.
 // No node builtins here, so the web can import it too.
+import { z } from 'zod'
 
 export function slugify(s: string): string {
   return s
@@ -31,6 +32,9 @@ export interface Trace {
   from: string
   rel: TraceRel
 }
+/** A trace in a diagram file: `{ from: '<diagram key>/<element id>', rel }`. */
+export const traceSchema = z.object({ from: z.string(), rel: z.enum(['derived-from', 'groups', 'shows']) })
+
 export const TRACE_LABEL: Record<TraceRel, string> = { 'derived-from': '來自', groups: '組成', shows: '畫面' }
 
 export function parseTraceRef(ref: string): { key: string; element: string } | undefined {

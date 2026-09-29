@@ -2,9 +2,9 @@
 // cut lines top → bottom. Stories carry acceptance criteria and trace links (usually derived-from an
 // EventStorming command). Pure and builtin-free.
 import { z } from 'zod'
-import { idAllocator, type Trace } from './ids.js'
+import { idAllocator, traceSchema, type Trace } from './ids.js'
 
-const trace = z.object({ from: z.string(), rel: z.enum(['derived-from', 'groups', 'shows']) })
+const trace = traceSchema
 
 export const userStoryMapSchema = z.object({
   activities: z

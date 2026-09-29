@@ -190,8 +190,15 @@ Nodes and agents may carry a `detail` object; the template copies it to `item.da
 { "columns": [{ "name": "Backlog" }, { "name": "In Progress", "wip": 3 }, { "name": "Done" }],
   "cards": [
     { "id": "c-happy", "title": "Upload contacts CSV", "column": "Backlog", "size": "M", "labels": ["ST:ReadyForAgent"], "assignee": "@planner" },
-    { "title": "Flaky date parsing", "column": "In Progress", "size": "S", "description": "…" } ] }
+    { "title": "Flaky date parsing", "column": "In Progress", "size": "S", "description": "…" },
+    { "id": "release-1", "title": "Release 1", "column": "Backlog", "stories": ["studio-story-map/receipts"],
+      "traces": [{ "from": "studio-es/ask-ai", "rel": "derived-from" }] } ] }
 ```
+
+Every card and column carries `data.element` (the card's `id`, else the slug of its title; a column's slug) so
+traces from other diagrams can point at it. `traces` on a card are drawn as dotted trace wires when the target
+is on the board; `stories: ['<story map key>/<story id>']` is shorthand for `groups` traces (組成) and is also
+kept as `data.stories` for the WorkTracker adapter (docs/diagrams.md §6).
 
 Columns are vertical `lane` items (`role: column`, `data.wip` optional) side by side; cards are `card` items (`role: card`, `data.{labels,size,assignee,description}`) stacked inside, `parent` = the column. Ids are `kb.column.<slug>-<hash>` and `kb.card.<id or title>`; a card with an explicit `id` keeps a stable item id across renders. The web UI shows each column's card count against its WIP limit (`4/3 over` — text, not colour alone) and stacks cards top → bottom by their `y`, so a dropped card snaps into the pile.
 

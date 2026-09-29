@@ -5,6 +5,7 @@
 import { z } from 'zod'
 import type { Board, Item } from '../model.js'
 import { make, offsetAll, stableId, type RenderOpts } from './util.js'
+import { idAllocator, slugify, traceSchema, type Trace } from '../diagrams/ids.js'
 
 export const CARD_SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const
 
@@ -21,6 +22,10 @@ export const kanbanSchema = z.object({
         assignee: z.string().optional(),
         description: z.string().optional(),
         order: z.number().optional(),
+        /** Links into other diagrams (docs/diagrams.md §2), e.g. `{ from: 'studio-story-map/receipts', rel: 'groups' }`. */
+        traces: z.array(traceSchema).optional(),
+        /** Shorthand for the stories this card groups: `'<story map key>/<story id>'` → a `groups` trace (§6). */
+        stories: z.array(z.string()).optional(),
       }),
     )
     .default([]),
@@ -52,6 +57,9 @@ export function renderKanban(raw: KanbanContent, opts: RenderOpts = {}): Item[] 
   const items: Item[] = []
   const lanes: Item[] = []
 
+  // Element ids (what a trace in another diagram points at): the card's `id`, else the slug of its title.
+  const alloc = idAllocator()
+  const elementOf = new Map(c.cards.map((card) => [card, alloc(card.id, card.title, 'card')]))
   const known = new Set(c.columns.map((col) => col.name))
   // cards naming an unknown column go to the first one rather than vanishing
   const columnOf = (name: string) => (known.has(name) ? name : c.columns[0].name)
@@ -71,6 +79,10 @@ export function renderKanban(raw: KanbanContent, opts: RenderOpts = {}): Item[] 
       if (card.size) data.size = card.size
       if (card.assignee) data.assignee = card.assignee
       if (card.description) data.description = card.description
+      data.element = elementOf.get(card)
+      const traces: Trace[] = [...(card.traces ?? []), ...(card.stories ?? []).map((from) => ({ from, rel: 'groups' as const }))]
+      if (traces.length) data.traces = traces
+      if (card.stories?.length) data.stories = card.stories
       items.push(
         make(
           { id: cardId(scope, card.id ?? card.title), type: 'card', x: x + COLUMN_PAD, y, w: CARD_W, h, text: card.title, color: 'white', role: 'card', parent: laneId, order: k, data },
@@ -80,7 +92,7 @@ export function renderKanban(raw: KanbanContent, opts: RenderOpts = {}): Item[] 
       y += h + CARD_GAP
     })
     const laneH = Math.max(COLUMN_MIN_H, y + COLUMN_PAD)
-    lanes.push(make({ id: laneId, type: 'lane', x, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: 'column', color: 'grey', order: ci, data: col.wip ? { name: col.name, wip: col.wip } : { name: col.name } }, now))
+    lanes.push(make({ id: laneId, type: 'lane', x, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: 'column', color: 'grey', order: ci, data: { name: col.name, element: slugify(col.name) || `column-${ci + 1}`, ...(col.wip ? { wip: col.wip } : {}) } }, now))
   })
   // Every column is as tall as the tallest one so they read as one board.
   const tallest = Math.max(...lanes.map((l) => l.h))
