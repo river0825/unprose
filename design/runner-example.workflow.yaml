@@ -1,5 +1,5 @@
 # A small workflow to show how the runner works (docs/workflow.md): triage one incoming issue.
-# Draw: awd design draw design/runner-example.workflow.yaml --board "title:Unprose — Studio 設計"
+# Draw: awd design draw design/runner-example.workflow.yaml --board "title:Runner"
 # Run:  awd run design/runner-example.workflow.yaml --worker fake   (then POST an issue to /hooks/issue)
 name: issue-triage
 key: "{{ event.data.issue }}"          # one run per issue

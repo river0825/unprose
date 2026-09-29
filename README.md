@@ -1,90 +1,145 @@
 # Unprose
 
-**A shared visual canvas where people and AI agents talk designs through.**
-A plugin for Claude Code, Codex and any MCP-capable agent.
+**Talk designs through with your AI agent on a shared board, not in walls of text.**
 
-Long prose is a poor medium for aligning with an agent: you cannot point at a sentence and say "this
-part, but different", and you cannot see what the agent understood. Unprose puts the conversation on a
-board — EventStorming, story maps, kanban, wireframes, agent workflows — where you comment on an item,
-drag a wire, or edit a line, and the agent answers in the thread and changes the files behind it.
+[繁體中文](README.zh-TW.md) · Works with Claude Code, Codex and any MCP agent · Apache-2.0
 
-## The design chain
+![Ask about an item on the board; the agent answers in the thread and updates the diagram](docs/images/demo.gif)
 
-```
-EventStorming ──(events, flow)──▶ User Story Map ──(stories grouped)──▶ Work tracker (kanban · text file · …)
-  discuss how the system works       decide the scope (release lines)       track the work
-                                              │
-                                              └──▶ Wireframes: what a story looks like
-Domain Storytelling (optional way in) · Workflows (agent pipelines as data)
-```
+## Why
 
-Several diagrams share one board as **diagram frames**, linked by trace wires (derived from / groups /
-shows), so "which event does this story come from?" is one click away.
+- Long text is hard to align on. You can't point at a sentence and say "this part".
+- On a board you can. Select a box, a line or a whole diagram, and ask.
+- The agent edits the design files in your repo. You decide what changes.
 
-## How it works
+## Try it in 5 minutes
 
-- **Files are the truth.** Every diagram is a file in your repo — `design/<name>.es.yaml`,
-  `design/<name>.story-map.yaml`, a workflow yaml … The board is a projection; redraws keep your layout.
-- **The AI is the editor, you direct.** Comment on anything (an item, a selection, lines of a file, the
-  whole board); with Studio running, the comment reaches an agent session that answers in the thread.
-- **Edits on the canvas are proposals.** A wire you drag, text you change in the source dialog, a story
-  proposed from EventStorming — the agent reviews it with you, then applies it to the file.
-- **Read receipts.** Every message shows Sent / Seen by agent / Agent is working / Needs you.
-- **EventStorming per the book** (*Introducing EventStorming*): colours, the command → system → event →
-  policy grammar, left → right in time, a grammar check with page references.
-
-## Quick start
+You need **Node.js 20+**, **git**, and **Claude Code** (other agents: see below).
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
 npm install && npm run build
-npm start                         # canvas → http://localhost:4400
-node packages/cli/bin/awd.js design draw design/studio.es.yaml --board "title:My first board"
-node packages/cli/bin/awd.js design draw design/studio.story-map.yaml --board "title:My first board"
+npm start                     # the board opens at http://localhost:4400
 ```
 
-Open the printed URL, select an item, and ask something in the **Chat** tab.
+Keep that running. In a second terminal, connect Claude Code to the board:
 
-Use it from your agent:
+```bash
+claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"
+```
 
-- **Claude Code plugin:** `/plugin marketplace add river0825/unprose` then `/plugin install unprose@unprose`
-  (skill + the `awd-canvas` MCP server). See [docs/agents-setup.md](docs/agents-setup.md).
-- **Codex / other MCP clients:** register `node <unprose>/scripts/mcp.mjs` as an MCP server and point
-  the agent at [AGENTS.md](AGENTS.md).
-- **Studio** (optional: agent sessions per board, in herdr terminal panes):
-  `node packages/cli/bin/awd.js studio --project <your repo>` — see [docs/studio.md](docs/studio.md).
+That's it. Open Claude Code in any project and follow **Your first session** below.
 
-## Screenshots
+<details>
+<summary><b>Other ways to connect</b> (Claude Code plugin, Codex, other MCP clients)</summary>
 
-_To add:_ the Studio example board (EventStorming + story map + workflow frames) · the Inspector on a
-workflow step · a chat with read receipts · a proposed wire change · the source dialog with line comments.
+- **Claude Code plugin** (adds the Unprose skill too):
+  ```
+  /plugin marketplace add river0825/unprose
+  /plugin install unprose@unprose
+  ```
+  Then run `npm install && npm run build` once inside the installed plugin folder.
+- **Codex:** add to `~/.codex/config.toml`, and copy [AGENTS.md](AGENTS.md) into your project:
+  ```toml
+  [mcp_servers.awd-canvas]
+  command = "node"
+  args = ["/path/to/unprose/scripts/mcp.mjs"]
+  env = { AWD_CANVAS_URL = "http://localhost:4400" }
+  ```
+- **Any MCP client:** a stdio server, command `node`, argument `/path/to/unprose/scripts/mcp.mjs`,
+  environment `AWD_CANVAS_URL=http://localhost:4400`.
 
-## What's inside
+Details and caveats: [docs/agents-setup.md](docs/agents-setup.md).
+</details>
 
-| Package | What |
+## Your first session
+
+**1. Ask your agent for a diagram.**
+
+> Draw an EventStorming of our signup flow in Unprose.
+
+The agent writes `design/signup.es.yaml` in your repo and draws it on the board.
+
+**2. Open the board.** Go to <http://localhost:4400> and pick the board the agent created.
+Events, commands, systems and policies read left to right in time.
+
+![The signup flow as an EventStorming board](docs/images/step2-board.png)
+
+**3. Ask about one item.** Click a box, open the **Chat** tab, type your question, press **Ask AI**.
+
+![Selecting "Send verification email" and asking a question in the Chat tab](docs/images/step3-comment.png)
+
+**4. The agent replies and edits the file.** The answer appears in the same thread. When the change
+is agreed, the agent updates `design/signup.es.yaml` and the board redraws. Here it added
+**Resend email**.
+
+![The agent's reply in the thread, and the new "Resend email" command on the board](docs/images/step4-reply.png)
+
+Every message shows where it is: **Sent**, **Seen by agent**, **Agent is working…**, or
+**Needs you**.
+
+![A question with "Agent is working…" under it](docs/images/receipts.png)
+
+## Diagrams
+
+Each diagram is one file in `design/`. Several can share one board and link to each other.
+
+| Diagram | Use it to | File | Preview |
+|---|---|---|---|
+| EventStorming | discuss how the system behaves, step by step | `design/<name>.es.yaml` | <img src="docs/images/thumb-es.png" width="260" alt="EventStorming"> |
+| Story map | decide what to build first (release lines) | `design/<name>.story-map.yaml` | <img src="docs/images/thumb-story-map.png" width="150" alt="Story map"> |
+| Kanban | track the work | `design/<name>.kanban.yaml` | <img src="docs/images/thumb-kanban.png" width="260" alt="Kanban"> |
+| Wireframe | sketch a screen | `design/<name>.wireframe.yaml` | <img src="docs/images/thumb-wireframe.png" width="260" alt="Wireframe"> |
+| Workflow | describe an agent pipeline you can run | `<name>.workflow.yaml` | <img src="docs/images/thumb-workflow.png" width="260" alt="Workflow"> |
+
+More views of the same ideas:
+
+| | |
 |---|---|
-| `packages/canvas` | the canvas server (HTTP + WebSocket), diagram templates, the MCP server, the web UI |
-| `packages/core` | workflow schema, pure reducer, expressions, lint (IO-free) |
-| `packages/runtime` | the event-driven workflow runtime, workers (Claude Code, herdr, Anthropic API), Studio |
-| `packages/cli` | `awd` — lint · graph · run · test · design · studio · reflect |
+| ![Inspector](docs/images/inspector.png) | ![Proposed wire change](docs/images/wire-proposal.png) |
+| **Inspector:** everything about one step: who runs it, its prompt, its outcomes. | **Proposals:** drag a wire; the agent reviews the change with you before editing the file. |
 
-Docs: [diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
-[workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md).
+![Source dialog with syntax highlighting and a comment on lines 13–15](docs/images/source-dialog.png)
+**Comment on any lines** of a file or prompt, in a large view with syntax highlighting.
+
+## How it works
+
+```
+  design/*.yaml  ──draw──▶  board  ──you comment──▶  agent
+        ▲                                              │
+        └──────────────── edits the file ◀─────────────┘
+```
+
+1. **Files are the truth.** The board is drawn from files in your repo. Every change is a normal git diff.
+2. **The agent edits, you direct.** You ask and decide; the agent does the typing.
+3. **Changes on the board are proposals.** A dragged wire or an edited line waits for your OK.
+4. **Your layout stays.** Redrawing keeps where you put things.
+
+## Glossary
+
+| Word | Meaning |
+|---|---|
+| **Board** | A page on the canvas. It can hold several diagrams. |
+| **Diagram frame** | One diagram on a board, drawn from one file. |
+| **Trace** | A dotted link between diagrams, e.g. "this story comes from that command". |
+| **Proposal** | A change you made on the board that is not in the file yet. |
+| **Studio** | Optional. Gives each board its own agent session, so plain comments get answers. See [docs/studio.md](docs/studio.md). |
+| **herdr** | The terminal workspace Studio uses to run agent sessions in panes. [herdr.dev](https://herdr.dev) |
+| **awd** | The command-line tool: `node packages/cli/bin/awd.js design draw …`, `lint`, `run`, `studio`. |
 
 ## Status
 
-Early and moving fast. Working: diagram frames with files, EventStorming and story maps, workflows,
-Studio (one agent session per board, forks for concurrent requests), proposals, read receipts.
-Next: more diagram kinds (sequence, state, C4, ER), Trello / Jira / Linear adapters for the work
-tracker, authentication for shared canvases, a hosted option.
+Early and moving fast. Working today: EventStorming, story maps, kanban, wireframes and workflows as
+files; chat on any item, selection, line or board; proposals; read receipts; Studio.
+Next: more diagram kinds, Trello / Jira / Linear sync, sign-in for shared boards, a hosted option.
 
-> The canvas server has **no authentication** yet. Keep it on localhost or behind an access proxy.
+More reading: [diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
+[workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md).
 
-## 繁體中文
+## Safety
 
-Unprose 是協助人類與 AI 溝通的工具，給開發者，以及想利用 AI agent 做設計討論的人。把討論從一大段文字
-搬到畫面上：EventStorming 討論流程、User Story Mapping 決定範圍、Kanban 管理進度、Wireframe 說明頁面。
-每張圖背後都是 repo 裡的一個檔案；AI 負責修改，人下指導棋，畫面上的修改都先變成提案，討論後才改檔。
+The board has **no sign-in yet**. Anyone who can reach it can read and edit it. Keep it on
+`localhost`, or put an access proxy in front of it before sharing.
 
 ## License
 
