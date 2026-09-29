@@ -55,7 +55,7 @@ function titleOf(file: string): string | undefined {
   return m?.[1].trim()
 }
 
-/** Resolve a static asset referenced from a doc (images under docs/ or example/). */
+/** Resolve a static asset referenced from a doc (images under docs/, or the private example/ folder when present). */ // export-public: allow
 export function resolveDocAsset(docsDir: string, rel: string): string | undefined {
   const root = path.dirname(docsDir)
   const safe = path.normalize(rel).replace(/^(\.\.[/\\])+/, '')

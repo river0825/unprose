@@ -1,6 +1,6 @@
 # card-pipeline — the coordinator skill as data
 
-The original lives in [`example/card-pipeline-coordinator/`](../../example/card-pipeline-coordinator/):
+The original was a Claude Code skill (not included here):
 a 37 KB `SKILL.md`, a 100 KB `reference.md`, and ~7 000 lines of Python that
 drifted apart one incident at a time. This folder is the same pipeline as a
 **19-step `workflow.yaml`** with **four agents** you can lint, draw, replay and
@@ -175,5 +175,5 @@ Model aliases in the yaml (`opus`, `sonnet`) are resolved by the worker.
   must produce. This is the test to write after an incident: record the event
   stream, assert the decision, keep it forever.
 
-Every incident in `example/workflow-issue-in-skill/day-02-*.md` becomes one of
+Every incident from the original pipeline's post-mortems becomes one of
 these instead of another paragraph.

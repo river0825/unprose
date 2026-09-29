@@ -29,7 +29,7 @@
 | 5 | **問 agent 一句話要繞路** | 右鍵 / 長按項目 → 選單：「加註解」「問 agent」「改顏色」「刪除」；「問 agent」= 建 comment + 立即 handoff。 | UI |
 | 6 | **切視窗才看得到圖** | `canvas_create_board` 回傳後 agent 直接 `canvas_open`（MCP 描述改成預設開啟）；board URL 支援 `?focus=<itemId>`，agent 回覆 comment 時給帶 focus 的連結。 | MCP / UI |
 | 7 | **從 workflow.yaml 到 canvas 要兩步** | `awd graph workflow.yaml --canvas [url]` 一步建立/更新 workflow board（deterministic id → 重跑即更新）。 | CLI |
-| 8 | **啟動要記三個指令** | root `npm start` 同時起 canvas + workflow runtime（`concurrently` 或簡單 node script）；`deploy/` 的 launchd 已覆蓋常駐。 | root |
+| 8 | **啟動要記三個指令** | root `npm start` 同時起 canvas + workflow runtime（`concurrently` 或簡單 node script）；常駐見 ARCHITECTURE.md §5 自架。 | root |
 | 9 | **change feed 混在一起** | feed 可切「只看 agent / 只看你」；點一筆 → 定位並閃一下（已有）。 | UI |
 | 10 | **Board 標題不能改** | header 標題可點編輯 → `PUT /api/boards/:id`。 | UI |
 | 11 | **鍵盤操作不完整**（Dragging Movements 準則） | 方向鍵移動選取（10px / Shift 50px）、Tab 在項目間移動焦點、`?` 顯示快捷鍵表。 | UI |
@@ -56,7 +56,7 @@
 
 ## 下一輪（從 dogfooding 的 backlog 與實測來的）
 
-- comment thread 摺疊與已讀狀態（`docs/backlog.md` #3；`data.seenBy` 已存在，UI 還沒用）
+- comment thread 摺疊與已讀狀態（`data.seenBy` 已存在，UI 還沒用）
 - 選取項目可編輯文字 / 連線可改標籤、改端點（backlog #2、#4）
 - 項目與文字可 resize（backlog #5）
 - Kanban board 在 `on: board` trigger 訂閱時 header 常駐「Agent is watching」——presence 應該分辨「runtime 在訂閱」與「agent 在等你」

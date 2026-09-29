@@ -22,7 +22,7 @@ packages/canvas/
 npm install
 npm run build -w @awd/canvas          # → packages/canvas/dist
 node packages/canvas/dist/cli.js serve --port 4400 --dir ./boards   # http://localhost:4400
-node packages/canvas/dist/cli.js demo  # seven sample boards (one per kind) drawn from example/card-pipeline-coordinator
+node packages/canvas/dist/cli.js demo  # seven sample boards (one per kind) drawn from the card-pipeline example
 ```
 
 `AWD_CANVAS_DIR` sets the board directory, `AWD_CANVAS_URL` tells the MCP server / CLI where the server is (default `http://localhost:4400`). If `packages/canvas/web/dist` exists it is served at `/` and `/b/:id`; otherwise a plain page lists the boards.

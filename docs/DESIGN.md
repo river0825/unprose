@@ -5,7 +5,7 @@ Two products in one monorepo, sharing one idea: **the process is data, the agent
 1. **`awd` workflow runtime** — an event-driven runtime where a *skill* is a small graph you can draw, not a 1,500-line SKILL.md. External event in → deterministic script, or AI call, or wait-for-human → event out.
 2. **`awd-canvas`** — a Miro-like board where an agent lays out its thinking as diagrams (Event Storming, user story map, user journey, wireframe, the workflow graph itself), the human moves/annotates, and the agent sees the diff and reacts.
 
-The examples in `example/` are the *before* picture. `card-pipeline-coordinator/SKILL.md` is 37 KB of prose plus 7 K lines of Python that drifted apart; `workflow-issue-in-skill/` is the diagnosis (rules with no compiler, invariants smeared across five copies, review as the only oracle). This repo is the *after*: the same pipeline expressed as `workflow.yaml` + a reducer + golden tests.
+The *before* picture is a real card-pipeline coordinator written as a Claude Code skill: a 37 KB `SKILL.md` plus 7 K lines of Python that drifted apart; three post-mortems are the diagnosis (rules with no compiler, invariants smeared across five copies, review as the only oracle). This repo is the *after*: the same pipeline expressed as `workflow.yaml` + a reducer + golden tests.
 
 ---
 

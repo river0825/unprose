@@ -17,7 +17,7 @@ Below, `<unprose>` is the absolute path of that checkout.
 (`.claude-plugin/marketplace.json`):
 
 ```
-/plugin marketplace add <owner>/unprose
+/plugin marketplace add river0825/unprose
 /plugin install unprose@unprose
 ```
 

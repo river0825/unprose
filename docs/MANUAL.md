@@ -15,7 +15,7 @@
 ### 一次起兩個服務（開發用）
 
 ```bash
-cd ~/Documents/agent-workflow-diagram
+# 在 repo 根目錄
 npm install && npm run build      # 第一次，或改了程式之後
 npm start                         # canvas :4400 + 範例 workflow :4311，Ctrl-C 一起停
 npm run demo                      # 建 6 個示範 board + 把 workflow.yaml 畫到白板
@@ -23,32 +23,9 @@ npm run demo                      # 建 6 個示範 board + 把 workflow.yaml �
 
 環境變數：`CANVAS_PORT`、`AWD_PORT`、`AWD_WORKER`（預設 `fake`，不呼叫模型）。
 
-### 常駐（launchd + Cloudflare tunnel）
+### 常駐與對外
 
-三個 plist 在 `deploy/`：`dev.unprose.awd-canvas`、`dev.unprose.awd-workflow`、`dev.unprose.cloudflared-awd`。**這一步要在你自己的終端跑**（Claude Code 的 shell 接不到 launchd 的 GUI domain）：
-
-```bash
-# 先停掉手動起的背景程序，避免 port 衝突
-pkill -f 'canvas/dist/cli.js serve'; pkill -f 'bin/awd.js run'; pkill -f cloudflared-awd.yaml
-for s in awd-canvas awd-workflow cloudflared-awd; do
-  cp ~/Documents/agent-workflow-diagram/deploy/dev.unprose.$s.plist ~/Library/LaunchAgents/
-  launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.unprose.$s.plist
-done
-launchctl list | grep you        # 三個都在就對了
-```
-
-| 動作 | 指令 |
-|---|---|
-| 看 log | `tail -f ~/Library/Logs/awd/{canvas,workflow,cloudflared}-std*.log` |
-| 重啟一個 | `launchctl kickstart -k gui/$(id -u)/dev.unprose.awd-canvas` |
-| 停掉一個 | `launchctl bootout gui/$(id -u)/dev.unprose.awd-canvas` |
-| 改完程式重新上線 | `npm run build` 然後 kickstart 兩個 awd 服務（tunnel 不用動） |
-
-Tunnel `awd` 的設定在 `deploy/cloudflared-awd.yaml`；加新 hostname：改那個檔 + `cloudflared tunnel route dns awd <name>.example.com` + kickstart tunnel。
-
-> `canvas.example.com` 本身沒有登入機制。對外開之前請在 Cloudflare Zero Trust → Access 加一條只允許你 email 的 policy。
-
-![部署：三個 launchd 服務、tunnel、herdr socket，與對外的兩個 hostname](diagrams/deployment.svg)
+把 canvas（`:4400`）和 runtime（`:4311`）交給 launchd（macOS）或 systemd（Linux）常駐、前面放 reverse proxy 或 tunnel、**一定要加登入**——做法與設定範例在 [ARCHITECTURE.md §5 自架](ARCHITECTURE.md)。改完程式：`npm run build`，再重啟兩個服務。
 
 ---
 
@@ -330,8 +307,8 @@ npx awd status examples/herdr-smoke/workflow.yaml --store-dir /tmp/awd-herdr    
 agent 回答時可以多帶兩個欄位（schema 不用宣告）：`remember: {…}` 只在**這張卡的 run** 裡記得（進 `state.memory.short`，replay 會重現），`learn: [{ note, tags }]` 變成 **`memory.learned` 事件**，下次同一個 agent 被叫到時 runtime 先召回（同 key 優先、再新到舊，`memory.recall` 條）放進 system prompt。細節與召回規則在 [agents.md §7](agents.md)。
 
 ```bash
-npx awd memory dev/workflow.yaml --store-dir .awd-dev            # 每個 agent 學過什麼
-npx awd memory dev/workflow.yaml planner --forget <id>           # 不再召回（事件留在 log）
+npx awd memory examples/card-pipeline/workflow.yaml             # 每個 agent 學過什麼
+npx awd memory examples/card-pipeline/workflow.yaml planner --forget <id>   # 不再召回（事件留在 log）
 ```
 
 ### 4.5 反省：失敗與 `reflect` 變成卡片
@@ -390,51 +367,10 @@ curl -s localhost:4311/api/status
 | 想從頭來 | 刪 `<store-dir>/events.ndjson`（那就是全部狀態）；白板刪 `boards/<id>.json` + `.changes.ndjson` |
 | 看流程有沒有走錯 | `awd replay wf.yaml --key <key>` 一步一步印出每個事件產生的 command |
 | Kanban header 一直顯示「Agent is watching」 | 不是 bug：`on: board` trigger 用 long-poll 訂閱那張 board，server 因此把 runtime 算成 watcher。要知道真的 agent 在不在看，看 workflow board 的 overlay |
-| `merge.sh` 拒絕合併 | 主 checkout 有未 commit 的**已追蹤**變更；先 commit（未追蹤檔不算），或手動 merge |
 | `awd reflect --to-board` 什麼都沒建 | 沒有 pattern 過門檻（預設 ≥2 次，`rule` 一次即可）；`--threshold 1` 可降；先不帶 `--to-board` 看表 |
-| 卡片 id 變成 `kb.card.dev-…` | template 會把 `dev.<slug>` 這種 id slug 化；run 的 key 與 branch（`card/<key>`）跟著用這個 id，正常 |
+| 卡片 id 變成 `kb.card.<slug>` | template 會把卡片 id slug 化；run 的 key 與 branch（`card/<key>`）跟著用這個 id，正常 |
 | workflow board 顯示 `runtime offline` | `awd graph --canvas --runtime <url>` 記的位址連不上；board 網址加 `?run=http://localhost:4313` 可以臨時改 |
-| 全部測試 | `npm test`（架構相依規則也在裡面）+ `npx awd test examples/card-pipeline/workflow.yaml` + `dev/scripts/goldens.sh` |
+| 全部測試 | `npm test`（架構相依規則也在裡面）+ `npx awd test examples/card-pipeline/workflow.yaml` |
 
 ---
 
-## 7 · 用 awd 跑 awd 自己（dogfooding）
-
-`dev/` 是這個 repo 自己的開發流程。事件來源是 canvas 上的 Kanban「agent-workflow-diagram — dev」；你只在三個 gate 動手，其餘由流程推動。詳細檔案表在 [`dev/README.md`](../dev/README.md)。
-
-![Dogfooding 迴圈：人搬卡片（三個 gate）→ plan → build → test & review → merge → reflect → 新卡片；每一站都寫回 event log 與記憶](diagrams/dogfooding-loop.svg)
-
-```
-Backlog ─[你]→ Planning ─[planner]→ Planned ─[你]→ Ready
-  → worktree → In Progress → builder → npm test → reviewer（≤3 輪 fix、可問 architect）
-  → Human Review ─[你]→ Done（merge --no-ff、移除 worktree）
-```
-
-### 啟動
-
-```bash
-node dev/scripts/seed_board.mjs                                            # 從 dev/board.json 建立/更新 Kanban（冪等，不會動你搬過的卡）
-npx awd run dev/workflow.yaml --worker claude-code --port 4313 --store-dir .awd-dev &
-npx awd graph dev/workflow.yaml --canvas --runtime http://localhost:4313    # workflow board + 即時 overlay
-```
-
-### 你要做的三件事
-
-| 拖卡片到 | 意思 | 之後會發生 |
-|---|---|---|
-| **Planning** | 決定做這張 | `card_info.sh` 讀卡片 → planner 寫計畫與驗收清單（或回 `needs-human` 附問題）→ 卡片自己到 **Planned** |
-| **Ready** | 計畫可以 | 開 `.worktrees/<card>` + branch `card/<card>` → 卡片到 **In Progress** → builder 在 worktree 裡做（`--permission-mode acceptEdits`）→ `npm test` 當 gate → reviewer 看 diff 對照驗收清單 → 乾淨就到 **Human Review** |
-| **Done** | 授權 merge | `git merge --no-ff`、移除 worktree、刪 branch → 卡片到 **Done** |
-
-拖回 **Backlog**（從 Planned）= 不做；拖回 **In Progress**（從 Human Review）= 退回 builder。測試失敗、builder 說 blocked、三輪 fix 還不乾淨、merge 失敗 → 卡片回 **Ready**，原因在 run 上（`awd status`）。
-
-### 看它在跑
-
-- workflow board：step 卡片亮 running / waiting / done / failed；底部抽屜有 Runs 與 Events（點 `call_ai` 看 input/output）。
-- `npx awd status dev/workflow.yaml --store-dir .awd-dev`、`npx awd memory dev/workflow.yaml --store-dir .awd-dev`（planner 學到的東西）。
-- 第一次實跑（2026-09-22）：拖「Edit the selected item」進 Planning → 73 ms 讀卡 → planner（Opus via `claude -p`）78 s 回 `ready`、學到 2 條長期記憶 → 卡片到 Planned → 等 `confirm`。worktree → builder → test → review 這段目前只在 golden（fake worker）下跑過，拖到 Ready 就是第一次真跑。
-- 失敗會回到 Kanban：加 `*.failed` 的反省 step（§4.5）後，重複的失敗自動變成 Backlog 卡。
-
-### 測試與安全
-
-`dev/scripts/goldens.sh` 跑四個 golden（happy → Human Review、confirm 拒絕、測試失敗 → park、一輪 findings → clean）；`AWD_DRY_RUN=1` 讓所有 script 只印 JSON、不碰 git / board / npm。`merge.sh` 在主 checkout 有未 commit 的變更時會拒絕。

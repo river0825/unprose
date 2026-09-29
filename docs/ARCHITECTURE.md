@@ -8,9 +8,9 @@
 
 ## 0 · 為什麼
 
-`example/card-pipeline-coordinator/` 是一條真的在跑的 Trello → GitHub 開發流程：
+起點是一條真的在跑的 Trello → GitHub 開發流程，寫成一個 Claude Code skill（card-pipeline coordinator）：
 一個 37 KB 的 `SKILL.md`、一個 100 KB 的 `reference.md`、約 7,000 行 Python。
-它一開始很好用，然後每出一次事就多一條規則。`example/workflow-issue-in-skill/` 三篇文章把病灶說得很清楚：
+它一開始很好用，然後每出一次事就多一條規則。三篇事後檢討把病灶說得很清楚：
 
 | 失敗形態（day-03） | 根本原因 | 這個 repo 的對應解法 |
 | --- | --- | --- |
@@ -506,7 +506,7 @@ workflow board 上看到的 running / waiting / done / failed 徽章與 Runs / E
 
 ![五層：driving adapters、application、domain（焦點，零 IO）、ports、driven adapters；相依方向一律向內](diagrams/ports-adapters.svg)
 
-`example/workflow-issue-in-skill/Personal Agent Harness.png` 那棵樹是六角架構畫成直的（PLAN.md §2）。這個 repo 從第三天起把它落成**目錄**：每個 package 都分成 `ports/`（介面）、`application/`（用 port 的純邏輯）、`adapters/`（真的碰外面世界的實作），加上一個 composition root（`src/index.ts`）負責把 adapter 接到 port。相依方向只有一個：**adapters → application → ports**，而且有測試在守（`test/architecture.test.ts`，每個 package 一份——任何一個 `import` 從核心指向 adapter，測試就紅）。
+原本那張「Personal Agent Harness」樹狀圖，其實是六角架構畫成直的。這個 repo 從第三天起把它落成**目錄**：每個 package 都分成 `ports/`（介面）、`application/`（用 port 的純邏輯）、`adapters/`（真的碰外面世界的實作），加上一個 composition root（`src/index.ts`）負責把 adapter 接到 port。相依方向只有一個：**adapters → application → ports**，而且有測試在守（`test/architecture.test.ts`，每個 package 一份——任何一個 `import` 從核心指向 adapter，測試就紅）。
 
 ```mermaid
 flowchart LR
@@ -619,46 +619,39 @@ flowchart LR
 
 ---
 
-## 5 · 部署：launchd + cloudflared named tunnel
+## 5 · 自架（Self-hosting）
 
-![部署：Internet → Cloudflare edge → tunnel（焦點）→ :4400 / :4311 → herdr socket](diagrams/deployment.svg)
+canvas 和 runtime 都是單一個 node 程序，放在一台常開的機器上就能用：
 
-`deploy/` 裡有四個檔：
+| 服務 | 指令 | 預設 port |
+| --- | --- | --- |
+| canvas（UI · API · MCP · 文件） | `node packages/canvas/dist/cli.js serve --port 4400 --dir boards --studio-project .` | 4400 |
+| workflow runtime | `node packages/cli/bin/awd.js run <workflow.yaml> --port 4311 --worker claude-code` | 4311 |
 
-| 檔 | 做什麼 |
-| --- | --- |
-| `cloudflared-awd.yaml` | named tunnel `awd` 的 ingress：`canvas.example.com → :4400`（canvas UI / API / 這份文件），`awd.example.com → :4311`（workflow webhook） |
-| `dev.unprose.cloudflared-awd.plist` | launchd：`cloudflared tunnel --config deploy/cloudflared-awd.yaml run` |
-| `dev.unprose.awd-canvas.plist` | launchd：`node packages/canvas/dist/cli.js serve --port 4400 --dir boards` |
-| `dev.unprose.awd-workflow.plist` | launchd：`node packages/cli/bin/awd.js run examples/card-pipeline/workflow.yaml --port 4311 --worker fake` |
+**常駐。** macOS 用 launchd（`~/Library/LaunchAgents/<label>.plist`，`KeepAlive` 為 true），Linux 用 systemd user service：
 
-還有一個**不在 tunnel 後面**的 runtime：`dev/workflow.yaml`（本 repo 自己的開發流程）跑在 `:4313`，`--worker claude-code`、`--store-dir .awd-dev`，目前是 nohup 手動起的（見 ROADMAP「下一步」）。它只需要連本機的 canvas（`on: board` trigger）與 `claude` CLI，對外不必開口。
-
-```mermaid
-flowchart LR
-  inet((Internet)) -->|https| cf[Cloudflare edge]
-  cf -->|tunnel awd| cfd[cloudflared<br/>launchd]
-  cfd -->|canvas.example.com| c4400[awd-canvas :4400]
-  cfd -->|awd.example.com| w4311[awd run :4311]
-  c4400 --- boards[(boards/)]
-  w4311 --- log[(.awd/events.ndjson)]
-  trello[Trello webhook] --> inet
+```ini
+# ~/.config/systemd/user/unprose-canvas.service
+[Service]
+WorkingDirectory=%h/code/unprose
+ExecStart=/usr/bin/env node packages/canvas/dist/cli.js serve --port 4400 --dir boards --studio-project %h/code/unprose
+Restart=always
+[Install]
+WantedBy=default.target
 ```
 
-安裝（plist 放到 `~/Library/LaunchAgents/` 再 `launchctl load`）：
-
-```bash
-npm run build
-for p in deploy/dev.unprose.*.plist; do
-  cp "$p" ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/$(basename "$p")
-done
-tail -f ~/Library/Logs/awd/*.log
+```xml
+<!-- ~/Library/LaunchAgents/dev.unprose.canvas.plist（節錄） -->
+<key>ProgramArguments</key>
+<array><string>/usr/bin/env</string><string>node</string><string>packages/canvas/dist/cli.js</string>
+       <string>serve</string><string>--port</string><string>4400</string><string>--dir</string><string>boards</string></array>
+<key>WorkingDirectory</key><string>/path/to/unprose</string>
+<key>KeepAlive</key><true/>
 ```
 
-兩件要知道的事：
+macOS 注意：repo 若放在 `~/Documents` 之類受保護的資料夾，launchd 起的 `node` 需要在「隱私權與安全性」給檔案存取權，否則程序會卡在讀檔。
 
-- workflow 服務用 `--worker fake`。它是 demo，不燒 token；要接真模型改成 `--worker claude-code`（用 launchd 跑時要確認 `claude` 在 PATH 上且已登入）。
-- **canvas 目前沒有驗證。** `canvas.example.com` 誰都能開、能改。放公網之前，至少在 Cloudflare Zero Trust 加一條 Access policy（email OTP 就夠），或給 server 加 `AWD_CANVAS_TOKEN`。這是 §6 清單裡的第一項。
+**對外。** 前面放一個 reverse proxy（Caddy / nginx）或 tunnel（例如 Cloudflare named tunnel：`canvas.example.com → :4400`、`awd.example.com → :4311`，後者給 webhook）。**canvas 目前沒有驗證**：對外開之前一定要在前面加一層登入（Cloudflare Access、proxy 的 basic auth / OIDC），否則任何人都能改 board，也能從網頁啟動 studio。
 
 > **原本以為**：先用 `cloudflared tunnel --url` 的 quick tunnel 就好。
 > **實際上**：quick tunnel 的 URL 每次重啟都變，Trello webhook 要重新註冊。named tunnel 多花五分鐘設定，換來一個固定的 hostname，之後 webhook、MCP 的 `AWD_CANVAS_URL`、書籤都不用動。
@@ -671,18 +664,14 @@ tail -f ~/Library/Logs/awd/*.log
 
 **沒做的：**
 
-- dogfooding 的 **builder → test → review → merge 這段只在 golden（fake worker）下跑過**，還沒真跑。第一張卡停在 `confirm`，拖到 Ready 就是第一次；`merge.sh` 在主 checkout 有未 commit 的已追蹤變更時會拒絕。
-- canvas 沒有驗證／授權：`canvas.example.com` 誰都能改（`docs/backlog.md` #1；dev Kanban 的第一張卡）。
-- dev runtime（`:4313`）沒有 launchd，重開機就沒了。
+- canvas 沒有驗證／授權：對外的 canvas 誰都能改（見 §5，前面一定要加登入）。
 - Kanban 被 `on: board` trigger 訂閱時 header 常駐「Agent is watching」——presence 沒分「runtime 在訂閱」與「agent 在等你」。
 - Kanban 卡片 id 會被 slug 化（`dev.x` → `kb.card.dev-x`），run 的 key 與 branch 名跟著變長。
 - `anthropic` worker 只編譯過、沒真跑（沒有 API key）；記憶與反省的 prompt 區塊只在 claude-code 上實跑過。
 - 長期記憶沒有向量檢索：召回是「同 key 優先、再新到舊、取 N 條」。筆記超過幾十條時要再看。
 - WIP cap 的時間感知（工作時段 3 / 夜間 1）與 `serial-mode` override：`concurrency` 仍是每個 key 的常數。
-- Trello / GitHub 的真實 adapter：`examples/card-pipeline/scripts/` 仍是讀 `board.json` 的假腳本（dogfooding 的 `dev/scripts/` 才是真的 git）。
+- Trello / GitHub 的真實 adapter：`examples/card-pipeline/scripts/` 仍是讀 `board.json` 的假腳本。
 - Shadow mode（PLAN.md Day 22）：「只記錄不執行」的 executor 沒有。
-
-**下一步**（詳見 [ROADMAP.md](ROADMAP.md)「下一步」）：把 builder 那段跑真的 → dev runtime 上 launchd → Cloudflare Access → 每週反省 cron → 上面兩個 Kanban 瑕疵從 Kanban 進來修。
 
 ---
 
@@ -692,7 +681,6 @@ tail -f ~/Library/Logs/awd/*.log
 docs/
   MANUAL.md          操作手冊（繁中）
   ARCHITECTURE.md    這份
-  ROADMAP.md         四個階段的規劃、驗收與下一步
   agents.md          多 agent：CrewAI 對照、runner、herdr、記憶
   reflection.md      signal → pattern → decision
   workflow.md        awd 使用手冊（yaml 參考、board trigger、live view）
@@ -715,7 +703,5 @@ examples/card-pipeline/
   workflow.yaml · agents: + agents/architect.md · roles/ · scripts/（含 board_move.sh、reflect_to_board.sh）
   fixtures/ai/ · tests/*.golden.yaml（15）· board.json
 examples/herdr-smoke/  codex → opencode 兩個 herdr pane 的最小範例
-dev/                 本 repo 自己的開發流程：workflow.yaml · agents/ · scripts/ · board.json · tests/（4 golden）
-example/             改寫前的原件（給對照用，不要改）
-deploy/              launchd plists + cloudflared ingress
 ```
+

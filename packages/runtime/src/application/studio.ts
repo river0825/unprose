@@ -252,7 +252,7 @@ export function describeProposal(p: Proposal, opts: { resume?: boolean; emitsOf?
   return [`The wire \`${b.from}\` → \`${b.to}\` (${sub(b)}) would become \`${a.from}\` → \`${a.to}\` (${pick(moved)}).`, `Yaml intent: remove ${sub(b)} from \`${b.to}.${list}\` and add ${pick(moved)} to \`${a.to}.on\`.`]
 }
 
-/** `dev/agents/planner.md:12–14`, `prompt of plan:3`. */
+/** `agents/planner.md:12–14`, `prompt of plan:3`. */
 function whereOf(a: Anchor, board: StudioBoard, target?: string): string {
   const lines = `${a.line}${a.endLine ? `–${a.endLine}` : ''}`
   if (a.file) return `${a.file}:${lines}`

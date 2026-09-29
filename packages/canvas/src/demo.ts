@@ -1,12 +1,12 @@
 // Sample content for `awd-canvas demo` — the Trello card pipeline from
-// example/card-pipeline-coordinator, drawn five ways.
+// the card-pipeline example, drawn five ways.
 import type { DiagramKind } from './model.js'
 
 export const demoBoards: Array<{ title: string; kind: DiagramKind; content: unknown; meta?: Record<string, unknown> }> = [
   {
     title: 'Card pipeline — Event Storming (process level)',
     kind: 'event-storming',
-    meta: { source: 'example/card-pipeline-coordinator/SKILL.md', level: 'process' },
+    meta: { source: 'examples/card-pipeline/workflow.yaml', level: 'process' },
     content: {
       level: 'process',
       lanes: ['Planning', 'Build', 'Review & merge'],

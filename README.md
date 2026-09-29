@@ -36,7 +36,7 @@ shows), so "which event does this story come from?" is one click away.
 ## Quick start
 
 ```bash
-git clone https://github.com/<owner>/unprose && cd unprose
+git clone https://github.com/river0825/unprose && cd unprose
 npm install && npm run build
 npm start                         # canvas → http://localhost:4400
 node packages/cli/bin/awd.js design draw design/studio.es.yaml --board "title:My first board"
@@ -47,7 +47,7 @@ Open the printed URL, select an item, and ask something in the **Chat** tab.
 
 Use it from your agent:
 
-- **Claude Code plugin:** `/plugin marketplace add <owner>/unprose` then `/plugin install unprose@unprose`
+- **Claude Code plugin:** `/plugin marketplace add river0825/unprose` then `/plugin install unprose@unprose`
   (skill + the `awd-canvas` MCP server). See [docs/agents-setup.md](docs/agents-setup.md).
 - **Codex / other MCP clients:** register `node <unprose>/scripts/mcp.mjs` as an MCP server and point
   the agent at [AGENTS.md](AGENTS.md).

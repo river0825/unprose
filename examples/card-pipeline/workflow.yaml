@@ -1,5 +1,5 @@
-# The card-pipeline coordinator (example/card-pipeline-coordinator/SKILL.md,
-# 37 KB of prose) rewritten as data. Every arrow the prose described is an
+# The card-pipeline coordinator (originally a Claude Code skill, a 37 KB
+# SKILL.md of prose) rewritten as data. Every arrow the prose described is an
 # event here; every "rule" is either a gate expression, a script, or a
 # human step. `awd graph workflow.yaml` draws it; `awd test` proves it.
 #

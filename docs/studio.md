@@ -191,7 +191,7 @@ comments, the mode comes from the command line (never the board), and every chan
 ```bash
 npm run build                                     # runtime, cli, canvas (the canvas server must be this build: it keeps data.detail)
 node packages/canvas/dist/cli.js serve --port 4400 &
-node packages/cli/bin/awd.js studio dev/workflow.yaml     # inside a herdr session
+node packages/cli/bin/awd.js studio --project .           # inside a herdr session
 ```
 
 Open the printed board, select a block (e.g. `plan`), and add a comment with `data.discuss` — the Inspector's
@@ -219,7 +219,7 @@ Selecting a workflow block (an item with `data.detail`) turns the Selected tab i
 | script | Command, Source (monospace, collapsible, "truncated" note), Retry / timeout |
 | trigger | On · emits · data mapping |
 
-Every block also shows **Listens to / Emits** (in words), the source location (`dev/workflow.yaml:42`,
+Every block also shows **Listens to / Emits** (in words), the source location (`design/runner-example.workflow.yaml:42`,
 copyable), and at the bottom a **Discuss with AI** composer: model picker (default opus), a textarea, and
 suggested asks per kind (agent: "Sharpen this persona", gate: "Explain when this blocks", script: "What can
 go wrong here?"). Sending posts the §2 comment. The block's thread (requests, the studio ack, the
@@ -236,8 +236,8 @@ file, every role/prompt file, every script a step runs. Each file is cut at 100 
 1-based line range of that step/agent/trigger in the workflow file.
 
 **Views.** Text shown with line numbers and comment gutters:
-- a file (`file: 'dev/agents/planner.md'`) — the **Files** view: file list + viewer, opened from any path
-  link in the Inspector (persona file, script file, `dev/workflow.yaml:42` jumps to that line, "view yaml"
+- a file (`file: 'examples/card-pipeline/agents/architect.md'`) — the **Files** view: file list + viewer, opened from any path
+  link in the Inspector (persona file, script file, `design/runner-example.workflow.yaml:42` jumps to that line, "view yaml"
   shows the block's range);
 - a derived text (`doc: 'prompt'`) — the ai step's assembled prompt, which is not a file.
 
@@ -269,7 +269,7 @@ comments** behind the selection, so notes left without asking are picked up by t
 The files snapshot is written by `pushGraphToCanvas` (`packages/cli/src/graphCanvas.ts`) from
 `workflowFiles()` in `runtime/src/application/blockDetails.ts`: the workflow yaml plus every `detail.file`
 (agent files, role/prompt files, script files). `meta` is replaced on each redraw, not merged. For
-`dev/workflow.yaml` that is 12 files, about 19 KB.
+`examples/card-pipeline/workflow.yaml` that is its yaml plus every agent, role and script file.
 
 ## 6. "The agent has read this / is working on it"
 

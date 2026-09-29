@@ -306,7 +306,6 @@ packages/runtime/src/adapters/workers/herdr.ts    HerdrWorker（信箱 · 一個
 packages/runtime/src/adapters/workers/claudeCode.ts  `claudeCode: { permissionMode, cwd, addDirs }`
 packages/runtime/src/application/prompting.ts     renderPrompt · extractJsonAnswer（codex / opencode / claude-code 事件流）
 examples/card-pipeline/                agents: planner · reviewer · qa；agents/architect.md；tests/11 · 12 · 13（memory）· 14 · 15（reflection）
-dev/agents/*.md                        本 repo 自己的 planner · builder（acceptEdits，在 worktree 裡）· reviewer · architect
 ```
 
 ## 10. 在 canvas 上看 agent
