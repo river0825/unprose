@@ -1,0 +1,1 @@
+{ "outcome": "guidance", "guidance": "Keep the upload route thin; move parsing behind the ContactImport aggregate so the CSV shape is not a public contract." }

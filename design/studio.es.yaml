@@ -1,0 +1,54 @@
+# Studio's "Ask AI" — how a question on the board becomes a change in the files.
+# Process-level EventStorming (docs/diagrams.md §3). Draw: awd design draw design/studio.es.yaml --board "title:Unprose — Studio 設計"
+title: Studio · Ask AI（process）
+level: process
+people: [你 You, AI Agent]
+systems:
+  - { id: canvas, text: awd-canvas }
+  - { id: studio, text: awd studio }
+  - { id: herdr, text: herdr, external: true }
+  - { id: files, text: repo files }
+
+events:
+  - { id: asked, text: 提問已送出 }
+  - { id: seen, text: 已讀（seenBy agent） }
+  - { id: session-ready, text: board session 已就緒 }
+  - { id: forked, text: 分支 session 已開 }
+  - { id: briefed, text: brief 已寫好 }
+  - { id: proposal-reviewed, text: 提案已討論 }
+  - { id: files-changed, text: 檔案已修改 }
+  - { id: checks-passed, text: lint / goldens 通過 }
+  - { id: redrawn, text: board 已重畫 }
+  - { id: replied, text: 回覆已貼在 thread }
+
+commands:
+  - { id: ask-ai, text: Ask AI（選取 + 問題）, by: 你 You, system: canvas, produces: asked }
+  - { id: pick-up, text: 接手請求, system: studio, produces: [seen, session-ready, forked] }
+  - { id: write-brief, text: 寫 brief, system: studio, produces: briefed }
+  - { id: discuss, text: 在 thread 討論提案, by: 你 You, system: canvas, produces: proposal-reviewed }
+  - { id: edit-files, text: 修改檔案, by: AI Agent, system: files, produces: files-changed }
+  - { id: run-checks, text: 跑 lint / goldens, by: AI Agent, system: files, produces: checks-passed }
+  - { id: redraw, text: awd graph / design draw, by: AI Agent, system: canvas, produces: redrawn }
+  - { id: reply, text: 回覆, by: AI Agent, system: canvas, produces: replied }
+
+policies:
+  - { id: on-ask, text: 每當有提問，就接手, when: asked, then: pick-up }
+  - { id: on-session, text: session 就緒就寫 brief, when: [session-ready, forked], then: write-brief }
+  - { id: on-brief, text: 有 brief 就回覆並討論, when: briefed, then: reply }
+  - { id: on-agreed, text: 你同意後才改檔, when: proposal-reviewed, then: edit-files, person: 你 You }
+  - { id: on-changed, text: 改完就檢查, when: files-changed, then: run-checks }
+  - { id: on-checked, text: 通過就重畫, when: checks-passed, then: redraw }
+
+readModels:
+  - { id: thread, text: Chat thread（泡泡 + 狀態）, updatedBy: [seen, replied], informs: 你 You }
+  - { id: board, text: board（虛線提案 → 實線）, updatedBy: redrawn, informs: 你 You }
+
+hotspots:
+  - { text: 每次新 session 的 token 成本？→ board session + fork, on: pick-up }
+  - { text: 兩個請求同時改同一個檔案？, on: edit-files }
+
+opportunities:
+  - { text: 暖好的 base session 讓第一個回覆更快, on: session-ready }
+
+definitions:
+  - { term: brief, text: studio 寫給 AI Agent 的說明檔：選取了什麼、背後的檔案、請求、怎麼工作 }

@@ -1,0 +1,27 @@
+# The reviewer finds things twice (fixtures/ai/reviewer/c-review.json), the builder fixes each time (fix-round.again → build), third review is clean.
+mode: run
+key: c-review
+events:
+  - { type: card.moved, data: { card: c-review, from: Backlog, to: Ready } }
+expect:
+  status: waiting
+  outcomes:
+    - qualify.pick
+    - size-gate.build
+    - build.done
+    - push.done
+    - review.findings
+    - qa.pass                # QA passed on round 0 and is not re-run; the gate remembers vars.qa.passed
+    - ready-gate.wait
+    - fix-round.again
+    - build.done               # the builder fixes
+    - push.done
+    - review.findings
+    - fix-round.again
+    - build.done               # the builder fixes
+    - push.done
+    - review.clean
+    - ready-gate.both
+    - park.done
+  vars:
+    fix-round: { rounds: 2 }

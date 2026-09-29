@@ -1,0 +1,34 @@
+name: herdr-smoke
+agents:
+  pinger:
+    description: codex in a herdr pane (reused if already there)
+    runner: herdr
+    herdr: { kind: codex, name: awd-pinger }
+    system: You are a test agent inside an automated workflow. Do exactly what the message asks, nothing more.
+  checker:
+    description: opencode in a fresh herdr pane
+    runner: herdr
+    herdr: { kind: opencode, name: awd-checker }
+    system: You verify another agent's answer. Be terse.
+triggers:
+  go: { on: cli, emit: ping }
+steps:
+  ask:
+    on: ping
+    ai:
+      agent: pinger
+      input: { question: "{{ event.data.q }}" }
+      output:
+        type: object
+        required: [outcome, answer]
+        properties: { outcome: { enum: [done] }, answer: { type: string } }
+  check:
+    on: ask.done
+    terminal: [ok, wrong]
+    ai:
+      agent: checker
+      input: { question: "{{ event.data.q }}", answer: "{{ vars.ask.answer }}" }
+      output:
+        type: object
+        required: [outcome, reason]
+        properties: { outcome: { enum: [ok, wrong] }, reason: { type: string } }

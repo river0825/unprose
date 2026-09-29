@@ -1,0 +1,20 @@
+{
+  "outcome": "ready-for-agent",
+  "summary": "Add a CSV upload route + parser; one migration.",
+  "size": "M",
+  "tasks": [
+    "route",
+    "parser",
+    "tests"
+  ],
+  "open_questions": [],
+  "learn": [
+    {
+      "note": "Cards tagged SP:NoOpenSpec carry no proposal.md — put the rollback section in the card's own 實作方式 instead.",
+      "tags": [
+        "planning",
+        "rollback"
+      ]
+    }
+  ]
+}

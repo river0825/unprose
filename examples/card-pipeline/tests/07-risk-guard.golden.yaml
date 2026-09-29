@@ -1,0 +1,8 @@
+# Hard-to-reverse cards owe proof: c-risky has it and builds; c-norisk is paused with `missing`.
+mode: run
+key: c-risky
+events:
+  - { type: card.moved, data: { card: c-risky, from: Backlog, to: Ready } }
+expect:
+  status: waiting
+  outcomes: [qualify.pick, size-gate.guarded, guard-check.ok, build.done, push.done, review.clean, ready-gate.wait, qa.pass, ready-gate.both, park.done]

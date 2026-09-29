@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>awd — system architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>code{font-size:0.7rem;color:#e2e8f0}</style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #22d3ee;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-left: 1.75rem;
+    }
+    
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    
+    svg {
+      width: 100%;
+      min-width: 900px;
+      display: block;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .card ul {
+      list-style: none;
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+    
+    .card li {
+      margin-bottom: 0.375rem;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+      flex-shrink: 0;
+      align-items: center;
+    }
+    .toolbar-toggle {
+      background: transparent;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      transition: color 0.2s, background 0.2s;
+    }
+    .toolbar-toggle:hover { color: #94a3b8; background: rgba(30, 41, 59, 0.5); }
+    .toolbar-actions {
+      display: none;
+      gap: 0.5rem;
+    }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar-actions button {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .toolbar-actions button:hover {
+      background: rgba(51, 65, 85, 0.8);
+      color: white;
+      border-color: #475569;
+    }
+
+    @media print {
+      body { background: #020617; padding: 1rem; }
+      .toolbar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>awd — system architecture</h1>
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button onclick="copyAsImage(this)">📋 Copy</button>
+            <button onclick="downloadPNG(this)">🖼️ PNG</button>
+            <button onclick="downloadPDF(this)">📄 PDF</button>
+          </div>
+          <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export options" aria-label="Export options">⋯</button>
+        </div>
+      </div>
+      <p class="subtitle">workflow runtime + shared canvas + agent panes</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 690">
+        <!-- Definitions -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <rect x="200" y="40" width="770" height="580" rx="12" fill="rgba(136, 19, 55, 0.06)" stroke="#fb7185" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="212" y="600" fill="#fb7185" font-size="10" font-weight="600">Mac mini · launchd services (you)</text>
+        <text x="212" y="613" fill="#fb7185" font-size="8">no auth on canvas — put Cloudflare Access in front of canvas.example.com</text>
+        <line x1="100" y1="380" x2="100" y2="332" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="108" y="360" fill="#94a3b8" font-size="9" text-anchor="start">webhook</text>
+        <line x1="170" y1="295" x2="228" y2="295" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="199" y="287" fill="#94a3b8" font-size="9" text-anchor="middle">:4311</text>
+        <path d="M130,260 V70 H985 V285 H952" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="560" y="64" fill="#94a3b8" font-size="9" text-anchor="middle">:4400 · canvas.example.com</text>
+        <path d="M250,320 V395 H190 V510 H172" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="258" y="362" fill="#94a3b8" font-size="9" text-anchor="start">claude -p · API</text>
+        <line x1="285" y1="320" x2="285" y2="428" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="293" y="380" fill="#94a3b8" font-size="9" text-anchor="start">append</text>
+        <line x1="430" y1="285" x2="518" y2="285" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="474" y="277" fill="#94a3b8" font-size="9" text-anchor="middle">herdr socket</text>
+        <path d="M400,320 V470 H518" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="408" y="400" fill="#94a3b8" font-size="9" text-anchor="start">writes .in.json</text>
+        <line x1="590" y1="320" x2="590" y2="428" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="598" y="380" fill="#94a3b8" font-size="9" text-anchor="start">writes .out.json</text>
+        <line x1="790" y1="150" x2="790" y2="248" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="798" y="205" fill="#94a3b8" font-size="9" text-anchor="start">MCP</text>
+        <line x1="900" y1="150" x2="900" y2="248" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="908" y="205" fill="#94a3b8" font-size="9" text-anchor="start">WS + HTTP</text>
+        <line x1="860" y1="320" x2="860" y2="428" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="868" y="380" fill="#94a3b8" font-size="9" text-anchor="start">snapshot + changes</text>
+        <rect x="30" y="260" width="140" height="70" rx="6" fill="#0f172a"/>
+        <rect x="30" y="260" width="140" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="100.0" y="280" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cloudflare tunnel</text>
+        <text x="100.0" y="296" fill="#fbbf24" font-size="9" text-anchor="middle">awd</text>
+        <text x="100.0" y="310" fill="#fbbf24" font-size="9" text-anchor="middle">canvas → :4400</text>
+        <text x="100.0" y="324" fill="#fbbf24" font-size="9" text-anchor="middle">awd → :4311</text>
+        <rect x="30" y="380" width="140" height="50" rx="6" fill="#0f172a"/>
+        <rect x="30" y="380" width="140" height="50" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="100.0" y="400" fill="white" font-size="11" font-weight="600" text-anchor="middle">Trello / GitHub</text>
+        <text x="100.0" y="416" fill="#94a3b8" font-size="9" text-anchor="middle">webhooks</text>
+        <rect x="30" y="480" width="140" height="60" rx="6" fill="#0f172a"/>
+        <rect x="30" y="480" width="140" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="100.0" y="500" fill="white" font-size="11" font-weight="600" text-anchor="middle">Claude</text>
+        <text x="100.0" y="516" fill="#94a3b8" font-size="9" text-anchor="middle">claude -p</text>
+        <text x="100.0" y="530" fill="#94a3b8" font-size="9" text-anchor="middle">Messages API</text>
+        <rect x="690" y="90" width="140" height="60" rx="6" fill="#0f172a"/>
+        <rect x="690" y="90" width="140" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="760.0" y="110" fill="white" font-size="11" font-weight="600" text-anchor="middle">Claude Code</text>
+        <text x="760.0" y="126" fill="#94a3b8" font-size="9" text-anchor="middle">agent · MCP client</text>
+        <rect x="850" y="90" width="100" height="60" rx="6" fill="#0f172a"/>
+        <rect x="850" y="90" width="100" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="900.0" y="110" fill="white" font-size="11" font-weight="600" text-anchor="middle">Browser</text>
+        <text x="900.0" y="126" fill="#94a3b8" font-size="9" text-anchor="middle">canvas UI</text>
+        <rect x="230" y="250" width="200" height="70" rx="6" fill="#0f172a"/>
+        <rect x="230" y="250" width="200" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="330.0" y="270" fill="white" font-size="11" font-weight="600" text-anchor="middle">awd runtime</text>
+        <text x="330.0" y="286" fill="#94a3b8" font-size="9" text-anchor="middle">:4311 · engine · reducer</text>
+        <text x="330.0" y="300" fill="#94a3b8" font-size="9" text-anchor="middle">webhook + cron triggers</text>
+        <rect x="520" y="250" width="140" height="70" rx="6" fill="#0f172a"/>
+        <rect x="520" y="250" width="140" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="590.0" y="270" fill="white" font-size="11" font-weight="600" text-anchor="middle">herdr panes</text>
+        <text x="590.0" y="286" fill="#94a3b8" font-size="9" text-anchor="middle">codex · opencode · claude</text>
+        <text x="590.0" y="300" fill="#94a3b8" font-size="9" text-anchor="middle">interactive agents</text>
+        <rect x="770" y="250" width="180" height="70" rx="6" fill="#0f172a"/>
+        <rect x="770" y="250" width="180" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="860.0" y="270" fill="white" font-size="11" font-weight="600" text-anchor="middle">awd-canvas server</text>
+        <text x="860.0" y="286" fill="#94a3b8" font-size="9" text-anchor="middle">:4400 · HTTP + WS</text>
+        <text x="860.0" y="300" fill="#94a3b8" font-size="9" text-anchor="middle">/docs · MCP stdio bridge</text>
+        <rect x="230" y="430" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="230" y="430" width="140" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="300.0" y="450" fill="white" font-size="11" font-weight="600" text-anchor="middle">events.ndjson</text>
+        <text x="300.0" y="466" fill="#94a3b8" font-size="9" text-anchor="middle">.awd/</text>
+        <text x="300.0" y="480" fill="#94a3b8" font-size="9" text-anchor="middle">append-only</text>
+        <text x="300.0" y="494" fill="#94a3b8" font-size="9" text-anchor="middle">source of truth</text>
+        <rect x="520" y="430" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="520" y="430" width="140" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="590.0" y="450" fill="white" font-size="11" font-weight="600" text-anchor="middle">mailbox</text>
+        <text x="590.0" y="466" fill="#94a3b8" font-size="9" text-anchor="middle">.awd/mail/</text>
+        <text x="590.0" y="480" fill="#94a3b8" font-size="9" text-anchor="middle"><cmd>.in.json</text>
+        <text x="590.0" y="494" fill="#94a3b8" font-size="9" text-anchor="middle"><cmd>.out.json</text>
+        <rect x="770" y="430" width="180" height="80" rx="6" fill="#0f172a"/>
+        <rect x="770" y="430" width="180" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="860.0" y="450" fill="white" font-size="11" font-weight="600" text-anchor="middle">boards/</text>
+        <text x="860.0" y="466" fill="#94a3b8" font-size="9" text-anchor="middle"><id>.json snapshot</text>
+        <text x="860.0" y="480" fill="#94a3b8" font-size="9" text-anchor="middle"><id>.changes.ndjson</text>
+        <text x="860.0" y="494" fill="#94a3b8" font-size="9" text-anchor="middle">append-only</text>
+        <text x="30" y="650" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="100" y="641" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="122" y="650" fill="#94a3b8" font-size="8">Frontend / agent</text>
+        <rect x="230" y="641" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="252" y="650" fill="#94a3b8" font-size="8">Backend</text>
+        <rect x="360" y="641" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="382" y="650" fill="#94a3b8" font-size="8">Store (files)</text>
+        <rect x="490" y="641" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="512" y="650" fill="#94a3b8" font-size="8">Cloud / tunnel</text>
+        <rect x="620" y="641" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="642" y="650" fill="#94a3b8" font-size="8">External</text>
+        <rect x="750" y="641" width="16" height="10" rx="2" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="772" y="650" fill="#94a3b8" font-size="8">Machine boundary</text>
+        <line x1="900" y1="646" x2="916" y2="646" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="922" y="650" fill="#94a3b8" font-size="8">Model call</text>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Where state lives</h3>
+        </div>
+        <ul>
+          <li>• <code>.awd/events.ndjson</code> — every workflow event, append-only; status and replay are derived from it</li>
+          <li>• <code>boards/&lt;id&gt;.changes.ndjson</code> — every board change with its <code>before</code>; the snapshot is rebuildable</li>
+          <li>• <code>.awd/mail/*.json</code> — the contract between the runtime and an agent in a pane</li>
+          <li>• Nothing lives in memory only; restart = replay</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Who talks to whom</h3>
+        </div>
+        <ul>
+          <li>• Browser ↔ canvas over WebSocket (changes, presence)</li>
+          <li>• Claude Code → canvas through the MCP stdio bridge → HTTP</li>
+          <li>• Trello → tunnel → runtime webhook → event</li>
+          <li>• Runtime → herdr socket → pane agent → mailbox file back</li>
+          <li>• Runtime → <code>claude -p</code> or the Messages API for structured output</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>What is swappable</h3>
+        </div>
+        <ul>
+          <li>• LLM / tool: <code>WorkerRuntime</code> — claude-code, anthropic, cli, herdr, fake</li>
+          <li>• Agent channel: <code>AgentChannel</code> — herdr today, tmux tomorrow</li>
+          <li>• Storage: <code>EventStore</code> / <code>BoardRepository</code> — file or memory, sqlite next</li>
+          <li>• Board: only the trigger's <code>data:</code> mapping and script steps</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      awd • agent-workflow-diagram • ports and adapters in docs/ARCHITECTURE
+    </p>
+  </div>
+
+  <script>
+    async function copyAsImage(btn) {
+      const orig = btn.textContent;
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#020617', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btn.textContent = '✓ Copied!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPNG(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '⏳ ...';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#020617', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const link = document.createElement('a');
+        link.download = 'diagram.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        btn.textContent = '✓ Done!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPDF(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '⏳ ...';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#020617', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ orientation, unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save('diagram.pdf');
+        btn.textContent = '✓ Done!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+  </script>
+</body>
+</html>

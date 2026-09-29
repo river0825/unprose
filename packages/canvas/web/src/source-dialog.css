@@ -1,0 +1,227 @@
+/* Source dialog (docs/studio.md §9): a large CodeMirror view beside its comments. */
+:root {
+  --hl-keyword: #7a3ec8;
+  --hl-string: #1c7c3a;
+  --hl-number: #a3550b;
+  --hl-comment: var(--ink-3);
+  --hl-property: #0b5cad;
+  --hl-variable: #8a3b12;
+  --hl-function: #6a4bb5;
+  --hl-meta: #6a4bb5;
+  --sd-active: rgba(22, 26, 31, 0.04);
+  --sd-selection: rgba(11, 92, 173, 0.18);
+  --sd-match: rgba(255, 196, 0, 0.3);
+  --sd-add: rgba(28, 124, 58, 0.12);
+  --sd-del: rgba(200, 40, 40, 0.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --hl-keyword: #c79bff;
+    --hl-string: #85d996;
+    --hl-number: #f6ad6a;
+    --hl-property: #7fb8f5;
+    --hl-variable: #f0a37e;
+    --hl-function: #c9b2ff;
+    --hl-meta: #c9b2ff;
+    --sd-active: rgba(255, 255, 255, 0.04);
+    --sd-selection: rgba(127, 184, 245, 0.25);
+    --sd-match: rgba(255, 196, 0, 0.22);
+    --sd-add: rgba(133, 217, 150, 0.14);
+    --sd-del: rgba(255, 122, 122, 0.14);
+  }
+}
+:root[data-theme='dark'] {
+  --hl-keyword: #c79bff;
+  --hl-string: #85d996;
+  --hl-number: #f6ad6a;
+  --hl-property: #7fb8f5;
+  --hl-variable: #f0a37e;
+  --hl-function: #c9b2ff;
+  --hl-meta: #c9b2ff;
+  --sd-active: rgba(255, 255, 255, 0.04);
+  --sd-selection: rgba(127, 184, 245, 0.25);
+  --sd-match: rgba(255, 196, 0, 0.22);
+  --sd-add: rgba(133, 217, 150, 0.14);
+  --sd-del: rgba(255, 122, 122, 0.14);
+}
+
+.sd {
+  width: min(90vw, 1500px);
+  height: 85vh;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--chrome);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.sd[open] {
+  display: flex;
+  flex-direction: column;
+}
+.sd::backdrop {
+  background: rgba(10, 12, 15, 0.45);
+}
+.sd-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.sd-head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-modes {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.sd-modes button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 12px;
+  min-height: 30px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.sd-modes button[aria-pressed='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+.sd-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  /* one row the height of the dialog: the editor scrolls itself, the dialog never does */
+  grid-template-rows: minmax(0, 1fr);
+}
+.sd-editor {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.sd-editor .cm-editor {
+  height: 100%;
+}
+.sd-editor .cm-editor.cm-focused {
+  outline: none;
+}
+.sd-side {
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  border-left: 1px solid var(--rule);
+}
+.sd-side h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+}
+.sd-selbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.sd-thread {
+  margin: 8px 0 12px;
+}
+.sd-where {
+  font-size: 12px;
+}
+.sd-cgutter .cm-gutterElement {
+  padding: 0 2px 0 4px;
+}
+.sd-dot {
+  color: var(--hl-keyword);
+  font-size: 9px;
+  line-height: inherit;
+}
+.sd-sent {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: 13px;
+}
+.sd-warn {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--hl-number);
+  background: var(--paper);
+  font-size: 13px;
+}
+.sd-diff {
+  margin: 0 0 10px;
+  max-height: 40vh;
+  overflow: auto;
+  padding: 6px 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+.sd-diff span {
+  display: block;
+  padding: 0 8px;
+}
+.sd-diff .add {
+  background: var(--sd-add);
+}
+.sd-diff .del {
+  background: var(--sd-del);
+}
+.sd-diff .hunk {
+  color: var(--ink-3);
+}
+.sd-ask label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.sd-ask textarea {
+  width: 100%;
+  font: inherit;
+}
+/* the Expand button on a panel text view */
+.tv-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+@media (max-width: 720px) {
+  .sd {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .sd-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
+  }
+  .sd-side {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+}

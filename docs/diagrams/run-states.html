@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A run through the reducer</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --color-paper: #fbfbf9; --color-ink: #161a1f; --color-muted: #444b53; --color-accent: #1f56d6;
+      --font-sans: 'IBM Plex Sans', system-ui, sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace; }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1280px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-sans); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 1.75rem); font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">State machine · lifecycle phase map · Diagram Design</p>
+    <h1>A run through the reducer</h1>
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="run-states-title run-states-desc">
+  <title id="run-states-title">A run through the reducer</title>
+  <desc id="run-states-desc">Lifecycle phase map of one run (one key): idle to running to done on the primary rail, with the human waiting state and a queued state in a wait band, a retry self-loop on running, and failed as the terminal outcome.</desc>
+  <defs>
+    <marker id="run-states-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#444b53"/></marker>
+    <marker id="run-states-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#1f56d6"/></marker>
+    <marker id="run-states-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3a6ea5"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#fbfbf9"/>
+<rect x="64" y="72" width="1152" height="144" rx="8" fill="rgba(68,75,83,0.035)" stroke="rgba(22,26,31,0.12)"/>
+<rect x="64" y="472" width="1152" height="144" rx="8" fill="rgba(22,26,31,0.04)" stroke="rgba(22,26,31,0.12)"/>
+<text x="80" y="92" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">WAIT / RECOVERY</text>
+<text x="80" y="284" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">PRIMARY PHASES</text>
+<text x="80" y="492" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">TERMINAL OUTCOME</text>
+<line x1="60" y1="336" x2="120" y2="336" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<line x1="300" y1="336" x2="440" y2="336" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<line x1="640" y1="336" x2="980" y2="336" stroke="#1f56d6" stroke-width="1.4" marker-end="url(#run-states-arrow-accent)"/>
+<path d="M600,300 V236 Q600,228 608,228 H692 Q700,228 700,220 V184" fill="none" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<path d="M780,184 V244 Q780,252 772,252 H628 Q620,252 620,260 V300" fill="none" stroke="#444b53" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#run-states-arrow)"/>
+<path d="M480,300 V252 Q480,244 472,244 H338 Q330,244 330,236 V184" fill="none" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<path d="M250,184 V260 Q250,268 258,268 H452 Q460,268 460,276 V300" fill="none" stroke="#444b53" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#run-states-arrow)"/>
+<path d="M470,372 V412 Q470,420 462,420 H418 Q410,420 410,412 V364 Q410,356 418,356 H440" fill="none" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<path d="M600,372 V440 Q600,448 608,448 H692 Q700,448 700,456 V512" fill="none" stroke="#444b53" stroke-width="1.2" marker-end="url(#run-states-arrow)"/>
+<rect x="66.8" y="313" width="46.4" height="12" rx="2" fill="#fbfbf9"/>
+<text x="90" y="322" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">TRIGGER</text>
+<rect x="318.0" y="313" width="104.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="370" y="322" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ON: &lt;EVENT&gt; [IF]</text>
+<rect x="725.0" y="313" width="170.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="810" y="322" fill="#1f56d6" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">&lt;STEP&gt;.&lt;OUTCOME&gt;  [TERMINAL]</text>
+<rect x="614.0" y="205" width="72.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="650" y="214" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WAIT_HUMAN</text>
+<rect x="637.0" y="261" width="126.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="700" y="270" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESUME_ON [OUTCOME]</text>
+<rect x="353.0" y="221" width="104.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="405" y="230" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CONCURRENCY FULL</text>
+<rect x="312.0" y="277" width="86.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="355" y="286" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">STEP RELEASED</text>
+<rect x="325.0" y="431" width="230.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="440" y="440" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">&lt;STEP&gt;.FAILED [ATTEMPT &lt; MAX] / SCHEDULE</text>
+<rect x="609.0" y="425" width="110.0" height="12" rx="2" fill="#fbfbf9"/>
+<text x="664" y="434" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RETRIES EXHAUSTED</text>
+<circle cx="54" cy="336" r="6" fill="#161a1f"/>
+<rect x="120" y="300" width="180" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="120" y="300" width="180" height="72" rx="6" fill="#ffffff" stroke="#161a1f" stroke-width="1"/>
+<rect x="128" y="306" width="38" height="12" rx="2" fill="none" stroke="#161a1f" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="147.0" y="315" fill="#161a1f" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PHASE</text>
+<text x="210.0" y="332.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Idle</text>
+<text x="210.0" y="348.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">no active step</text>
+<rect x="440" y="300" width="200" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="440" y="300" width="200" height="72" rx="6" fill="#ffffff" stroke="#161a1f" stroke-width="1"/>
+<rect x="448" y="306" width="38" height="12" rx="2" fill="none" stroke="#161a1f" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="467.0" y="315" fill="#161a1f" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PHASE</text>
+<text x="540.0" y="332.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Running</text>
+<text x="540.0" y="348.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">an executor is in flight</text>
+<rect x="980" y="300" width="180" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="980" y="300" width="180" height="72" rx="6" fill="#ffffff" stroke="#161a1f" stroke-width="1"/>
+<rect x="988" y="306" width="38" height="12" rx="2" fill="none" stroke="#161a1f" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="1007.0" y="315" fill="#161a1f" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PHASE</text>
+<text x="1070.0" y="332.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Done</text>
+<text x="1070.0" y="348.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">terminal outcome reached</text>
+<circle cx="1140" cy="318" r="7" fill="none" stroke="#161a1f"/><circle cx="1140" cy="318" r="4" fill="#161a1f"/>
+<rect x="640" y="112" width="200" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="640" y="112" width="200" height="72" rx="6" fill="rgba(31,86,214,0.08)" stroke="#1f56d6" stroke-width="1"/>
+<rect x="648" y="118" width="32" height="12" rx="2" fill="none" stroke="#1f56d6" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="664.0" y="127" fill="#1f56d6" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WAIT</text>
+<text x="740.0" y="144.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Waiting</text>
+<text x="740.0" y="160.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">human step · resume_on event</text>
+<rect x="200" y="112" width="180" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="200" y="112" width="180" height="72" rx="6" fill="rgba(22,26,31,0.02)" stroke="rgba(22,26,31,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="208" y="118" width="32" height="12" rx="2" fill="none" stroke="#444b53" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="224.0" y="127" fill="#444b53" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WAIT</text>
+<text x="290.0" y="144.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Queued</text>
+<text x="290.0" y="160.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">concurrency cap per key</text>
+<rect x="640" y="512" width="200" height="72" rx="6" fill="#fbfbf9"/>
+<rect x="640" y="512" width="200" height="72" rx="6" fill="rgba(22,26,31,0.05)" stroke="#444b53" stroke-width="1"/>
+<rect x="648" y="518" width="56" height="12" rx="2" fill="none" stroke="#444b53" stroke-opacity="0.4" stroke-width="0.8"/>
+<text x="676.0" y="527" fill="#444b53" fill-opacity="0.85" font-size="7" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">TERMINAL</text>
+<text x="740.0" y="544.0" fill="#161a1f" font-size="12" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif" text-anchor="middle">Failed</text>
+<text x="740.0" y="560.0" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle">retry budget exhausted</text>
+<text x="1216" y="700" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="end" letter-spacing="0.06em">state per key · derived from the event log · replayable</text>
+</svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# What we build for Studio, sliced into releases (docs/diagrams.md §5).
+# Stories trace back to the EventStorming in design/studio.es.yaml.
+title: Studio · Story map
+releases: [Release 1, Release 2]
+activities:
+  - id: ask
+    text: 在 board 上提問
+    steps:
+      - id: select
+        text: 選取要討論的東西
+        stories:
+          - id: chat-selection
+            text: 選取一個或多個 item 開 Chat
+            release: Release 1
+            acceptance: [提問已送出, Chat thread 顯示]
+            traces: [{ from: studio-es/ask-ai, rel: derived-from }]
+          - id: line-comment
+            text: 在檔案的某幾行留言 / Ask AI
+            release: Release 1
+            traces: [{ from: studio-es/ask-ai, rel: derived-from }]
+      - id: see-status
+        text: 知道 AI 有沒有在處理
+        stories:
+          - id: receipts
+            text: 顯示 Sent / Seen / Working
+            release: Release 1
+            acceptance: [已讀（seenBy agent）, Chat thread 更新]
+  - id: answer
+    text: AI 回答與修改
+    steps:
+      - id: session
+        text: 開 / 重用 session
+        stories:
+          - id: board-session
+            text: 一張 board 一個 session，忙碌時分支
+            release: Release 1
+            traces: [{ from: studio-es/pick-up, rel: derived-from }]
+          - id: warm-session
+            text: 暖好的 base session
+            release: Release 2
+      - id: change
+        text: 討論後修改檔案
+        stories:
+          - id: proposals
+            text: 畫面上的修改變成提案，同意後才改檔
+            release: Release 1
+            traces: [{ from: studio-es/discuss, rel: derived-from }]
+          - id: redraw
+            text: 改完自動 lint / 重畫
+            release: Release 2
+            traces: [{ from: studio-es/redraw, rel: derived-from }]

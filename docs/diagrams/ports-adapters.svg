@@ -1,0 +1,60 @@
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ports-adapters-title ports-adapters-desc">
+  <title id="ports-adapters-title">Clean architecture in awd: what depends on what</title>
+  <desc id="ports-adapters-desc">Layer stack from driving adapters through application, the IO-free domain core, the ports, and the driven adapters, with dependency arrows converging on the domain layer and a note on the enforced dependency rule.</desc>
+  <defs>
+    <marker id="ports-adapters-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#444b53"/></marker>
+    <marker id="ports-adapters-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#1f56d6"/></marker>
+    <marker id="ports-adapters-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3a6ea5"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#fbfbf9"/>
+<line x1="200" y1="112" x2="1040" y2="112" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<rect x="200" y="112" width="840" height="88" fill="#f0f1f0"/>
+<line x1="200" y1="200" x2="1040" y2="200" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<text x="220" y="160.0" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.14em">01</text>
+<text x="272" y="152.0" fill="#161a1f" font-size="16" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif">Driving adapters</text>
+<text x="272" y="172.0" fill="#444b53" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.04em">webhook · cron · awd CLI · awd-canvas mcp · web UI</text>
+<rect x="200" y="200" width="840" height="88" fill="#ffffff"/>
+<line x1="200" y1="288" x2="1040" y2="288" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<text x="220" y="248.0" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.14em">02</text>
+<text x="272" y="240.0" fill="#161a1f" font-size="16" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif">Application</text>
+<text x="272" y="260.0" fill="#444b53" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.04em">engine · timer · runner registry · board diff / outline</text>
+<rect x="200" y="288" width="840" height="88" fill="rgba(31,86,214,0.08)"/>
+<rect x="200" y="288" width="840" height="88" fill="none" stroke="#1f56d6" stroke-width="1"/>
+<text x="220" y="336.0" fill="#1f56d6" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.14em" font-weight="600">03</text>
+<text x="272" y="328.0" fill="#161a1f" font-size="16" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif">Domain  @awd/core</text>
+<text x="272" y="348.0" fill="#1f56d6" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.04em">schema · expressions · lint · reducer · graph — zero IO</text>
+<rect x="200" y="376" width="840" height="88" fill="#ffffff"/>
+<line x1="200" y1="464" x2="1040" y2="464" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<text x="220" y="424.0" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.14em">04</text>
+<text x="272" y="416.0" fill="#161a1f" font-size="16" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif">Ports</text>
+<text x="272" y="436.0" fill="#444b53" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.04em">EventStore · WorkerRuntime · AgentChannel · Mailbox · Clock · TriggerSource · BoardRepository</text>
+<rect x="200" y="464" width="840" height="88" fill="#f0f1f0"/>
+<line x1="200" y1="552" x2="1040" y2="552" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<text x="220" y="512.0" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.14em">05</text>
+<text x="272" y="504.0" fill="#161a1f" font-size="16" font-weight="600" font-family="'IBM Plex Sans', system-ui, sans-serif">Driven adapters</text>
+<text x="272" y="524.0" fill="#444b53" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" letter-spacing="0.04em">file / memory stores · claude-code · anthropic · cli · herdr · fake clock</text>
+<rect x="200" y="112" width="840" height="440" fill="none" stroke="rgba(22,26,31,0.30)" stroke-width="1"/>
+<text x="96" y="100" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">DEPENDS ON</text>
+<line x1="140" y1="120" x2="140" y2="280.0" stroke="rgba(22,26,31,0.30)" stroke-width="1"/>
+<polygon points="136,280.0 144,280.0 140,288.0" fill="#444b53"/>
+<line x1="140" y1="544" x2="140" y2="384.0" stroke="rgba(22,26,31,0.30)" stroke-width="1"/>
+<polygon points="136,384.0 144,384.0 140,376.0" fill="#444b53"/>
+<text x="96" y="572" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">DEPENDS ON</text>
+<line x1="1064" y1="120" x2="1064" y2="544" stroke="rgba(22,26,31,0.12)" stroke-width="1"/>
+<text x="1080" y="136" fill="#6b727a" font-size="8" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="start" letter-spacing="0.14em">DEPENDENCY RULE</text>
+<text x="1080" y="164" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">Arrows point inward:</text>
+<text x="1080" y="184" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">adapters know the ports,</text>
+<text x="1080" y="204" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">ports know the domain,</text>
+<text x="1080" y="224" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">the domain knows nothing</text>
+<text x="1080" y="244" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">outside itself.</text>
+<text x="1080" y="264" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif"></text>
+<text x="1080" y="284" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">Swap a driven adapter</text>
+<text x="1080" y="304" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">(herdr → tmux, file → sqlite)</text>
+<text x="1080" y="324" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">without touching the</text>
+<text x="1080" y="344" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">application. Every port</text>
+<text x="1080" y="364" fill="#444b53" font-size="12" font-family="'IBM Plex Sans', system-ui, sans-serif">has a fake.</text>
+<text x="1080" y="404" fill="#161a1f" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace">test/architecture.test.ts</text>
+<text x="1080" y="424" fill="#444b53" font-size="9" font-family="'IBM Plex Mono', ui-monospace, monospace">fails the build otherwise</text>
+<line x1="200" y1="596" x2="248" y2="596" stroke="#1f56d6" stroke-width="1"/>
+<text x="200" y="618" fill="#444b53" font-size="14" font-style="italic" font-family="'IBM Plex Sans', system-ui, sans-serif">The focal layer is the one you can test without a network: recorded events in, expected commands out.</text>
+</svg>

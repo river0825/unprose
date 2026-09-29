@@ -1,0 +1,31 @@
+# Delegation is an event: the reviewer finishes with `needs-architect`, the architect's step
+# listens to it, answers with `guidance`, and the builder's next round follows it. Then the reviewer looks again.
+# (fixtures/ai/reviewer/c-arch.json answers needs-architect first, clean second.)
+mode: run
+key: c-arch
+events:
+  - { type: card.moved, data: { card: c-arch, from: Backlog, to: Ready } }
+expect:
+  status: waiting
+  outcomes:
+    - qualify.pick
+    - size-gate.build
+    - build.done
+    - push.done
+    - review.needs-architect     # @reviewer hands off …
+    - qa.pass
+    - ready-gate.wait
+    - architect-review.guidance  # … @architect answers (agents/architect.md, frontmatter file)
+    - fix-round.again
+    - build.done               # the builder fixes
+    - push.done
+    - review.clean
+    - ready-gate.both
+    - park.done
+  vars:
+    review: { findings: [] }
+    architect-review: { guidance: "~ContactImport aggregate" }
+  commands:
+    - { kind: call_ai, step: review, agent: reviewer, model: sonnet }
+    - { kind: call_ai, step: qa, agent: qa, model: sonnet }
+    - { kind: call_ai, step: architect-review, agent: architect, model: opus, effort: xhigh, input: { question: "~public API contract" } }

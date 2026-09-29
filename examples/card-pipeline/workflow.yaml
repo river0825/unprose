@@ -1,0 +1,312 @@
+# The card-pipeline coordinator (example/card-pipeline-coordinator/SKILL.md,
+# 37 KB of prose) rewritten as data. Every arrow the prose described is an
+# event here; every "rule" is either a gate expression, a script, or a
+# human step. `awd graph workflow.yaml` draws it; `awd test` proves it.
+#
+# Columns (the aggregate is the Trello card):
+#   Backlog ─[human]→ Agent Planning ─[agent]→ Agent Planned ─[human]→ Ready
+#   → In Progress → AI Agent Review → Human Review ─[human]→ Human Review Passed ─[agent]→ Ready for Staging
+
+name: card-pipeline
+key: "{{ default(event.data.card, 'system') }}"   # one run per card; ticks share the 'system' run
+concurrency: 2                                     # review + qa may run side by side on one card
+
+# ── Who does the work ──────────────────────────────────────────────────
+# An agent is a persona (prompt · model · tools · runner). A step says *what*
+# happens and names the agent that does it. Delegation is never a hidden call:
+# the reviewer hands work to the architect by finishing with `needs-architect`,
+# which is an event the architect's step listens to — so it shows on the graph,
+# replays, and has a golden test.
+agents:
+  planner:
+    description: Turns a card into a plan a build worker can execute without questions.
+    file: roles/planner.md
+    model: opus
+    effort: high
+    tools: [Read, Grep, Glob]
+    memory: { recall: 10 }            # long-term: recall up to 10 `learn` notes from earlier cards (default 20)
+  reviewer:
+    description: Reviews the implementation of a PR; may ask the architect.
+    file: roles/reviewer.md
+    model: sonnet
+    tools: [Read, Grep, Glob, "Bash(gh pr *)", "Bash(gh api *)"]
+    delegates: [architect]
+  builder:
+    description: Writes the code for one card — the first build and every fix round.
+    system: |
+      You implement one card on its branch. Follow `input.plan`. If `input.findings` is present this is a
+      fix round: address every finding and nothing else. If `input.guidance` is present the architect settled
+      a design question — follow it. Commit and stop; the push step opens the PR.
+      Outcome rules: `done` when the change is committed · `blocked` when you cannot go on, with `reason`.
+    model: opus
+    tools: [Read, Edit, Write, Grep, Glob, Bash]
+  # architect lives in agents/architect.md (frontmatter + prompt, the Claude Code agent-file shape)
+  qa:
+    description: Black-box scenario testing of the running preview; never reads the diff.
+    system: |
+      You test the *running* feature of one card against its test scenarios, as a user would.
+      Never read the diff or the code. Report `passed: true` only when every scenario passes.
+      Outcome rules: `pass` when all scenarios pass · `fail` otherwise, with one line per failure.
+    model: sonnet
+    tools: [WebFetch, "Bash(curl *)"]
+    # Alternative runners — uncomment ONE block per agent to hand the stage to a different tool.
+    # Goldens keep using the fake worker (`--worker fake` overrides every runner), so nothing breaks.
+    #
+    # reviewer, as a headless Codex run (JSONL stream on stdout, prompt on stdin):
+    #   runner: cli
+    #   cli: { preset: codex }            # = codex exec --json -s read-only -
+    # reviewer, as any other CLI:
+    #   runner: cli
+    #   cli: { command: "my-agent --model {{ model }} -", stdin: true, timeoutMs: 20m }
+    # qa, as an interactive opencode session in a herdr pane (A2A without A2A — see docs/agents.md):
+    #   runner: herdr
+    #   herdr: { kind: opencode, timeoutMs: 15m }
+
+triggers:
+  trello:
+    on: webhook
+    path: /hooks/trello
+    emit: card.moved
+    if: "body.action.type == 'updateCard' && body.action.data.listAfter"
+    data:
+      card: "{{ body.action.data.card.shortLink }}"
+      name: "{{ body.action.data.card.name }}"
+      from: "{{ body.action.data.listBefore.name }}"
+      to:   "{{ body.action.data.listAfter.name }}"
+  reconcile:
+    on: cron
+    every: 30m
+    emit: tick
+  # The same events from a kanban board on the canvas instead of Trello (docs/workflow.md → "Board trigger").
+  # Uncomment, then `awd-canvas demo` (or draw one) so a board titled "Card pipeline — Kanban" exists;
+  # dragging a card into another column emits card.moved exactly like the webhook above.
+  # kanban:
+  #   on: board
+  #   board: "title:Card pipeline — Kanban"      # or a board id
+  #   canvas: http://localhost:4400              # default AWD_CANVAS_URL
+  #   author: user                               # only the person's drags; `agent` or `all` also possible
+  #   emit: card.moved
+  #   data:
+  #     card: "{{ card.id }}"
+  #     name: "{{ card.title }}"
+  #     from: "{{ from }}"
+  #     to:   "{{ to }}"
+  #     board: "{{ seq }}"
+  # …and the other direction: a step that pushes the card on, like the Trello moves used to:
+  #   advance-card:
+  #     on: qualify.pick
+  #     run: bash scripts/board_move.sh <boardId> {{ key }} "In Progress"
+
+steps:
+  # ── Planning ──────────────────────────────────────────────────────────
+  plan:
+    description: Author the spec; decide whether the card is build-ready or needs a human answer.
+    on: card.moved
+    if: "event.data.to == 'Agent Planning'"
+    ai:
+      agent: planner
+      input:
+        card: "{{ key }}"
+        name: "{{ event.data.name }}"
+      output:
+        type: object
+        required: [outcome, summary, size]
+        properties:
+          outcome: { enum: [ready-for-agent, needs-human] }
+          summary: { type: string }
+          size: { enum: [XS, S, M, L, XL] }
+          tasks: { type: array, items: { type: string } }
+          open_questions: { type: array, items: { type: string } }
+    timeout: 1h
+
+  handoff:
+    description: Move the card to Agent Planned with the readiness label; the human decides next.
+    on: [plan.ready-for-agent, plan.needs-human]
+    run: >-
+      scripts/move_card.sh {{ key }} "Agent Planned"
+      --label "{{ event.type == 'plan.ready-for-agent' ? 'ST:ReadyForAgent' : 'ST:ReadyForHuman' }}"
+
+  confirm:
+    description: The human's gate. Dwell time here is human-decision latency.
+    on: handoff.done
+    timeout: 7d
+    human:
+      resume_on: card.moved
+      outcomes:
+        approved: "event.data.to == 'Ready'"
+        re-plan:  "event.data.to == 'Agent Planning'"
+        shelved:  "event.data.to == 'Backlog'"
+    terminal: [shelved, re-plan, timeout]   # re-plan: the same move also re-fires `plan` above
+
+  # ── Ready → build ─────────────────────────────────────────────────────
+  qualify:
+    description: RFA label + CardSize + Risk + hands-off check (deterministic, reads the board).
+    on:
+      - confirm.approved
+      - event: card.moved
+        if: "event.data.to == 'Ready' && !('plan' in vars)"   # a human put an unplanned card straight into Ready
+    run: python3 scripts/qualify.py --card {{ key }}
+    outcomes: [pick, skip]
+    terminal: [skip]
+
+  size-gate:
+    description: Size decides routing; risk decides whether proof is owed first.
+    on: qualify.pick
+    gate:
+      outcomes:
+        guarded: "vars.qualify.riskClass == 'hard-to-reverse' && vars.qualify.size in ['XS','S','M','L']"
+        build:   "vars.qualify.size in ['XS','S','M','L']"
+      default: split
+
+  guard-check:
+    description: A hard-to-reverse card owes a rollback plan and a tripwire test before it builds.
+    on: size-gate.guarded
+    run: python3 scripts/check_risk.py --card {{ key }}
+    outcomes: [ok, missing]
+    terminal: [missing]
+
+  split:
+    on: size-gate.split
+    run: 'scripts/comment.sh {{ key }} "XL — split by a human, never built"' 
+    terminal: true
+
+  build:
+    description: The builder writes the code — first round, or a fix round with the findings / architect guidance.
+    on: [size-gate.build, guard-check.ok, fix-round.again]
+    ai:
+      agent: builder
+      input:
+        card: "{{ key }}"
+        size: "{{ vars.qualify.size }}"
+        plan: "{{ default(vars.plan.summary, '') }}"
+        round: "{{ default(vars['fix-round'].rounds, 0) }}"
+        findings: "{{ default(vars.review.findings, []) }}"
+        guidance: "{{ default(vars['architect-review'].guidance, '') }}"
+      output:
+        type: object
+        required: [outcome, summary]
+        properties:
+          outcome: { enum: [done, blocked] }
+          summary: { type: string }
+          reason: { type: string }
+    timeout: 2h
+
+  push:
+    description: Adopt planning's branch + draft PR, push, run gate.py (real change · clean base · fresh base). One card = one branch = one PR.
+    on: build.done
+    run: scripts/push.sh {{ key }} --size {{ vars.qualify.size }}
+    timeout: 30m
+    retry: { max: 1 }
+
+  # ── Review loop (bounded) — two agents in parallel, a third on demand; fixes go back to the builder ──
+  review:
+    description: Code review of the PR (threads + CI + diff). May hand a design question to the architect.
+    on: [push.done, human-review.bounced]
+    ai:
+      agent: reviewer
+      input:
+        card: "{{ key }}"
+        pr: "{{ vars.push.pr }}"
+        round: "{{ default(vars['fix-round'].rounds, 0) }}"
+      output:
+        type: object
+        required: [outcome]
+        properties:
+          outcome: { enum: [clean, findings, needs-architect] }
+          findings: { type: array, items: { type: string } }
+          question: { type: string, description: "for needs-architect: the design question" }
+    timeout: 45m
+
+  qa:
+    description: Black-box QA of the running preview, in parallel with the first code review (concurrency 2). Runs once — fix rounds are re-reviewed, not re-tested.
+    on: push.done
+    if: "!('qa' in vars)"
+    ai:
+      agent: qa
+      input:
+        card: "{{ key }}"
+        preview: "{{ vars.push.preview }}"
+      output:
+        type: object
+        required: [outcome, passed]
+        properties:
+          outcome: { enum: [pass, fail] }
+          passed: { type: boolean }
+          failures: { type: array, items: { type: string } }
+    timeout: 45m
+
+  architect-review:
+    description: Delegation — the reviewer asked; the architect answers with guidance the next build round must follow.
+    on: review.needs-architect
+    ai:
+      agent: architect
+      input:
+        card: "{{ key }}"
+        pr: "{{ vars.push.pr }}"
+        question: "{{ vars.review.question }}"
+      output:
+        type: object
+        required: [outcome, guidance]
+        properties:
+          outcome: { enum: [guidance] }
+          guidance: { type: string }
+    timeout: 30m
+
+  fix-round:
+    description: The one "try again" hub — findings and guidance come back here; the builder fixes. Three rounds, then a human.
+    on: [review.findings, architect-review.guidance]
+    run: bash scripts/round.sh 3
+    outcomes: [again, escalate]
+
+  escalate:
+    on: [fix-round.escalate, qa.fail, build.blocked]
+    run: 'scripts/move_card.sh {{ key }} "Human Review" --label "ST:NeedsHuman"' 
+    terminal: true
+
+  ready-gate:
+    description: Both agents must agree — the latest review clean AND QA passed — before a human is asked.
+    on: [review.clean, qa.pass]
+    gate:
+      outcomes:
+        both: "len(default(vars.review.findings, ['pending'])) == 0 && vars.qa.passed == true"
+      default: wait
+    terminal: [wait]
+
+  park:
+    description: Park in Human Review; a person tests the kept-alive preview.
+    on: ready-gate.both
+    run: 'scripts/move_card.sh {{ key }} "Human Review"'
+
+  human-review:
+    on: park.done
+    human:
+      resume_on: card.moved
+      outcomes:
+        passed:  "event.data.to == 'Human Review Passed'"
+        bounced: "event.data.to == 'AI Agent Review'"
+
+  # ── Merge (only ever on the human's move) ─────────────────────────────
+  merge:
+    description: Merge, archive the openspec change, move to Ready for Staging, tear down.
+    on: human-review.passed
+    run: scripts/merge.sh {{ key }} --pr {{ vars.push.pr }}
+    timeout: 30m
+    terminal: true
+
+  # ── Reconcile (level-triggered safety net) ────────────────────────────
+  sweep:
+    description: Orphan worktrees / dead tunnels are listed, never deleted.
+    on: tick
+    run: scripts/sweep.sh
+    terminal: true
+
+  # ── Reflection: a failure anywhere is a signal; patterns become cards ──
+  # `*.failed` listens to every other step's failure (only *.failed / *.timeout exist).
+  # The script groups the signals in this workflow's log and, when the canvas is
+  # reachable (AWD_CANVAS_URL), opens ONE card per repeated pattern in Backlog —
+  # with a suggested golden. Unreachable → `skipped`, so goldens stay hermetic.
+  reflect-failure:
+    description: Any step failed → group signals into patterns; a repeated one becomes a Backlog card that asks for a golden.
+    on: "*.failed"
+    run: bash scripts/reflect_to_board.sh {{ key }} {{ event.type }}
+    terminal: [done, skipped]

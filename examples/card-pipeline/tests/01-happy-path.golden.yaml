@@ -1,0 +1,29 @@
+# A planned card goes all the way: plan → human confirms → qualify → build → review ∥ qa → human passes → merge.
+# Two agents work on the built card at once (concurrency: 2); ready-gate waits for both.
+mode: run
+key: c-happy
+events:
+  - { type: card.moved, data: { card: c-happy, name: Upload contacts CSV, from: Backlog, to: Agent Planning } }
+  - { type: card.moved, data: { card: c-happy, from: Agent Planned, to: Ready } }
+  - { type: card.moved, data: { card: c-happy, from: Human Review, to: Human Review Passed } }
+expect:
+  status: done
+  outcomes:
+    - plan.ready-for-agent
+    - handoff.done
+    - confirm.approved
+    - qualify.pick
+    - size-gate.build
+    - build.done
+    - push.done
+    - review.clean          # @reviewer (sonnet) …
+    - ready-gate.wait       # …but QA is still running
+    - qa.pass               # @qa
+    - ready-gate.both
+    - park.done
+    - human-review.passed
+    - merge.done
+  vars:
+    qualify: { size: M, riskClass: reversible }
+    handoff: { list: Agent Planned, label: "ST:ReadyForAgent" }
+    merge: { merged: true }

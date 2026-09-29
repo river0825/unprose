@@ -1,0 +1,48 @@
+/* The panel's left edge: a wide invisible hit area with a thin line that shows on hover / focus / drag. */
+.panel-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: transparent;
+  transition: background-color 120ms;
+}
+.panel-resize:hover::after,
+.panel-resize.dragging::after,
+.panel-resize:focus-visible::after {
+  background: var(--ink-3);
+}
+.panel-resize:focus-visible {
+  outline: none;
+}
+.panel-resize.dragging {
+  cursor: col-resize;
+}
+/* no text selection or panel slide animation while dragging */
+.app:has(.panel-resize.dragging) {
+  user-select: none;
+  cursor: col-resize;
+}
+.app:has(.panel-resize.dragging) .panel {
+  transition: none;
+}
+.app:not(.panel-open) .panel-resize {
+  display: none;
+}
+@media (max-width: 720px) {
+  .panel-resize {
+    display: none;
+  }
+}

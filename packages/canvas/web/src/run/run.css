@@ -1,0 +1,60 @@
+/* Run overlay — badges on step/agent cards + the runs/events drawer. Tokens from styles.css. */
+.run-badges { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+.run-badge {
+  position: absolute; display: inline-flex; align-items: center; gap: 5px; max-width: 260px;
+  padding: 2px 8px 2px 6px; border-radius: 4px; border: 1px solid var(--rule-2); background: var(--chrome);
+  color: var(--ink); font-size: 12px; font-weight: 500; white-space: nowrap; transform-origin: 100% 50%;
+  pointer-events: auto;
+}
+.run-badge .glyph { font-size: 11px; }
+.run-badge .text { overflow: hidden; text-overflow: ellipsis; }
+.run-badge .count { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 11px; color: var(--ink-3); }
+.run-badge.running { border-color: var(--marker); color: var(--marker); background: var(--marker-soft); }
+.run-badge.running .glyph { animation: run-pulse 1.2s ease-in-out infinite; }
+.run-badge.waiting { border-color: var(--c-orange); background: color-mix(in srgb, var(--c-orange) 22%, var(--paper)); }
+.run-badge.done { border-color: var(--user); color: var(--user); }
+.run-badge.failed { border-left: 3px solid var(--danger); color: var(--danger); }
+.run-badge.agent { border-style: dashed; }
+.run-badge.agent.idle { color: var(--ink-3); }
+.run-badge.agent.running { border-style: solid; border-color: var(--agent); color: var(--agent); background: color-mix(in srgb, var(--agent) 14%, var(--paper)); }
+@keyframes run-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .run-badge.running .glyph { animation: none; } }
+
+.run-drawer {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column;
+  max-height: 44%; border-top: 1px solid var(--rule); background: var(--chrome); font-size: 13px;
+}
+.run-drawer:not(.open) { max-height: none; }
+.run-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px; min-height: 36px; border-bottom: 1px solid var(--rule); }
+.run-drawer:not(.open) .run-head { border-bottom: 0; }
+.run-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+.run-head .dot.on { background: var(--user); box-shadow: 0 0 0 3px color-mix(in srgb, var(--user) 25%, transparent); }
+.run-title { font-weight: 500; }
+.run-title .mono, .run-table .mono, .run-events .mono { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 12px; }
+.run-head .spacer { flex: 1; }
+.run-chip { border: 1px solid var(--marker); color: var(--marker); background: var(--marker-soft); border-radius: 4px; padding: 1px 8px; font: inherit; font-size: 12px; cursor: pointer; }
+.run-tabs { display: inline-flex; border: 1px solid var(--rule-2); border-radius: 4px; overflow: hidden; }
+.run-tabs button { border: 0; background: transparent; color: var(--ink-2); padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 28px; }
+.run-tabs button.on { background: var(--paper); color: var(--ink); font-weight: 500; }
+.run-toggle { border: 1px solid var(--rule-2); background: var(--paper); color: var(--ink); border-radius: 4px; padding: 3px 10px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 28px; }
+.run-tabs button:focus-visible, .run-toggle:focus-visible, .run-chip:focus-visible, .run-events button:focus-visible { outline: 2px solid var(--marker); outline-offset: 2px; }
+.run-body { overflow: auto; padding: 6px 12px 10px; }
+.run-empty { margin: 8px 0; color: var(--ink-3); }
+.run-table { width: 100%; border-collapse: collapse; }
+.run-table th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 12px; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--rule); }
+.run-table td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.run-table tbody tr { cursor: pointer; }
+.run-table tbody tr:hover { background: var(--chrome-2); }
+.run-table tbody tr.selected { background: var(--marker-soft); }
+.run-table .muted, .run-events .muted { color: var(--ink-3); font-size: 12px; }
+.state { display: inline-block; padding: 0 6px; border-radius: 3px; border: 1px solid var(--rule-2); font-size: 12px; }
+.state.running { color: var(--marker); border-color: var(--marker); }
+.state.waiting { color: var(--ink); border-color: var(--c-orange); }
+.state.done { color: var(--user); border-color: var(--user); }
+.state.failed { color: var(--danger); border-color: var(--danger); }
+.run-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.run-events { list-style: none; margin: 0; padding: 0; overflow: auto; }
+.run-events li button { display: grid; grid-template-columns: minmax(60px, 0.5fr) minmax(0, 1fr) auto; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink); padding: 4px 6px; font: inherit; cursor: pointer; border-bottom: 1px solid var(--rule); }
+.run-events li button:hover, .run-events li.selected button { background: var(--marker-soft); }
+.run-events .key { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.run-detail { margin: 0; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); font-size: 12px; overflow: auto; max-height: 100%; white-space: pre-wrap; word-break: break-word; }

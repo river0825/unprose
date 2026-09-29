@@ -1,0 +1,13 @@
+# Reflection, automatic signal: push.failed on c-flaky fires the `*.failed` wildcard step
+# (reflect-failure). With no canvas in tests its script answers `skipped` — hermetic — but the
+# wildcard listener demonstrably ran, on another step's failure, without being wired to it.
+mode: run
+key: c-flaky
+events:
+  - { type: card.moved, data: { card: c-flaky, from: Backlog, to: Ready } }
+  - { type: card.moved, data: { card: c-flaky, from: Human Review, to: Human Review Passed } }
+expect:
+  status: done
+  events:
+    - { type: push.failed, key: c-flaky }
+    - { type: reflect-failure.skipped, key: c-flaky, data: { reason: "~AWD_CANVAS_URL", signal: push.failed } }

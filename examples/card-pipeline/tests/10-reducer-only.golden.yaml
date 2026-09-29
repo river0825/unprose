@@ -1,0 +1,20 @@
+# replay mode: every event is given by hand and ONLY the reducer runs — no scripts, no model.
+# This is the cheapest kind of test: it pins which commands each event must produce.
+mode: replay
+key: c-happy
+events:
+  - { type: card.moved, data: { card: c-happy, to: Agent Planning, name: Upload contacts CSV } }
+  - { type: plan.ready-for-agent, data: { summary: ok, size: M } }
+  - { type: handoff.done, data: { list: Agent Planned } }
+  - { type: card.moved, data: { card: c-happy, to: Somewhere Else } }   # ignored: no outcome matches
+  - { type: card.moved, data: { card: c-happy, to: Ready } }
+  - { type: confirm.approved }                                            # what the `emit` below produces in a live run
+expect:
+  status: running                                                         # qualify is in flight
+  outcomes: [plan.ready-for-agent, handoff.done, confirm.approved]
+  commands:
+    - { kind: call_ai, step: plan, agent: planner, model: opus, tools: [Read, Grep, Glob], input: { card: c-happy, name: Upload contacts CSV } }
+    - { kind: run_script, step: handoff, cmd: "~--label \"ST:ReadyForAgent\"" }
+    - { kind: wait_human, step: confirm, resumeOn: [card.moved] }
+    - { kind: emit, event: { type: confirm.approved } }
+    - { kind: run_script, step: qualify, cmd: python3 scripts/qualify.py --card c-happy }

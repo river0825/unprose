@@ -1,0 +1,53 @@
+<svg viewBox="0 0 1040 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dogfooding-loop-title dogfooding-loop-desc">
+<title id="dogfooding-loop-title">The dogfooding loop</title>
+<desc id="dogfooding-loop-desc">Seven stations flow clockwise: a person moves a kanban card, the planner plans, the builder builds in a worktree, tests and review run, the merge lands after the Done gate, reflection collects signals, and awd reflect turns repeated patterns into new cards. Every station writes to one hub: the event log and memory.</desc>
+<defs><marker id="dogfooding-loop-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#444b53"/></marker><marker id="dogfooding-loop-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b727a"/></marker></defs>
+<style>.ring{fill:none;stroke:#444b53;stroke-width:1.2}.spoke{fill:none;stroke:#6b727a;stroke-width:1;stroke-dasharray:5 4}.station{fill:#fbfbf9;stroke:#161a1f;stroke-width:1}.station.focal{fill:#1f56d6;fill-opacity:0.08;stroke:#1f56d6;stroke-width:1.2}.hub{fill:#161a1f}.node-name{fill:#161a1f;font:600 12px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}.focal-name{fill:#1f56d6}.sublabel{fill:#6b727a;font:400 8.5px 'IBM Plex Mono',ui-monospace,monospace;text-anchor:middle}.hub-name{fill:#fbfbf9;font:600 15px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}.hub-sub{fill:#fbfbf9;opacity:.72;font:400 8.5px 'IBM Plex Mono',ui-monospace,monospace;text-anchor:middle}.arrow-label{fill:#6b727a;font:500 8px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em;text-anchor:middle}</style>
+<rect width="1040" height="680" fill="#fbfbf9"/>
+<!-- ring: clockwise arcs on one circle -->
+<path class="ring" d="M608.000 116.715 A240 240 0 0 1 677.843 159.209" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M730.105 224.000 A240 240 0 0 1 759.262 358.804" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M744.820 424.000 A240 240 0 0 1 675.009 523.227" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M536.000 579.466 A240 240 0 0 1 505.198 579.543" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M365.909 524.000 A240 240 0 0 1 295.603 425.123" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M280.835 360.000 A240 240 0 0 1 309.318 225.052" marker-end="url(#dogfooding-loop-arrow)"/>
+<path class="ring" d="M361.255 160.000 A240 240 0 0 1 430.885 117.158" marker-end="url(#dogfooding-loop-arrow)"/>
+<!-- write-back spokes: station inner edge → 6px before the hub -->
+<path class="spoke" d="M520.0 132.0 L520.0 282.0" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M667.5 222.4 L589.9 284.3" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M666.0 373.3 L625.8 364.2" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M608.7 524.2 L547.6 397.4" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M431.3 524.2 L492.4 397.4" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M374.0 373.3 L414.2 364.2" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<path class="spoke" d="M372.5 222.4 L450.1 284.3" marker-end="url(#dogfooding-loop-arrow-soft)"/>
+<rect x="502.0" y="199.0" width="84.0" height="16" rx="3" fill="#fbfbf9"/><text x="544.0" y="210.0" class="arrow-label">CARD.MOVED</text>
+<rect x="619.7" y="264.1" width="48.0" height="16" rx="3" fill="#fbfbf9"/><text x="643.7" y="275.1" class="arrow-label">LEARN</text>
+<rect x="357.5" y="337.3" width="62.4" height="16" rx="3" fill="#fbfbf9"/><text x="388.7" y="348.3" class="arrow-label">SIGNALS</text>
+<rect x="391.5" y="226.5" width="69.6" height="16" rx="3" fill="#fbfbf9"/><text x="426.3" y="237.5" class="arrow-label">PATTERNS</text>
+<!-- stations -->
+<rect class="station focal" x="432" y="68" width="176" height="64" rx="6"/>
+<text x="520" y="96" class="node-name focal-name">Person moves a card</text>
+<text x="520" y="114" class="sublabel">Planning · Ready · Done</text>
+<rect class="station" x="620" y="160" width="176" height="64" rx="6"/>
+<text x="708" y="188" class="node-name">Plan</text>
+<text x="708" y="206" class="sublabel">@planner · memory recalled</text>
+<rect class="station" x="664" y="360" width="176" height="64" rx="6"/>
+<text x="752" y="388" class="node-name">Build</text>
+<text x="752" y="406" class="sublabel">@builder · git worktree</text>
+<rect class="station" x="536" y="524" width="176" height="64" rx="6"/>
+<text x="624" y="552" class="node-name">Test &amp; review</text>
+<text x="624" y="570" class="sublabel">npm test · reviewer ⇄ architect</text>
+<rect class="station" x="328" y="524" width="176" height="64" rx="6"/>
+<text x="416" y="552" class="node-name">Merge</text>
+<text x="416" y="570" class="sublabel">--no-ff · worktree removed</text>
+<rect class="station" x="200" y="360" width="176" height="64" rx="6"/>
+<text x="288" y="388" class="node-name">Reflect</text>
+<text x="288" y="406" class="sublabel">&lt;step&gt;.failed · reflect notes</text>
+<rect class="station" x="244" y="160" width="176" height="64" rx="6"/>
+<text x="332" y="188" class="node-name">New cards</text>
+<text x="332" y="206" class="sublabel">awd reflect → Backlog</text>
+<!-- the one shared-state hub -->
+<rect class="hub" x="420.0" y="288.0" width="200" height="104" rx="8"/>
+<text x="520" y="336" class="hub-name">Event log + memory</text>
+<text x="520" y="360" class="hub-sub">events.ndjson · memory.learned</text>
+</svg>

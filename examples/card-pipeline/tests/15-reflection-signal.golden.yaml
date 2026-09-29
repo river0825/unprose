@@ -1,0 +1,15 @@
+# Reflection, explicit signal: the reviewer's answer carries `reflect: [...]`. The runtime records it
+# as a reflection.noted event (source ai) — a signal for the people, grouped later by `awd reflect` —
+# and strips it from vars, like `remember` / `learn`.
+mode: run
+key: c-happy
+events:
+  - { type: card.moved, data: { card: c-happy, from: Backlog, to: Ready } }
+  - { type: card.moved, data: { card: c-happy, from: Human Review, to: Human Review Passed } }
+expect:
+  status: done
+  events:
+    - { type: review.clean, key: c-happy }
+    - { type: reflection.noted, key: c-happy, data: { source: ai, agent: reviewer, step: review, kind: friction, tags: [review, ci], note: "~CI status link" } }
+  vars:
+    review: { findings: [] }        # `reflect` is not in vars

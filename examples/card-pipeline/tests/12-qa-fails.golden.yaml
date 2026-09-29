@@ -1,0 +1,11 @@
+# The two parallel agents disagree: the review is clean but black-box QA fails → a human takes over.
+# ready-gate never says `both` because vars.qa.passed is false.
+mode: run
+key: c-qafail
+events:
+  - { type: card.moved, data: { card: c-qafail, from: Backlog, to: Ready } }
+expect:
+  status: done
+  outcomes: [qualify.pick, size-gate.build, build.done, push.done, review.clean, ready-gate.wait, qa.fail, escalate.done]
+  vars:
+    qa: { passed: false, failures: ["SC2: duplicate rows are imported twice"] }

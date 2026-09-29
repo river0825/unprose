@@ -1,0 +1,11 @@
+{
+  "outcome": "clean",
+  "findings": [],
+  "remember": {
+    "lastVerdict": "clean",
+    "threadsChecked": true
+  },
+  "reflect": [
+    { "note": "The review input had no CI status link; I had to infer it from the PR page.", "kind": "friction", "tags": ["review", "ci"] }
+  ]
+}

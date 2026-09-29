@@ -1,0 +1,12 @@
+export * from './model.js'
+// port + adapters (store.js is the compatibility name for the file adapter)
+export * from './ports/boardRepository.js'
+export * from './adapters/boards/index.js'
+export { BoardStore } from './store.js'
+export * from './diff.js'
+export * from './templates/index.js'
+export * from './server.js'
+export * from './client.js'
+export { createMcpServer, runMcp } from './mcp.js'
+export { demoBoards } from './demo.js'
+export { renderThumb } from './thumb.js'

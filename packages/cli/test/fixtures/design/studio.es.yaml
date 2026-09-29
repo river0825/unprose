@@ -1,0 +1,17 @@
+# A tiny process-level EventStorming of Studio's Ask AI (docs/diagrams.md §3)
+level: process
+people: [You]
+systems: [awd studio]
+events:
+  - { id: asked, text: Discuss comment added }
+  - { id: picked-up, text: Request picked up, pivotal: true }
+  - { id: replied, text: Reply posted }
+commands:
+  - { id: ask-ai, text: Ask AI, by: You, system: awd studio, produces: asked }
+  - { id: open-session, text: Open session, system: awd studio, produces: picked-up }
+policies:
+  - { text: Whenever a request arrives open a session, when: asked, then: open-session }
+readModels:
+  - { text: Chat thread, updatedBy: replied, informs: You }
+hotspots:
+  - { text: Token cost per session?, on: open-session }

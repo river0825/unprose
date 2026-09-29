@@ -1,0 +1,20 @@
+# Studio work, one card per release (docs/diagrams.md §6).
+# A card groups the story-map stories of its release (design/studio.story-map.yaml).
+title: Studio · Kanban
+columns:
+  - { name: Backlog }
+  - { name: Doing, wip: 1 }
+  - { name: Review }
+  - { name: Done }
+cards:
+  - id: release-1
+    title: Release 1
+    column: Backlog
+    labels: [release]
+    description: |
+      Story map 上 Release 1 線以上的 stories：
+      - chat-selection：選取一個或多個 item 開 Chat
+      - line-comment：在檔案的某幾行留言 / Ask AI
+      - receipts：顯示 Sent / Seen / Working
+      - board-session：一張 board 一個 session，忙碌時分支
+      - proposals：畫面上的修改變成提案，同意後才改檔

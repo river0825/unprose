@@ -1,0 +1,101 @@
+# A small workflow to show how the runner works (docs/workflow.md): triage one incoming issue.
+# Draw: awd design draw design/runner-example.workflow.yaml --board "title:Unprose — Studio 設計"
+# Run:  awd run design/runner-example.workflow.yaml --worker fake   (then POST an issue to /hooks/issue)
+name: issue-triage
+key: "{{ event.data.issue }}"          # one run per issue
+concurrency: 1
+
+agents:
+  triager:
+    description: Reads a new issue and says what kind it is and how urgent.
+    model: sonnet
+    system: |
+      You triage one issue for a small team. Read `input.title` and `input.body`.
+      Decide `kind` (bug | feature | question) and `urgency` (low | normal | high).
+      Outcome `triaged` when you can tell; `unclear` when the issue does not say enough — put what you need in `ask`.
+
+triggers:
+  issue:
+    on: webhook
+    path: /hooks/issue
+    emit: issue.opened
+    data:
+      issue: "{{ body.number }}"
+      title: "{{ body.title }}"
+      body: "{{ body.body }}"
+  label:
+    on: webhook
+    path: /hooks/label
+    emit: issue.labelled
+    data:
+      issue: "{{ body.number }}"
+      label: "{{ body.label }}"
+
+steps:
+  fetch:
+    description: Read the issue and its labels (a script; retried when the tracker is flaky).
+    on: issue.opened
+    run: echo '{"outcome":"done","data":{"labels":[]}}'
+    retry: { max: 2, backoff: 30s }
+    timeout: 2m
+
+  triage:
+    description: The triager agent classifies the issue.
+    on: fetch.done
+    timeout: 10m
+    retry: { max: 1, backoff: 1m }
+    ai:
+      agent: triager
+      input:
+        title: "{{ event.data.title }}"
+        body: "{{ event.data.body }}"
+      output:
+        type: object
+        required: [outcome]
+        properties:
+          outcome: { enum: [triaged, unclear] }
+          kind: { enum: [bug, feature, question] }
+          urgency: { enum: [low, normal, high] }
+          ask: { type: string }
+
+  route:
+    description: A gate — no IO, just a decision on the triager's answer.
+    on: triage.triaged
+    gate:
+      outcomes:
+        urgent: "vars.triage.urgency == 'high'"
+        backlog: "vars.triage.kind != 'question'"
+      default: answer
+
+  confirm:
+    description: A person checks urgent issues; the run waits for their reply (7 days at most).
+    on: route.urgent
+    timeout: 7d
+    human:
+      resume_on: [issue.labelled]
+      outcomes:
+        accepted: "event.data.label == 'urgent'"
+        downgraded: "event.data.label != 'urgent'"
+    terminal: [accepted, downgraded, timeout]
+
+  ask-reporter:
+    description: Comment on the issue asking for what the triager could not find.
+    on: triage.unclear
+    run: echo '{"outcome":"done"}'
+
+  file:
+    description: Put the issue on the backlog (or answer the question).
+    on: [route.backlog, route.answer]
+    run: echo '{"outcome":"done"}'
+
+  park:
+    description: Any step that failed for good lands here — the run stops and a person looks.
+    on: ["*.failed", "*.timeout"]
+    run: echo '{"outcome":"done"}'
+    terminal: true
+
+  # the rest ends here on purpose
+  done:
+    on: [ask-reporter.done, file.done]
+    run: echo '{"outcome":"done"}'
+    terminal: true

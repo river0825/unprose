@@ -1,0 +1,67 @@
+# How the workflow runner (`awd run`) handles one run — from an outside event to the run's end.
+# Process-level EventStorming (docs/diagrams.md §3), checked against packages/core/src/reducer.ts and
+# packages/runtime/src/application/engine.ts. Example workflow: design/runner-example.workflow.yaml.
+title: Workflow runner · 一次 run（process）
+level: process
+people: [維護者 Maintainer]
+systems:
+  - { id: tracker, text: 外部服務（webhook / board / cron）, external: true, raises: received }
+  - { id: runtime, text: awd run }
+  - { id: log, text: event log（events.ndjson） }
+  - { id: reducer, text: reducer（pure） }
+  - { id: scripts, text: script runner }
+  - { id: worker, text: worker（claude-code / herdr / anthropic / fake） }
+  - { id: timer, text: durable timer }
+
+events:
+  - { id: started, text: runtime 已啟動（log 已重播） }
+  - { id: received, text: trigger 事件已收到（issue.opened） }
+  - { id: appended, text: 事件已寫入 log }
+  - { id: decided, text: 下一步已決定（commands） }
+  - { id: script-done, text: script 完成（<step>.done） }
+  - { id: failed, text: step 失敗（<step>.failed） }
+  - { id: timed-out, text: step 逾時（<step>.timeout） }
+  - { id: retry-due, text: 重試到期（<step>.retry） }
+  - { id: answered, text: agent 答案已驗證（<step>.<outcome>） }
+  - { id: learned, text: 記憶已記下（memory.learned） }
+  - { id: noted, text: 反思已記下（reflection.noted） }
+  - { id: waiting, text: run 在等人（human step） }
+  - { id: resumed, text: 人已回覆（resume_on 符合） }
+  - { id: parked, text: 失敗已接手（*.failed listener） }
+  - { id: patterns, text: 反覆的問題已變成 kanban 卡片 }
+
+commands:
+  - { id: run, text: awd run（啟動 / 改 yaml 後重啟）, by: 維護者 Maintainer, system: runtime, produces: started }
+  - { id: append, text: 寫入 log（key = run）, system: log, produces: appended }
+  - { id: reduce, text: 交給 reducer, system: reducer, produces: [decided, waiting] }
+  - { id: run-script, text: 執行 script step, system: scripts, produces: [script-done, failed, timed-out] }
+  - { id: call-ai, text: 呼叫 agent（ai step）, system: worker, produces: [answered, failed, timed-out] }
+  - { id: schedule-retry, text: 排程重試（backoff 後）, system: timer, produces: retry-due }
+  - { id: record, text: 記下 learn / reflect, system: log, produces: [learned, noted] }
+  - { id: reply, text: 回覆（拖卡片 / label / awd emit）, by: 維護者 Maintainer, system: tracker, produces: resumed }
+  - { id: park, text: 交給失敗處理 step, system: scripts, produces: parked }
+  - { id: reflect, text: awd reflect --to-board, by: 維護者 Maintainer, system: runtime, produces: patterns }
+
+policies:
+  - { id: on-event, text: 每個事件都先寫進 log, when: [received, resumed, script-done, answered], then: append }
+  - { id: on-append, text: 寫進 log 就交給 reducer, when: appended, then: reduce }
+  - { id: on-script, text: 決定 run_script 就執行, when: decided, then: run-script }
+  - { id: on-ai, text: 決定 call_ai 就呼叫 agent, when: decided, then: call-ai }
+  - { id: on-fail, text: 失敗 / 逾時且還有 retry 額度就重試, when: [failed, timed-out], then: schedule-retry }
+  - { id: on-retry, text: 重試到期就重跑, when: retry-due, then: run-script }
+  - { id: on-answer, text: 答案裡有 learn / reflect 就記下, when: answered, then: record }
+  - { id: on-exhausted, text: 額度用完就交給 *.failed listener, when: [failed, timed-out], then: park }
+  - { id: on-noted, text: 反思夠多就整理成卡片, when: noted, then: reflect, person: 維護者 Maintainer }
+
+readModels:
+  - { id: status, text: run 狀態（awd status / canvas overlay）, updatedBy: [appended, waiting, parked], informs: 維護者 Maintainer }
+
+hotspots:
+  - { text: 改 workflow.yaml 要重啟 awd run；進行中的 run 會用新定義重播 log, on: run }
+  - { text: 重啟會重送還沒回答的 command — script 要能重跑（冪等）, on: run-script }
+  - { text: concurrency 滿了 step 會排隊（pending），看不太出來, on: reduce }
+
+definitions:
+  - { term: key, text: 一個 run 的 id：workflow 的 key 模板（例如 issue 編號）算出來；同 key 的事件屬於同一個 run }
+  - { term: run, text: 一個 key 的所有事件 + reducer 從中算出的狀態（running / waiting / done / failed） }
+  - { term: outcome, text: step 的結果，變成事件 <step>.<outcome>；ai step 的 output schema 裡的 enum 就是它的 outcomes }

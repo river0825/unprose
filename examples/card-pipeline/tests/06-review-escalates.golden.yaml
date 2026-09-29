@@ -1,0 +1,29 @@
+# A reviewer that never says clean is cut off after three fix rounds by fix-round.
+mode: run
+key: c-stuck
+events:
+  - { type: card.moved, data: { card: c-stuck, from: Backlog, to: Ready } }
+expect:
+  status: done
+  outcomes:
+    - qualify.pick
+    - size-gate.build
+    - build.done
+    - push.done
+    - review.findings
+    - qa.pass
+    - ready-gate.wait
+    - fix-round.again
+    - build.done               # the builder fixes
+    - push.done
+    - review.findings
+    - fix-round.again
+    - build.done               # the builder fixes
+    - push.done
+    - review.findings
+    - fix-round.again
+    - build.done
+    - push.done
+    - review.findings          # fourth review, still findings → three fix rounds used up
+    - fix-round.escalate
+    - escalate.done

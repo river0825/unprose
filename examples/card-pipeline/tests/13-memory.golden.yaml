@@ -1,0 +1,23 @@
+# Memory. Long-term: the planner finishes card c-flaky with a `learn` note; the runtime turns it
+# into a `memory.learned` event and, on the NEXT card, puts it in front of the planner again
+# (the outcome event's meta.recalled records what the model was shown). Short-term: the reviewer's
+# `remember` lands in state.memory.short and is stripped from vars. Everything asserted is in the log.
+mode: run
+key: c-happy
+events:
+  - { type: card.moved, key: c-flaky, data: { card: c-flaky, name: First card, from: Backlog, to: Agent Planning } }
+  - { type: card.moved, key: c-happy, data: { card: c-happy, name: Upload contacts CSV, from: Backlog, to: Agent Planning } }
+  - { type: card.moved, key: c-happy, data: { card: c-happy, from: Agent Planned, to: Ready } }
+  - { type: card.moved, key: c-happy, data: { card: c-happy, from: Human Review, to: Human Review Passed } }
+expect:
+  status: done
+  events:
+    - { type: plan.ready-for-agent, key: c-flaky }
+    - { type: memory.learned, key: c-flaky, data: { agent: planner, step: plan, note: "~SP:NoOpenSpec", tags: [planning, rollback] } }
+    - { type: plan.ready-for-agent, key: c-happy, meta: { recalled: ["~SP:NoOpenSpec"] } }   # the second planner call saw the first card's lesson
+    - { type: review.clean, key: c-happy, data: { remember: { lastVerdict: clean } } }
+  vars:
+    plan: { size: M }                 # `learn` is not in vars …
+  state:
+    memory:
+      short: { reviewer: { lastVerdict: clean, threadsChecked: true } }   # … `remember` lives here

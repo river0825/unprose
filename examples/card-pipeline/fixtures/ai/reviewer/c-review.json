@@ -1,0 +1,5 @@
+[
+  { "outcome": "findings", "findings": ["missing test for empty filter", "N+1 query in search"] },
+  { "outcome": "findings", "findings": ["N+1 query still there"] },
+  { "outcome": "clean", "findings": [] }
+]

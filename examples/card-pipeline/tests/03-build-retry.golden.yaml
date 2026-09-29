@@ -1,0 +1,20 @@
+# push.sh fails on its first attempt for c-flaky (stale base); retry: { max: 1 } runs it once more.
+# The failure also fires the `*.failed` reflection step (14-reflection covers that); its script and the
+# retried push run concurrently, so this golden asserts the pipeline's own order as an event subsequence.
+mode: run
+key: c-flaky
+events:
+  - { type: card.moved, data: { card: c-flaky, from: Backlog, to: Ready } }
+  - { type: card.moved, data: { card: c-flaky, from: Human Review, to: Human Review Passed } }
+expect:
+  status: done
+  events:
+    - { type: qualify.pick }
+    - { type: size-gate.build }
+    - { type: push.failed, meta: { attempt: 1 } }
+    - { type: push.done, meta: { attempt: 2 } }
+    - { type: review.clean }
+    - { type: qa.pass }
+    - { type: park.done }
+    - { type: human-review.passed }
+    - { type: merge.done }

@@ -1,0 +1,12 @@
+{
+  "name": "unprose",
+  "owner": { "name": "Unprose contributors" },
+  "plugins": [
+    {
+      "name": "unprose",
+      "source": "./",
+      "description": "Visual design discussions between people and AI agents: EventStorming, story maps, kanban, wireframes, workflows.",
+      "version": "0.1.0"
+    }
+  ]
+}

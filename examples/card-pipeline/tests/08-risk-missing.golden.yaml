@@ -1,0 +1,9 @@
+mode: run
+key: c-norisk
+events:
+  - { type: card.moved, data: { card: c-norisk, from: Backlog, to: Ready } }
+expect:
+  status: done
+  outcomes: [qualify.pick, size-gate.guarded, guard-check.missing]
+  vars:
+    guard-check: { missing: [rollback, tripwireTest] }

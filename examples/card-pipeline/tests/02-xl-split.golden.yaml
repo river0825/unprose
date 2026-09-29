@@ -1,0 +1,8 @@
+# An unplanned XL card dropped straight into Ready is qualified, then routed to split — never built.
+mode: run
+key: c-xl
+events:
+  - { type: card.moved, data: { card: c-xl, from: Backlog, to: Ready } }
+expect:
+  status: done
+  outcomes: [qualify.pick, size-gate.split, split.done]

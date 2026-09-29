@@ -1,0 +1,4 @@
+[
+  { "outcome": "needs-architect", "question": "Should the CSV column mapping be a public API contract or an internal detail?" },
+  { "outcome": "clean", "findings": [] }
+]

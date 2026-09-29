@@ -1,0 +1,1 @@
+{ "outcome": "fail", "passed": false, "failures": ["SC2: duplicate rows are imported twice"] }

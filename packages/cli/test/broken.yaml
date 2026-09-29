@@ -1,0 +1,7 @@
+name: broken
+triggers:
+  t: { on: manual, emit: go }
+steps:
+  a:
+    on: nope.done
+    run: echo

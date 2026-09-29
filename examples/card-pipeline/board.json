@@ -1,0 +1,95 @@
+{
+  "_comment": "A fake Trello board. Scripts read this instead of the API so the example runs offline.",
+  "cards": {
+    "c-happy": {
+      "name": "Upload contacts CSV",
+      "size": "M",
+      "risk": "Low",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-xl": {
+      "name": "Rewrite the sync engine",
+      "size": "XL",
+      "risk": "High",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-flaky": {
+      "name": "Auto-sort disabled variants",
+      "size": "S",
+      "risk": "Lowest",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-risky": {
+      "name": "Drop legacy_contacts table",
+      "size": "S",
+      "risk": "Highest",
+      "labels": [
+        "ST:ReadyForAgent"
+      ],
+      "rollback": true,
+      "tripwireTest": true
+    },
+    "c-norisk": {
+      "name": "Change sender address",
+      "size": "S",
+      "risk": "High",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-review": {
+      "name": "Contact search filters",
+      "size": "L",
+      "risk": "Medium",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-stuck": {
+      "name": "Flaky date parsing",
+      "size": "S",
+      "risk": "Low",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-human": {
+      "name": "Owner-driven migration",
+      "size": "S",
+      "risk": "Low",
+      "labels": [
+        "ST:HumanOwned"
+      ]
+    },
+    "c-unsized": {
+      "name": "Mystery card",
+      "size": null,
+      "risk": "Low",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-arch": {
+      "name": "CSV column mapping",
+      "size": "M",
+      "risk": "Medium",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    },
+    "c-qafail": {
+      "name": "Dedupe on import",
+      "size": "S",
+      "risk": "Low",
+      "labels": [
+        "ST:ReadyForAgent"
+      ]
+    }
+  }
+}

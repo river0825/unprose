@@ -1,0 +1,459 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import type { Author, Board, Change, Item, Op } from '../../../src/model'
+import { isContainer } from '../flow/boardToFlow'
+import { detailOf, type DiscussModel } from '../inspector/detail'
+import { Connections } from './Connections'
+import { WireProposal } from './WireProposal'
+import { isFlowWire, type Pending } from '../inspector/pending'
+import { BlockInspector } from './BlockInspector'
+import { FilesView, type FileNav } from './FilesView'
+import { SelectionChat } from './SelectionChat'
+import { AllChats, chatsNeedingYou } from './AllChats'
+import { filesOf, type Anchor } from '../inspector/anchor'
+import { useFreshMeta } from '../inspector/useFreshMeta'
+import { timeAgo } from '../time'
+import type { DiscussArg } from '../inspector/diff'
+import { DiagramElementPanel, DiagramFramePanel } from './DiagramInspector'
+import { diagramData, diagramOf } from '../diagrams/frame'
+
+interface Props {
+  board: Board
+  changes: Change[]
+  selectedId: string | null
+  /** the whole selection (the Chat tab is about all of it) */
+  selectedIds: string[]
+  onComment: (targetId: string, text: string) => void
+  /** chat with the selection: a comment marked `data.discuss = { model, about }` (docs/studio.md §2b) */
+  onChat: (ids: string[], text: string, model: DiscussModel) => void
+  /** a follow-up in a chat: a plain comment on its root */
+  onReply: (rootId: string, text: string) => void
+  /** a comment on lines of a file or prompt (docs/studio.md §5); `discuss` also asks the AI */
+  onAnchoredComment: (target: string, text: string, anchor: Anchor, discuss?: DiscussArg) => void
+  /** save the selected item's text (an arrow's label) */
+  onEditText: (id: string, text: string) => void
+  onSelect: (id: string | null) => void
+  onMoveToContainer: (id: string, containerId: string | null) => void
+  /** fit the view to these items (used by "locate" on agent batches) */
+  onLocate: (ids: string[]) => void
+  onToast: (text: string) => void
+  /** a flow wire's proposal → a chat request carrying it (docs/studio.md §7) */
+  onWireChat: (ids: string[], text: string, model: DiscussModel, proposal: Pending) => void
+  onUndoWire: (id: string) => void
+  onPickWireEvent: (id: string, event: string) => void
+  /** drop a proposed (pending) item, e.g. a story the agent proposed (docs/diagrams.md §4) */
+  onDismiss: (id: string) => void
+}
+
+/** Shown by the Event section already, or drawing detail: not repeated as raw data rows. */
+const WIRE_KEYS = new Set(['event', 'pending', 'fromSide', 'toSide', 'bend'])
+/** Shown by the diagram panels (frame spec, proposal, traces): not repeated as raw data rows. */
+const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces'])
+
+const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
+
+function describeOp(op: Op, board: Board, change: Change): string {
+  const name = (id: string) => {
+    const it = board.items[id] ?? change.before[id]
+    const t = it?.text?.trim()
+    return t ? `'${t.length > 40 ? `${t.slice(0, 40)}…` : t}'` : `${it?.type ?? 'item'} ${id.slice(0, 8)}`
+  }
+  if (op.kind === 'add') return `added ${op.item.type}${op.item.role ? ` (${op.item.role})` : ''} ${name(op.item.id)}`
+  if (op.kind === 'remove') return `removed ${name(op.id)}`
+  const keys = Object.keys(op.patch)
+  const moved = keys.includes('x') || keys.includes('y')
+  const rest = keys.filter((k) => !['x', 'y', 'updatedBy', 'updatedAt'].includes(k))
+  const parts = []
+  if (moved) parts.push('moved')
+  if (rest.length) parts.push(`changed ${rest.join(', ')}`)
+  return `${parts.join(' and ') || 'touched'} ${name(op.id)}`
+}
+
+const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.item.id : o.id)))]
+
+type Filter = 'all' | 'agent' | 'user'
+
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss }: Props) {
+  const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
+  const [nav, setNav] = useState<FileNav>({})
+  // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
+  const board = useFreshMeta(liveBoard, changes, tab)
+  const hasFiles = Object.keys(filesOf(board)).length > 0
+  const [filter, setFilter] = useState<Filter>('all')
+  const [draft, setDraft] = useState('')
+  const selected = selectedId ? board.items[selectedId] : undefined
+  // The Chat tab is always there: with nothing selected it is about the whole board.
+  // A tab whose subject went away falls back: Selected → Chat; Files without files → Changes.
+  const activeTab = tab === 'item' && !selected ? 'chat' : tab === 'files' && !hasFiles ? 'feed' : tab
+  const detail = detailOf(selected)
+  // Picking a workflow block means "tell me about it": open the Inspector. Picking a wire means
+  // "what does this join?": open Selected, which lists both ends.
+  const isBlock = Boolean(detail)
+  const isWire = selected?.type === 'arrow'
+  // a diagram frame (or an element in an EventStorming / story-map / domain-story frame) opens Selected too
+  const selectedDiagram = diagramFrameOf(selected)
+  const inFrame = selected && selected.type !== 'comment' ? diagramOf(board, selected) : undefined
+  // only inside a diagram frame: legacy diagram boards keep their old tab behaviour
+  const inDiagram = Boolean(inFrame?.frame && ['event-storming', 'user-story-map', 'domain-story'].includes(inFrame.kind))
+  useEffect(() => {
+    if (isBlock || isWire || selectedDiagram || inDiagram) setTab('item')
+  }, [selectedId, isBlock, isWire, Boolean(selectedDiagram), inDiagram])
+
+  const comments = selected
+    ? Object.values(board.items)
+        .filter((i) => i.type === 'comment' && i.target === selected.id)
+        .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+    : []
+
+  const visible = changes.filter((c) => filter === 'all' || c.author === filter)
+  const needYou = useMemo(() => chatsNeedingYou(board), [board])
+
+  return (
+    <aside id="board-panel" className="panel" aria-label="Board panel">
+      <div className="panel-tabs" role="tablist">
+        <button role="tab" aria-selected={activeTab === 'feed'} onClick={() => setTab('feed')}>
+          Changes
+        </button>
+        <button role="tab" aria-selected={activeTab === 'item'} onClick={() => setTab('item')} disabled={!selected}>
+          {selected ? (detail ? 'Inspector' : 'Selected') : selectedIds.length > 1 ? `${selectedIds.length} selected` : 'Select an item'}
+        </button>
+        <button role="tab" aria-selected={activeTab === 'chat'} onClick={() => setTab('chat')} title={selectedIds.length ? 'Chat about the selection' : 'Chat about this board'}>
+          Chat
+        </button>
+        <button role="tab" aria-selected={activeTab === 'chats'} onClick={() => setTab('chats')} title="Every chat on this board">
+          Chats{needYou ? <span className="tab-badge" aria-label={`${needYou} unread`}>{needYou}</span> : null}
+        </button>
+        {hasFiles && (
+          <button role="tab" aria-selected={activeTab === 'files'} onClick={() => setTab('files')}>
+            Files
+          </button>
+        )}
+      </div>
+      <div className="panel-body">
+        {activeTab === 'chats' ? (
+          <AllChats board={board} onLocate={onLocate} onReply={onReply} />
+        ) : activeTab === 'feed' ? (
+          <>
+            <div className="filter" role="group" aria-label="Show changes by">
+              {(['all', 'agent', 'user'] as Filter[]).map((f) => (
+                <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>
+                  {f === 'all' ? 'All' : f === 'agent' ? 'Agent' : 'You'}
+                </button>
+              ))}
+            </div>
+            {visible.length === 0 ? (
+              <p className="muted">{changes.length === 0 ? 'Nothing has changed yet. Move something, or wait for the agent.' : 'No changes from this side yet.'}</p>
+            ) : (
+              <ul className="feed">
+                {visible.map((c) => {
+                  const ids = idsOf(c).filter((i) => board.items[i])
+                  return (
+                    <li key={c.seq} className={c.author}>
+                      <div className="row">
+                        <span className="who">{who(c.author)}</span>
+                        <span className="mono">{c.seq}</span>
+                        <span style={{ marginLeft: 'auto' }}>{timeAgo(c.ts)}</span>
+                      </div>
+                      {c.note === 'handoff' ? (
+                        <div className="note">Handed to the agent</div>
+                      ) : c.author === 'agent' && ids.length ? (
+                        <div className="note">
+                          Agent changed {ids.length} item{ids.length === 1 ? '' : 's'}
+                          {c.note ? `: ${c.note}` : ''}{' '}
+                          <button type="button" className="link" onClick={() => onLocate(ids)}>
+                            locate
+                          </button>
+                        </div>
+                      ) : (
+                        c.note && <div className="note">{c.note}</div>
+                      )}
+                      {c.ops.length > 0 && (
+                        <details>
+                          <summary>
+                            {c.ops.length} change{c.ops.length === 1 ? '' : 's'}
+                          </summary>
+                          <ul className="ops">
+                            {c.ops.map((op, i) => {
+                              const id = op.kind === 'add' ? op.item.id : op.id
+                              const exists = Boolean(board.items[id])
+                              return (
+                                <li key={i}>
+                                  <button
+                                    type="button"
+                                    disabled={!exists}
+                                    onClick={() => {
+                                      onSelect(id)
+                                      setTab('item')
+                                    }}
+                                  >
+                                    {describeOp(op, board, c)}
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </details>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </>
+        ) : activeTab === 'files' ? (
+          <FilesView board={board} nav={nav} onNav={setNav} onAnchoredComment={onAnchoredComment} onReply={onReply} />
+        ) : activeTab === 'chat' ? (
+          <SelectionChat board={board} selectedIds={selectedIds} onChat={onChat} onReply={onReply} onSelect={(id) => onSelect(id)} onLocate={onLocate} />
+        ) : selected && detail ? (
+          <BlockInspector
+            key={selected.id}
+            board={board}
+            item={selected}
+            detail={detail}
+            onSelect={(id) => onSelect(id)}
+            onOpenChat={() => setTab('chat')}
+            onToast={onToast}
+            onOpenFile={(path, at) => {
+              setNav({ path, line: at?.line, range: at?.range })
+              setTab('files')
+            }}
+            onAnchoredComment={onAnchoredComment}
+            onReply={onReply}
+          />
+        ) : selected ? (
+          <ItemDetail
+            board={board}
+            item={selected}
+            comments={comments}
+            draft={draft}
+            setDraft={setDraft}
+            onMoveToContainer={onMoveToContainer}
+            onToast={onToast}
+            onEditText={onEditText}
+            onSelect={onSelect}
+            diagramPanel={
+              selectedDiagram ? (
+                <DiagramFramePanel
+                  board={board}
+                  diagram={selectedDiagram}
+                  onSelect={(id) => onSelect(id)}
+                  onOpenFile={(path) => {
+                    setNav({ path })
+                    setTab('files')
+                  }}
+                />
+              ) : (
+                <DiagramElementPanel board={board} item={selected} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} />
+              )
+            }
+            wirePanel={
+              isFlowWire(board, selected) ? (
+                <WireProposal
+                  board={board}
+                  item={selected}
+                  onSelect={(id) => onSelect(id)}
+                  onOpenFile={(path, line) => {
+                    setNav({ path, line })
+                    setTab('files')
+                  }}
+                  onWireChat={onWireChat}
+                  onUndo={onUndoWire}
+                  onPickEvent={onPickWireEvent}
+                />
+              ) : undefined
+            }
+            onSubmit={() => {
+              const t = draft.trim()
+              if (!t) return
+              onComment(selected.id, t)
+              setDraft('')
+            }}
+          />
+        ) : null}
+      </div>
+    </aside>
+  )
+}
+
+function ItemDetail({
+  board,
+  item,
+  comments,
+  draft,
+  setDraft,
+  onSubmit,
+  onMoveToContainer,
+  onToast,
+  onEditText,
+  onSelect,
+  wirePanel,
+  diagramPanel,
+}: {
+  board: Board
+  item: Item
+  comments: Item[]
+  onSelect: (id: string) => void
+  /** the Event / proposal section of a workflow flow wire */
+  wirePanel?: ReactNode
+  /** a diagram frame, or an element inside one (docs/diagrams.md) */
+  diagramPanel?: ReactNode
+  draft: string
+  setDraft: (s: string) => void
+  onSubmit: () => void
+  onMoveToContainer: (id: string, containerId: string | null) => void
+  onToast: (text: string) => void
+  onEditText: (id: string, text: string) => void
+}) {
+  const data = item.data ?? {}
+  const containers = Object.values(board.items).filter((i) => isContainer(i) && i.id !== item.id)
+  const canMove = !isContainer(item) && item.type !== 'arrow' && containers.length > 0
+  const copyLink = () => {
+    const url = `${location.origin}/b/${encodeURIComponent(board.id)}?focus=${encodeURIComponent(item.id)}`
+    navigator.clipboard
+      .writeText(url)
+      .then(() => onToast('Link copied'))
+      .catch(() => onToast(`Copy this link: ${url}`))
+  }
+  return (
+    <div>
+      <div className="selected-head">
+        <TextField key={item.id} label={item.type === 'arrow' ? 'Arrow label' : 'Text'} value={(item.type === 'arrow' ? (item.label ?? item.text) : item.text) ?? ''} onSave={(t) => onEditText(item.id, t)} />
+        <button type="button" className="ghost small" onClick={copyLink}>
+          Copy link
+        </button>
+      </div>
+      {diagramPanel}
+      {wirePanel ?? <Connections board={board} item={item} onSelect={onSelect} />}
+      <dl className="kv">
+        <dt>Type</dt>
+        <dd>
+          {item.type}
+          {item.role ? `, ${item.role.replace(/-/g, ' ')}` : ''}
+        </dd>
+        {item.color && (
+          <>
+            <dt>Colour</dt>
+            <dd>{item.color.replace(/-/g, ' ')}</dd>
+          </>
+        )}
+        {item.type !== 'arrow' && (
+          <>
+            <dt>Position</dt>
+            <dd className="mono">
+              {Math.round(item.x)}, {Math.round(item.y)} ({Math.round(item.w)} by {Math.round(item.h)})
+            </dd>
+          </>
+        )}
+        <dt>Changed</dt>
+        <dd>
+          {who(item.updatedBy)}, {timeAgo(item.updatedAt)}
+          {item.updatedBy !== item.createdBy ? ` (added by ${who(item.createdBy).toLowerCase()})` : ''}
+        </dd>
+        <dt>Id</dt>
+        <dd className="mono">{item.id}</dd>
+        {Object.entries(data).filter(([k]) => !(wirePanel && WIRE_KEYS.has(k)) && !(diagramPanel && DIAGRAM_KEYS.has(k))).map(([k, v]) => (
+          <DataRow key={k} k={k} v={v} />
+        ))}
+      </dl>
+
+      {canMove && (
+        <div className="field">
+          <label htmlFor="move-to">Move to lane or frame</label>
+          <select id="move-to" value={item.parent ?? ''} onChange={(e) => onMoveToContainer(item.id, e.target.value || null)}>
+            <option value="">None (loose on the board)</option>
+            {containers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.text || c.type}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <h3>Comments</h3>
+      {comments.length === 0 ? (
+        <p className="muted">No comments on this item.</p>
+      ) : (
+        <ul className="thread">
+          {comments.map((c) => (
+            <li key={c.id} className={c.createdBy}>
+              <div className="who">
+                {who(c.createdBy)}, {timeAgo(c.updatedAt)}
+              </div>
+              <div>{c.text}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="comment-form"
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSubmit()
+        }}
+      >
+        <label htmlFor="comment-draft">Add a comment for the agent</label>
+        <textarea
+          id="comment-draft"
+          value={draft}
+          placeholder="What should change here?"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onSubmit()
+          }}
+        />
+        <div className="actions">
+          <span className="muted">⌘ Enter to send</span>
+          <button className="primary" type="submit" disabled={!draft.trim()}>
+            Add comment
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+/** The selected item's text, editable in place: blur or ⌘Enter saves, Escape reverts. */
+function TextField({ label, value, onSave }: { label: string; value: string; onSave: (text: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  const save = () => {
+    if (draft !== value) onSave(draft)
+  }
+  return (
+    <textarea
+      className="selected-title"
+      aria-label={label}
+      value={draft}
+      placeholder="No text"
+      rows={Math.min(6, Math.max(1, draft.split('\n').length))}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          setDraft(value)
+        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault()
+          save()
+        }
+      }}
+    />
+  )
+}
+
+function DataRow({ k, v }: { k: string; v: unknown }) {
+  const s = typeof v === 'string' ? v : JSON.stringify(v)
+  return (
+    <>
+      <dt>{k}</dt>
+      <dd className={typeof v === 'string' ? '' : 'mono'}>{s}</dd>
+    </>
+  )
+}
+
+/** The selected item as a diagram frame, when it is one. */
+function diagramFrameOf(it: Item | undefined) {
+  const d = diagramData(it)
+  return d && it ? { ...d, frame: it } : undefined
+}

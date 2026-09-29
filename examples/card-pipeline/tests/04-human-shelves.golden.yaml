@@ -1,0 +1,13 @@
+# The planner needs a human; the human shelves the card back to Backlog. Nothing builds.
+mode: run
+key: c-questions
+fixtures:
+  planner: { outcome: needs-human, summary: "Overwrite or skip duplicates?", size: S, open_questions: ["Overwrite?"] }
+events:
+  - { type: card.moved, data: { card: c-questions, name: Dedupe import, from: Backlog, to: Agent Planning } }
+  - { type: card.moved, data: { card: c-questions, from: Agent Planned, to: Backlog } }
+expect:
+  status: done
+  outcomes: [plan.needs-human, handoff.done, confirm.shelved]
+  vars:
+    handoff: { label: "ST:ReadyForHuman" }

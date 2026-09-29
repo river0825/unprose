@@ -1,0 +1,49 @@
+---
+name: unprose
+description: Discuss a design with the person on a shared visual canvas instead of long prose — EventStorming, user story maps, kanban, wireframes and workflows, each backed by a YAML file you edit. Use when the person wants to explore a system's flow, decide scope, plan work, sketch pages, or understand/change an agent workflow, or says "draw it", "put it on the board", "let's EventStorm this", "story map", "wireframe", "show me the workflow".
+---
+
+# Unprose — talk designs through on a canvas
+
+Pictures align people and agents faster than paragraphs. Unprose gives you a canvas the person can see
+and annotate, and a rule set that keeps it honest:
+
+- **Files are the truth.** Every diagram is a file under `design/` (or a workflow yaml). The board is a
+  projection of it; redraw after every change.
+- **You are the editor, the person directs.** Change files when they agree; say what you changed.
+- **Canvas edits are proposals.** A wire the person drags, text they edit in the source dialog, a story
+  the tool proposes — discuss it in the thread, then apply it to the file.
+
+## Tools
+
+- MCP server `awd-canvas` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
+  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
+  It needs a running canvas server: `npm start` (or `node packages/canvas/dist/cli.js serve --port 4400`)
+  in the plugin/repo directory, after `npm install && npm run build`.
+- CLI `awd` (`node packages/cli/bin/awd.js …`):
+  - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
+    (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).
+  - `awd design lint <file>` — schema + EventStorming grammar (with book page references).
+  - `awd design propose-stories <es file> --into <story map file> --board …` — story candidates from
+    EventStorming, drawn as dashed proposals (never written until the person accepts).
+  - `awd graph <workflow.yaml> --canvas` — a workflow as a board; `awd lint` / `awd test` for workflows.
+
+## The loop
+
+1. Pick the diagram that fits: **EventStorming** for a system's flow (left → right in time; a system
+   between a command and its event, a policy between an event and the next command), **story map** to
+   decide scope (backbone → steps → stories, release cut lines), **kanban** for the work, **wireframe**
+   for a page, **workflow** for an agent pipeline. Several can share one board; link them with
+   `traces` (來自 derived-from / 組成 groups / 畫面 shows).
+2. Write or edit the `design/*.yaml` file, `awd design lint` it, `awd design draw` it. Give the person
+   the board URL and say what to look at.
+3. `canvas_wait` for their comments, moves and proposals; read the diff lines. Ignore pure layout moves.
+4. Answer in the comment thread (`canvas_add_items` with a `comment` targeting their comment). Mark open
+   questions as hotspots in the file rather than guessing.
+5. When they agree, edit the file, lint, redraw — dashed proposals become solid.
+
+## Studio (optional)
+
+`awd studio --project <repo>` watches every board of the project: each comment the person writes opens or
+continues a Claude Code session in a herdr tab, briefed on the selection, the diagram's grammar and the
+files behind it. See `docs/studio.md` and `docs/diagrams.md`.

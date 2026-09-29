@@ -1,0 +1,8 @@
+{
+  "name": "unprose",
+  "version": "0.1.0",
+  "description": "A shared visual canvas where people and AI agents talk designs through — EventStorming, story maps, kanban, wireframes and workflows, each backed by a file the agent edits.",
+  "author": { "name": "Unprose contributors" },
+  "license": "Apache-2.0",
+  "keywords": ["design", "eventstorming", "story-mapping", "kanban", "wireframe", "workflow", "canvas", "mcp", "human-in-the-loop"]
+}

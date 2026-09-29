@@ -1,0 +1,9 @@
+# ST:HumanOwned is skipped first, whatever the column.
+mode: run
+key: c-human
+events:
+  - { type: card.moved, data: { card: c-human, from: Backlog, to: Ready } }
+expect:
+  outcomes: [qualify.skip]
+  vars:
+    qualify: { reason: hands-off }

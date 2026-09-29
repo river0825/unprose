@@ -1,0 +1,11 @@
+{
+  "name": "card-pipeline-example",
+  "private": true,
+  "scripts": {
+    "demo": "awd test workflow.yaml",
+    "lint": "awd lint workflow.yaml",
+    "graph": "awd graph workflow.yaml",
+    "run": "awd run workflow.yaml --worker fake",
+    "run:claude": "awd run workflow.yaml --worker claude-code"
+  }
+}

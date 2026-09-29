@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.awd/
+/boards/
+.env
+.awd-dev/
+.worktrees/
+
+# reference book (large, not ours to redistribute)
+Introducing Eventstorming.pdf

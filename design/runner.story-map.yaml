@@ -1,0 +1,90 @@
+# What the workflow runner offers, as a story map (docs/diagrams.md §5).
+# "Now" = in the code today; "Later" = ideas. Stories trace back to design/runner.es.yaml.
+title: Workflow runner · Story map
+releases: [Now, Later]
+activities:
+  - id: write
+    text: 寫 workflow
+    steps:
+      - id: define
+        text: 定義 trigger 與 step
+        stories:
+          - { id: four-kinds, text: 用 script / ai / gate / human 四種 step 寫流程, release: Now }
+          - { id: agents, text: 在 agents 宣告 persona、model、tools, release: Now }
+      - id: check
+        text: 跑之前先檢查
+        stories:
+          - { id: lint, text: awd lint 擋掉沒人產生的事件, release: Now }
+          - { id: goldens, text: awd test 用 golden 檔驗證流程, release: Now }
+  - id: run
+    text: 跑起來
+    steps:
+      - id: start
+        text: 啟動與接收事件
+        stories:
+          - id: start-replay
+            text: awd run 啟動時重播 log，接續中斷的 run
+            release: Now
+            acceptance: [runtime 已啟動（log 已重播）]
+            traces: [{ from: runner-es/run, rel: derived-from }]
+          - { id: triggers, text: webhook / board / cron trigger 送出事件, release: Now }
+          - { id: hot-reload, text: 改 workflow.yaml 不用重啟, release: Later }
+      - id: execute
+        text: 執行 step
+        stories:
+          - id: scripts
+            text: script step 用 stdout 最後一行 JSON 回報 outcome
+            release: Now
+            traces: [{ from: runner-es/run-script, rel: derived-from }]
+          - id: ai-steps
+            text: ai step 的答案先驗證 schema 才變成事件
+            release: Now
+            acceptance: [agent 答案已驗證（<step>.<outcome>）]
+            traces: [{ from: runner-es/call-ai, rel: derived-from }]
+  - id: watch
+    text: 看進度
+    steps:
+      - id: status
+        text: 看 run 在哪裡
+        stories:
+          - { id: awd-status, text: awd status 列出每個 run 的狀態, release: Now }
+          - { id: overlay, text: canvas overlay 即時顯示 run 走到哪, release: Now }
+  - id: recover
+    text: 失敗與恢復
+    steps:
+      - id: retry
+        text: 自動重試
+        stories:
+          - id: retry-backoff
+            text: 失敗或逾時後依 backoff 重試
+            release: Now
+            traces: [{ from: runner-es/schedule-retry, rel: derived-from }]
+      - id: human
+        text: 等人決定
+        stories:
+          - id: human-gate
+            text: human step 等 resume_on 事件再繼續
+            release: Now
+            traces: [{ from: runner-es/reply, rel: derived-from }]
+          - id: park
+            text: 用 *.failed 接住所有失敗
+            release: Now
+            traces: [{ from: runner-es/park, rel: derived-from }]
+          - { id: idempotent, text: 標記哪些 script 可以安全重跑, release: Later }
+  - id: improve
+    text: 反思改進
+    steps:
+      - id: learn
+        text: 讓 agent 記住
+        stories:
+          - id: memory
+            text: agent 答案裡的 learn 變成下次的提示
+            release: Now
+            traces: [{ from: runner-es/record, rel: derived-from }]
+      - id: patterns
+        text: 找出反覆的問題
+        stories:
+          - id: reflect-cards
+            text: awd reflect 把反覆的失敗變成 kanban 卡片
+            release: Now
+            traces: [{ from: runner-es/reflect, rel: derived-from }]

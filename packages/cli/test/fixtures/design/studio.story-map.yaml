@@ -1,0 +1,8 @@
+title: Studio — story map
+releases: [Release 1]
+activities:
+  - text: Talk to the AI
+    steps:
+      - text: Ask AI
+        stories:
+          - { id: ask-about-selection, text: Ask about the selected items, release: Release 1 }
