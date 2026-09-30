@@ -71,7 +71,8 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
   const push = (it: Item) => {
     if (visited.has(it.id)) return
     visited.add(it.id)
-    const parent = it.parent && byId[it.parent] && it.parent !== it.id ? byId[it.parent] : undefined
+    // a comment belongs to its target (the tether shows it), never to a frame: it can sit anywhere on the board
+    const parent = it.type !== 'comment' && it.parent && byId[it.parent] && it.parent !== it.id ? byId[it.parent] : undefined
     if (parent) push(parent)
     const thread = byRoot.get(it.id) ?? []
     const open = it.type !== 'comment' || openComments.has(it.id)
@@ -177,7 +178,7 @@ const side = (v: unknown, fallback: string) => (typeof v === 'string' && SIDES.h
 /** Absolute bounds of a node after a drag, given the current board. */
 export function absolutePosition(board: Board, id: string, rel: { x: number; y: number }): { x: number; y: number } {
   const it = board.items[id]
-  const parent = it?.parent ? board.items[it.parent] : undefined
+  const parent = it?.parent && it.type !== 'comment' ? board.items[it.parent] : undefined
   return parent ? { x: rel.x + parent.x, y: rel.y + parent.y } : rel
 }
 

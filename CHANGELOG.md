@@ -6,6 +6,13 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-09-30
+
+### Fixed
+- Comments no longer join a frame: a comment could only move inside the frame of the item it was about. A
+  comment now belongs to its target (the tether shows it), can sit anywhere on the board, stays where it is when
+  the frame moves, and is not deleted with the frame; older comments that were stored inside a frame are freed too.
+
 ## [0.4.0] — 2026-09-30
 
 ### Added
@@ -158,7 +165,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/river0825/unprose/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/river0825/unprose/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/river0825/unprose/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/river0825/unprose/compare/v0.2.0...v0.3.0

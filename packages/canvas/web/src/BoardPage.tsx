@@ -215,8 +215,9 @@ function BoardInner({ id }: { id: string }) {
           patch.x = Math.round(abs.x)
           patch.y = Math.round(abs.y)
         }
-        // re-parent when the item's centre lands in a different container
-        if (it.type !== 'frame' && it.type !== 'lane') {
+        // comments never join a frame or lane: they belong to their target (an old `parent` on one is ignored)
+        if (it.type !== 'comment' && it.type !== 'frame' && it.type !== 'lane') {
+          // re-parent when the item's centre lands in a different container
           const cx = abs.x + it.w / 2
           const cy = abs.y + it.h / 2
           const container = containerAt(board, cx, cy, n.id)
@@ -232,7 +233,7 @@ function BoardInner({ id }: { id: string }) {
         const dx = p.x - c.x
         const dy = p.y - c.y
         for (const it of Object.values(board.items)) {
-          if (!isInside(board, it.id, cid) || patches.get(it.id)?.x !== undefined) continue
+          if (it.type === 'comment' || !isInside(board, it.id, cid) || patches.get(it.id)?.x !== undefined) continue
           patches.set(it.id, { ...patches.get(it.id), x: it.x + dx, y: it.y + dy })
         }
       }
@@ -314,7 +315,6 @@ function BoardInner({ id }: { id: string }) {
         h: 64,
         text,
         target: targetId,
-        parent: t.parent,
         ...(data ? { data } : {}),
       })
       setOpenComment(item.id, true)
@@ -409,7 +409,7 @@ function BoardInner({ id }: { id: string }) {
         ids.add(sid)
         // children and attached comments / arrows go with their container
         for (const it of Object.values(board.items)) {
-          if (it.parent === sid || it.target === sid || it.from === sid || it.to === sid) ids.add(it.id)
+          if ((it.parent === sid && it.type !== 'comment') || it.target === sid || it.from === sid || it.to === sid) ids.add(it.id)
         }
       }
       for (const it of Object.values(board.items)) if (it.type === 'comment' && ids.has(threadRoot(board, it.id)?.id ?? '')) ids.add(it.id)
