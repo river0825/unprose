@@ -236,3 +236,15 @@ test('an install without dist/ downloads its runtime from the release (checksum 
     server.close()
   }
 })
+
+test('the session project (for the SessionStart hook): CLAUDE_PROJECT_DIR or cwd, lifted to the repo; none for home', async () => {
+  const { sessionProjectRoot, registerSessionProject } = await import('../runtime.mjs')
+  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'awd-sess-')))
+  const root = path.join(base, 'repo')
+  fs.mkdirSync(path.join(root, '.git'), { recursive: true })
+  fs.mkdirSync(path.join(root, 'sub'), { recursive: true })
+  assert.equal(sessionProjectRoot({ CLAUDE_PROJECT_DIR: path.join(root, 'sub') }, '/', '/nohome'), root)
+  assert.equal(sessionProjectRoot({}, base, base), undefined)
+  // a remote canvas is never asked to register a local directory
+  assert.equal(await registerSessionProject({ env: { AWD_CANVAS_URL: 'https://canvas.example.com', CLAUDE_PROJECT_DIR: root } }), undefined)
+})

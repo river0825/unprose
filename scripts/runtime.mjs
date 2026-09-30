@@ -340,3 +340,34 @@ export async function ensureCanvas({ runtime, root = pluginRoot, data = dataDir(
     return { action: 'note', message: `canvas failed to start (log: ${logFile})` }
   })
 }
+
+/**
+ * The project a session works in: CLAUDE_PROJECT_DIR (Claude Code sets it for hooks), else the working
+ * directory, lifted to its git top level; none for the home directory or `/` (docs/canvas.md "Projects").
+ */
+export function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os.homedir()) {
+  const start = path.resolve(env.CLAUDE_PROJECT_DIR || cwd)
+  for (let d = start; ; d = path.dirname(d)) {
+    if (fs.existsSync(path.join(d, '.git'))) return d
+    if (path.dirname(d) === d) break
+  }
+  if (start === path.resolve(home) || path.dirname(start) === start) return undefined
+  return start
+}
+
+/**
+ * Register the session's project with a canvas on this machine, so boards made in this session are
+ * stored in <project>/.unprose/boards/. Quiet: a remote canvas, an older server or no project is fine.
+ */
+export async function registerSessionProject({ env = process.env, cwd = process.cwd(), timeoutMs = 2000 } = {}) {
+  const target = canvasTarget(env)
+  const root = sessionProjectRoot(env, cwd)
+  if (!root || !isLocal(target)) return undefined
+  try {
+    const res = await fetch(`${target}/api/projects`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ root }), signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) return undefined
+    return (await res.json()).project?.id
+  } catch {
+    return undefined
+  }
+}

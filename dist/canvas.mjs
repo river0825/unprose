@@ -6952,8 +6952,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path8) {
-      let input2 = path8;
+    function removeDotSegments(path9) {
+      let input2 = path9;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -7362,8 +7362,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path8 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path8 && path8 !== "/" ? path8 : void 0;
+        const path9 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path9 && path9 !== "/" ? path9 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -10876,12 +10876,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs7, exportName) {
+    function addFormats(ajv, list2, fs8, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs7[f]);
+        ajv.addFormat(f, fs8[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -10890,9 +10890,9 @@ var require_dist = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs6 from "node:fs";
-import os2 from "node:os";
-import path7 from "node:path";
+import fs7 from "node:fs";
+import os3 from "node:os";
+import path8 from "node:path";
 import { execFile as execFile2 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
@@ -10916,10 +10916,10 @@ var import_websocket_server = __toESM(require_websocket_server(), 1);
 var HANDOFF_NOTE = "handoff";
 var NotFound = class extends Error {
 };
-
-// packages/canvas/dist/adapters/boards/file.js
-import fs from "node:fs";
-import path2 from "node:path";
+var PERSONAL_PROJECT = "personal";
+function hasProjects(r) {
+  return typeof r.registerProject === "function";
+}
 
 // packages/canvas/dist/model.js
 var diagramFrameId = (key) => `diagram.${key}`;
@@ -11201,69 +11201,6 @@ function isInsidePluginCache(dir) {
   return /[\\/]plugins[\\/]cache[\\/]/.test(path.resolve(dir) + path.sep);
 }
 
-// packages/canvas/dist/adapters/boards/file.js
-var FileBoardRepository = class extends BoardRepositoryBase {
-  dir;
-  constructor(dir = defaultBoardsDir()) {
-    super();
-    this.dir = path2.resolve(dir);
-    fs.mkdirSync(this.dir, { recursive: true });
-    for (const f of fs.readdirSync(this.dir)) {
-      if (!f.endsWith(".json"))
-        continue;
-      try {
-        const board = JSON.parse(fs.readFileSync(path2.join(this.dir, f), "utf8"));
-        if (board?.id)
-          this.boards.set(board.id, board);
-      } catch {
-      }
-    }
-    for (const f of fs.readdirSync(this.dir)) {
-      if (!f.endsWith(".changes.ndjson"))
-        continue;
-      const id = f.slice(0, -".changes.ndjson".length);
-      if (this.boards.has(id))
-        continue;
-      const rebuilt = this.rebuild(id);
-      if (rebuilt)
-        this.boards.set(id, rebuilt);
-    }
-  }
-  snapshotPath(id) {
-    return path2.join(this.dir, `${id}.json`);
-  }
-  logPath(id) {
-    return path2.join(this.dir, `${id}.changes.ndjson`);
-  }
-  /** The directory vanished (e.g. a plugin reinstall deleted it): make it again, so the retry can write. */
-  recover(error62) {
-    if (error62?.code !== "ENOENT")
-      return false;
-    fs.mkdirSync(this.dir, { recursive: true });
-    return true;
-  }
-  persist(board) {
-    const p = this.snapshotPath(board.id);
-    const tmp = `${p}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(board, null, 2));
-    fs.renameSync(tmp, p);
-  }
-  appendLog(change) {
-    fs.appendFileSync(this.logPath(change.boardId), JSON.stringify(change) + "\n");
-  }
-  readLog(id) {
-    const p = this.logPath(id);
-    if (!fs.existsSync(p))
-      return [];
-    return fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
-  }
-  remove(id) {
-    for (const p of [this.snapshotPath(id), this.logPath(id)])
-      if (fs.existsSync(p))
-        fs.unlinkSync(p);
-  }
-};
-
 // packages/canvas/dist/adapters/boards/memory.js
 var MemoryBoardRepository = class extends BoardRepositoryBase {
   logs = /* @__PURE__ */ new Map();
@@ -11283,11 +11220,297 @@ var MemoryBoardRepository = class extends BoardRepositoryBase {
   }
 };
 
+// packages/canvas/dist/adapters/boards/projects.js
+import fs from "node:fs";
+import path2 from "node:path";
+var REGISTRY_FILE = ".projects.json";
+var PROJECT_GITIGNORE = `# Unprose (https://github.com/river0825/unprose)
+# boards/<id>.json \u2014 the board snapshots \u2014 are meant to be committed with the project.
+# The change logs are local history (large, noisy in diffs); temporary files are never wanted.
+boards/*.changes.ndjson
+boards/*.tmp
+`;
+var LOG = ".changes.ndjson";
+function projectSlug(name) {
+  return name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "project";
+}
+var ProjectsBoardRepository = class extends BoardRepositoryBase {
+  /** The personal boards dir (kept as `dir` so callers that print "boards in <dir>" still work). */
+  dir;
+  registryPath;
+  registered = [];
+  /** Which directory stores each board. */
+  dirOf = /* @__PURE__ */ new Map();
+  constructor(dir = defaultBoardsDir()) {
+    super();
+    this.dir = path2.resolve(dir);
+    this.registryPath = path2.join(this.dir, REGISTRY_FILE);
+    fs.mkdirSync(this.dir, { recursive: true });
+    this.loadDir(this.dir);
+    for (const p of this.readRegistry()) {
+      this.registered.push(p);
+      this.loadDir(boardsDirOf(p.root));
+    }
+  }
+  // ---- projects ----
+  projects() {
+    return [
+      { id: PERSONAL_PROJECT, name: "Personal", root: null, boardsDir: this.dir, personal: true },
+      ...this.registered.map((p) => ({ id: p.id, name: path2.basename(p.root), root: p.root, boardsDir: boardsDirOf(p.root) }))
+    ];
+  }
+  registerProject(root) {
+    const abs = path2.resolve(root);
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory())
+      throw new Error(`project root ${abs} is not a directory`);
+    const real = fs.realpathSync(abs);
+    if (real === fs.realpathSync(this.dir))
+      throw new Error("the personal boards dir cannot be a project");
+    let p = this.registered.find((r) => r.root === real);
+    if (!p) {
+      const taken = /* @__PURE__ */ new Set([PERSONAL_PROJECT, ...this.registered.map((r) => r.id)]);
+      const base = projectSlug(path2.basename(real));
+      let id = base;
+      for (let n2 = 2; taken.has(id); n2++)
+        id = `${base}-${n2}`;
+      p = { id, root: real };
+      this.registered.push(p);
+      this.writeRegistry();
+      this.loadDir(boardsDirOf(real));
+    }
+    return this.projects().find((x2) => x2.id === p.id);
+  }
+  projectOf(boardId) {
+    const dir = this.dirOf.get(boardId);
+    return this.registered.find((p) => boardsDirOf(p.root) === dir)?.id ?? PERSONAL_PROJECT;
+  }
+  create(input2, author = "agent") {
+    const dir = this.dirForProject(input2.project ?? PERSONAL_PROJECT);
+    const id = input2.id ?? newId("b");
+    if (this.get(id))
+      throw new Error(`board ${id} already exists`);
+    this.prepare(dir);
+    this.dirOf.set(id, dir);
+    try {
+      return super.create({ ...input2, id }, author);
+    } catch (e) {
+      if (!this.get(id))
+        this.dirOf.delete(id);
+      throw e;
+    }
+  }
+  moveBoard(boardId, projectId) {
+    const board = this.get(boardId);
+    if (!board)
+      throw new NotFound(`board ${boardId} not found`);
+    const from = this.dirOf.get(boardId);
+    const to = this.dirForProject(projectId);
+    if (from === to)
+      return board;
+    this.prepare(to);
+    const log = path2.join(from, `${boardId}${LOG}`);
+    if (fs.existsSync(log))
+      fs.copyFileSync(log, path2.join(to, `${boardId}${LOG}`));
+    writeSnapshot(to, board);
+    if (!fs.existsSync(path2.join(to, `${boardId}.json`)))
+      throw new Error(`could not write ${boardId}.json into ${to}`);
+    this.dirOf.set(boardId, to);
+    for (const f of [path2.join(from, `${boardId}.json`), log])
+      if (fs.existsSync(f))
+        fs.unlinkSync(f);
+    return board;
+  }
+  // ---- persistence hooks ----
+  persist(board) {
+    writeSnapshot(this.dirFor(board.id), board);
+  }
+  appendLog(change) {
+    fs.appendFileSync(path2.join(this.dirFor(change.boardId), `${change.boardId}${LOG}`), JSON.stringify(change) + "\n");
+  }
+  readLog(id) {
+    const p = path2.join(this.dirFor(id), `${id}${LOG}`);
+    if (!fs.existsSync(p))
+      return [];
+    return fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  }
+  remove(id) {
+    const dir = this.dirFor(id);
+    for (const p of [path2.join(dir, `${id}.json`), path2.join(dir, `${id}${LOG}`)])
+      if (fs.existsSync(p))
+        fs.unlinkSync(p);
+    this.dirOf.delete(id);
+  }
+  /** A directory vanished (a plugin reinstall, a `git clean`): make it again so the retry can write. */
+  recover(error62) {
+    if (error62?.code !== "ENOENT")
+      return false;
+    for (const dir of new Set(this.dirOf.values()))
+      fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(this.dir, { recursive: true });
+    return true;
+  }
+  // ---- internals ----
+  dirFor(id) {
+    return this.dirOf.get(id) ?? this.dir;
+  }
+  dirForProject(projectId) {
+    if (projectId === PERSONAL_PROJECT)
+      return this.dir;
+    const p = this.registered.find((r) => r.id === projectId);
+    if (!p)
+      throw new NotFound(`project ${projectId} is not registered`);
+    return boardsDirOf(p.root);
+  }
+  /** A project's boards dir exists and its `.unprose/.gitignore` says what to commit. */
+  prepare(dir) {
+    fs.mkdirSync(dir, { recursive: true });
+    if (dir === this.dir)
+      return;
+    const ignore = path2.join(path2.dirname(dir), ".gitignore");
+    if (!fs.existsSync(ignore))
+      fs.writeFileSync(ignore, PROJECT_GITIGNORE);
+  }
+  /** Load the boards stored in `dir` (snapshots first, then boards that only have a log). */
+  loadDir(dir) {
+    if (!fs.existsSync(dir))
+      return;
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      if (!f.endsWith(".json") || f.startsWith("."))
+        continue;
+      try {
+        const board = JSON.parse(fs.readFileSync(path2.join(dir, f), "utf8"));
+        if (!board?.id)
+          continue;
+        if (this.boards.has(board.id) && this.dirOf.get(board.id) !== dir) {
+          console.warn(`awd-canvas: board ${board.id} exists in ${this.dirOf.get(board.id)} and ${dir}; keeping the first`);
+          continue;
+        }
+        this.boards.set(board.id, board);
+        this.dirOf.set(board.id, dir);
+      } catch {
+      }
+    }
+    for (const f of files) {
+      if (!f.endsWith(LOG))
+        continue;
+      const id = f.slice(0, -LOG.length);
+      if (this.boards.has(id))
+        continue;
+      this.dirOf.set(id, dir);
+      const rebuilt = this.rebuild(id);
+      if (rebuilt)
+        this.boards.set(id, rebuilt);
+      else
+        this.dirOf.delete(id);
+    }
+  }
+  readRegistry() {
+    try {
+      const raw = JSON.parse(fs.readFileSync(this.registryPath, "utf8"));
+      return (raw.projects ?? []).filter((p) => p && typeof p.id === "string" && typeof p.root === "string" && fs.existsSync(p.root));
+    } catch {
+      return [];
+    }
+  }
+  writeRegistry() {
+    const tmp = `${this.registryPath}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ projects: this.registered }, null, 2) + "\n");
+    fs.renameSync(tmp, this.registryPath);
+  }
+};
+function boardsDirOf(root) {
+  return path2.join(root, ".unprose", "boards");
+}
+function writeSnapshot(dir, board) {
+  const p = path2.join(dir, `${board.id}.json`);
+  const tmp = `${p}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(board, null, 2) + "\n");
+  fs.renameSync(tmp, p);
+}
+
 // packages/canvas/dist/adapters/boards/index.js
 function createBoardRepository(kind, dir) {
   if (kind === "memory")
     return new MemoryBoardRepository();
-  return new FileBoardRepository(dir);
+  return new ProjectsBoardRepository(dir);
+}
+
+// packages/canvas/dist/projectsApi.js
+var ProjectHttpError = class extends Error {
+  status;
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+var FORWARDED = ["x-forwarded-for", "x-real-ip", "forwarded", "cf-connecting-ip", "cf-ray", "true-client-ip"];
+function isLocalRequest(req) {
+  const addr = req.socket.remoteAddress ?? "";
+  const loopback = addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
+  return loopback && !FORWARDED.some((h) => req.headers[h] !== void 0);
+}
+function projectView(p, local, boards) {
+  return { id: p.id, name: p.name, personal: !!p.personal, boards, ...local ? { root: p.root } : {} };
+}
+function resolveProject(store, req, project, projectRoot) {
+  if (typeof projectRoot === "string" && projectRoot) {
+    if (!isLocalRequest(req))
+      throw new ProjectHttpError(403, "projectRoot is only accepted from this machine");
+    if (!hasProjects(store))
+      throw new ProjectHttpError(400, "this canvas store has no projects");
+    return store.registerProject(projectRoot).id;
+  }
+  if (typeof project !== "string" || !project)
+    return void 0;
+  if (project === PERSONAL_PROJECT)
+    return project;
+  if (!hasProjects(store) || !store.projects().some((p) => p.id === project))
+    throw new ProjectHttpError(404, `project ${project} is not registered`);
+  return project;
+}
+async function projectsRoute(store, req, method, readBody) {
+  const local = isLocalRequest(req);
+  const counts = /* @__PURE__ */ new Map();
+  if (hasProjects(store))
+    for (const b2 of store.list())
+      counts.set(store.projectOf(b2.id), (counts.get(store.projectOf(b2.id)) ?? 0) + 1);
+  if (method === "GET") {
+    const list2 = hasProjects(store) ? store.projects() : [{ id: PERSONAL_PROJECT, name: "Personal", root: null, boardsDir: null, personal: true }];
+    return { status: 200, body: { projects: list2.map((p) => projectView(p, local, hasProjects(store) ? counts.get(p.id) ?? 0 : store.list().length)) } };
+  }
+  if (method === "POST") {
+    if (!local)
+      throw new ProjectHttpError(403, "projects can only be registered from this machine");
+    if (!hasProjects(store))
+      throw new ProjectHttpError(400, "this canvas store has no projects");
+    const body = await readBody();
+    if (typeof body.root !== "string" || !body.root)
+      throw new ProjectHttpError(400, "root (an absolute directory) required");
+    try {
+      const p = store.registerProject(body.root);
+      return { status: 200, body: { project: projectView(p, true, counts.get(p.id) ?? 0) } };
+    } catch (e) {
+      throw new ProjectHttpError(400, e.message);
+    }
+  }
+  throw new ProjectHttpError(405, "method not allowed");
+}
+async function moveRoute(store, req, id, readBody) {
+  if (!isLocalRequest(req))
+    throw new ProjectHttpError(403, "boards can only be moved from this machine");
+  if (!hasProjects(store))
+    throw new ProjectHttpError(400, "this canvas store has no projects");
+  const body = await readBody();
+  const project = resolveProject(store, req, body.project, body.projectRoot);
+  if (!project)
+    throw new ProjectHttpError(400, "project (an id) or projectRoot (a directory) required");
+  try {
+    store.moveBoard(id, project);
+  } catch (e) {
+    throw new ProjectHttpError(e instanceof NotFound ? 404 : 500, e.message);
+  }
+  return { status: 200, body: { board: id, project } };
 }
 
 // packages/canvas/dist/diff.js
@@ -12457,10 +12680,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path8) {
-  if (!path8)
+function getElementAtPath(obj, path9) {
+  if (!path9)
     return obj;
-  return path8.reduce((acc, key) => acc?.[key], obj);
+  return path9.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -12800,11 +13023,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path8, issues) {
+function prefixIssues(path9, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path8);
+    iss.path.unshift(path9);
     return iss;
   });
 }
@@ -13254,16 +13477,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path8 = []) => {
+  const processError = (error63, path9 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path8, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -13302,17 +13525,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path8 = []) => {
+  const processError = (error63, path9 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path8, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -13351,8 +13574,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path8 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path8) {
+  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path9) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -30454,13 +30677,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path8 = ref2.slice(1).split("/").filter(Boolean);
-  if (path8.length === 0) {
+  const path9 = ref2.slice(1).split("/").filter(Boolean);
+  if (path9.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path8[0] === defsKey) {
-    const key = path8[1] === void 0 ? void 0 : decodeJSONPointerSegment(path8[1]);
+  if (path9[0] === defsKey) {
+    const key = path9[1] === void 0 ? void 0 : decodeJSONPointerSegment(path9[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -35178,9 +35401,44 @@ function startServer(opts = {}) {
   const webDist = opts.webDist ?? WEB_DIST;
   let cachedRelease;
   const release = () => cachedRelease ??= findRelease(opts.releaseDir);
+  const focusListeners = /* @__PURE__ */ new Map();
+  const onFocus = (boardId, fn) => {
+    let set2 = focusListeners.get(boardId);
+    if (!set2)
+      focusListeners.set(boardId, set2 = /* @__PURE__ */ new Set());
+    set2.add(fn);
+    return () => set2.delete(fn);
+  };
+  const emitFocus = (boardId, m2) => {
+    const set2 = focusListeners.get(boardId);
+    for (const fn of set2 ?? [])
+      fn(m2);
+    return set2?.size ?? 0;
+  };
   const json2 = (res, status, body) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
+  };
+  const projectReply = async (res, run) => {
+    try {
+      const r = await run();
+      return json2(res, r.status, r.body);
+    } catch (e) {
+      if (e instanceof ProjectHttpError)
+        return json2(res, e.status, { error: e.message });
+      throw e;
+    }
+  };
+  const projectOrError = (res, run) => {
+    try {
+      return run();
+    } catch (e) {
+      if (e instanceof ProjectHttpError) {
+        json2(res, e.status, { error: e.message });
+        return null;
+      }
+      throw e;
+    }
   };
   const readBody = (req) => new Promise((resolve, reject) => {
     const chunks = [];
@@ -35231,15 +35489,25 @@ function startServer(opts = {}) {
         return json2(res, 200, { kinds: diagramKinds });
       if (parts[1] === "version" && method === "GET")
         return json2(res, 200, { ...release(), pid: process.pid });
+      if (parts[1] === "projects" && !parts[2])
+        return projectReply(res, () => projectsRoute(store, req, method, () => readBody(req)));
       if (parts[1] !== "boards")
         throw new HttpError(404, "not found");
       const id = parts[2];
       const sub = parts[3];
       if (!id) {
-        if (method === "GET")
-          return json2(res, 200, { boards: store.list().map(summary) });
+        if (method === "GET") {
+          const only = projectOrError(res, () => resolveProject(store, req, url2.searchParams.get("project") ?? void 0));
+          if (only === null)
+            return;
+          const projectOf = (b2) => hasProjects(store) ? store.projectOf(b2.id) : "personal";
+          return json2(res, 200, { boards: store.list().filter((b2) => !only || projectOf(b2) === only).map((b2) => ({ ...summary(b2), project: projectOf(b2) })) });
+        }
         if (method === "POST") {
           const body = await readBody(req);
+          const project = projectOrError(res, () => resolveProject(store, req, body.project, body.projectRoot));
+          if (project === null)
+            return;
           if (!body.title || typeof body.title !== "string")
             throw new HttpError(400, "title required");
           if (!body.kind || !diagramKinds.includes(body.kind))
@@ -35251,8 +35519,8 @@ function startServer(opts = {}) {
               throw new HttpError(400, `invalid content: ${parsed.error.message}`);
             items = render(body.kind, parsed.data);
           }
-          const board2 = store.create({ title: body.title, kind: body.kind, meta: body.meta, items }, isAuthor(body.author) ? body.author : "agent");
-          return json2(res, 201, { board: board2 });
+          const board2 = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...project ? { project } : {} }, isAuthor(body.author) ? body.author : "agent");
+          return json2(res, 201, { board: board2, project: hasProjects(store) ? store.projectOf(board2.id) : "personal" });
         }
         throw new HttpError(405, "method not allowed");
       }
@@ -35270,6 +35538,8 @@ function startServer(opts = {}) {
           return json2(res, 200, { deleted: store.delete(id) });
         throw new HttpError(405, "method not allowed");
       }
+      if (sub === "move" && method === "POST")
+        return projectReply(res, () => moveRoute(store, req, id, () => readBody(req)));
       if (sub === "ops" && method === "POST") {
         const body = await readBody(req);
         if (!isAuthor(body.author))
@@ -35277,6 +35547,36 @@ function startServer(opts = {}) {
         const ops = assertOps(body.ops);
         const change = store.apply(id, ops, body.author, body.note);
         return json2(res, 200, { seq: change.seq, change });
+      }
+      if (sub === "focus" && method === "POST") {
+        const body = await readBody(req);
+        const author = body.author ?? "agent";
+        if (!isAuthor(author))
+          throw new HttpError(400, "author must be 'agent' or 'user'");
+        if (body.ids !== void 0 && !(Array.isArray(body.ids) && body.ids.every((i) => typeof i === "string")))
+          throw new HttpError(400, "ids must be an array of item ids");
+        if (body.frame !== void 0 && (typeof body.frame !== "string" || !DIAGRAM_KEY.test(body.frame)))
+          throw new HttpError(400, "frame must be a diagram key");
+        if (body.note !== void 0 && typeof body.note !== "string")
+          throw new HttpError(400, "note must be a string");
+        const board2 = store.get(id);
+        const ids = [...new Set(body.ids ?? [])];
+        const missing = ids.filter((i) => !board2.items[i]);
+        if (missing.length)
+          throw new HttpError(404, `no item ${missing.map((m2) => `"${m2}"`).join(", ")} on this board`);
+        const frame = body.frame;
+        if (frame) {
+          const fid = diagramFrameId(frame);
+          if (board2.items[fid])
+            ids.unshift(fid);
+          else if (!(board2.kind !== "freeform" && frame === board2.kind))
+            throw new HttpError(404, `no diagram "${frame}" on this board`);
+        }
+        if (!ids.length && !frame)
+          throw new HttpError(400, "give ids and/or frame");
+        const note = body.note?.trim().slice(0, 500) || void 0;
+        const msg = { type: "focus", ids, ...frame ? { frame } : {}, ...note ? { note } : {}, author, at: (/* @__PURE__ */ new Date()).toISOString() };
+        return json2(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg });
       }
       if (sub === "changes" && method === "GET") {
         const since = Number(url2.searchParams.get("since") ?? 0);
@@ -35517,10 +35817,12 @@ function startServer(opts = {}) {
         if (e.boardId === board.id)
           send({ type: "storage", ok: e.ok, message: e.message, at: e.at });
       });
+      const offFocus = onFocus(board.id, (m3) => send(m3));
       const off = () => {
         offChange();
         offPresence();
         offStorage();
+        offFocus();
       };
       ws.on("close", off);
       ws.on("error", off);
@@ -35647,6 +35949,9 @@ var SpawnSupervisor = class {
 
 // packages/canvas/dist/mcp.js
 import { execFile } from "node:child_process";
+import fs6 from "node:fs";
+import os2 from "node:os";
+import path7 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -36022,8 +36327,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path8, errorMaps, issueData } = params;
-  const fullPath = [...path8, ...issueData.path || []];
+  const { data, path: path9, errorMaps, issueData } = params;
+  const fullPath = [...path9, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -36138,11 +36443,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path8, key) {
+  constructor(parent, value, path9, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path8;
+    this._path = path9;
     this._key = key;
   }
   get path() {
@@ -39693,11 +39998,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path8) {
-  if (path8.length === 0) {
+function getDotPath(path9) {
+  if (path9.length === 0) {
     return "object root";
   }
-  return path8.reduce((acc, seg, index) => {
+  return path9.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -45305,11 +45610,24 @@ var CanvasClient = class {
       throw new Error(data?.error ?? `${res.status} ${res.statusText}`);
     return data;
   }
-  listBoards() {
-    return this.req("GET", "/api/boards").then((r) => r.boards);
+  /** Boards, optionally only those of one project (a project id, or 'personal'). */
+  listBoards(project) {
+    const q2 = project ? `?project=${encodeURIComponent(project)}` : "";
+    return this.req("GET", `/api/boards${q2}`).then((r) => r.boards);
   }
   createBoard(input2) {
     return this.req("POST", "/api/boards", input2).then((r) => r.board);
+  }
+  projects() {
+    return this.req("GET", "/api/projects").then((r) => r.projects);
+  }
+  /** Register the project at `root` on this canvas (only accepted from the canvas's own machine). */
+  registerProject(root) {
+    return this.req("POST", "/api/projects", { root }).then((r) => r.project);
+  }
+  /** Move a board (snapshot + log) into a project: a project id or, from this machine, `{ projectRoot }`. */
+  moveBoard(id, to) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/move`, to);
   }
   getBoard(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}`).then((r) => r.board);
@@ -45349,8 +45667,19 @@ var CanvasClient = class {
   moveCard(id, cardId2, column, author = "agent", note) {
     return this.req("POST", `/api/boards/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId2)}/move`, { column, author, note });
   }
-  boardUrl(id) {
-    return `${this.baseUrl}/b/${encodeURIComponent(id)}`;
+  /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
+  focus(id, target, author = "agent") {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author });
+  }
+  /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
+  boardUrl(id, at = {}) {
+    const q2 = new URLSearchParams();
+    if (at.frame)
+      q2.set("frame", at.frame);
+    if (at.focus)
+      q2.set("focus", at.focus);
+    const qs = q2.toString();
+    return `${this.baseUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
   }
 };
 
@@ -45365,15 +45694,32 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }`;
-var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
+var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var text = (s) => ({ content: [{ type: "text", text: s }] });
-function createMcpServer(client = new CanvasClient()) {
-  const server = new McpServer({ name: "awd-canvas", version: "0.3.1" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
-  server.registerTool("canvas_list_boards", { title: "List boards", description: "List every board on the canvas server with id, kind, title and current seq." }, async () => {
-    const boards = await client.listBoards();
+function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os2.homedir()) {
+  const start = path7.resolve(env.CLAUDE_PROJECT_DIR || cwd);
+  for (let d = start; ; d = path7.dirname(d)) {
+    if (fs6.existsSync(path7.join(d, ".git")))
+      return d;
+    if (path7.dirname(d) === d)
+      break;
+  }
+  if (start === path7.resolve(home) || path7.dirname(start) === start)
+    return void 0;
+  return start;
+}
+function createMcpServer(client = new CanvasClient(), opts = {}) {
+  const server = new McpServer({ name: "awd-canvas", version: "0.4.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
+  server.registerTool("canvas_list_boards", {
+    title: "List boards",
+    description: `List boards with id, kind, title, current seq and project. By default only this session's project${opts.project ? ` (${opts.project})` : ""}; pass all: true for every project (and the personal space).`,
+    inputSchema: { all: external_exports.boolean().default(false).describe("List the boards of every project, not only this session's") }
+  }, async ({ all }) => {
+    const only = all ? void 0 : opts.project;
+    const boards = await client.listBoards(only);
     if (!boards.length)
-      return text("(no boards yet \u2014 create one with canvas_create_board)");
-    return text(boards.map((b2) => `${b2.id}	${b2.kind}	seq ${b2.seq}	${b2.items} items	${b2.title}	${client.boardUrl(b2.id)}`).join("\n"));
+      return text(only ? `(no boards in project ${only} yet \u2014 create one with canvas_create_board, or list all: true)` : "(no boards yet \u2014 create one with canvas_create_board)");
+    return text(boards.map((b2) => `${b2.id}	${b2.kind}	seq ${b2.seq}	${b2.items} items	[${b2.project ?? "personal"}]	${b2.title}	${client.boardUrl(b2.id)}`).join("\n"));
   });
   server.registerTool("canvas_create_board", {
     title: "Create a board from structured content",
@@ -45384,10 +45730,11 @@ ${CONTENT_HELP}`,
       title: external_exports.string().describe("Board title shown to the user"),
       kind: kindEnum,
       content: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Structured content for the kind (see description)"),
-      meta: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe('Free board metadata, e.g. { source: "workflow.yaml" }')
+      meta: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe('Free board metadata, e.g. { source: "workflow.yaml" }'),
+      project: external_exports.string().optional().describe(`Project id to store the board in (its <project>/.unprose/boards/); default: this session's project${opts.project ? ` (${opts.project})` : ""}, 'personal' for none`)
     }
-  }, async ({ title, kind, content, meta: meta3 }) => {
-    const board = await client.createBoard({ title, kind, content, meta: meta3, author: "agent" });
+  }, async ({ title, kind, content, meta: meta3, project }) => {
+    const board = await client.createBoard({ title, kind, content, meta: meta3, author: "agent", ...project ?? opts.project ? { project: project ?? opts.project } : {} });
     const n2 = Object.keys(board.items).length;
     const url2 = client.boardUrl(board.id);
     if (process.platform === "darwin" && process.env.AWD_CANVAS_NO_OPEN !== "1")
@@ -45470,6 +45817,20 @@ ${r.lines.join("\n")}`);
     return text(`user changed the board (seq ${r.seq}):
 ${r.lines.join("\n")}`);
   });
+  server.registerTool("canvas_focus", {
+    title: "Show the person something on the board",
+    description: 'Use this whenever you ask the person to look at something ("see the Q1\u2013Q4 cards in the \u8981\u4F60\u6C7A\u5B9A column"). Their open page shows "Agent wants to show you \u2026" with a Go button (or jumps at once if they turned on Follow agent) and fits the view to those items. Pass item `ids` and/or a diagram `frame` key; `note` says why (one line). Nothing is stored on the board. Returns how many pages received it and a link that opens right there (share it in your reply too).',
+    inputSchema: {
+      id: external_exports.string().describe("board id"),
+      ids: external_exports.array(external_exports.string()).optional().describe("item ids to bring into view"),
+      frame: external_exports.string().optional().describe('diagram frame key, e.g. "studio-es"'),
+      note: external_exports.string().max(500).optional()
+    }
+  }, async ({ id, ids, frame, note }) => {
+    const r = await client.focus(id, { ids, frame, note });
+    const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
+    return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+  });
   server.registerTool("canvas_open", { title: "Open a board in the browser", description: "Print the board URL and open it in the default browser (macOS).", inputSchema: { id: external_exports.string() } }, async ({ id }) => {
     const url2 = client.boardUrl(id);
     if (process.platform === "darwin")
@@ -45496,7 +45857,17 @@ async function runMcp() {
     process.exit(1);
   }
   process.env.AWD_CANVAS_URL = base;
-  const server = createMcpServer();
+  let project;
+  const root = sessionProjectRoot();
+  if (root) {
+    try {
+      project = (await new CanvasClient(base).registerProject(root)).id;
+    } catch (e) {
+      process.stderr.write(`awd-canvas MCP: boards stay in the canvas's personal space (${root} not registered: ${e.message})
+`);
+    }
+  }
+  const server = createMcpServer(new CanvasClient(base), { project });
   await server.connect(new StdioServerTransport());
 }
 
@@ -45739,6 +46110,7 @@ var USAGE = `awd-canvas \u2014 a shared canvas for agents and humans
 
   awd-canvas serve [--port 4400] [--dir <boards dir>] [--store file|memory]   start the HTTP/WS server (+ web UI if built)
         boards dir: --dir, else $AWD_BOARDS_DIR, else $XDG_DATA_HOME/awd/boards, else ~/.awd/boards
+        [--project <dir>]...   serve these projects' boards too (stored in <dir>/.unprose/boards; also registered over the API)
         [--studio-project <dir>]... [--studio-cmd "<command with {project}>"]   let the web start/stop "awd studio" for these projects only
         (--studio <workflow.yaml> still works: it means that file's repo)
   awd-canvas mcp                                    MCP stdio server over a running canvas server (AWD_CANVAS_URL)
@@ -45756,25 +46128,25 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path7.dirname(d)) {
-    if (fs6.existsSync(path7.join(d, ".git")))
+  for (let d = dir; ; d = path8.dirname(d)) {
+    if (fs7.existsSync(path8.join(d, ".git")))
       return d;
-    if (path7.dirname(d) === d)
+    if (path8.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path7.dirname(path7.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path8.dirname(path8.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs6.realpathSync(path7.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path7.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs7.realpathSync(path8.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path8.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs6.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs7.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path7.join(os2.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path8.join(os3.homedir(), "Library", "Logs", "awd") };
 }
 function flag(args, name) {
   const i = args.indexOf(name);
@@ -45787,12 +46159,19 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path7.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path8.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
       const studio = studioConfig(args);
-      const s = await startServer({ port, store: createBoardRepository(storeKind, dir), studio });
+      const store = createBoardRepository(storeKind, dir);
+      for (const root of flags(args, "--project")) {
+        if (!hasProjects(store))
+          throw new Error("--project needs the file store");
+        const p = store.registerProject(root);
+        console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
+      }
+      const s = await startServer({ port, store, studio });
       const where = storeKind === "memory" ? "in memory" : `in ${s.store.dir ?? dir}`;
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`);
       for (const p of studio?.projects ?? [])
@@ -45812,7 +46191,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs6.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs7.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

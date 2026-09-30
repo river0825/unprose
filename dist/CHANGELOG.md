@@ -6,6 +6,29 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-30
+
+### Added
+- **Go to…** (`⌘K` / `Ctrl+K`, or the header button): search diagram frames and items by title, key or text and
+  jump there. Links can open a board on a diagram frame (`?frame=<key>`; *Copy link* in the frame panel).
+- **"Look here" from the agent:** the MCP tool `canvas_focus` (and `POST /api/boards/:id/focus`) shows "Agent
+  wants to show you …" on the person's open page with **Go** / **Dismiss**; *Follow agent* jumps without asking.
+  Nothing is stored on the board. The skill tells agents to use it whenever they ask you to look at something.
+- **Boards live in their project:** a project's boards are stored in `<project>/.unprose/boards/` — the
+  snapshots are meant to be committed with the project, the change logs stay local (a generated
+  `.unprose/.gitignore` says so). One canvas server serves several projects on the same port and URL; the
+  board list groups boards by project. Projects are registered by `awd-canvas serve --project <dir>`, the
+  plugin (the session's project, at session start), and `awd design draw` / `awd graph --canvas` (the file's
+  repo); `GET/POST /api/projects`, `?project=` and `project` on the boards API. `canvas_create_board` stores
+  new boards in the session's project and `canvas_list_boards` lists them (`all: true` for every project).
+- `awd boards move <board id | title:…> --to <project dir>` moves an older board (snapshot and log) into a
+  project; the old files go only after the copy is in place.
+
+### Changed
+- Boards made before projects stay in the **personal** space (the server's `--dir`, default
+  `~/.awd/boards`) and keep working; a title lookup still finds them. Registering a project or moving a board
+  is only accepted from the canvas's own machine (no proxy/tunnel headers), since the canvas has no auth.
+
 ## [0.3.1] — 2026-09-30
 
 ### Added
@@ -135,7 +158,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/river0825/unprose/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/river0825/unprose/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/river0825/unprose/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/river0825/unprose/compare/v0.1.0...v0.2.0

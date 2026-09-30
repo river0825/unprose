@@ -10,6 +10,8 @@ export interface CreateBoardInput {
   meta?: Record<string, unknown>
   items?: Item[]
   id?: string
+  /** Which project stores it (a `ProjectInfo.id`); default: the personal space. */
+  project?: string
 }
 
 export interface ChangesQuery {
@@ -53,3 +55,35 @@ export interface BoardRepository {
 }
 
 export class NotFound extends Error {}
+
+// ---- Projects: boards live inside the project they belong to (`<root>/.unprose/boards/`) ----
+
+/** The space for boards that belong to no project (the server's own boards dir). */
+export const PERSONAL_PROJECT = 'personal'
+
+export interface ProjectInfo {
+  /** Stable, url-safe: the slug of the directory name (`-2`, `-3` … on a clash); `personal` for the personal space. */
+  id: string
+  /** Shown to people: the directory name, or "Personal". */
+  name: string
+  /** Absolute project root; null for the personal space. */
+  root: string | null
+  /** Where its boards are stored. */
+  boardsDir: string | null
+  personal?: boolean
+}
+
+/** A repository that stores each board in the project it belongs to (optional capability of a BoardRepository). */
+export interface ProjectBoards {
+  projects(): ProjectInfo[]
+  /** Register (or find) the project at `root`; idempotent, persisted. */
+  registerProject(root: string): ProjectInfo
+  /** The project that stores a board. */
+  projectOf(boardId: string): string
+  /** Move a board (snapshot and change log) into another project; the old files go only after the copy succeeded. */
+  moveBoard(boardId: string, projectId: string): Board
+}
+
+export function hasProjects(r: BoardRepository): r is BoardRepository & ProjectBoards {
+  return typeof (r as Partial<ProjectBoards>).registerProject === 'function'
+}

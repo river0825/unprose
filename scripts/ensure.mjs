@@ -5,8 +5,9 @@
 //      the GitHub release (checksum-verified), else (dev checkout) npm run build.
 //   2. canvas (local AWD_CANVAS_URL only, unless AWD_CANVAS_AUTOSTART=0): start one if none answers;
 //      restart one the plugin started when its version differs; leave a canvas you started alone.
+//   3. project: register the session's project with a local canvas, so its boards live in the project.
 // Prints at most a few short lines (they reach the session); never fails the session.
-import { ensureCanvas, ensureRuntime } from './runtime.mjs'
+import { ensureCanvas, ensureRuntime, registerSessionProject } from './runtime.mjs'
 
 const lines = []
 const log = (s) => lines.push(`unprose: ${s}`)
@@ -14,6 +15,8 @@ try {
   const { runtime, reason } = await ensureRuntime({ log: (s) => process.stderr.write(`unprose: ${s}\n`) })
   if (!runtime) log(reason)
   await ensureCanvas({ runtime, log })
+  // boards made in this session belong to its project (<project>/.unprose/boards/)
+  await registerSessionProject()
 } catch (e) {
   log(`setup check failed: ${e?.message ?? e}`)
 }

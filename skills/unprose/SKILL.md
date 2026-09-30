@@ -17,13 +17,18 @@ and annotate, and a rule set that keeps it honest:
 ## Tools
 
 - MCP server `awd-canvas` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
-  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
+  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_focus`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
   It needs a running canvas server. As a plugin, it is started for you at the start of each session (and
   restarted on the new version after a plugin update); a note in the session says so if it had to act. If
   none is running (e.g. the `canvas_autostart` option is off), start it in the background from the plugin (or repo) root —
-  two directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400,
-  boards in `~/.awd/boards`). No install or build is needed; if the runtime is missing, `node
+  two directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400). No install or build is needed; if the runtime is missing, `node
   <root>/scripts/ensure.mjs` fetches it for this version.
+
+**Boards live in the project.** Boards you create are stored in the session's project at
+`<project>/.unprose/boards/` (the plugin registers the project with a local canvas); commit
+`.unprose/boards/*.json` with the project — the change logs are ignored by `.unprose/.gitignore`.
+`canvas_list_boards` shows this project's boards (`all: true` for every project). Move an older board in
+with `awd boards move <board id | title:…> --to <project dir>`.
 
 **Canvas somewhere else** (a tunnel, another machine, `https://canvas.example.com`): set
 `AWD_CANVAS_URL` to its address before the agent starts — a pasted board link (`…/b/<id>`) works too, the
@@ -49,10 +54,12 @@ For the CLI, pass `--canvas <url>`.
    `traces` (來自 derived-from / 組成 groups / 畫面 shows).
 2. Write or edit the `design/*.yaml` file, `awd design lint` it, `awd design draw` it. Give the person
    the board URL and say what to look at.
-3. `canvas_wait` for their comments, moves and proposals; read the diff lines. Ignore pure layout moves.
-4. Answer in the comment thread (`canvas_add_items` with a `comment` targeting their comment). Mark open
+3. When you ask the person to look at something, call `canvas_focus` with the item ids or the frame key (and a
+   one-line note) so their page jumps there — don't make them search. Put the returned link in your reply too.
+4. `canvas_wait` for their comments, moves and proposals; read the diff lines. Ignore pure layout moves.
+5. Answer in the comment thread (`canvas_add_items` with a `comment` targeting their comment). Mark open
    questions as hotspots in the file rather than guessing.
-5. When they agree, edit the file, lint, redraw — dashed proposals become solid.
+6. When they agree, edit the file, lint, redraw — dashed proposals become solid.
 
 ## Studio (optional)
 

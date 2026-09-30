@@ -1,6 +1,9 @@
 // MCP stdio server — the agent's hands on the canvas. Thin over the HTTP API so
 // the browser UI and the agent share one store.
 import { execFile } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -20,20 +23,45 @@ const CONTENT_HELP = `content shape per kind (see docs/canvas.md for full exampl
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  — columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> → <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }`
 
-const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react — answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`
+const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at — and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react — answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
-export function createMcpServer(client = new CanvasClient()): McpServer {
-  const server = new McpServer({ name: 'awd-canvas', version: '0.3.1' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
+/**
+ * The project an agent session works in: \`CLAUDE_PROJECT_DIR\` (set by Claude Code), else the working
+ * directory — lifted to its git top level. None for the home directory or the filesystem root (a
+ * session there belongs to no project, so its boards stay personal).
+ */
+export function sessionProjectRoot(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd(), home = os.homedir()): string | undefined {
+  const start = path.resolve(env.CLAUDE_PROJECT_DIR || cwd)
+  for (let d = start; ; d = path.dirname(d)) {
+    if (fs.existsSync(path.join(d, '.git'))) return d
+    if (path.dirname(d) === d) break
+  }
+  if (start === path.resolve(home) || path.dirname(start) === start) return undefined
+  return start
+}
+
+export interface McpOptions {
+  /** The session's project id on this canvas: new boards go there, and board lists show its boards first. */
+  project?: string
+}
+
+export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
+  const server = new McpServer({ name: 'awd-canvas', version: '0.4.0' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
 
   server.registerTool(
     'canvas_list_boards',
-    { title: 'List boards', description: 'List every board on the canvas server with id, kind, title and current seq.' },
-    async () => {
-      const boards = await client.listBoards()
-      if (!boards.length) return text('(no boards yet — create one with canvas_create_board)')
-      return text(boards.map((b) => `${b.id}\t${b.kind}\tseq ${b.seq}\t${b.items} items\t${b.title}\t${client.boardUrl(b.id)}`).join('\n'))
+    {
+      title: 'List boards',
+      description: `List boards with id, kind, title, current seq and project. By default only this session's project${opts.project ? ` (${opts.project})` : ''}; pass all: true for every project (and the personal space).`,
+      inputSchema: { all: z.boolean().default(false).describe('List the boards of every project, not only this session\'s') },
+    },
+    async ({ all }) => {
+      const only = all ? undefined : opts.project
+      const boards = await client.listBoards(only)
+      if (!boards.length) return text(only ? `(no boards in project ${only} yet — create one with canvas_create_board, or list all: true)` : '(no boards yet — create one with canvas_create_board)')
+      return text(boards.map((b) => `${b.id}\t${b.kind}\tseq ${b.seq}\t${b.items} items\t[${b.project ?? 'personal'}]\t${b.title}\t${client.boardUrl(b.id)}`).join('\n'))
     },
   )
 
@@ -47,10 +75,11 @@ export function createMcpServer(client = new CanvasClient()): McpServer {
         kind: kindEnum,
         content: z.record(z.string(), z.unknown()).describe('Structured content for the kind (see description)'),
         meta: z.record(z.string(), z.unknown()).optional().describe('Free board metadata, e.g. { source: "workflow.yaml" }'),
+        project: z.string().optional().describe(`Project id to store the board in (its <project>/.unprose/boards/); default: this session's project${opts.project ? ` (${opts.project})` : ''}, 'personal' for none`),
       },
     },
-    async ({ title, kind, content, meta }) => {
-      const board = await client.createBoard({ title, kind, content, meta, author: 'agent' })
+    async ({ title, kind, content, meta, project }) => {
+      const board = await client.createBoard({ title, kind, content, meta, author: 'agent', ...((project ?? opts.project) ? { project: project ?? opts.project } : {}) })
       const n = Object.keys(board.items).length
       const url = client.boardUrl(board.id)
       // Open it for the person right away so they never have to copy a URL.
@@ -150,6 +179,26 @@ export function createMcpServer(client = new CanvasClient()): McpServer {
   )
 
   server.registerTool(
+    'canvas_focus',
+    {
+      title: 'Show the person something on the board',
+      description:
+        'Use this whenever you ask the person to look at something ("see the Q1–Q4 cards in the 要你決定 column"). Their open page shows "Agent wants to show you …" with a Go button (or jumps at once if they turned on Follow agent) and fits the view to those items. Pass item `ids` and/or a diagram `frame` key; `note` says why (one line). Nothing is stored on the board. Returns how many pages received it and a link that opens right there (share it in your reply too).',
+      inputSchema: {
+        id: z.string().describe('board id'),
+        ids: z.array(z.string()).optional().describe('item ids to bring into view'),
+        frame: z.string().optional().describe('diagram frame key, e.g. "studio-es"'),
+        note: z.string().max(500).optional(),
+      },
+    },
+    async ({ id, ids, frame, note }) => {
+      const r = await client.focus(id, { ids, frame, note })
+      const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...(frame ? { frame } : {}) })
+      return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now — send the person this link instead: ${link}`)
+    },
+  )
+
+  server.registerTool(
     'canvas_open',
     { title: 'Open a board in the browser', description: 'Print the board URL and open it in the default browser (macOS).', inputSchema: { id: z.string() } },
     async ({ id }) => {
@@ -178,6 +227,17 @@ export async function runMcp(): Promise<void> {
     process.exit(1)
   }
   process.env.AWD_CANVAS_URL = base
-  const server = createMcpServer()
+  // Boards this session creates belong to its project (stored in <project>/.unprose/boards/). Only a
+  // canvas on this machine accepts the registration; elsewhere the boards stay in its personal space.
+  let project: string | undefined
+  const root = sessionProjectRoot()
+  if (root) {
+    try {
+      project = (await new CanvasClient(base).registerProject(root)).id
+    } catch (e) {
+      process.stderr.write(`awd-canvas MCP: boards stay in the canvas's personal space (${root} not registered: ${(e as Error).message})\n`)
+    }
+  }
+  const server = createMcpServer(new CanvasClient(base), { project })
   await server.connect(new StdioServerTransport())
 }

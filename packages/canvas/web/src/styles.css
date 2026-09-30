@@ -1796,3 +1796,48 @@ kbd {
   color: var(--ink-2);
   border-bottom: 1px dashed var(--ink-3);
 }
+
+/* ---------- board list: boards grouped by project (docs/canvas.md "Projects") ---------- */
+.project-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 18px;
+}
+.project-filter button {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.project-filter button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.project-filter button[aria-pressed='true'] .muted {
+  color: inherit;
+  opacity: 0.7;
+}
+.project-group + .project-group {
+  margin-top: 28px;
+}
+.project-name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.project-hint {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-3);
+}

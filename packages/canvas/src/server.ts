@@ -7,6 +7,8 @@ import { WebSocketServer, WebSocket } from 'ws'
 import { NotFound, type BoardRepository } from './ports/boardRepository.js'
 import type { ProcessInfo, ProcessSupervisor } from './ports/processSupervisor.js'
 import { createBoardRepository } from './adapters/boards/index.js'
+import { hasProjects } from './ports/boardRepository.js'
+import { moveRoute, ProjectHttpError, projectsRoute, resolveProject } from './projectsApi.js'
 import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
 import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, resolveTraces, type FrameRequest } from './templates/index.js'
 import { DIAGRAM_KEY } from './diagrams/ids.js'
@@ -14,7 +16,7 @@ import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
 import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
-import { isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { diagramFrameId, isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // The web UI: next to the bundled server (`dist/web`, the published plugin — unprose#4), else the workspace build.
@@ -155,9 +157,47 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   let cachedRelease: Release | undefined
   const release = () => (cachedRelease ??= findRelease(opts.releaseDir))
 
+  // "Look here" messages go straight to the board's open pages; they are not board changes (docs/canvas.md).
+  type FocusMessage = Extract<WsMessage, { type: 'focus' }>
+  const focusListeners = new Map<string, Set<(m: FocusMessage) => void>>()
+  const onFocus = (boardId: string, fn: (m: FocusMessage) => void) => {
+    let set = focusListeners.get(boardId)
+    if (!set) focusListeners.set(boardId, (set = new Set()))
+    set.add(fn)
+    return () => set!.delete(fn)
+  }
+  const emitFocus = (boardId: string, m: FocusMessage) => {
+    const set = focusListeners.get(boardId)
+    for (const fn of set ?? []) fn(m)
+    return set?.size ?? 0
+  }
+
   const json = (res: http.ServerResponse, status: number, body: unknown) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify(body))
+  }
+
+  /** Run a projects route and answer with its result or its ProjectHttpError. */
+  const projectReply = async (res: http.ServerResponse, run: () => Promise<{ status: number; body: unknown }>) => {
+    try {
+      const r = await run()
+      return json(res, r.status, r.body)
+    } catch (e) {
+      if (e instanceof ProjectHttpError) return json(res, e.status, { error: e.message })
+      throw e
+    }
+  }
+  /** A project id (or undefined for "any"), or null after answering with the error. */
+  const projectOrError = (res: http.ServerResponse, run: () => string | undefined): string | undefined | null => {
+    try {
+      return run()
+    } catch (e) {
+      if (e instanceof ProjectHttpError) {
+        json(res, e.status, { error: e.message })
+        return null
+      }
+      throw e
+    }
   }
 
   const readBody = (req: http.IncomingMessage): Promise<unknown> =>
@@ -213,14 +253,22 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       if (parts[1] === 'kinds' && method === 'GET') return json(res, 200, { kinds: diagramKinds })
       // pid: lets the plugin tell a canvas it started (and may restart after an update) from one the person runs
       if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid })
+      if (parts[1] === 'projects' && !parts[2]) return projectReply(res, () => projectsRoute(store, req, method, () => readBody(req)))
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]
 
       if (!id) {
-        if (method === 'GET') return json(res, 200, { boards: store.list().map(summary) })
+        if (method === 'GET') {
+          const only = projectOrError(res, () => resolveProject(store, req, url.searchParams.get('project') ?? undefined))
+          if (only === null) return
+          const projectOf = (b: Board) => (hasProjects(store) ? store.projectOf(b.id) : 'personal')
+          return json(res, 200, { boards: store.list().filter((b) => !only || projectOf(b) === only).map((b) => ({ ...summary(b), project: projectOf(b) })) })
+        }
         if (method === 'POST') {
-          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown }
+          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string }
+          const project = projectOrError(res, () => resolveProject(store, req, body.project, body.projectRoot))
+          if (project === null) return
           if (!body.title || typeof body.title !== 'string') throw new HttpError(400, 'title required')
           if (!body.kind || !diagramKinds.includes(body.kind)) throw new HttpError(400, `kind must be one of ${diagramKinds.join(', ')}`)
           let items = body.items
@@ -229,8 +277,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
             if (!parsed.success) throw new HttpError(400, `invalid content: ${parsed.error.message}`)
             items = render(body.kind, parsed.data)
           }
-          const board = store.create({ title: body.title, kind: body.kind, meta: body.meta, items }, isAuthor(body.author) ? body.author : 'agent')
-          return json(res, 201, { board })
+          const board = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...(project ? { project } : {}) }, isAuthor(body.author) ? body.author : 'agent')
+          return json(res, 201, { board, project: hasProjects(store) ? store.projectOf(board.id) : 'personal' })
         }
         throw new HttpError(405, 'method not allowed')
       }
@@ -248,12 +296,36 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         throw new HttpError(405, 'method not allowed')
       }
 
+      if (sub === 'move' && method === 'POST') return projectReply(res, () => moveRoute(store, req, id, () => readBody(req)))
+
       if (sub === 'ops' && method === 'POST') {
         const body = (await readBody(req)) as { author?: unknown; ops?: unknown; note?: string }
         if (!isAuthor(body.author)) throw new HttpError(400, "author must be 'agent' or 'user'")
         const ops = assertOps(body.ops)
         const change = store.apply(id, ops, body.author, body.note)
         return json(res, 200, { seq: change.seq, change })
+      }
+      if (sub === 'focus' && method === 'POST') {
+        const body = (await readBody(req)) as { ids?: unknown; frame?: unknown; note?: unknown; author?: unknown }
+        const author = body.author ?? 'agent'
+        if (!isAuthor(author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        if (body.ids !== undefined && !(Array.isArray(body.ids) && body.ids.every((i) => typeof i === 'string'))) throw new HttpError(400, 'ids must be an array of item ids')
+        if (body.frame !== undefined && (typeof body.frame !== 'string' || !DIAGRAM_KEY.test(body.frame))) throw new HttpError(400, 'frame must be a diagram key')
+        if (body.note !== undefined && typeof body.note !== 'string') throw new HttpError(400, 'note must be a string')
+        const board = store.get(id)!
+        const ids = [...new Set((body.ids as string[] | undefined) ?? [])]
+        const missing = ids.filter((i) => !board.items[i])
+        if (missing.length) throw new HttpError(404, `no item ${missing.map((m) => `"${m}"`).join(', ')} on this board`)
+        const frame = body.frame as string | undefined
+        if (frame) {
+          const fid = diagramFrameId(frame)
+          if (board.items[fid]) ids.unshift(fid)
+          else if (!(board.kind !== 'freeform' && frame === board.kind)) throw new HttpError(404, `no diagram "${frame}" on this board`)
+        }
+        if (!ids.length && !frame) throw new HttpError(400, 'give ids and/or frame')
+        const note = (body.note as string | undefined)?.trim().slice(0, 500) || undefined
+        const msg: FocusMessage = { type: 'focus', ids, ...(frame ? { frame } : {}), ...(note ? { note } : {}), author, at: new Date().toISOString() }
+        return json(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg })
       }
       if (sub === 'changes' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0)
@@ -475,10 +547,12 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       const offStorage = store.onStorage((e) => {
         if (e.boardId === board.id) send({ type: 'storage', ok: e.ok, message: e.message, at: e.at })
       })
+      const offFocus = onFocus(board.id, (m) => send(m))
       const off = () => {
         offChange()
         offPresence()
         offStorage()
+        offFocus()
       }
       ws.on('close', off)
       ws.on('error', off)

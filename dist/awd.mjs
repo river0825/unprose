@@ -125,17 +125,17 @@ var require_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node3, visitor, path16) {
-      const ctrl = callVisitor(key, node3, visitor, path16);
+    function visit_(key, node3, visitor, path17) {
+      const ctrl = callVisitor(key, node3, visitor, path17);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path16, ctrl);
-        return visit_(key, ctrl, visitor, path16);
+        replaceNode(key, path17, ctrl);
+        return visit_(key, ctrl, visitor, path17);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node3)) {
-          path16 = Object.freeze(path16.concat(node3));
+          path17 = Object.freeze(path17.concat(node3));
           for (let i = 0; i < node3.items.length; ++i) {
-            const ci = visit_(i, node3.items[i], visitor, path16);
+            const ci = visit_(i, node3.items[i], visitor, path17);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -146,13 +146,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node3)) {
-          path16 = Object.freeze(path16.concat(node3));
-          const ck = visit_("key", node3.key, visitor, path16);
+          path17 = Object.freeze(path17.concat(node3));
+          const ck = visit_("key", node3.key, visitor, path17);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node3.key = null;
-          const cv = visit_("value", node3.value, visitor, path16);
+          const cv = visit_("value", node3.value, visitor, path17);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -173,17 +173,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node3, visitor, path16) {
-      const ctrl = await callVisitor(key, node3, visitor, path16);
+    async function visitAsync_(key, node3, visitor, path17) {
+      const ctrl = await callVisitor(key, node3, visitor, path17);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path16, ctrl);
-        return visitAsync_(key, ctrl, visitor, path16);
+        replaceNode(key, path17, ctrl);
+        return visitAsync_(key, ctrl, visitor, path17);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node3)) {
-          path16 = Object.freeze(path16.concat(node3));
+          path17 = Object.freeze(path17.concat(node3));
           for (let i = 0; i < node3.items.length; ++i) {
-            const ci = await visitAsync_(i, node3.items[i], visitor, path16);
+            const ci = await visitAsync_(i, node3.items[i], visitor, path17);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -194,13 +194,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node3)) {
-          path16 = Object.freeze(path16.concat(node3));
-          const ck = await visitAsync_("key", node3.key, visitor, path16);
+          path17 = Object.freeze(path17.concat(node3));
+          const ck = await visitAsync_("key", node3.key, visitor, path17);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node3.key = null;
-          const cv = await visitAsync_("value", node3.value, visitor, path16);
+          const cv = await visitAsync_("value", node3.value, visitor, path17);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -227,23 +227,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node3, visitor, path16) {
+    function callVisitor(key, node3, visitor, path17) {
       if (typeof visitor === "function")
-        return visitor(key, node3, path16);
+        return visitor(key, node3, path17);
       if (identity.isMap(node3))
-        return visitor.Map?.(key, node3, path16);
+        return visitor.Map?.(key, node3, path17);
       if (identity.isSeq(node3))
-        return visitor.Seq?.(key, node3, path16);
+        return visitor.Seq?.(key, node3, path17);
       if (identity.isPair(node3))
-        return visitor.Pair?.(key, node3, path16);
+        return visitor.Pair?.(key, node3, path17);
       if (identity.isScalar(node3))
-        return visitor.Scalar?.(key, node3, path16);
+        return visitor.Scalar?.(key, node3, path17);
       if (identity.isAlias(node3))
-        return visitor.Alias?.(key, node3, path16);
+        return visitor.Alias?.(key, node3, path17);
       return void 0;
     }
-    function replaceNode(key, path16, node3) {
-      const parent = path16[path16.length - 1];
+    function replaceNode(key, path17, node3) {
+      const parent = path17[path17.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node3;
       } else if (identity.isPair(parent)) {
@@ -855,10 +855,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path16, value) {
+    function collectionFromPath(schema, path17, value) {
       let v = value;
-      for (let i = path16.length - 1; i >= 0; --i) {
-        const k = path16[i];
+      for (let i = path17.length - 1; i >= 0; --i) {
+        const k = path17[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -877,7 +877,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path16) => path16 == null || typeof path16 === "object" && !!path16[Symbol.iterator]().next().done;
+    var isEmptyPath = (path17) => path17 == null || typeof path17 === "object" && !!path17[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -907,11 +907,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path16, value) {
-        if (isEmptyPath(path16))
+      addIn(path17, value) {
+        if (isEmptyPath(path17))
           this.add(value);
         else {
-          const [key, ...rest] = path16;
+          const [key, ...rest] = path17;
           const node3 = this.get(key, true);
           if (identity.isCollection(node3))
             node3.addIn(rest, value);
@@ -925,8 +925,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path16) {
-        const [key, ...rest] = path16;
+      deleteIn(path17) {
+        const [key, ...rest] = path17;
         if (rest.length === 0)
           return this.delete(key);
         const node3 = this.get(key, true);
@@ -940,8 +940,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path16, keepScalar) {
-        const [key, ...rest] = path16;
+      getIn(path17, keepScalar) {
+        const [key, ...rest] = path17;
         const node3 = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node3) ? node3.value : node3;
@@ -959,8 +959,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path16) {
-        const [key, ...rest] = path16;
+      hasIn(path17) {
+        const [key, ...rest] = path17;
         if (rest.length === 0)
           return this.has(key);
         const node3 = this.get(key, true);
@@ -970,8 +970,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path16, value) {
-        const [key, ...rest] = path16;
+      setIn(path17, value) {
+        const [key, ...rest] = path17;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3486,9 +3486,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path16, value) {
+      addIn(path17, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path16, value);
+          this.contents.addIn(path17, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3563,14 +3563,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path16) {
-        if (Collection.isEmptyPath(path16)) {
+      deleteIn(path17) {
+        if (Collection.isEmptyPath(path17)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path16) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path17) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3585,10 +3585,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path16, keepScalar) {
-        if (Collection.isEmptyPath(path16))
+      getIn(path17, keepScalar) {
+        if (Collection.isEmptyPath(path17))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path16, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path17, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3599,10 +3599,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path16) {
-        if (Collection.isEmptyPath(path16))
+      hasIn(path17) {
+        if (Collection.isEmptyPath(path17))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path16) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path17) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3619,13 +3619,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path16, value) {
-        if (Collection.isEmptyPath(path16)) {
+      setIn(path17, value) {
+        if (Collection.isEmptyPath(path17)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path16), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path17), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path16, value);
+          this.contents.setIn(path17, value);
         }
       }
       /**
@@ -5586,9 +5586,9 @@ var require_cst_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path16) => {
+    visit2.itemAtPath = (cst, path17) => {
       let item = cst;
-      for (const [field, index] of path16) {
+      for (const [field, index] of path17) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5597,23 +5597,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path16) => {
-      const parent = visit2.itemAtPath(cst, path16.slice(0, -1));
-      const field = path16[path16.length - 1][0];
+    visit2.parentCollection = (cst, path17) => {
+      const parent = visit2.itemAtPath(cst, path17.slice(0, -1));
+      const field = path17[path17.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path16, item, visitor) {
-      let ctrl = visitor(item, path16);
+    function _visit(path17, item, visitor) {
+      let ctrl = visitor(item, path17);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path16.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path17.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5624,10 +5624,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path16);
+            ctrl = ctrl(item, path17);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path16) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path17) : ctrl;
     }
     exports.visit = visit2;
   }
@@ -12062,8 +12062,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path16) {
-      let input2 = path16;
+    function removeDotSegments(path17) {
+      let input2 = path17;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -12472,8 +12472,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path16 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path16 && path16 !== "/" ? path16 : void 0;
+        const path17 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path17 && path17 !== "/" ? path17 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -17819,14 +17819,14 @@ function redactSensitive(body) {
   }
   return null;
 }
-async function checkCredentialsFileSafety(path16, onWarn = (m) => console.warn(`anthropic-sdk: ${m}`)) {
+async function checkCredentialsFileSafety(path17, onWarn = (m) => console.warn(`anthropic-sdk: ${m}`)) {
   if (typeof process === "undefined" || process.platform === "win32")
     return;
   const { fs: fs15 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  let resolved = path16;
+  let resolved = path17;
   let st;
   try {
-    resolved = await fs15.promises.realpath(path16);
+    resolved = await fs15.promises.realpath(path17);
     st = await fs15.promises.stat(resolved);
   } catch {
     return;
@@ -17843,8 +17843,8 @@ async function checkCredentialsFileSafety(path16, onWarn = (m) => console.warn(`
   }
 }
 async function writeCredentialsFileAtomic(targetPath, data) {
-  const { fs: fs15, path: path16 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  const dir = path16.dirname(targetPath);
+  const { fs: fs15, path: path17 } = await Promise.resolve().then(() => (init_node(), node_exports));
+  const dir = path17.dirname(targetPath);
   await fs15.promises.mkdir(dir, { recursive: true, mode: 448 });
   const tmpPath = `${targetPath}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   try {
@@ -18264,8 +18264,8 @@ var init_credentials = __esm({
         return null;
       }
       validateProfileName(profileName);
-      const { fs: fs15, path: path16 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      const configPath = path16.join(rootConfigPath, "configs", `${profileName}.json`);
+      const { fs: fs15, path: path17 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const configPath = path17.join(rootConfigPath, "configs", `${profileName}.json`);
       let configRaw;
       try {
         configRaw = await fs15.promises.readFile(configPath, "utf-8");
@@ -18349,14 +18349,14 @@ var init_credentials = __esm({
         return null;
       }
       validateProfileName(profileName);
-      const { path: path16 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      return path16.join(rootConfigPath, "credentials", `${profileName}.json`);
+      const { path: path17 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      return path17.join(rootConfigPath, "credentials", `${profileName}.json`);
     };
     getRootConfigPath = async () => {
       if (!supportsLocalConfigFiles()) {
         return null;
       }
-      const { path: path16 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const { path: path17 } = await Promise.resolve().then(() => (init_node(), node_exports));
       const configDir = readEnv("ANTHROPIC_CONFIG_DIR");
       if (configDir) {
         return configDir;
@@ -18365,21 +18365,21 @@ var init_credentials = __esm({
       if (os2 === "Windows") {
         const appData = readEnv("APPDATA");
         if (appData) {
-          return path16.join(appData, "Anthropic");
+          return path17.join(appData, "Anthropic");
         }
         const userProfile = readEnv("USERPROFILE");
         if (userProfile) {
-          return path16.join(userProfile, "AppData", "Roaming", "Anthropic");
+          return path17.join(userProfile, "AppData", "Roaming", "Anthropic");
         }
         return null;
       }
       const xdgConfigHome = readEnv("XDG_CONFIG_HOME");
       if (xdgConfigHome) {
-        return path16.join(xdgConfigHome, "anthropic");
+        return path17.join(xdgConfigHome, "anthropic");
       }
       const home = readEnv("HOME");
       if (home) {
-        return path16.join(home, ".config", "anthropic");
+        return path17.join(home, ".config", "anthropic");
       }
       return null;
     };
@@ -18396,8 +18396,8 @@ var init_credentials = __esm({
       if (profileName) {
         return profileName;
       }
-      const { fs: fs15, path: path16 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      const filePath = path16.join(rootConfigPath, "active_config");
+      const { fs: fs15, path: path17 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const filePath = path17.join(rootConfigPath, "active_config");
       try {
         return (await fs15.promises.readFile(filePath, "utf-8")).trim() || "default";
       } catch (err) {
@@ -18411,21 +18411,21 @@ var init_credentials = __esm({
 });
 
 // node_modules/@anthropic-ai/sdk/lib/credentials/identity-token.mjs
-function identityTokenFromFile(path16) {
-  if (!path16) {
+function identityTokenFromFile(path17) {
+  if (!path17) {
     throw new AnthropicError("Identity token file path is empty");
   }
   return async () => {
     const { fs: fs15 } = await Promise.resolve().then(() => (init_node(), node_exports));
     let content;
     try {
-      content = await fs15.promises.readFile(path16, "utf-8");
+      content = await fs15.promises.readFile(path17, "utf-8");
     } catch (err) {
-      throw new AnthropicError(`Failed to read identity token file at ${path16}: ${err}`);
+      throw new AnthropicError(`Failed to read identity token file at ${path17}: ${err}`);
     }
     const token = content.trim();
     if (!token) {
-      throw new AnthropicError(`Identity token file at ${path16} is empty`);
+      throw new AnthropicError(`Identity token file at ${path17} is empty`);
     }
     return token;
   };
@@ -19746,12 +19746,12 @@ var init_path = __esm({
   "node_modules/@anthropic-ai/sdk/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path16(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path17(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path17 = statics.reduce((previousValue, currentValue, index) => {
+      const path18 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -19768,7 +19768,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path17.split(/[?#]/, 1)[0];
+      const pathOnly = path18.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match;
       while ((match = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -19789,10 +19789,10 @@ var init_path = __esm({
         }, "");
         throw new AnthropicError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e) => e.error).join("\n")}
-${path17}
+${path18}
 ${underline}`);
       }
-      return path17;
+      return path18;
     };
     path5 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
@@ -33472,9 +33472,9 @@ var init_client = __esm({
         makeStatusError(status, error62, message, headers) {
           return APIError.generate(status, error62, message, headers);
         }
-        buildURL(path16, query, defaultBaseURL) {
+        buildURL(path17, query, defaultBaseURL) {
           const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-          const url2 = isAbsoluteURL(path16) ? new URL(path16) : new URL(baseURL + (baseURL.endsWith("/") && path16.startsWith("/") ? path16.slice(1) : path16));
+          const url2 = isAbsoluteURL(path17) ? new URL(path17) : new URL(baseURL + (baseURL.endsWith("/") && path17.startsWith("/") ? path17.slice(1) : path17));
           const defaultQuery = this.defaultQuery();
           const pathQuery = Object.fromEntries(url2.searchParams);
           if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -33546,24 +33546,24 @@ var init_client = __esm({
         backendMiddleware() {
           return [];
         }
-        get(path16, opts) {
-          return this.methodRequest("get", path16, opts);
+        get(path17, opts) {
+          return this.methodRequest("get", path17, opts);
         }
-        post(path16, opts) {
-          return this.methodRequest("post", path16, opts);
+        post(path17, opts) {
+          return this.methodRequest("post", path17, opts);
         }
-        patch(path16, opts) {
-          return this.methodRequest("patch", path16, opts);
+        patch(path17, opts) {
+          return this.methodRequest("patch", path17, opts);
         }
-        put(path16, opts) {
-          return this.methodRequest("put", path16, opts);
+        put(path17, opts) {
+          return this.methodRequest("put", path17, opts);
         }
-        delete(path16, opts) {
-          return this.methodRequest("delete", path16, opts);
+        delete(path17, opts) {
+          return this.methodRequest("delete", path17, opts);
         }
-        methodRequest(method, path16, opts) {
+        methodRequest(method, path17, opts) {
           return this.request(Promise.resolve(opts).then((opts2) => {
-            return { method, path: path16, ...opts2 };
+            return { method, path: path17, ...opts2 };
           }));
         }
         request(options, remainingRetries = null) {
@@ -33684,8 +33684,8 @@ var init_client = __esm({
           armAbandonmentBackstop(response.body ?? response, controller);
           return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
         }
-        getAPIList(path16, Page2, opts) {
-          return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path16, ...opts2 })) : { method: "get", path: path16, ...opts });
+        getAPIList(path17, Page2, opts) {
+          return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path17, ...opts2 })) : { method: "get", path: path17, ...opts });
         }
         requestAPIList(Page2, options) {
           const request = this.makeRequest(options, null, void 0);
@@ -33803,14 +33803,14 @@ var init_client = __esm({
         }
         async buildRequest(inputOptions, { retryCount = 0 } = {}) {
           const options = { ...inputOptions };
-          const { method, path: path16, query, defaultBaseURL } = options;
+          const { method, path: path17, query, defaultBaseURL } = options;
           if (this._authState.resolution) {
             await this._authState.resolution;
           }
           if (!this._baseURLIsExplicit && this._authState.baseURL && this.baseURL !== this._authState.baseURL) {
             this.baseURL = this._authState.baseURL;
           }
-          const url2 = this.buildURL(path16, query, defaultBaseURL);
+          const url2 = this.buildURL(path17, query, defaultBaseURL);
           if ("timeout" in options)
             validatePositiveInteger("timeout", options.timeout);
           options.timeout = options.timeout ?? this.timeout;
@@ -36404,9 +36404,67 @@ var init_dist2 = __esm({
   }
 });
 
+// packages/cli/dist/projects.js
+var projects_exports = {};
+__export(projects_exports, {
+  boardByTitle: () => boardByTitle,
+  cmdBoards: () => cmdBoards,
+  registerProject: () => registerProject
+});
+import path12 from "node:path";
+async function registerProject(api, root) {
+  try {
+    return (await api("POST", "/api/projects", { root: path12.resolve(root) })).project.id;
+  } catch {
+    return void 0;
+  }
+}
+async function boardByTitle(api, title, kind, project, match = () => true) {
+  const { boards } = await api("GET", "/api/boards");
+  const named2 = boards.filter((b) => b.title === title && match(b));
+  const hit = (project ? named2.find((b) => b.project === project) : void 0) ?? named2[0];
+  if (hit)
+    return hit;
+  return (await api("POST", "/api/boards", { title, kind, ...project ? { project } : {} })).board;
+}
+async function cmdBoards(args2, flags2) {
+  const [sub, ref2] = args2;
+  const to = typeof flags2.to === "string" ? flags2.to : void 0;
+  if (sub !== "move" || !ref2 || !to) {
+    console.error("usage: awd boards move <board id | title:\u2026> --to <project dir> [--canvas URL]");
+    return false;
+  }
+  const base = (typeof flags2.canvas === "string" && flags2.canvas || process.env.AWD_CANVAS_URL || "http://localhost:4400").replace(/\/$/, "");
+  const api = async (method, p, body) => {
+    const res = await fetch(base + p, { method, headers: { "content-type": "application/json" }, body: body === void 0 ? void 0 : JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok)
+      throw new Error(`${method} ${p} \u2192 ${res.status} ${text.slice(0, 300)}`);
+    return JSON.parse(text);
+  };
+  let id = ref2;
+  if (ref2.startsWith("title:")) {
+    const title = ref2.slice(6).trim();
+    const hits = (await api("GET", "/api/boards")).boards.filter((b) => b.title === title);
+    if (hits.length !== 1) {
+      console.error(hits.length ? `${hits.length} boards are titled "${title}" \u2014 pass the board id (${hits.map((b) => `${b.id} [${b.project ?? "personal"}]`).join(", ")})` : `no board titled "${title}"`);
+      return false;
+    }
+    id = hits[0].id;
+  }
+  const r = await api("POST", `/api/boards/${encodeURIComponent(id)}/move`, { projectRoot: path12.resolve(to) });
+  console.log(`moved ${r.board} into project ${r.project} (${path12.join(path12.resolve(to), ".unprose", "boards")}); the URL ${base}/b/${r.board} is unchanged`);
+  console.log(`commit ${path12.join(".unprose", "boards", `${r.board}.json`)} with the project (the change log stays local)`);
+  return true;
+}
+var init_projects = __esm({
+  "packages/cli/dist/projects.js"() {
+  }
+});
+
 // packages/cli/dist/graphCanvas.js
 import fs11 from "node:fs";
-import path12 from "node:path";
+import path13 from "node:path";
 async function pushGraphToCanvas(def2, opts = {}) {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || "http://localhost:4400").replace(/\/$/, "");
   const { graph, files } = withDetails(toGraph(def2), opts.file);
@@ -36417,17 +36475,15 @@ async function pushGraphToCanvas(def2, opts = {}) {
       throw new Error(`${method} ${p} \u2192 ${res.status} ${await res.text()}`);
     return res.json();
   };
-  const { boards } = await api("GET", "/api/boards");
-  let board = boards.find((b) => b.kind === "workflow" && b.title === title);
-  if (!board)
-    board = (await api("POST", "/api/boards", { title, kind: "workflow" })).board;
+  const project = opts.file ? await registerProject(api, repoRoot(path13.dirname(path13.resolve(opts.file)))) : void 0;
+  const board = await boardByTitle(api, title, "workflow", project, (b) => b.kind === "workflow");
   const { items: drawn } = await api("POST", `/api/boards/${board.id}/template`, { kind: "workflow", content: graph });
   const { board: current } = await api("GET", `/api/boards/${board.id}`);
   const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0&author=user`);
   const ops = planRedraw(current.items, drawn, placedByUser(changes));
   const { seq } = await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd graph: ${def2.name}` });
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || "http://localhost:4311").replace(/\/$/, "");
-  const meta3 = { ...current.meta, workflow: { statusUrl, name: def2.name, file: opts.file ? path12.resolve(opts.file) : void 0, ...files } };
+  const meta3 = { ...current.meta, workflow: { statusUrl, name: def2.name, file: opts.file ? path13.resolve(opts.file) : void 0, ...files } };
   await api("PUT", `/api/boards/${board.id}`, { meta: meta3 });
   return { base, boardId: board.id, seq };
 }
@@ -36447,10 +36503,10 @@ function withDetails(graph, file2) {
   };
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path12.dirname(d)) {
-    if (fs11.existsSync(path12.join(d, ".git")))
+  for (let d = dir; ; d = path13.dirname(d)) {
+    if (fs11.existsSync(path13.join(d, ".git")))
       return d;
-    if (path12.dirname(d) === d)
+    if (path13.dirname(d) === d)
       return dir;
   }
 }
@@ -36514,6 +36570,7 @@ function planRedraw(board, drawn, placed, scope = { prefix: SCOPE }) {
 var GEOMETRY, SCOPE, pendingOf, node, wireOf, sameWire, PRESENTATION;
 var init_graphCanvas = __esm({
   "packages/cli/dist/graphCanvas.js"() {
+    init_projects();
     init_dist();
     init_dist2();
     GEOMETRY = ["x", "y", "w", "h", "parent", "order", "fontSize"];
@@ -36753,10 +36810,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path16) {
-  if (!path16)
+function getElementAtPath(obj, path17) {
+  if (!path17)
     return obj;
-  return path16.reduce((acc, key) => acc?.[key], obj);
+  return path17.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -37015,11 +37072,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path16, issues) {
+function prefixIssues(path17, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path16);
+    iss.path.unshift(path17);
     return iss;
   });
 }
@@ -37540,16 +37597,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path16 = []) => {
+  const processError = (error63, path17 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path16, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path17, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path17, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path17, ...issue2.path]);
       } else {
-        const fullpath = [...path16, ...issue2.path];
+        const fullpath = [...path17, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -37588,17 +37645,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path16 = []) => {
+  const processError = (error63, path17 = []) => {
     var _a4;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path16, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path17, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path17, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path17, ...issue2.path]);
       } else {
-        const fullpath = [...path16, ...issue2.path];
+        const fullpath = [...path17, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -37637,8 +37694,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path16 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path16) {
+  const path17 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path17) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -55634,13 +55691,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path16 = ref2.slice(1).split("/").filter(Boolean);
-  if (path16.length === 0) {
+  const path17 = ref2.slice(1).split("/").filter(Boolean);
+  if (path17.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path16[0] === defsKey) {
-    const key = path16[1] === void 0 ? void 0 : decodeJSONPointerSegment(path16[1]);
+  if (path17[0] === defsKey) {
+    const key = path17[1] === void 0 ? void 0 : decodeJSONPointerSegment(path17[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -57738,6 +57795,13 @@ var init_model = __esm({
   }
 });
 
+// packages/canvas/dist/diagrams/goto.js
+var init_goto = __esm({
+  "packages/canvas/dist/diagrams/goto.js"() {
+    init_model();
+  }
+});
+
 // packages/canvas/dist/templates/esTimeline.js
 var init_esTimeline = __esm({
   "packages/canvas/dist/templates/esTimeline.js"() {
@@ -58009,7 +58073,7 @@ function unwrap(s) {
   }
   return s;
 }
-function unknownFields(schema, value, path16 = "") {
+function unknownFields(schema, value, path17 = "") {
   const s = unwrap(schema);
   const d = def(s);
   if (d.type === "object" && isPlainObject2(value)) {
@@ -58018,16 +58082,16 @@ function unknownFields(schema, value, path16 = "") {
     const out = [];
     for (const [k, v] of Object.entries(value)) {
       if (k in shape)
-        out.push(...unknownFields(shape[k], v, at(path16, k)));
+        out.push(...unknownFields(shape[k], v, at(path17, k)));
       else if (!open2)
-        out.push({ path: path16 || "(root)", field: k });
+        out.push({ path: path17 || "(root)", field: k });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v, i) => unknownFields(d.element, v, at(path16, i)));
+    return value.flatMap((v, i) => unknownFields(d.element, v, at(path17, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k, v]) => unknownFields(d.valueType, v, at(path16, k)));
+    return Object.entries(value).flatMap(([k, v]) => unknownFields(d.valueType, v, at(path17, k)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -58035,7 +58099,7 @@ function unknownFields(schema, value, path16 = "") {
     });
     if (!fits.length)
       return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path16) })).sort((a, b) => a.extra.length - b.extra.length);
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path17) })).sort((a, b) => a.extra.length - b.extra.length);
     return ranked[0].extra;
   }
   return [];
@@ -58051,7 +58115,7 @@ var init_check = __esm({
     def = (s) => s._zod.def;
     WRAPPERS = /* @__PURE__ */ new Set(["optional", "default", "nullable", "readonly", "catch", "prefault", "nonoptional"]);
     isPlainObject2 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
-    at = (path16, key) => typeof key === "number" ? `${path16}[${key}]` : path16 ? `${path16}.${key}` : key;
+    at = (path17, key) => typeof key === "number" ? `${path17}[${key}]` : path17 ? `${path17}.${key}` : key;
   }
 });
 
@@ -58067,6 +58131,7 @@ var init_diagrams = __esm({
     init_egon();
     init_proposeFromDomainStory();
     init_model();
+    init_goto();
     init_check();
   }
 });
@@ -58090,7 +58155,7 @@ __export(design_exports, {
   yamlCommentHint: () => yamlCommentHint
 });
 import fs12 from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 function parseDesignFile(file2, text) {
   let raw;
   try {
@@ -58103,7 +58168,7 @@ ${hint}` : ""}`);
   }
   if (typeof raw !== "object" || Array.isArray(raw))
     throw new Error(`${file2}: expected a YAML mapping`);
-  const base = path13.basename(file2).replace(/\.ya?ml$/i, "");
+  const base = path14.basename(file2).replace(/\.ya?ml$/i, "");
   const dot = base.lastIndexOf(".");
   const name = dot > 0 ? base.slice(0, dot) : base;
   const alias = dot > 0 ? base.slice(dot + 1) : void 0;
@@ -58161,7 +58226,7 @@ function cmdDesignLint(file2) {
   const errors = findings.filter((f) => f.severity === "error");
   for (const f of findings)
     console.log(`${f.severity === "error" ? "\u2716" : f.severity === "warning" ? "\u26A0" : "\xB7"} ${f.element ? `${f.element}: ` : ""}${f.message}${f.page ? `  (${f.page})` : ""}`);
-  console.log(`${errors.length ? "\u2716" : "\u2714"} ${path13.basename(file2)} (${d.kind}, key ${d.key}): ${errors.length} error(s), ${findings.length - errors.length} note(s)`);
+  console.log(`${errors.length ? "\u2716" : "\u2714"} ${path14.basename(file2)} (${d.kind}, key ${d.key}): ${errors.length} error(s), ${findings.length - errors.length} note(s)`);
   return errors.length === 0;
 }
 function canvasApi(base) {
@@ -58172,12 +58237,11 @@ function canvasApi(base) {
     return res.json();
   };
 }
-async function resolveBoard(api, ref2) {
+async function resolveBoard(api, ref2, projectRoot) {
   if (ref2.startsWith("title:")) {
     const title = ref2.slice(6).trim();
-    const { boards } = await api("GET", "/api/boards");
-    const hit = boards.find((b) => b.title === title);
-    const id = hit?.id ?? (await api("POST", "/api/boards", { title, kind: "freeform" })).board.id;
+    const project = projectRoot ? await registerProject(api, projectRoot) : void 0;
+    const id = (await boardByTitle(api, title, "freeform", project)).id;
     return (await api("GET", `/api/boards/${id}`)).board;
   }
   return (await api("GET", `/api/boards/${encodeURIComponent(ref2)}`)).board;
@@ -58188,12 +58252,12 @@ function frameOf(board, key) {
 async function drawDesign(file2, opts) {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || "http://localhost:4400").replace(/\/$/, "");
   const api = canvasApi(base);
-  const abs = path13.resolve(file2);
+  const abs = path14.resolve(file2);
   const text = fs12.readFileSync(abs, "utf8");
   const d = parseDesignFile(abs, text);
-  const root = repoRoot(path13.dirname(abs));
-  const source = path13.relative(root, abs);
-  const board = await resolveBoard(api, opts.board);
+  const root = repoRoot(path14.dirname(abs));
+  const source = path14.relative(root, abs);
+  const board = await resolveBoard(api, opts.board, root);
   const wf = d.kind === "workflow" ? withDetails(toGraph(loadWorkflow(abs).def), abs) : void 0;
   const { items: drawn, unresolvedTraces = [] } = await api("POST", `/api/boards/${board.id}/template`, {
     kind: d.kind,
@@ -58282,7 +58346,7 @@ async function proposeStoriesToBoard(esFile, usmFile, opts) {
   if (usm.kind !== "user-story-map")
     throw new Error(`${usmFile} is a ${usm.kind} diagram, not a story map`);
   const { candidates } = es.kind === "domain-story" ? proposeFromDomainStory(es.content, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content }) : proposeStories(es.content, { esKey: es.key, existing: usm.content });
-  const board = await resolveBoard(api, opts.board);
+  const board = await resolveBoard(api, opts.board, repoRoot(path14.dirname(path14.resolve(usmFile))));
   const { ops, proposed, skipped } = proposalOps(board, candidates, usm.key, es.key);
   const seq = ops.length ? (await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd design propose-stories: ${proposed} from ${es.key}` })).seq : void 0;
   return { base, boardId: board.id, proposed, skipped, candidates: candidates.length, seq };
@@ -58310,7 +58374,7 @@ async function cmdDesign(args2, flags2) {
       console.warn(`\u26A0 ${w.message}`);
     const at2 = str(flags2.at)?.split(",").map(Number);
     const r = await drawDesign(file2, { board: boardRef, canvas, ...at2 && at2.length === 2 && at2.every(Number.isFinite) ? { at: { x: at2[0], y: at2[1] } } : {} });
-    console.log(`\u2714 ${path13.basename(file2)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== "error").length} note(s) \u2014 awd design lint ${file2})`);
+    console.log(`\u2714 ${path14.basename(file2)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== "error").length} note(s) \u2014 awd design lint ${file2})`);
     for (const line of unresolvedReport(r.unresolvedTraces))
       console.warn(line);
     return true;
@@ -58330,7 +58394,7 @@ async function cmdDesign(args2, flags2) {
     const r = importEgonFile(file2, out);
     for (const w of r.warnings)
       console.warn(`\u26A0 ${w}`);
-    console.log(`\u2714 ${path13.basename(file2)} \u2192 ${out} (${r.sentences} sentence(s)); draw it with awd design draw ${out} --board \u2026`);
+    console.log(`\u2714 ${path14.basename(file2)} \u2192 ${out} (${r.sentences} sentence(s)); draw it with awd design draw ${out} --board \u2026`);
     return cmdDesignLint(out);
   }
   if (sub === "export-egon") {
@@ -58338,7 +58402,7 @@ async function cmdDesign(args2, flags2) {
     if (!file2 || !out)
       throw new Error("usage: awd design export-egon <design/<name>.domain-story.yaml> --out <story.egn>");
     exportEgonFile(file2, out);
-    console.log(`\u2714 ${path13.basename(file2)} \u2192 ${out}; open it in Egon.io (https://egon.io) with Import`);
+    console.log(`\u2714 ${path14.basename(file2)} \u2192 ${out}; open it in Egon.io (https://egon.io) with Import`);
     return true;
   }
   throw new Error("usage: awd design draw|lint|propose-stories|import-egon|export-egon \u2026 (docs/diagrams.md)");
@@ -58364,9 +58428,9 @@ function importEgonFile(file2, out) {
     text = m[1].replace(/<!--|-->/g, "");
   }
   const r = fromEgon(JSON.parse(text));
-  const header = [`# Imported from Egon.io (${path13.basename(file2)}) by awd design import-egon.`, ...r.description ? [`# ${r.description.replace(/\n/g, " ")}`] : []].join("\n");
+  const header = [`# Imported from Egon.io (${path14.basename(file2)}) by awd design import-egon.`, ...r.description ? [`# ${r.description.replace(/\n/g, " ")}`] : []].join("\n");
   const body = import_yaml3.default.stringify({ ...r.title ? { title: r.title } : {}, ...r.content }, { lineWidth: 0 });
-  fs12.mkdirSync(path13.dirname(path13.resolve(out)), { recursive: true });
+  fs12.mkdirSync(path14.dirname(path14.resolve(out)), { recursive: true });
   fs12.writeFileSync(out, `${header}
 ${body}`);
   return { sentences: (r.content.sentences ?? []).length, warnings: r.warnings };
@@ -58385,6 +58449,7 @@ var init_design = __esm({
     init_dist();
     init_dist2();
     init_graphCanvas();
+    init_projects();
     str = (v) => typeof v === "string" ? v : void 0;
     KIND_ALIASES = {
       es: "event-storming",
@@ -58413,7 +58478,7 @@ __export(studio_exports, {
   cmdStudio: () => cmdStudio
 });
 import fs13 from "node:fs";
-import path14 from "node:path";
+import path15 from "node:path";
 import { randomUUID as randomUUID3 } from "node:crypto";
 import { fileURLToPath } from "node:url";
 async function cmdStudio(file2, flags2) {
@@ -58432,7 +58497,7 @@ async function cmdStudio(file2, flags2) {
   if (!projectFlag && !file2)
     throw new Error("awd studio needs --project <dir> or a workflow file");
   let base = str2(flags2.canvas) ?? process.env.AWD_CANVAS_URL ?? "http://localhost:4400";
-  let root = projectFlag ? fs13.realpathSync(path14.resolve(projectFlag)) : "";
+  let root = projectFlag ? fs13.realpathSync(path15.resolve(projectFlag)) : "";
   if (file2) {
     const wf = loadWorkflow(file2);
     root ||= fs13.realpathSync(repoRoot(wf.dir));
@@ -58440,12 +58505,12 @@ async function cmdStudio(file2, flags2) {
     base = drawn.base;
     console.log(`studio: ${wf.def.name} \u2192 ${drawn.base}/b/${drawn.boardId} (seq ${drawn.seq})`);
   }
-  const name = path14.basename(root);
+  const name = path15.basename(root);
   const studio = new Studio({
     canvas: canvasBoardHttp({ base }),
     channel: new HerdrChannel(str2(flags2["herdr-bin"]) ?? "herdr"),
     // per project: state.json + status.json; briefs per board under <board-scope>/
-    store: new FileStudioStore(path14.join(root, ".awd", "studio")),
+    store: new FileStudioStore(path15.join(root, ".awd", "studio")),
     project: root,
     projectName: name,
     canvasUrl: base.replace(/\/$/, ""),
@@ -58479,7 +58544,7 @@ async function cmdStudio(file2, flags2) {
 function awdCommand(root) {
   const self = fileURLToPath(import.meta.url);
   const bin = self.endsWith(".mjs") ? self : fileURLToPath(new URL("../bin/awd.js", import.meta.url));
-  return `node ${path14.relative(root, bin) || bin}`;
+  return `node ${path15.relative(root, bin) || bin}`;
 }
 var str2;
 var init_studio2 = __esm({
@@ -58497,7 +58562,7 @@ init_dist();
 init_dist2();
 init_graphCanvas();
 import fs14 from "node:fs";
-import path15 from "node:path";
+import path16 from "node:path";
 var HELP = `awd \u2014 small event-driven agent workflows
 
   awd lint    <workflow.yaml>
@@ -58512,6 +58577,7 @@ var HELP = `awd \u2014 small event-driven agent workflows
   awd design  propose-stories <es | domain-story file> --into <story-map file> --board <\u2026>   # story candidates as pending cards
   awd design  import-egon <story.egn | .egn.svg> --out design/<name>.domain-story.yaml   # from Egon.io
   awd design  export-egon <domain-story file> --out <story.egn>                         # to Egon.io
+  awd boards  move <board id | title:...> --to <project dir> [--canvas URL]            # store a board in <project>/.unprose/boards
   awd run     <workflow.yaml> [--port 4311] [--worker fake|claude-code|anthropic|cli|herdr] [--store file|memory] [--store-dir DIR] [--quiet]
               --worker is the default runner; each agent may pick its own runner:. --worker fake overrides all of them.
               --store memory keeps the event log in RAM (demos, tests); file (default) appends to <store-dir>/events.ndjson.
@@ -58607,8 +58673,8 @@ function cmdAgents(file2, flags2) {
 }
 async function cmdMemory(file2, agent, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str3(flags2["store-dir"]) });
-  const store = new FileEventStore(path15.join(wf.storeDir, "events.ndjson"));
-  const memory = new FileMemoryStore(path15.join(wf.storeDir, "memory"));
+  const store = new FileEventStore(path16.join(wf.storeDir, "events.ndjson"));
+  const memory = new FileMemoryStore(path16.join(wf.storeDir, "memory"));
   await syncMemory(store.all(), memory);
   const forget = str3(flags2.forget);
   if (forget) {
@@ -58633,11 +58699,11 @@ async function cmdMemory(file2, agent, flags2) {
     }
     console.log(`  ${c.dim(e.at.slice(0, 16).replace("T", " "))} ${c.dim(e.id)} ${e.key ? c.dim("[" + e.key + "] ") : ""}${e.note}${e.tags.length ? c.dim("  #" + e.tags.join(" #")) : ""}`);
   }
-  console.log(c.dim(`${entries.length} notes in ${path15.join(wf.storeDir, "memory")}`));
+  console.log(c.dim(`${entries.length} notes in ${path16.join(wf.storeDir, "memory")}`));
 }
 async function cmdReflect(file2, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str3(flags2["store-dir"]) });
-  const store = new FileEventStore(path15.join(wf.storeDir, "events.ndjson"));
+  const store = new FileEventStore(path16.join(wf.storeDir, "events.ndjson"));
   const since = str3(flags2.since) ? Date.now() - parseDuration(str3(flags2.since), "--since") : void 0;
   const threshold = flags2.threshold !== void 0 ? Number(flags2.threshold) : 2;
   const patterns = patternsOf(store.all(), { since });
@@ -58648,7 +58714,7 @@ async function cmdReflect(file2, flags2) {
   if (!board) {
     console.log(renderPatterns(patterns, { threshold }));
     if (decisions.length)
-      console.log(c.dim(`${decisions.length} pattern(s) would become cards: awd reflect ${path15.relative(process.cwd(), wf.file)} --to-board "title:<kanban board>"`));
+      console.log(c.dim(`${decisions.length} pattern(s) would become cards: awd reflect ${path16.relative(process.cwd(), wf.file)} --to-board "title:<kanban board>"`));
     return;
   }
   const cards = decisions.map(cardForPattern);
@@ -58688,7 +58754,7 @@ async function cmdRun(file2, flags2) {
     console.log(`  @${a.id}: ${workerName === "fake" ? "fake" : a.runner ?? workerName}${a.model ? " \xB7 " + a.model : ""}${a.tools?.length ? " \xB7 tools " + a.tools.join(",") : ""}`);
   for (const l of [...hooks, ...crons])
     console.log(l);
-  console.log(`  status: http://localhost:${port}/api/status   emit: awd emit ${path15.relative(process.cwd(), wf.file)} <event.type> --data '{...}'`);
+  console.log(`  status: http://localhost:${port}/api/status   emit: awd emit ${path16.relative(process.cwd(), wf.file)} <event.type> --data '{...}'`);
   const shutdown = () => {
     void rt.stop().then(() => process.exit(0));
   };
@@ -58698,7 +58764,7 @@ async function cmdRun(file2, flags2) {
 function cmdEmit(file2, type, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str3(flags2["store-dir"]) });
   const data = flags2.data ? JSON.parse(String(flags2.data)) : void 0;
-  const store = new FileEventStore(path15.join(wf.storeDir, "events.ndjson"));
+  const store = new FileEventStore(path16.join(wf.storeDir, "events.ndjson"));
   const draft = { id: "pending", type, data, ts: (/* @__PURE__ */ new Date()).toISOString() };
   const key = str3(flags2.key) ?? keyFor(wf.def, draft, process.env);
   const ev = store.append({ type, key, data, meta: { trigger: "cli" } });
@@ -58706,7 +58772,7 @@ function cmdEmit(file2, type, flags2) {
 }
 function cmdStatus(file2, key, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str3(flags2["store-dir"]) });
-  const store = new FileEventStore(path15.join(wf.storeDir, "events.ndjson"));
+  const store = new FileEventStore(path16.join(wf.storeDir, "events.ndjson"));
   const states = projectStates(wf.def, store.all(), { roles: wf.roles, agents: wf.agents, env: process.env });
   const list2 = [...states.values()].filter((s) => !key || s.key === key);
   if (flags2.json)
@@ -58730,7 +58796,7 @@ function printRun(s) {
 }
 function cmdReplay(file2, eventsFile, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str3(flags2["store-dir"]) });
-  const src = eventsFile ?? path15.join(wf.storeDir, "events.ndjson");
+  const src = eventsFile ?? path16.join(wf.storeDir, "events.ndjson");
   const events = fs14.readFileSync(src, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
   const byKey = /* @__PURE__ */ new Map();
   for (const e of events) {
@@ -58780,7 +58846,7 @@ async function cmdTest(file2, targets) {
       console.log(`${c.red("error")} ${e.where}: ${e.message}`);
     return false;
   }
-  const files = collectGoldens(targets.length ? targets : [path15.join(wf.dir, "tests")]);
+  const files = collectGoldens(targets.length ? targets : [path16.join(wf.dir, "tests")]);
   if (!files.length) {
     console.log(c.yellow("no *.golden.yaml files found"));
     return true;
@@ -58788,7 +58854,7 @@ async function cmdTest(file2, targets) {
   let pass = 0, fail = 0;
   for (const f of files) {
     const g = import_yaml4.default.parse(fs14.readFileSync(f, "utf8"));
-    const name = g.name ?? path15.basename(f).replace(/\.golden\.ya?ml$/, "");
+    const name = g.name ?? path16.basename(f).replace(/\.golden\.ya?ml$/, "");
     const problems = await runGolden(wf, g);
     if (problems.length) {
       fail++;
@@ -58811,7 +58877,7 @@ function collectGoldens(targets) {
     if (fs14.statSync(t).isDirectory())
       for (const f of fs14.readdirSync(t).sort())
         if (/\.golden\.ya?ml$/.test(f))
-          out.push(path15.join(t, f));
+          out.push(path16.join(t, f));
         else
           out.push(t);
   }
@@ -58928,6 +58994,8 @@ try {
     case "studio":
       await (await Promise.resolve().then(() => (init_studio2(), studio_exports))).cmdStudio(args[0], flags);
       break;
+    case "boards":
+      process.exit(await (await Promise.resolve().then(() => (init_projects(), projects_exports))).cmdBoards(args, flags) ? 0 : 1);
     case "run":
       await cmdRun(need(args, 0, "workflow file"), flags);
       break;

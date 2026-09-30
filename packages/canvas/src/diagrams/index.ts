@@ -42,4 +42,5 @@ export { proposeStories, type StoryCandidate, type StoryProposal, type ProposeOp
 export { fromEgon, toEgon, type EgonImport } from './egon.js'
 export { proposeFromDomainStory, type ProposeFromDomainStoryOptions } from './proposeFromDomainStory.js'
 export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSpec, type DiagramInfo, type DiagramFrameKind } from '../model.js'
+export { gotoTargets, rankTargets, type GotoTarget } from './goto.js'
 export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'

@@ -1,0 +1,22 @@
+/* "Go to…" palette (⌘K) and the "Agent wants to show you" banner. Tokens from styles.css. */
+.goto-backdrop { position: fixed; inset: 0; z-index: 3000; background: color-mix(in srgb, var(--ink) 18%, transparent); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; }
+.goto { width: min(560px, 100%); max-height: 70vh; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow-lift, 0 12px 32px rgba(0, 0, 0, 0.18)); overflow: hidden; }
+.goto-input { border: 0; border-bottom: 1px solid var(--rule); padding: 14px 16px; font: inherit; font-size: 15px; background: transparent; color: var(--ink); outline: none; }
+.goto-input:focus-visible { box-shadow: inset 0 -2px 0 var(--marker, var(--ink-2)); }
+.goto-list { list-style: none; margin: 0; padding: 6px; overflow: auto; }
+.goto-row { display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.goto-row.active { background: color-mix(in srgb, var(--marker, var(--ink)) 12%, transparent); }
+.goto-badge { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+.goto-badge.k-frame { background: var(--chrome); font-weight: 600; color: var(--ink); }
+.goto-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.goto-row.k-frame .goto-label { font-weight: 600; }
+.goto-detail { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
+.goto-empty { padding: 12px; color: var(--ink-3); font-size: 13px; }
+.goto-hint { margin: 0; padding: 7px 14px; border-top: 1px solid var(--rule); font-size: 11.5px; color: var(--ink-3); }
+
+.focus-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: min(720px, calc(100% - 32px)); padding: 8px 12px; background: var(--paper); color: var(--ink); border: 1px solid var(--rule-2); border-left: 3px solid var(--marker, var(--ink)); border-radius: 8px; box-shadow: var(--shadow-lift, 0 8px 24px rgba(0, 0, 0, 0.14)); font-size: 13.5px; }
+.focus-text { flex: 1 1 260px; min-width: 0; }
+.focus-note { color: var(--ink-2); }
+.focus-follow { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.focus-follow input { margin: 0; }
+.goto-btn { white-space: nowrap; }

@@ -40,6 +40,9 @@ import { StudioControl } from './components/StudioControl'
 import { isWorkflowScope } from './diagrams/frame'
 import { FrozenHeaders } from './flow/FrozenHeaders'
 import { captureIds, copySelectionAsImage, imageFileName } from './flow/copyImage'
+import { GoToPalette } from './components/GoToPalette'
+import { FocusBanner, readFollow, writeFollow } from './components/FocusBanner'
+import type { FocusRequest } from './store'
 
 const GRID: [number, number] = [10, 10]
 const MULTI_SELECT_KEYS = ['Meta', 'Control', 'Shift']
@@ -98,6 +101,8 @@ function BoardInner({ id }: { id: string }) {
   const [openComments, setOpenComment] = useStoredSet(`awd.canvas.open-comments.${id}`)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [gotoOpen, setGotoOpen] = useState(false)
+  const [follow, setFollow] = useState(readFollow)
   const [handed, setHanded] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -170,6 +175,28 @@ function BoardInner({ id }: { id: string }) {
       flow.fitView({ nodes: ids.map((i) => ({ id: i })), padding: 0.4, duration: 300, maxZoom: 1.2 })
     },
     [flow],
+  )
+
+  // "Take me there": fit the view to these items and select them (the palette, ?frame= links, canvas_focus).
+  // No ids = a legacy board's whole diagram → fit everything.
+  const goTo = useCallback(
+    (ids: string[]) => {
+      const known = ids.filter((i) => board?.items[i])
+      if (!known.length) {
+        flow.fitView({ padding: 0.15, duration: 300 })
+        return
+      }
+      select(known)
+      flow.fitView({ nodes: known.map((i) => ({ id: i })), padding: 0.2, duration: 350, maxZoom: 1.2 })
+    },
+    [board, flow, select],
+  )
+  const goToRequest = useCallback(
+    (r: FocusRequest) => {
+      goTo(r.ids)
+      store.clearFocus()
+    },
+    [goTo, store],
   )
 
   // ---- gestures → ops
@@ -602,6 +629,11 @@ function BoardInner({ id }: { id: string }) {
         setTool('select')
         return
       }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setGotoOpen(true)
+        return
+      }
       if (typing || editingId) return
       const mod = e.metaKey || e.ctrlKey
       if (mod && e.key.toLowerCase() === 'z') {
@@ -667,17 +699,22 @@ function BoardInner({ id }: { id: string }) {
   useEffect(() => {
     if (!board || fitted.current || !derived.nodes.length) return
     fitted.current = true
-    const focus = new URLSearchParams(location.search).get('focus')
+    const params = new URLSearchParams(location.search)
+    const focus = params.get('focus')
+    const frameKey = params.get('frame')
     const it = focus ? board.items[focus] : undefined
+    const frame = frameKey ? board.items[`diagram.${frameKey}`] : undefined
     setTimeout(() => {
-      if (it) {
+      if (frame && !it) {
+        goTo([frame.id])
+      } else if (it) {
         select([it.id])
         flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: 1 })
       } else {
         flow.fitView({ padding: 0.15 })
       }
     }, 30)
-  }, [board, derived.nodes.length, flow, select])
+  }, [board, derived.nodes.length, flow, select, goTo])
 
   // double-click on empty paper → sticky at the cursor, in edit mode
   const onWrapDoubleClick = useCallback(
@@ -713,7 +750,7 @@ function BoardInner({ id }: { id: string }) {
 
   return (
     <div className={`app ${panelOpen ? 'panel-open' : ''}`} style={{ '--panel-w': `${panelWidth}px` } as CSSProperties}>
-      <Header store={store} title={board.title} kind={KIND_NAMES[board.kind] ?? board.kind} panelOpen={panelOpen} setPanelOpen={setPanelOpen} onHandoff={handoff} handed={handed} />
+      <Header store={store} title={board.title} kind={KIND_NAMES[board.kind] ?? board.kind} panelOpen={panelOpen} setPanelOpen={setPanelOpen} onHandoff={handoff} handed={handed} onGoTo={() => setGotoOpen(true)} />
       <Rail
         color={color}
         setColor={setColor}
@@ -781,6 +818,18 @@ function BoardInner({ id }: { id: string }) {
           </ReactFlow>
         </EditContext.Provider>
         <RunOverlay board={board} />
+        <FocusBanner
+          board={board}
+          request={store.focusRequest}
+          follow={follow}
+          onFollow={(on) => {
+            setFollow(on)
+            writeFollow(on)
+          }}
+          onGo={goToRequest}
+          onDismiss={store.clearFocus}
+        />
+        <GoToPalette board={board} open={gotoOpen} onClose={() => setGotoOpen(false)} onGo={(t) => goTo([t.id])} />
         {tool === 'comment' && <div className="hint">Click an item to comment on it. Esc cancels.</div>}
         {store.storageError && (
           <div className="storage-banner" role="alert">
@@ -858,6 +907,7 @@ function Header({
   setPanelOpen,
   onHandoff,
   handed,
+  onGoTo,
 }: {
   store: ReturnType<typeof useBoard>
   title: string
@@ -866,6 +916,7 @@ function Header({
   setPanelOpen: (b: boolean) => void
   onHandoff: () => void
   handed: boolean
+  onGoTo?: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
@@ -941,6 +992,11 @@ function Header({
           onClick={onHandoff}
         >
           Hand to agent
+        </button>
+      )}
+      {onGoTo && (
+        <button type="button" className="ghost goto-btn" onClick={onGoTo} aria-keyshortcuts="Meta+K Control+K" title="Go to a frame or item (⌘K / Ctrl+K)">
+          Go to…
         </button>
       )}
       <a className="home" href="/docs">

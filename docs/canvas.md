@@ -25,7 +25,7 @@ node packages/canvas/dist/cli.js serve --port 4400   # http://localhost:4400 · 
 node packages/canvas/dist/cli.js demo  # seven sample boards (one per kind) drawn from the card-pipeline example
 ```
 
-Boards are stored in `--dir`, else `$AWD_BOARDS_DIR` (the older `AWD_CANVAS_DIR` also works), else `$XDG_DATA_HOME/awd/boards`, else `~/.awd/boards` — never inside a checkout or plugin install by default, because a plugin reinstall replaces its directory (the server warns if `--dir` points into a `plugins/cache` folder, and a board whose save fails shows "Changes are not being saved" in the page). `AWD_CANVAS_URL` tells the MCP server / CLI where the server is (default `http://localhost:4400`). If `packages/canvas/web/dist` exists it is served at `/` and `/b/:id`; otherwise a plain page lists the boards.
+**Boards live in the project they belong to** (see [Projects](#projects)): a board made from a session or a design file of a project is stored in `<project>/.unprose/boards/`. Boards of no project — the **personal** space — are stored in `--dir`, else `$AWD_BOARDS_DIR` (the older `AWD_CANVAS_DIR` also works), else `$XDG_DATA_HOME/awd/boards`, else `~/.awd/boards` — never inside a checkout or plugin install by default, because a plugin reinstall replaces its directory (the server warns if `--dir` points into a `plugins/cache` folder, and a board whose save fails shows "Changes are not being saved" in the page). `AWD_CANVAS_URL` tells the MCP server / CLI where the server is (default `http://localhost:4400`). If `packages/canvas/web/dist` exists it is served at `/` and `/b/:id`; otherwise a plain page lists the boards.
 
 Claude Code in a checkout of this repo gets the tools through the dev-only project `.mcp.json` (`node scripts/mcp.mjs`); the plugin declares the same server in `.claude-plugin/plugin.json`. The MCP server needs the HTTP server running — it does not own a store of its own, so the browser and the agent always see the same board.
 
@@ -58,20 +58,61 @@ Always keep the last `seq` you saw and pass it as `since`. `canvas_diff` returns
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, author: user\|agent\|all` | human-readable lines for every change after `since` |
 | `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
+| `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
+
+## Projects
+
+One canvas server serves several projects — same port, same URL, same tunnel. A project is a directory
+on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
+
+```
+<project>/.unprose/
+  .gitignore            # written once: boards/*.changes.ndjson, boards/*.tmp
+  boards/<id>.json      # the board snapshot — commit it with the project
+  boards/<id>.changes.ndjson   # the change log — local history, not committed
+```
+
+- **Registering a project:** `awd-canvas serve --project <dir>` (repeatable); the Claude Code plugin
+  registers the session's project (`CLAUDE_PROJECT_DIR`, else the working directory, lifted to its git
+  top level) at session start and when the MCP server starts; `awd design draw` / `awd graph --canvas`
+  register the design or workflow file's repo. The registry is kept in `<personal dir>/.projects.json`;
+  a project's id is the slug of its directory name (`-2`, `-3` … on a clash).
+- **Only from this machine:** anything that names a directory — `POST /api/projects`, `projectRoot`, moving
+  a board — is accepted only from a loopback caller without proxy/tunnel forwarding headers (the canvas
+  has no auth; a tunnel such as cloudflared connects from localhost but adds them). Creating and reading
+  boards in an already registered project works from anywhere, like every other board operation.
+- **Board ids and URLs never change** (`/b/<id>`); the server knows which project stores which board. The
+  board list groups boards by project, with a filter that remembers your last choice.
+- **The agent's defaults:** `canvas_create_board` stores new boards in the session's project
+  (`project: 'personal'` for none); `canvas_list_boards` lists the session's project (`all: true` for every
+  project). A remote canvas (`AWD_CANVAS_URL` on another machine) cannot write into your project, so boards
+  made through it stay in its personal space.
+- **Committing boards:** the snapshots are pretty-printed JSON with a final newline, so they diff well.
+  A clone has the snapshots but not the logs: the board opens and keeps working (its history starts over).
+  Two people editing the same board in different clones will merge-conflict on the snapshot like on any
+  file — the design files (`design/*.yaml`) stay the source of truth, the board adds layout and discussion.
+- **Migrating older boards:** boards made before projects stay in the personal space and keep working
+  (a title lookup still finds them). Move one into a project with
+  `awd boards move <board id | title:…> --to <project dir>` — the snapshot and the log are copied first,
+  and the old files are removed only after the copy is in place.
 
 ## HTTP API
 
 | Method | Path | Body / query | Returns |
 |---|---|---|---|
-| GET | `/api/boards` | | `{ boards: [{ id, title, kind, seq, items, … }] }` |
-| POST | `/api/boards` | `{ title, kind, content? \| items?, meta?, author? }` | `201 { board }` — `content` is rendered with the kind's template |
+| GET | `/api/boards` | `?project=<id>` | `{ boards: [{ id, title, kind, seq, items, project, … }] }` — only that project's boards with `project` |
+| POST | `/api/boards` | `{ title, kind, content? \| items?, meta?, author?, project?, projectRoot? }` | `201 { board, project }` — `content` is rendered with the kind's template; stored in `project` (an id; `personal` by default) or, from this machine, `projectRoot` (registered on the fly) |
+| GET | `/api/projects` | | `{ projects: [{ id, name, personal, boards, root? }] }` — `root` only for a caller on this machine |
+| POST | `/api/projects` | `{ root }` | `{ project }` — register (or find) a project; this machine only (`403` otherwise) |
+| POST | `/api/boards/:id/move` | `{ project } \| { projectRoot }` | `{ board, project }` — move the snapshot and log into that project; this machine only |
 | GET | `/api/boards/:id` | | `{ board }` |
 | PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` |
 | DELETE | `/api/boards/:id` | | `{ deleted }` |
 | POST | `/api/boards/:id/ops` | `{ author: 'agent'\|'user', ops: Op[], note? }` | `{ seq, change }` (atomic batch) |
 | GET | `/api/boards/:id/changes` | `?since=N&author=` | `{ changes: Change[], seq }` |
 | GET | `/api/boards/:id/diff` | `?since=N&author=` | `{ lines: string[], count, seq }` |
+| POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
 | GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq }`. `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
 | GET | `/api/boards/:id/thumb.svg` | | SVG thumbnail of the board (used by the board list) |
 | GET | `/api/boards/:id/outline` | | `text/plain` outline |
@@ -278,3 +319,13 @@ The workflow board a runtime draws (`awd graph … --canvas`) also shows **live 
 ## Tests
 
 `npm test -w @awd/canvas` — templates (determinism, level filtering, lane containment, no overlaps), the board repository (log + snapshot + rebuild, wait, memory adapter), kanban (`cardMoves`, `/cards` round trip), diff summaries, thumbnails, comment placement, the HTTP/WS server on a random port, and the architecture rule (ports / adapters).
+
+## Going to something
+
+- **Go to…** (`⌘K` / `Ctrl+K`, or the header button): type a few letters of a frame's title or key, or an item's
+  text; diagram frames are listed first. Enter fits the view to it and selects it.
+- **Links:** `/b/<board>?frame=<diagram key>` opens the board fitted to that diagram frame (the frame panel's
+  *Copy link*); `?focus=<item id>` opens it centred on an item (an item's *Copy link*).
+- **Agent → you:** `canvas_focus` / `POST /api/boards/:id/focus` shows "Agent wants to show you …" with **Go** and
+  **Dismiss**; *Follow agent* (remembered per viewer) makes the page jump without asking. Only the latest request
+  is shown.

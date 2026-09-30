@@ -5,6 +5,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { boardByTitle, registerProject } from './projects.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
 
@@ -26,9 +27,9 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${await res.text()}`)
     return res.json() as Promise<T>
   }
-  const { boards } = await api<{ boards: Array<{ id: string; title: string; kind: string }> }>('GET', '/api/boards')
-  let board = boards.find((b) => b.kind === 'workflow' && b.title === title)
-  if (!board) board = (await api<{ board: { id: string; title: string; kind: string } }>('POST', '/api/boards', { title, kind: 'workflow' })).board
+  // the board lives in the workflow's project (its repo), found there by title or created there
+  const project = opts.file ? await registerProject(api, repoRoot(path.dirname(path.resolve(opts.file)))) : undefined
+  const board = await boardByTitle(api, title, 'workflow', project, (b) => b.kind === 'workflow')
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem>; meta?: { workflow?: { statusUrl?: string } } & Record<string, unknown> } }>('GET', `/api/boards/${board.id}`)
   const { changes } = await api<{ changes: UserChange[] }>('GET', `/api/boards/${board.id}/changes?since=0&author=user`)

@@ -8,13 +8,14 @@ import path from 'node:path'
 import { startServer } from '../src/server.js'
 import { CanvasClient } from '../src/client.js'
 import { demoBoards } from '../src/demo.js'
-import { FileBoardRepository, MemoryBoardRepository, createBoardRepository } from '../src/adapters/boards/index.js'
+import { FileBoardRepository, MemoryBoardRepository, ProjectsBoardRepository, createBoardRepository } from '../src/adapters/boards/index.js'
 import { HANDOFF_NOTE, type BoardRepository } from '../src/ports/boardRepository.js'
 import { render } from '../src/templates/index.js'
 
 function eachRepo(): Array<[string, BoardRepository]> {
   return [
     ['file', new FileBoardRepository(fs.mkdtempSync(path.join(os.tmpdir(), 'awd-repo-')))],
+    ['projects', new ProjectsBoardRepository(fs.mkdtempSync(path.join(os.tmpdir(), 'awd-repo-')))],
     ['memory', new MemoryBoardRepository()],
   ]
 }
@@ -44,7 +45,8 @@ test('both adapters: create → apply → changes → waitFor(handoff) → delet
 
 test('createBoardRepository picks the adapter by name', () => {
   assert.ok(createBoardRepository('memory') instanceof MemoryBoardRepository)
-  assert.ok(createBoardRepository(undefined, fs.mkdtempSync(path.join(os.tmpdir(), 'awd-repo-'))) instanceof FileBoardRepository)
+  // files: the personal boards in the dir, each registered project's boards in <root>/.unprose/boards/
+  assert.ok(createBoardRepository(undefined, fs.mkdtempSync(path.join(os.tmpdir(), 'awd-repo-'))) instanceof ProjectsBoardRepository)
 })
 
 test('the HTTP server runs unchanged on the memory repository', async () => {

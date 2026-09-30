@@ -15,6 +15,8 @@ interface StackEntry {
   label: string
 }
 
+export type FocusRequest = Extract<WsMessage, { type: 'focus' }>
+
 export interface BoardStore {
   board: Board | null
   error: string | null
@@ -23,6 +25,9 @@ export interface BoardStore {
   agentWatching: boolean
   /** Set while the server cannot save this board (disk gone, permissions…); cleared when saving works again. */
   storageError: string | null
+  /** The latest "look here" request (canvas_focus / POST /focus); null once gone to or dismissed. */
+  focusRequest: FocusRequest | null
+  clearFocus: () => void
   changes: Change[]
   toasts: Toast[]
   /** ids of items the agent touched recently, for the highlight wash */
@@ -83,6 +88,7 @@ export function useBoard(id: string): BoardStore {
   const [connected, setConnected] = useState(false)
   const [agentWatching, setAgentWatching] = useState(false)
   const [storageError, setStorageError] = useState<string | null>(null)
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null)
   const [changes, setChanges] = useState<Change[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [pulse, setPulse] = useState<Set<string>>(new Set())
@@ -173,6 +179,8 @@ export function useBoard(id: string): BoardStore {
           foldChange(m.change)
         } else if (m.type === 'presence') {
           if (m.author === 'agent') setAgentWatching(Boolean(m.watching))
+        } else if (m.type === 'focus') {
+          setFocusRequest(m) // only the latest one is kept
         } else if (m.type === 'storage') {
           setStorageError(m.ok ? null : m.message)
           toast(m.ok ? m.message : `Changes are not being saved: ${m.message}`, m.ok ? 'info' : 'error')
@@ -266,6 +274,8 @@ export function useBoard(id: string): BoardStore {
     connected,
     agentWatching,
     storageError,
+    focusRequest,
+    clearFocus: () => setFocusRequest(null),
     changes,
     toasts,
     pulse,

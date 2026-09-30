@@ -56,11 +56,24 @@ export class CanvasClient {
     return data as T
   }
 
-  listBoards() {
-    return this.req<{ boards: Array<Pick<Board, 'id' | 'title' | 'kind' | 'seq' | 'createdAt' | 'updatedAt' | 'meta'> & { items: number }> }>('GET', '/api/boards').then((r) => r.boards)
+  /** Boards, optionally only those of one project (a project id, or 'personal'). */
+  listBoards(project?: string) {
+    const q = project ? `?project=${encodeURIComponent(project)}` : ''
+    return this.req<{ boards: Array<Pick<Board, 'id' | 'title' | 'kind' | 'seq' | 'createdAt' | 'updatedAt' | 'meta'> & { items: number; project?: string }> }>('GET', `/api/boards${q}`).then((r) => r.boards)
   }
-  createBoard(input: { title: string; kind: DiagramKind; content?: unknown; items?: Item[]; meta?: Record<string, unknown>; author?: Author }) {
+  createBoard(input: { title: string; kind: DiagramKind; content?: unknown; items?: Item[]; meta?: Record<string, unknown>; author?: Author; project?: string }) {
     return this.req<{ board: Board }>('POST', '/api/boards', input).then((r) => r.board)
+  }
+  projects() {
+    return this.req<{ projects: Array<{ id: string; name: string; personal: boolean; boards: number; root?: string | null }> }>('GET', '/api/projects').then((r) => r.projects)
+  }
+  /** Register the project at `root` on this canvas (only accepted from the canvas's own machine). */
+  registerProject(root: string) {
+    return this.req<{ project: { id: string; name: string; root?: string | null } }>('POST', '/api/projects', { root }).then((r) => r.project)
+  }
+  /** Move a board (snapshot + log) into a project: a project id or, from this machine, `{ projectRoot }`. */
+  moveBoard(id: string, to: { project?: string; projectRoot?: string }) {
+    return this.req<{ board: string; project: string }>('POST', `/api/boards/${encodeURIComponent(id)}/move`, to)
   }
   getBoard(id: string) {
     return this.req<{ board: Board }>('GET', `/api/boards/${encodeURIComponent(id)}`).then((r) => r.board)
@@ -96,7 +109,16 @@ export class CanvasClient {
   moveCard(id: string, cardId: string, column: string, author: Author = 'agent', note?: string) {
     return this.req<{ card: Item; from: string; to: string; seq: number }>('POST', `/api/boards/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId)}/move`, { column, author, note })
   }
-  boardUrl(id: string) {
-    return `${this.baseUrl}/b/${encodeURIComponent(id)}`
+  /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
+  focus(id: string, target: { ids?: string[]; frame?: string; note?: string }, author: Author = 'agent') {
+    return this.req<{ ok: true; viewers: number; focus: { ids: string[]; frame?: string; note?: string } }>('POST', `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author })
+  }
+  /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
+  boardUrl(id: string, at: { frame?: string; focus?: string } = {}) {
+    const q = new URLSearchParams()
+    if (at.frame) q.set('frame', at.frame)
+    if (at.focus) q.set('focus', at.focus)
+    const qs = q.toString()
+    return `${this.baseUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`
   }
 }

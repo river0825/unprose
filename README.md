@@ -19,7 +19,7 @@ the repository ships a ready-to-run build in `dist/`.
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
-node scripts/canvas.mjs       # the board opens at http://localhost:4400 (boards are kept in ~/.awd/boards)
+node scripts/canvas.mjs       # the board opens at http://localhost:4400 (a project's boards live in <project>/.unprose/boards)
 ```
 
 Keep that running. In a second terminal, connect Claude Code to the board:

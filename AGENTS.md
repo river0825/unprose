@@ -21,6 +21,9 @@ node scripts/canvas.mjs       # canvas on http://localhost:4400 — runs as ship
 # working on Unprose itself: npm install && npm run build; `npm start` also runs an example workflow
 ```
 
+Boards live in the project: `<project>/.unprose/boards/` (commit the `*.json` snapshots; the change logs
+are ignored). One canvas serves several projects; `awd boards move <board> --to <dir>` moves an older board in.
+
 Register the MCP server `awd-canvas` in your agent (see `docs/agents-setup.md`): it runs
 `node scripts/mcp.mjs` and talks to the canvas at `AWD_CANVAS_URL` (default `http://localhost:4400`).
 For a canvas elsewhere (tunnel, another host) set `AWD_CANVAS_URL=https://canvas.example.com` — a pasted
@@ -44,6 +47,8 @@ board link works too. If it cannot be reached, the MCP server exits with
    workflow (agent pipeline). Link related elements across diagrams with `traces`.
 2. Write the file, lint, draw; give the person the board URL.
 3. Wait for comments (MCP `canvas_wait`), answer in the thread, record open questions as hotspots.
+   When you ask the person to look at something, call `canvas_focus` (item ids or a frame key, plus a note) so
+   their page takes them there, and include the returned link.
 4. On agreement: edit the file, lint, redraw.
 
 Details: `docs/diagrams.md` (diagram files, EventStorming per the book), `docs/studio.md` (the comment →

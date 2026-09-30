@@ -102,6 +102,12 @@ export type WsMessage =
   | { type: 'presence'; author: Author; at: string; watching: boolean }
   /** Saving this board failed (`ok: false`, keep showing it) or works again (`ok: true`). */
   | { type: 'storage'; ok: boolean; message: string; at: string }
+  /**
+   * "Look here": someone (usually the agent) asks the viewers to bring these items into view. Not a board
+   * change — nothing is stored, nothing shows in a diff. `ids` are the items to fit (a frame key resolves to
+   * its frame item); empty with `frame` set means a legacy board's whole diagram.
+   */
+  | { type: 'focus'; ids: string[]; frame?: string; note?: string; author: Author; at: string }
 
 /** Default sticky colour per event-storming role — the book's palette (hotspots are purple, p.307). */
 export const EVENT_STORMING_COLORS: Record<string, ColorToken> = {

@@ -16,10 +16,25 @@ export interface BoardSummary {
   updatedAt: string
   createdAt?: string
   itemCount?: number
+  /** The project that stores it (docs/canvas.md "Projects"); absent on older servers. */
+  project?: string
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  personal: boolean
+  boards: number
 }
 
 export const api = {
   listBoards: () => fetch('/api/boards').then((r) => json<BoardSummary[] | { boards: BoardSummary[] }>(r)),
+  /** Projects on this canvas; an older server (no route) answers with the personal space only. */
+  listProjects: () =>
+    fetch('/api/projects')
+      .then((r) => (r.ok ? json<{ projects: ProjectSummary[] }>(r) : { projects: [] as ProjectSummary[] }))
+      .then((r) => r.projects)
+      .catch(() => [] as ProjectSummary[]),
   getBoard: (id: string) =>
     fetch(`/api/boards/${encodeURIComponent(id)}`)
       .then((r) => json<Board | { board: Board }>(r))

@@ -308,7 +308,9 @@ function ItemDetail({
   const containers = Object.values(board.items).filter((i) => isContainer(i) && i.id !== item.id)
   const canMove = !isContainer(item) && item.type !== 'arrow' && containers.length > 0
   const copyLink = () => {
-    const url = `${location.origin}/b/${encodeURIComponent(board.id)}?focus=${encodeURIComponent(item.id)}`
+    // a diagram frame opens by its stable key (?frame=), anything else by its item id (?focus=)
+    const key = (item.type === 'frame' ? (item.data?.diagram as { key?: string } | undefined)?.key : undefined)
+    const url = `${location.origin}/b/${encodeURIComponent(board.id)}${key ? `?frame=${encodeURIComponent(key)}` : `?focus=${encodeURIComponent(item.id)}`}`
     navigator.clipboard
       .writeText(url)
       .then(() => onToast('Link copied'))

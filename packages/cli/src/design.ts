@@ -10,6 +10,7 @@ import { checkDomainStory, checkEventStorming, contentSchemaFor, fromEgon, propo
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
+import { boardByTitle, registerProject } from './projects.js'
 
 type Flags = Record<string, string | boolean>
 const str = (v: string | boolean | undefined) => (typeof v === 'string' ? v : undefined)
@@ -149,13 +150,15 @@ function canvasApi(base: string) {
 }
 type Api = ReturnType<typeof canvasApi>
 
-/** `title:<title>` (created as a freeform board when missing) or a board id. */
-async function resolveBoard(api: Api, ref: string): Promise<Board> {
+/**
+ * `title:<title>` or a board id. A title is looked up in the design file's project first (its repo,
+ * registered on the canvas) and created there as a freeform board when missing (docs/canvas.md "Projects").
+ */
+async function resolveBoard(api: Api, ref: string, projectRoot?: string): Promise<Board> {
   if (ref.startsWith('title:')) {
     const title = ref.slice(6).trim()
-    const { boards } = await api<{ boards: Array<{ id: string; title: string }> }>('GET', '/api/boards')
-    const hit = boards.find((b) => b.title === title)
-    const id = hit?.id ?? (await api<{ board: { id: string } }>('POST', '/api/boards', { title, kind: 'freeform' })).board.id
+    const project = projectRoot ? await registerProject(api, projectRoot) : undefined
+    const id = (await boardByTitle(api, title, 'freeform', project)).id
     return (await api<{ board: Board }>('GET', `/api/boards/${id}`)).board
   }
   return (await api<{ board: Board }>('GET', `/api/boards/${encodeURIComponent(ref)}`)).board
@@ -179,7 +182,7 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const d = parseDesignFile(abs, text)
   const root = repoRoot(path.dirname(abs))
   const source = path.relative(root, abs)
-  const board = await resolveBoard(api, opts.board)
+  const board = await resolveBoard(api, opts.board, root)
   // A workflow is drawn with the runner's own projection (graph + block details); the files behind it
   // (agent prompts, scripts) go into the snapshot so the Inspector and Files tab can show them.
   const wf = d.kind === 'workflow' ? withDetails(toGraph(loadWorkflow(abs).def), abs) : undefined
@@ -278,7 +281,7 @@ export async function proposeStoriesToBoard(esFile: string, usmFile: string, opt
     es.kind === 'domain-story'
       ? proposeFromDomainStory(es.content as never, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content as never })
       : proposeStories(es.content as never, { esKey: es.key, existing: usm.content as never })
-  const board = await resolveBoard(api, opts.board)
+  const board = await resolveBoard(api, opts.board, repoRoot(path.dirname(path.resolve(usmFile))))
   const { ops, proposed, skipped } = proposalOps(board, candidates, usm.key, es.key)
   const seq = ops.length ? (await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design propose-stories: ${proposed} from ${es.key}` })).seq : undefined
   return { base, boardId: board.id, proposed, skipped, candidates: candidates.length, seq }

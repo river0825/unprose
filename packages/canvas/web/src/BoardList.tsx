@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, asArray, type BoardSummary } from './api'
+import { useEffect, useMemo, useState } from 'react'
+import { api, asArray, type BoardSummary, type ProjectSummary } from './api'
 import { navigate } from './BoardPage'
 import { timeAgo } from './time'
 
@@ -12,9 +12,22 @@ const KIND_NAMES: Record<string, string> = {
   freeform: 'Freeform',
 }
 
+const PROJECT_KEY = 'awd.boardList.project'
+const ALL = '*'
+
+function remembered(): string {
+  try {
+    return localStorage.getItem(PROJECT_KEY) ?? ALL
+  } catch {
+    return ALL
+  }
+}
+
 export function BoardList() {
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
+  const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [project, setProject] = useState<string>(remembered)
 
   useEffect(() => {
     document.title = 'Boards — awd canvas'
@@ -22,7 +35,35 @@ export function BoardList() {
       .listBoards()
       .then((b) => setBoards(asArray(b, 'boards').sort((a, z) => (z.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))))
       .catch((e: Error) => setError(e.message))
+    void api.listProjects().then(setProjects)
   }, [])
+
+  const pick = (id: string) => {
+    setProject(id)
+    try {
+      localStorage.setItem(PROJECT_KEY, id)
+    } catch {
+      // private mode: the choice just is not remembered
+    }
+  }
+
+  // Boards grouped by the project that stores them, projects in the server's order, personal last.
+  const groups = useMemo(() => {
+    if (!boards) return []
+    const order = [...projects.filter((p) => !p.personal), ...projects.filter((p) => p.personal)]
+    const known = new Set(order.map((p) => p.id))
+    const byId = new Map<string, BoardSummary[]>()
+    for (const b of boards) {
+      const id = b.project ?? 'personal'
+      if (!byId.has(id)) byId.set(id, [])
+      byId.get(id)!.push(b)
+    }
+    const out = order.filter((p) => byId.has(p.id)).map((p) => ({ id: p.id, name: p.name, boards: byId.get(p.id)! }))
+    for (const [id, list] of byId) if (!known.has(id)) out.push({ id, name: id === 'personal' ? 'Personal' : id, boards: list })
+    return out
+  }, [boards, projects])
+  const shown = project === ALL ? groups : groups.filter((g) => g.id === project)
+  const grouped = groups.length > 1 || (groups.length === 1 && groups[0].id !== 'personal')
 
   return (
     <main className="list-page">
@@ -45,7 +86,7 @@ export function BoardList() {
             <code>POST /api/boards</code>.
           </p>
         </div>
-      ) : (
+      ) : !grouped ? (
         <ul className="wall">
           {boards.map((b) => (
             <li key={b.id}>
@@ -53,6 +94,34 @@ export function BoardList() {
             </li>
           ))}
         </ul>
+      ) : (
+        <>
+          <div className="project-filter" role="group" aria-label="Show boards of">
+            <button type="button" aria-pressed={project === ALL} onClick={() => pick(ALL)}>
+              All projects
+            </button>
+            {groups.map((g) => (
+              <button key={g.id} type="button" aria-pressed={project === g.id} onClick={() => pick(g.id)}>
+                {g.name} <span className="muted">{g.boards.length}</span>
+              </button>
+            ))}
+          </div>
+          {(shown.length ? shown : groups).map((g) => (
+            <section key={g.id} className="project-group" aria-labelledby={`project-${g.id}`}>
+              <h2 id={`project-${g.id}`} className="project-name">
+                {g.name}
+                {g.id !== 'personal' && <span className="project-hint">.unprose/boards</span>}
+              </h2>
+              <ul className="wall">
+                {g.boards.map((b) => (
+                  <li key={b.id}>
+                    <BoardCard b={b} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </>
       )}
     </main>
   )

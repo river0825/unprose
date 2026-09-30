@@ -7,6 +7,7 @@ import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { startServer, type StudioConfig } from './server.js'
 import { createBoardRepository, defaultBoardsDir, isInsidePluginCache } from './adapters/boards/index.js'
+import { hasProjects } from './ports/boardRepository.js'
 import { SpawnSupervisor } from './adapters/process/index.js'
 import { runMcp } from './mcp.js'
 import { CanvasClient } from './client.js'
@@ -18,6 +19,7 @@ const USAGE = `awd-canvas — a shared canvas for agents and humans
 
   awd-canvas serve [--port 4400] [--dir <boards dir>] [--store file|memory]   start the HTTP/WS server (+ web UI if built)
         boards dir: --dir, else $AWD_BOARDS_DIR, else $XDG_DATA_HOME/awd/boards, else ~/.awd/boards
+        [--project <dir>]...   serve these projects' boards too (stored in <dir>/.unprose/boards; also registered over the API)
         [--studio-project <dir>]... [--studio-cmd "<command with {project}>"]   let the web start/stop "awd studio" for these projects only
         (--studio <workflow.yaml> still works: it means that file's repo)
   awd-canvas mcp                                    MCP stdio server over a running canvas server (AWD_CANVAS_URL)
@@ -76,7 +78,13 @@ async function main() {
       if (storeKind !== 'memory' && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install — reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`)
       const studio = studioConfig(args)
-      const s = await startServer({ port, store: createBoardRepository(storeKind, dir), studio })
+      const store = createBoardRepository(storeKind, dir)
+      for (const root of flags(args, '--project')) {
+        if (!hasProjects(store)) throw new Error('--project needs the file store')
+        const p = store.registerProject(root) // fails loudly on a typo, at startup
+        console.log(`  project ${p.id}: boards in ${p.boardsDir}`)
+      }
+      const s = await startServer({ port, store, studio })
       const where = storeKind === 'memory' ? 'in memory' : `in ${(s.store as { dir?: string }).dir ?? dir}`
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`)
       for (const p of studio?.projects ?? []) console.log(`  studio can be started from the web for boards of ${p.root}`)

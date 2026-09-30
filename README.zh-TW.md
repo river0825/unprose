@@ -18,7 +18,7 @@
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
-node scripts/canvas.mjs       # board 會開在 http://localhost:4400（board 存在 ~/.awd/boards）
+node scripts/canvas.mjs       # board 會開在 http://localhost:4400（專案的 board 存在 <專案>/.unprose/boards）
 ```
 
 讓它繼續跑著。在另一個終端機把 Claude Code 連到 board：
