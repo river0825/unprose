@@ -112,7 +112,9 @@ test("the plugin's MCP server resolves to the plugin's scripts/mcp.mjs, never th
   assert.equal(setting({ AWD_X: ' ', CLAUDE_PLUGIN_OPTION_X: 'y' }, 'AWD_X', 'X'), 'y')
 })
 
-test('the public export ships no root .mcp.json and no ${VAR:-} form (checked by scripts/export-public.sh)', () => {
+// The export script lives only in the private repo (it is not exported), so the public repo's CI skips this.
+const exportScript = path.join(repo, 'scripts/export-public.sh')
+test('the public export ships no root .mcp.json and no ${VAR:-} form (checked by scripts/export-public.sh)', { skip: !fs.existsSync(exportScript) && 'export script not in this checkout (public repo)' }, () => {
   const sh = fs.readFileSync(path.join(repo, 'scripts/export-public.sh'), 'utf8')
   assert.match(sh, /^\s+\.mcp\.json\s/m, '.mcp.json is in the exclude list')
   assert.match(sh, /VAR:-default/, 'the export rejects the default form')
