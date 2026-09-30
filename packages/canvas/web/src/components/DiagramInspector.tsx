@@ -11,6 +11,8 @@ import { REL_NAMES, tracesOf } from '../diagrams/traces'
 import { pendingOf, type Pending } from '../inspector/pending'
 import { MODELS, type DiscussModel } from '../inspector/detail'
 import { useModelChoice } from '../inspector/useModel'
+import { useFrozen } from '../flow/freeze'
+import { headerGroups } from '../flow/headerStrips'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
@@ -26,7 +28,7 @@ function ItemLink({ it, onSelect }: { it: Item | undefined; onSelect: (id: strin
 
 /** A selected diagram frame. */
 export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { board: Board; diagram: DiagramInfo & { frame: Item }; onSelect: (id: string) => void; onOpenFile: (path: string) => void }) {
-  const findings = useFrameFindings(board, diagram.frame, diagram.key, diagram.level, diagram.source)
+  const findings = useFrameFindings(board, diagram.frame, diagram.key, diagram.level, diagram.source, diagram.kind)
   const count = membersOf(board, diagram.frame.id).length
   return (
     <section className="dg-panel" aria-label="Diagram">
@@ -55,12 +57,26 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         <dt>Elements</dt>
         <dd>{count}</dd>
       </dl>
-      {diagram.kind === 'event-storming' ? <Findings findings={findings} board={board} onSelect={onSelect} /> : null}
+      <FreezeToggle board={board} diagramKey={diagram.key} />
+      {diagram.kind === 'event-storming' || diagram.kind === 'domain-story' ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
     </section>
   )
 }
 
-function Findings({ findings, board, onSelect }: { findings: Finding[]; board: Board; onSelect: (id: string) => void }) {
+/** Spreadsheet-style frozen headers for this frame (flow/FrozenHeaders.tsx); only shown when the frame has any. */
+function FreezeToggle({ board, diagramKey }: { board: Board; diagramKey: string }) {
+  const [on, setOn] = useFrozen(board.id, diagramKey)
+  const has = headerGroups(board).some((g) => g.key === diagramKey)
+  if (!has) return null
+  return (
+    <label className="dg-freeze">
+      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
+      Freeze headers <span className="muted">— keep column and row titles in view while you pan</span>
+    </label>
+  )
+}
+
+function Findings({ findings, board, onSelect, kind }: { findings: Finding[]; board: Board; onSelect: (id: string) => void; kind: string }) {
   return (
     <section className="insp-sec">
       <h3>
@@ -78,7 +94,11 @@ function Findings({ findings, board, onSelect }: { findings: Finding[]; board: B
           ))}
         </ul>
       ) : (
-        <p className="muted">Every command has its system, every event→command its policy, and no hotspot is open.</p>
+        <p className="muted">
+          {kind === 'domain-story'
+            ? 'Every actor takes part, every work object is in a sentence, and every reference resolves.'
+            : 'Every command has its system, every event→command its policy, and no hotspot is open.'}
+        </p>
       )}
     </section>
   )
@@ -117,6 +137,12 @@ export function DiagramElementPanel({
           {info.meaning} <span className="muted">({info.colour} · {info.page})</span>
         </p>
       ) : null}
+      {typeof item.data?.sentence === 'string' ? (
+        <p className="dg-sentence">
+          <span className="muted">Sentence</span> {item.data.sentence}
+        </p>
+      ) : null}
+      {typeof item.data?.note === 'string' ? <p className="muted">{item.data.note}</p> : null}
       {pending?.kind === 'add' ? <StoryProposal board={board} item={item} pending={pending} onProposalChat={onProposalChat} onDismiss={onDismiss} /> : null}
       {rule || (nb && (nb.before.length || nb.after.length)) ? (
         <section className="insp-sec">

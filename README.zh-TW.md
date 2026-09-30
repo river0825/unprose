@@ -86,6 +86,7 @@ Event、command、system、policy 依時間由左到右排列。
 |---|---|---|---|
 | EventStorming | 一步步討論系統怎麼運作 | `design/<name>.es.yaml` | <img src="docs/images/thumb-es.png" width="260" alt="EventStorming"> |
 | Story map | 決定先做什麼（release 切線） | `design/<name>.story-map.yaml` | <img src="docs/images/thumb-story-map.png" width="150" alt="Story map"> |
+| Domain Storytelling | 用圖示句子講一個具體情境（可與 [Egon.io](https://egon.io) 匯入／匯出） | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
 | Kanban | 追蹤工作進度 | `design/<name>.kanban.yaml` | <img src="docs/images/thumb-kanban.png" width="260" alt="Kanban"> |
 | Wireframe | 畫出畫面草稿 | `design/<name>.wireframe.yaml` | <img src="docs/images/thumb-wireframe.png" width="260" alt="Wireframe"> |
 | Workflow | 描述一條可以執行的 agent 流程 | `<name>.workflow.yaml` | <img src="docs/images/thumb-workflow.png" width="260" alt="Workflow"> |

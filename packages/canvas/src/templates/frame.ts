@@ -85,7 +85,16 @@ export function traceTarget(pool: Item[], ref: { key: string; element?: string }
  * author can be told instead of the link vanishing.
  */
 export function resolveTraces(rendered: Item[], boardItems: Record<string, Item>, now: string): { wires: Item[]; unresolved: UnresolvedTrace[] } {
-  const pool = [...Object.values(boardItems), ...rendered].filter((i) => i.type !== 'arrow' && i.type !== 'comment')
+  const everything = [...Object.values(boardItems), ...rendered]
+  const pool = everything.filter((i) => i.type !== 'arrow' && i.type !== 'comment')
+  // An element drawn as an arrow (a domain-story activity with no work object) is reached through its
+  // source — a trace wire needs a node at each end.
+  const byId = new Map(everything.map((i) => [i.id, i]))
+  const viaArrow = (ref: { key: string; element?: string }) => {
+    if (!ref.element) return undefined
+    const a = everything.find((i) => i.type === 'arrow' && i.id.startsWith(`${ref.key}.`) && i.data?.element === ref.element)
+    return a?.from ? byId.get(a.from) : undefined
+  }
   const wires: Item[] = []
   const unresolved: UnresolvedTrace[] = []
   for (const it of rendered) {
@@ -97,7 +106,7 @@ export function resolveTraces(rendered: Item[], boardItems: Record<string, Item>
         unresolved.push({ item: it.id, trace: t, reason: 'bad-ref' })
         continue
       }
-      const target = traceTarget(pool, ref)
+      const target = traceTarget(pool, ref) ?? viaArrow(ref)
       if (!target || target.id === it.id) {
         if (!target) unresolved.push({ item: it.id, trace: t, reason: 'not-found' })
         continue

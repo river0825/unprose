@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ColorToken } from '../../../src/model'
 import { COLORS, COLOR_NAMES } from './Rail'
 
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl '
+
 export interface MenuState {
   itemId: string
   x: number
@@ -19,12 +21,16 @@ interface Props {
   onColor: (id: string, c: ColorToken) => void
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
+  /** render the item — or the whole selection when the item is part of it — to a PNG on the clipboard */
+  onCopyImage: (id: string) => void
+  /** how many items "Copy as image" will take (the selection size when the item is in it) */
+  copyCount: number
   canColor: boolean
   askEnabled: boolean
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, canColor, askEnabled }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -129,6 +135,12 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
       )}
       <button role="menuitem" onClick={act(() => onDuplicate(menu.itemId))}>
         Duplicate
+      </button>
+      <button role="menuitem" onClick={act(() => onCopyImage(menu.itemId))}>
+        {copyCount > 1 ? `Copy ${copyCount} items as image` : 'Copy as image'}
+        <span aria-hidden="true" className="sub-arrow">
+          {MOD}⇧C
+        </span>
       </button>
       <button role="menuitem" className="danger" onClick={act(() => onDelete(menu.itemId))}>
         Delete

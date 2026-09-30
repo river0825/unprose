@@ -6,6 +6,23 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-30
+
+### Added
+- A version button at the bottom of the rail opens the release notes (CHANGELOG.md, newest first); a dot marks a
+  version you have not opened yet. The canvas serves them at `GET /api/version`.
+- Frozen headers: a diagram frame's column and row titles (story-map activities / steps and releases, kanban
+  columns, EventStorming swimlanes and phases) stay pinned to the top / left edge while you pan, lined up with
+  the frame; "Freeze headers" in the frame panel turns it off per frame.
+- Domain Storytelling as a diagram kind (`design/<name>.domain-story.yaml`), drawn like domainstorytelling.org /
+  Egon.io pictures: pictogram actors (each once, placed freely) and work objects, numbered activity arrows with the
+  verb on the line, groups, annotations, scope, a grammar check, the sentence read out in the Inspector;
+  `awd design import-egon` / `export-egon` exchange stories with Egon.io, and `awd design propose-stories` turns a
+  domain story's sentences into story-map proposals.
+- **Copy as image** (right-click menu, ⌘⇧C / Ctrl+Shift+C): the selection — a frame with its contents and the
+  wires between captured items — as a 2× PNG on the clipboard, falling back to a download. Right-clicking inside a
+  multi-selection now keeps it, so the menu acts on all of it.
+
 ## [0.2.0] — 2026-09-29
 
 ### Added
@@ -94,6 +111,7 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/river0825/unprose/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/river0825/unprose/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/river0825/unprose/releases/tag/v0.1.0

@@ -20,7 +20,26 @@ export {
   type EsPerson,
 } from './eventStorming.js'
 export { userStoryMapSchema, normalizeUserStoryMap, type UserStoryMapContent, type UsmModel, type UsmActivity, type UsmStep, type UsmStory } from './userStoryMap.js'
+export {
+  domainStorySchema,
+  normalizeDomainStory,
+  checkDomainStory,
+  readSentence,
+  circled,
+  DS_ACTOR_KINDS,
+  DS_OBJECT_KINDS,
+  DS_GRANULARITY,
+  type DomainStoryContent,
+  type DsModel,
+  type DsActor,
+  type DsWorkObject,
+  type DsSentence,
+  type DsFinding,
+  type DsRule,
+} from './domainStory.js'
 export { checkEventStorming, openHotspotCount, type GrammarFinding, type GrammarRule } from './grammar.js'
 export { proposeStories, type StoryCandidate, type StoryProposal, type ProposeOptions } from './proposeStories.js'
+export { fromEgon, toEgon, type EgonImport } from './egon.js'
+export { proposeFromDomainStory, type ProposeFromDomainStoryOptions } from './proposeFromDomainStory.js'
 export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSpec, type DiagramInfo, type DiagramFrameKind } from '../model.js'
 export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'

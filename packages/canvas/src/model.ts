@@ -8,6 +8,7 @@ export type DiagramKind =
   | 'wireframe'
   | 'workflow'
   | 'kanban'
+  | 'domain-story'
   | 'freeform'
 
 export type ItemType =
@@ -120,7 +121,7 @@ export const EVENT_STORMING_COLORS: Record<string, ColorToken> = {
 // ── Diagram frames (docs/diagrams.md §1) ──────────────────────────────────
 
 /** What a diagram frame can hold: every template kind but freeform, plus kinds drawn by hand for now. */
-export type DiagramFrameKind = Exclude<DiagramKind, 'freeform'> | 'domain-story'
+export type DiagramFrameKind = Exclude<DiagramKind, 'freeform'>
 
 /** `data.diagram` on a frame item. */
 export interface DiagramSpec {

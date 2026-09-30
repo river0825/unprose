@@ -32,10 +32,10 @@ export function renderUserStoryMap(raw: UserStoryMapContent, opts: RenderOpts = 
     a.steps.forEach((s) => stepCols.push({ id: s.id, text: s.text, col: col++, stories: s.stories }))
     if (a.steps.length === 0) col++
     const span = Math.max(col - startCol, 1)
-    items.push(make({ id: itemId('activity', a.id), type: 'sticky', x: PAD + startCol * COL, y: rowActivity, w: span * COL - GAP / 2, h: STICKY_H, text: a.text, color: 'blue', role: 'activity', order: ai, data: { element: a.id } }, now))
+    items.push(make({ id: itemId('activity', a.id), type: 'sticky', x: PAD + startCol * COL, y: rowActivity, w: span * COL - GAP / 2, h: STICKY_H, text: a.text, color: 'blue', role: 'activity', order: ai, data: { element: a.id, header: 'column' } }, now))
   })
   stepCols.forEach((s, i) => {
-    items.push(make({ id: itemId('step', s.id), type: 'sticky', x: PAD + s.col * COL, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: 'yellow', role: 'step', order: i, data: { element: s.id } }, now))
+    items.push(make({ id: itemId('step', s.id), type: 'sticky', x: PAD + s.col * COL, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: 'yellow', role: 'step', order: i, data: { element: s.id, header: 'column' } }, now))
   })
 
   // Release lanes: each lane's height = the most stories any step has in that release.
@@ -61,7 +61,7 @@ export function renderUserStoryMap(raw: UserStoryMapContent, opts: RenderOpts = 
       })
     })
     const laneH = Math.max(maxRows, 1) * (CARD_H + GAP / 2) + PAD
-    const lane = make({ id: laneId, type: 'lane', x: 0, y: y - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: 'release', color: 'grey', order: ri, data: { release: rel } }, now)
+    const lane = make({ id: laneId, type: 'lane', x: 0, y: y - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: 'release', color: 'grey', order: ri, data: { release: rel, header: 'row' } }, now)
     lanes.push(fit(lane, laneStories, PAD / 2, LANE_HEADER))
     items.push(...laneStories)
     y += laneH + LANE_HEADER + GAP / 2

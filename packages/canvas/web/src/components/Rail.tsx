@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ColorToken } from '../../../src/model'
+import { VersionButton } from './ReleaseNotes'
 
 export const COLORS: ColorToken[] = [
   'yellow',
@@ -190,6 +191,7 @@ export function Rail({ color, setColor, tool, setTool, onAdd, onDelete, selected
       <button className="rail-btn" aria-label="Keyboard shortcuts (?)" data-tip="Keyboard shortcuts  ?" onClick={onHelp}>
         {Icon.help}
       </button>
+      <VersionButton />
 
       {popOpen && (
         <div ref={popRef} className="swatch-pop" role="group" aria-label="Sticky colour" style={{ ['--pop-top' as string]: '52px' }}>

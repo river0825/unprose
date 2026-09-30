@@ -11,6 +11,7 @@ import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
 import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, resolveTraces, type FrameRequest } from './templates/index.js'
 import { DIAGRAM_KEY } from './diagrams/ids.js'
 import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
+import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
@@ -41,6 +42,8 @@ export interface ServerOptions {
   webDist?: string
   /** Directory of markdown docs served at /docs (default: the repo's docs/). */
   docsDir?: string
+  /** Where to look for CHANGELOG.md / package.json for GET /api/version (default: walk up from the running code). */
+  releaseDir?: string
   /** Projects this server may start `awd studio` for (docs/diagrams.md §8). Absent: no board is studio-capable. */
   studio?: StudioConfig
 }
@@ -148,6 +151,9 @@ function assertOps(ops: unknown): Op[] {
 export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   const store = opts.store ?? createBoardRepository(process.env.AWD_CANVAS_STORE, opts.dir)
   const webDist = opts.webDist ?? WEB_DIST
+  // read once per server; the notes do not change while it runs
+  let cachedRelease: Release | undefined
+  const release = () => (cachedRelease ??= findRelease(opts.releaseDir))
 
   const json = (res: http.ServerResponse, status: number, body: unknown) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
@@ -205,6 +211,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     // ---- API ----
     if (parts[0] === 'api') {
       if (parts[1] === 'kinds' && method === 'GET') return json(res, 200, { kinds: diagramKinds })
+      if (parts[1] === 'version' && method === 'GET') return json(res, 200, release())
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]

@@ -180,6 +180,22 @@ The JSON `awd graph --json` emits: `{ name?, nodes: [{ id, kind: trigger|script|
 
 Nodes and agents may carry a `detail` object; the template copies it to `item.data.detail`. `awd graph --canvas` fills it from the files around the workflow (persona and frontmatter of `agents/<id>.md`, the prompt an ai step really sends, a gate's rules in plain sentences, a script's source, `source: { workflow, line }`, `listens`, `emits`) — shape in [studio.md §1](studio.md). It is a snapshot refreshed on every redraw, not something the canvas writes back; `awd graph --json` stays detail-free.
 
+### `domain-story` (docs/diagrams.md §6b — Domain Storytelling)
+
+```json
+{ "scope": { "granularity": "coarse-grained", "time": "as-is", "purity": "digitalized" },
+  "actors": ["Moviegoer", "Cashier", { "text": "Ticket system", "kind": "system" }],
+  "workObjects": [{ "text": "ticket", "kind": "document" }],
+  "sentences": [{ "actor": "Cashier", "verb": "books", "object": "ticket", "to": "Ticket system", "toLabel": "in" }],
+  "groups": [{ "text": "Booking", "members": ["ticket"] }], "annotations": [{ "on": "Cashier", "text": "Cash only" }] }
+```
+
+Actors (`role: actor`, blue cards with a pictogram) appear once on the top row; each sentence gets its own
+work-object card (`role: work-object`, or `activity-node` when it has none) on the row below, in sequence order;
+`activity` arrows are labelled `① verb`, `activity-to` arrows go on to the receiver. Annotations
+(`role: annotation`), group outlines (`role: group`), a legend and the scope complete it. Cards carry
+`data.element`; a sentence's card also `data.sentence` (read out) and `data.traces`.
+
 ### `freeform`
 
 `{ items: [{ type?, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?, id? }] }` — missing geometry is filled on a grid. This is also how the agent replies to a comment: `{ items: [{ type: 'comment', text: '…', target: '<item id>' }] }`.

@@ -1,0 +1,21 @@
+/* While "Copy as image" renders (the .react-flow root carries .capturing for a moment): no selection or
+   focus styling, handles or resize controls in the picture — it should look like the items, not the editor. */
+.capturing .react-flow__node .item {
+  outline: none !important;
+}
+.capturing .react-flow__node.selected .item {
+  box-shadow: none !important;
+}
+.capturing .react-flow__handle,
+.capturing .react-flow__resize-control,
+.capturing .edge-grip {
+  display: none !important;
+}
+.capturing .react-flow__edge.selected .react-flow__edge-path,
+.capturing .react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--ink-2) !important;
+  stroke-width: 1.5 !important;
+}
+.capturing .edge-label.selected {
+  color: var(--ink) !important;
+}

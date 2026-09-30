@@ -6,7 +6,7 @@ import { knownFindings } from '../diagrams/findings'
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
 
-export type ItemNode = Node<{ item: Item; pulse: boolean; open: boolean; replies: Item[]; childCount?: number; diagram?: DiagramBadge }, Item['type']>
+export type ItemNode = Node<{ item: Item; pulse: boolean; open: boolean; replies: Item[]; childCount?: number; diagram?: DiagramBadge }, Item['type'] | 'dsIcon'>
 
 /** Side of a folded comment's badge. */
 export const BADGE = 26
@@ -56,6 +56,9 @@ export function threadOf(board: Board, id: string): Item[] {
  * Items → React Flow nodes/edges. Only a thread's root comment becomes a node; its replies render inside it. Model coordinates are absolute; React Flow wants
  * children positioned relative to their parent, and parents to appear first.
  */
+/** `data.ds` values drawn as Domain Storytelling pictograms. */
+const DS_ICONS = new Set(['actor', 'object', 'legend-actor', 'legend-object', 'legend-activity'])
+
 export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<string>): { nodes: ItemNode[]; edges: Edge[] } {
   const items = Object.values(board.items)
   const byId = board.items
@@ -75,7 +78,8 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
     const at = stacked.get(it.id) ?? { x: it.x, y: it.y }
     nodes.push({
       id: it.id,
-      type: it.type,
+      // a domain story's actors and work objects are pictograms, not boxes (docs/diagrams.md §6b)
+      type: typeof it.data?.ds === 'string' && DS_ICONS.has(it.data.ds) ? 'dsIcon' : it.type,
       position: parent ? { x: at.x - parent.x, y: at.y - parent.y } : { x: at.x, y: at.y },
       width: open ? it.w : BADGE,
       height: it.type === 'comment' ? (open ? undefined : BADGE) : it.h,
@@ -87,6 +91,7 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
       data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it) },
       // an element the agent proposed (a story from EventStorming) is dashed until the file has it
       ...(it.type !== 'comment' && it.data?.pending ? { className: 'node-pending' } : {}),
+      ...(it.data?.ds === 'group' ? { className: 'ds-group' } : it.data?.ds === 'annotation' ? { className: 'ds-annotation' } : {}),
       draggable: true,
       selectable: true,
       connectable: it.type !== 'comment',
@@ -109,7 +114,13 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
           // a workflow wire edited on the board is a proposal until the AI changes the file (docs/studio.md §7)
           ...(it.data?.pending && it.role !== 'trace' ? { className: (it.data.pending as { kind?: string }).kind === 'remove' ? 'wire-pending remove' : 'wire-pending' } : {}),
           // ownership / delegation links on the workflow board are intent, not flow: draw them dashed and quieter
-          ...(it.role === 'trace'
+          // a domain story's annotation link: a dashed line to what the note explains, no arrowhead
+          ...(it.data?.ds && it.role === 'annotation-link' ? { className: 'ds-note-link', style: { strokeDasharray: '5 5', stroke: 'var(--ink-3)', strokeWidth: 1.2 } } : {}),
+          ...(it.data?.ds && it.role === 'annotation-link'
+            ? {}
+            : it.data?.ds
+            ? { className: 'ds-activity', style: { stroke: 'var(--ink)', strokeWidth: 1.6 }, markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: 'var(--ink)' } }
+            : it.role === 'trace'
             ? { markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: 'var(--ink-3)' } }
             : it.role === 'owns' || it.role === 'delegates'
             ? { style: { strokeDasharray: it.role === 'owns' ? '3 5' : '6 4', stroke: 'var(--agent)', opacity: 0.7 }, markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: 'var(--agent)' } }
@@ -197,5 +208,5 @@ function isDescendant(board: Board, id: string, ancestor: string): boolean {
 function badgeOf(board: Board, it: Item): DiagramBadge | undefined {
   const d = diagramData(it)
   if (!d) return undefined
-  return { kind: d.kind, name: KIND_NAMES[d.kind] ?? d.kind, key: d.key, findings: d.kind === 'event-storming' ? knownFindings(board, it, d.level).length : undefined }
+  return { kind: d.kind, name: KIND_NAMES[d.kind] ?? d.kind, key: d.key, findings: d.kind === 'event-storming' || d.kind === 'domain-story' ? knownFindings(board, it, d.level, d.kind).length : undefined }
 }

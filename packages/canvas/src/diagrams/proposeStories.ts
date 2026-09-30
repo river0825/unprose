@@ -20,8 +20,8 @@ export interface StoryCandidate {
   activity: { id: string; text: string }
   step: { id: string; text: string }
   person?: string
-  /** The EventStorming element it comes from. */
-  source: { kind: 'command' | 'event'; id: string }
+  /** The element it comes from: an EventStorming command / event, or a Domain Storytelling sentence. */
+  source: { kind: 'command' | 'event' | 'sentence'; id: string }
 }
 
 export interface StoryProposal {

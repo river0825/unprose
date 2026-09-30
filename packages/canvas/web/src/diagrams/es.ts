@@ -115,10 +115,15 @@ export const USM_ROLES: Record<string, RoleInfo> = {
   release: { name: 'Release', colour: 'line', meaning: 'A cut line: stories above the first line are Release 1.', page: '§5' },
 }
 
+const DST = 'domainstorytelling.org'
 export const DOMAIN_STORY_ROLES: Record<string, RoleInfo> = {
-  actor: { name: 'Actor', colour: 'pictogram', meaning: 'A person, group or software system that takes part in the story.', page: 'domainstorytelling.org' },
-  'work-object': { name: 'Work object', colour: 'pictogram', meaning: 'What the actors work with: a document, data, a thing.', page: 'domainstorytelling.org' },
-  activity: { name: 'Activity', colour: 'numbered arrow', meaning: 'A verb on a numbered arrow; the numbers read as sentences.', page: 'domainstorytelling.org' },
+  actor: { name: 'Actor', colour: 'pictogram (person · group · system)', meaning: 'A person, a group of people, or a software system. Every actor appears only once in the story.', page: DST },
+  'work-object': { name: 'Work object', colour: 'pictogram', meaning: 'What actors create, work with and exchange — a document, a physical thing, a digital object. Every activity gets its own work object.', page: DST },
+  activity: { name: 'Activity', colour: 'arrow with a numbered circle', meaning: 'A verb from the domain language; the number in the circle at its origin orders the sentences. With no work object it runs straight from actor to actor.', page: DST },
+  'activity-to': { name: 'Activity (onward)', colour: 'arrow', meaning: 'The work object going on to the receiving actor.', page: DST },
+  annotation: { name: 'Annotation', colour: 'text note with a dashed line', meaning: 'Text that complements the sentences: variations, domain terms, assumptions.', page: DST },
+  group: { name: 'Group', colour: 'outline', meaning: 'An outline that clusters part of the story: a repetition, an optional part, a location, an organisation, a subdomain.', page: DST },
+  scope: { name: 'Scope', colour: 'note', meaning: 'Granularity (coarse ↔ fine), point in time (as-is / to-be), domain purity (pure / digitalized).', page: DST },
 }
 
 export function roleInfo(kind: string, it: Item): RoleInfo | undefined {

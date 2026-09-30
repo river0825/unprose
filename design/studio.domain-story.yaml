@@ -1,0 +1,29 @@
+# Studio's "Ask AI" as a domain story (docs/diagrams.md §6b): who does what with what, in sentences.
+# Coarse-grained, to-be, digitalized. Draw: awd design draw design/studio.domain-story.yaml --board "title:Unprose — Studio 設計"
+title: Studio · Ask AI（domain story）
+scope: { granularity: coarse-grained, time: to-be, purity: digitalized }
+actors:
+  - { id: you, text: 你 You, kind: person }
+  - { id: studio, text: awd studio, kind: system }
+  - { id: herdr, text: herdr, kind: system }
+  - { id: agent, text: AI Agent, kind: system }
+workObjects:
+  - { id: comment, text: comment, kind: conversation }
+  - { id: brief, text: brief, kind: document }
+  - { id: pane, text: pane, kind: digital }
+  - { id: proposal, text: proposal (diff), kind: document }
+  - { id: design-file, text: design file, kind: document }
+  - { id: reply, text: reply, kind: conversation }
+sentences:
+  - { id: ask, actor: you, verb: writes, object: comment, to: studio }
+  - { id: write-brief, actor: studio, verb: writes, object: brief, to: agent, toLabel: for }
+  - { id: open, actor: studio, verb: opens, object: pane, to: herdr, toLabel: in }
+  - { id: propose, actor: agent, verb: proposes, object: proposal, to: you }
+  - { id: agree, actor: you, verb: approves, object: proposal, to: agent }
+  - { id: edit, actor: agent, verb: edits, object: design-file }
+  - { id: answer, actor: agent, verb: posts, object: reply, to: you, toLabel: for }
+groups:
+  - { text: On the board, members: [ask, answer] }
+annotations:
+  - { on: agree, text: Nothing changes in the files before you agree }
+  - { on: open, text: One session per board; a fork when it is busy }

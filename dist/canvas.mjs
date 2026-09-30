@@ -2335,11 +2335,23 @@ var require_websocket = __commonJS({
           this._isServer = false;
           this._redirects = 0;
           if (protocols === void 0) {
-            protocols = [];
+            if (!options || options.protocols === void 0) {
+              protocols = [];
+            } else if (Array.isArray(options.protocols)) {
+              protocols = options.protocols;
+            } else {
+              protocols = [options.protocols];
+            }
           } else if (!Array.isArray(protocols)) {
             if (typeof protocols === "object" && protocols !== null) {
               options = protocols;
-              protocols = [];
+              if (options.protocols === void 0) {
+                protocols = [];
+              } else if (Array.isArray(options.protocols)) {
+                protocols = options.protocols;
+              } else {
+                protocols = [options.protocols];
+              }
             } else {
               protocols = [protocols];
             }
@@ -2536,7 +2548,6 @@ var require_websocket = __commonJS({
           }
           return;
         }
-        this._readyState = _WebSocket.CLOSING;
         this._sender.close(code, data, !this._isServer, (err) => {
           if (err) return;
           this._closeFrameSent = true;
@@ -2544,6 +2555,7 @@ var require_websocket = __commonJS({
             this._socket.end();
           }
         });
+        this._readyState = _WebSocket.CLOSING;
         setCloseTimer(this);
       }
       /**
@@ -2768,6 +2780,7 @@ var require_websocket = __commonJS({
         socketPath: void 0,
         hostname: void 0,
         protocol: void 0,
+        protocols: void 0,
         timeout: void 0,
         method: "GET",
         host: void 0,
@@ -6939,8 +6952,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path7) {
-      let input2 = path7;
+    function removeDotSegments(path8) {
+      let input2 = path8;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -7349,8 +7362,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path7 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
+        const path8 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path8 && path8 !== "/" ? path8 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -10863,12 +10876,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs6, exportName) {
+    function addFormats(ajv, list2, fs7, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs6[f]);
+        ajv.addFormat(f, fs7[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -10877,17 +10890,17 @@ var require_dist = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs5 from "node:fs";
+import fs6 from "node:fs";
 import os2 from "node:os";
-import path6 from "node:path";
+import path7 from "node:path";
 import { execFile as execFile2 } from "node:child_process";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
 import http from "node:http";
-import fs3 from "node:fs";
-import path4 from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import fs4 from "node:fs";
+import path5 from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
@@ -12444,10 +12457,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path8) {
+  if (!path8)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path8.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -12787,11 +12800,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path8, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path8);
     return iss;
   });
 }
@@ -13241,16 +13254,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path7 = []) => {
+  const processError = (error63, path8 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path8, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -13289,17 +13302,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path7 = []) => {
+  const processError = (error63, path8 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path8, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -13338,8 +13351,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path7) {
+  const path8 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path8) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -30441,13 +30454,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path7 = ref2.slice(1).split("/").filter(Boolean);
-  if (path7.length === 0) {
+  const path8 = ref2.slice(1).split("/").filter(Boolean);
+  if (path8.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path7[0] === defsKey) {
-    const key = path7[1] === void 0 ? void 0 : decodeJSONPointerSegment(path7[1]);
+  if (path8[0] === defsKey) {
+    const key = path8[1] === void 0 ? void 0 : decodeJSONPointerSegment(path8[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -32062,7 +32075,7 @@ function renderEventStorming(raw, opts = {}) {
   const PHASE_H = 32;
   const phasesH = phaseRows.length ? phaseRows.length * (PHASE_H + STACK) + GAP : 0;
   phaseBars.forEach((b2, i) => {
-    items.push(make({ id: itemId("phase", b2.ph.id), type: "text", x: PAD + b2.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b2.to - b2.from) * COL + STICKY_W, h: PHASE_H, text: b2.ph.text, role: "phase", color: ES_COLORS.phase, data: { element: b2.ph.id, from: b2.ph.from, to: b2.ph.to } }, now));
+    items.push(make({ id: itemId("phase", b2.ph.id), type: "text", x: PAD + b2.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b2.to - b2.from) * COL + STICKY_W, h: PHASE_H, text: b2.ph.text, role: "phase", color: ES_COLORS.phase, data: { element: b2.ph.id, from: b2.ph.from, to: b2.ph.to, header: "column" } }, now));
   });
   const timelineBands = m2.lanes.length ? laneKeys : ["timeline"];
   const laneIds = /* @__PURE__ */ new Map();
@@ -32098,7 +32111,7 @@ function renderEventStorming(raw, opts = {}) {
   const width = PAD * 2 + lastRank * COL + PIVOTAL_W;
   const laneItems = m2.lanes.map((name, i) => {
     const key = laneKeys[i];
-    const base = make({ id: laneIds.get(key), type: "lane", x: 0, y: bandTop.get(key) - LANE_HEADER, w: width, h: bandH.get(key) + LANE_HEADER, text: name, role: "lane", color: "grey", order: i }, now);
+    const base = make({ id: laneIds.get(key), type: "lane", x: 0, y: bandTop.get(key) - LANE_HEADER, w: width, h: bandH.get(key) + LANE_HEADER, text: name, role: "lane", color: "grey", order: i, data: { header: "row" } }, now);
     return fit(base, items.filter((it) => it.parent === base.id), PAD, LANE_HEADER);
   });
   const laneW = Math.max(width, ...laneItems.map((l) => l.x + l.w));
@@ -32266,10 +32279,10 @@ function renderUserStoryMap(raw, opts = {}) {
     if (a.steps.length === 0)
       col++;
     const span = Math.max(col - startCol, 1);
-    items.push(make({ id: itemId("activity", a.id), type: "sticky", x: PAD + startCol * COL2, y: rowActivity, w: span * COL2 - GAP / 2, h: STICKY_H, text: a.text, color: "blue", role: "activity", order: ai, data: { element: a.id } }, now));
+    items.push(make({ id: itemId("activity", a.id), type: "sticky", x: PAD + startCol * COL2, y: rowActivity, w: span * COL2 - GAP / 2, h: STICKY_H, text: a.text, color: "blue", role: "activity", order: ai, data: { element: a.id, header: "column" } }, now));
   });
   stepCols.forEach((s, i) => {
-    items.push(make({ id: itemId("step", s.id), type: "sticky", x: PAD + s.col * COL2, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: "yellow", role: "step", order: i, data: { element: s.id } }, now));
+    items.push(make({ id: itemId("step", s.id), type: "sticky", x: PAD + s.col * COL2, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: "yellow", role: "step", order: i, data: { element: s.id, header: "column" } }, now));
   });
   const width = PAD * 2 + Math.max(col, 1) * COL2;
   let y2 = rowStoriesStart;
@@ -32296,7 +32309,7 @@ function renderUserStoryMap(raw, opts = {}) {
       });
     });
     const laneH = Math.max(maxRows, 1) * (CARD_H + GAP / 2) + PAD;
-    const lane = make({ id: laneId, type: "lane", x: 0, y: y2 - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: "release", color: "grey", order: ri, data: { release: rel } }, now);
+    const lane = make({ id: laneId, type: "lane", x: 0, y: y2 - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: "release", color: "grey", order: ri, data: { release: rel, header: "row" } }, now);
     lanes.push(fit(lane, laneStories, PAD / 2, LANE_HEADER));
     items.push(...laneStories);
     y2 += laneH + LANE_HEADER + GAP / 2;
@@ -32654,7 +32667,7 @@ function renderKanban(raw, opts = {}) {
       y2 += h + CARD_GAP;
     });
     const laneH = Math.max(COLUMN_MIN_H, y2 + COLUMN_PAD);
-    lanes.push(make({ id: laneId, type: "lane", x: x2, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: "column", color: "grey", order: ci, data: { name: col.name, element: slugify2(col.name) || `column-${ci + 1}`, ...col.wip ? { wip: col.wip } : {} } }, now));
+    lanes.push(make({ id: laneId, type: "lane", x: x2, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: "column", color: "grey", order: ci, data: { name: col.name, element: slugify2(col.name) || `column-${ci + 1}`, header: "column", ...col.wip ? { wip: col.wip } : {} } }, now));
   });
   const tallest = Math.max(...lanes.map((l) => l.h));
   return offsetAll([...lanes.map((l) => ({ ...l, h: tallest })), ...items], opts.at);
@@ -32670,6 +32683,354 @@ function bottomOf(board, column, h) {
   const last = cards[cards.length - 1];
   const y2 = last ? last.y + last.h + CARD_GAP : column.y + COLUMN_HEADER + CARD_GAP;
   return { x: column.x + COLUMN_PAD, y: y2, laneH: Math.max(column.h, y2 + h + COLUMN_PAD - column.y) };
+}
+
+// packages/canvas/dist/diagrams/domainStory.js
+var DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
+var named = () => external_exports.union([
+  external_exports.string(),
+  external_exports.object({
+    id: external_exports.string().optional(),
+    text: external_exports.string().min(1),
+    /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
+    kind: external_exports.string().optional()
+  })
+]);
+var domainStorySchema = external_exports.object({
+  scope: external_exports.object({
+    granularity: external_exports.enum(DS_GRANULARITY).optional(),
+    time: external_exports.enum(["as-is", "to-be"]).optional(),
+    purity: external_exports.enum(["pure", "digitalized"]).optional()
+  }).optional(),
+  actors: external_exports.array(named()).min(1),
+  workObjects: external_exports.array(named()).default([]),
+  sentences: external_exports.array(external_exports.object({
+    id: external_exports.string().optional(),
+    /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
+    seq: external_exports.number().int().positive().optional(),
+    /** The actor who acts (id or text). */
+    actor: external_exports.string().min(1),
+    /** The activity, a verb from the domain language. */
+    verb: external_exports.string().min(1),
+    /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
+    object: external_exports.string().optional(),
+    /** The actor(s) the work object goes to. */
+    to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
+    /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
+    toLabel: external_exports.string().optional(),
+    note: external_exports.string().optional(),
+    traces: external_exports.array(traceSchema).optional()
+  })).min(1),
+  groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
+  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([])
+});
+function normalizeDomainStory(raw) {
+  const c = domainStorySchema.parse(raw);
+  const alloc = idAllocator();
+  const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
+  const actors = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const workObjects = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
+  const unresolved = [];
+  const find = (list2, ref2) => list2.find((x2) => x2.id === ref2) ?? list2.find((x2) => x2.text === ref2) ?? list2.find((x2) => x2.id === slugify2(ref2));
+  const actorRef = (ref2, element, field) => {
+    const hit = find(actors, ref2);
+    if (hit)
+      return hit.id;
+    unresolved.push({ element, field, ref: ref2 });
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    actors.push(added);
+    return added.id;
+  };
+  let next = 1;
+  const sentences = c.sentences.map((s) => {
+    const seq = s.seq ?? next;
+    next = Math.max(next, seq + 1);
+    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
+    const declared = s.object ? find(workObjects, s.object) : void 0;
+    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
+    return {
+      id,
+      seq,
+      actor: actorRef(s.actor, id, "actor"),
+      verb: s.verb,
+      ...declared ? { object: declared.id } : {},
+      ...s.object ? { objectText: declared?.text ?? s.object } : {},
+      objectKind: declared?.kind ?? "document",
+      to: to.map((r) => actorRef(r, id, "to")),
+      ...s.toLabel ? { toLabel: s.toLabel } : {},
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? []
+    };
+  });
+  const elementRef = (ref2, element, field) => {
+    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    if (!hit)
+      unresolved.push({ element, field, ref: ref2 });
+    return hit;
+  };
+  const groups = c.groups.map((g2) => {
+    const id = alloc(g2.id, g2.text, "group");
+    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
+  });
+  const annotations = c.annotations.flatMap((a, i) => {
+    const id = alloc(a.id, `note-${i + 1}`, "note");
+    const on = elementRef(a.on, id, "on");
+    return on ? [{ id, on, text: a.text }] : [];
+  });
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, unresolved, dsModel: true };
+}
+function readSentence(m2, s) {
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
+  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
+}
+function circled(n2) {
+  return n2 >= 1 && n2 <= 20 ? String.fromCodePoint(9312 + n2 - 1) : `(${n2})`;
+}
+
+// packages/canvas/dist/templates/domain-story.js
+var ICON_W = 132;
+var ICON_H = 100;
+var CELL_W = 460;
+var CELL_H = 330;
+var SPREAD = 150;
+var SLOT = 250;
+var NOTE_W = 200;
+var NOTE_H = 64;
+var centre = (b2) => ({ x: b2.x + b2.w / 2, y: b2.y + b2.h / 2 });
+var overlaps = (a, b2, gap = 16) => a.x < b2.x + b2.w + gap && b2.x < a.x + a.w + gap && a.y < b2.y + b2.h + gap && b2.y < a.y + a.h + gap;
+function countCrossings(segs) {
+  const same = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
+  const orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
+  let n2 = 0;
+  for (let i = 0; i < segs.length; i++)
+    for (let j2 = i + 1; j2 < segs.length; j2++) {
+      const [a, b2] = segs[i];
+      const [c, d] = segs[j2];
+      if (same(a, c) || same(a, d) || same(b2, c) || same(b2, d))
+        continue;
+      if (orient(a, b2, c) * orient(a, b2, d) < 0 && orient(c, d, a) * orient(c, d, b2) < 0)
+        n2++;
+    }
+  return n2;
+}
+var PREFERENCES = [
+  [[1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [0, 2], [2, 1], [2, -1]],
+  [[1, 0], [0, -1], [0, 1], [1, -1], [1, 1], [-1, -1], [-1, 1], [-1, 0], [2, 0], [0, -2], [2, -1], [2, 1]],
+  [[0, 1], [1, 0], [1, 1], [-1, 1], [0, -1], [1, -1], [-1, 0], [-1, -1], [0, 2], [2, 0], [1, 2], [2, 1]],
+  [[1, 1], [1, -1], [1, 0], [0, 1], [0, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [2, 1], [2, -1], [0, 2]]
+];
+var SLOTS = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]];
+function layoutWith(m2, sentences, order, pref) {
+  const cell = /* @__PURE__ */ new Map();
+  const taken = /* @__PURE__ */ new Set();
+  const put = (id, c, r) => {
+    cell.set(id, [c, r]);
+    taken.add(`${c},${r}`);
+  };
+  put(order[0], 0, 0);
+  const near = (id, partner) => {
+    const [pc, pr] = cell.get(partner);
+    for (const [dc, dr] of pref)
+      if (!taken.has(`${pc + dc},${pr + dr}`))
+        return put(id, pc + dc, pr + dr);
+    let c = pc + 1;
+    while (taken.has(`${c},${pr}`))
+      c++;
+    put(id, c, pr);
+  };
+  for (const s of sentences) {
+    const cast = [s.actor, ...s.to];
+    for (const id of cast) {
+      if (cell.has(id))
+        continue;
+      const partner = cast.find((p) => cell.has(p)) ?? [...cell.keys()][cell.size - 1];
+      near(id, partner);
+    }
+  }
+  for (const id of order)
+    if (!cell.has(id))
+      near(id, [...cell.keys()][cell.size - 1]);
+  const actor = /* @__PURE__ */ new Map();
+  for (const [id, [c, r]] of cell)
+    actor.set(id, { x: c * CELL_W, y: r * CELL_H, w: ICON_W, h: ICON_H });
+  const boxes = [...actor.values()];
+  const free = (b2) => !boxes.some((o) => overlaps(o, b2));
+  const wayCount = /* @__PURE__ */ new Map();
+  const wayKey = (s) => [s.actor, ...[...s.to].sort()].join(">");
+  const wayIndex = /* @__PURE__ */ new Map();
+  for (const s of sentences)
+    if (s.objectText && s.to.length)
+      wayCount.set(wayKey(s), (wayCount.get(wayKey(s)) ?? 0) + 1);
+  const object3 = /* @__PURE__ */ new Map();
+  for (const s of sentences) {
+    if (!s.objectText)
+      continue;
+    const a = centre(actor.get(s.actor));
+    let at;
+    let perp;
+    if (s.to.length) {
+      const rs = s.to.map((r) => centre(actor.get(r)));
+      const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
+      const len = Math.hypot(t.x - a.x, t.y - a.y) || 1;
+      perp = { x: -(t.y - a.y) / len, y: (t.x - a.x) / len };
+      const n2 = wayCount.get(wayKey(s)) ?? 1;
+      const k2 = wayIndex.get(wayKey(s)) ?? 0;
+      wayIndex.set(wayKey(s), k2 + 1);
+      const shift = (k2 - (n2 - 1) / 2) * SPREAD;
+      at = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift };
+    } else {
+      perp = { x: 0, y: 1 };
+      at = { x: a.x + SLOT, y: a.y };
+      for (const [dx, dy] of SLOTS) {
+        const cand = { x: a.x + dx * SLOT, y: a.y + dy * SLOT * 0.75 };
+        if (free({ x: cand.x - ICON_W / 2, y: cand.y - ICON_H / 2, w: ICON_W, h: ICON_H })) {
+          at = cand;
+          break;
+        }
+      }
+    }
+    let box = { x: at.x - ICON_W / 2, y: at.y - ICON_H / 2, w: ICON_W, h: ICON_H };
+    for (let step = 1; !free(box) && step <= 12; step++) {
+      const d = Math.ceil(step / 2) * 70 * (step % 2 ? 1 : -1);
+      box = { x: at.x + perp.x * d - ICON_W / 2, y: at.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H };
+    }
+    boxes.push(box);
+    object3.set(s.id, box);
+  }
+  const segs = [];
+  for (const s of sentences) {
+    const a = centre(actor.get(s.actor));
+    const o = object3.get(s.id);
+    if (o) {
+      segs.push([a, centre(o)]);
+      for (const r of s.to)
+        segs.push([centre(o), centre(actor.get(r))]);
+    } else
+      for (const r of s.to)
+        segs.push([a, centre(actor.get(r))]);
+  }
+  return { actor, object: object3, crossings: countCrossings(segs) };
+}
+function facing(from, to) {
+  const a = centre(from);
+  const b2 = centre(to);
+  const dx = b2.x - a.x;
+  const dy = b2.y - a.y;
+  if (Math.abs(dx) >= Math.abs(dy) * 0.9)
+    return dx >= 0 ? { fromSide: "right", toSide: "left" } : { fromSide: "left", toSide: "right" };
+  return dy >= 0 ? { fromSide: "bottom", toSide: "top" } : { fromSide: "top", toSide: "bottom" };
+}
+function renderDomainStory(raw, opts = {}) {
+  const m2 = normalizeDomainStory(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "ds";
+  const itemId = (role, element) => `${scope}.${role}.${element}`;
+  const sentences = [...m2.sentences].sort((a, b2) => a.seq - b2.seq);
+  const order = [];
+  const seen = (id) => void (order.includes(id) || order.push(id));
+  for (const s of sentences) {
+    seen(s.actor);
+    s.to.forEach(seen);
+  }
+  for (const a of m2.actors)
+    seen(a.id);
+  let best = layoutWith(m2, sentences, order, PREFERENCES[0]);
+  for (const pref of PREFERENCES.slice(1)) {
+    const l = layoutWith(m2, sentences, order, pref);
+    if (l.crossings < best.crossings)
+      best = l;
+  }
+  const items = [];
+  const actorItem = /* @__PURE__ */ new Map();
+  const actorTraces = /* @__PURE__ */ new Map();
+  for (const s of sentences)
+    if (!s.objectText && s.traces.length)
+      actorTraces.set(s.actor, [...actorTraces.get(s.actor) ?? [], ...s.traces]);
+  order.forEach((id, i) => {
+    const a = m2.actors.find((x2) => x2.id === id);
+    const b2 = best.actor.get(id);
+    const traces2 = actorTraces.get(id);
+    const it = make({ id: itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ds: "actor", ...traces2 ? { traces: traces2 } : {} } }, now);
+    actorItem.set(id, it);
+    items.push(it);
+  });
+  const objectItem = /* @__PURE__ */ new Map();
+  for (const s of sentences) {
+    const read = readSentence(m2, s);
+    const base = { seq: s.seq, sentence: read, ds: true };
+    const from = actorItem.get(s.actor);
+    const box = best.object.get(s.id);
+    if (box && s.objectText) {
+      const o = make({ id: itemId("object", s.id), type: "card", ...box, text: s.objectText, role: "work-object", order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ds: "object", ...s.object ? { workObject: s.object } : {}, ...s.traces.length ? { traces: s.traces } : {}, ...s.note ? { note: s.note } : {} } }, now);
+      objectItem.set(s.id, o);
+      items.push(o);
+      items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
+      for (const r of s.to) {
+        const to = actorItem.get(r);
+        items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
+      }
+    } else {
+      for (const [k2, r] of s.to.entries()) {
+        const to = actorItem.get(r);
+        items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
+      }
+    }
+  }
+  const placed = [...actorItem.values(), ...objectItem.values()];
+  for (const n2 of m2.annotations) {
+    const target = actorItem.get(n2.on) ?? objectItem.get(n2.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n2.on);
+    const base = target ?? { x: 0, y: 0, w: 0, h: 0 };
+    const candidates = [
+      { x: base.x + base.w + 60, y: base.y - 10 },
+      { x: base.x + base.w + 60, y: base.y + base.h - 20 },
+      { x: base.x - NOTE_W - 60, y: base.y - 10 },
+      { x: base.x, y: base.y + base.h + 40 },
+      { x: base.x, y: base.y - NOTE_H - 40 }
+    ];
+    let at = candidates.find((p) => !placed.some((o) => overlaps(o, { ...p, w: NOTE_W, h: NOTE_H }))) ?? candidates[0];
+    for (let k2 = 0; placed.some((o) => overlaps(o, { ...at, w: NOTE_W, h: NOTE_H })) && k2 < 12; k2++)
+      at = { x: at.x, y: at.y + NOTE_H + 20 };
+    const note = make({ id: itemId("note", n2.id), type: "text", x: at.x, y: at.y, w: NOTE_W, h: NOTE_H, text: n2.text, role: "annotation", data: { element: n2.id, on: n2.on, ds: "annotation" } }, now);
+    placed.push(note);
+    items.push(note);
+    if (target)
+      items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
+  }
+  const outlines = [];
+  for (const g2 of m2.groups) {
+    const members2 = g2.members.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
+    if (!members2.length)
+      continue;
+    const x0 = Math.min(...members2.map((b2) => b2.x)) - 36;
+    const y0 = Math.min(...members2.map((b2) => b2.y)) - 48;
+    const x1 = Math.max(...members2.map((b2) => b2.x + b2.w)) + 36;
+    const y1 = Math.max(...members2.map((b2) => b2.y + b2.h)) + 30;
+    outlines.push(make({ id: itemId("group", g2.id), type: "frame", x: x0, y: y0, w: x1 - x0, h: y1 - y0, text: g2.text, color: "grey", role: "group", data: { element: g2.id, members: g2.members, ds: "group" } }, now));
+  }
+  const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
+  const minX = Math.min(...all.map((i) => i.x));
+  const minY = Math.min(...all.map((i) => i.y));
+  const shifted = [...outlines, ...items].map((i) => i.type === "arrow" ? i : { ...i, x: i.x - minX + PAD, y: i.y - minY + PAD });
+  const bottom = Math.max(...shifted.filter((i) => i.type !== "arrow").map((i) => i.y + i.h));
+  const legendY = bottom + 90;
+  const legend2 = [make({ id: itemId("legend-title", "legend"), type: "text", x: PAD, y: legendY, w: 560, h: 24, text: "Legend \u2014 Domain Storytelling (domainstorytelling.org)", role: "legend-title" }, now)];
+  const entries = [
+    ["actor", "person", "person"],
+    ["actor", "group", "group"],
+    ["actor", "system", "system"],
+    ["object", "document", "work object"],
+    ["activity", "activity", "activity: \u2460 = order, then the verb"]
+  ];
+  entries.forEach(([what, kind, text2], i) => {
+    const w2 = what === "activity" ? 260 : 110;
+    const x2 = PAD + i * 130 + (what === "activity" ? 10 : 0);
+    legend2.push(make({ id: itemId("legend", `l${i}`), type: "card", x: x2, y: legendY + 36, w: w2, h: 88, text: text2, role: "legend", data: { ds: `legend-${what}`, kind } }, now));
+  });
+  const facets = [m2.scope.granularity, m2.scope.time, m2.scope.purity].filter(Boolean);
+  if (facets.length)
+    legend2.push(make({ id: itemId("scope", "scope"), type: "text", x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(" \xB7 ")}`, role: "scope", data: { scope: m2.scope } }, now));
+  return offsetAll([...shifted, ...legend2], opts.at);
 }
 
 // packages/canvas/dist/templates/frame.js
@@ -32719,7 +33080,15 @@ function traceTarget(pool, ref2) {
   return pick2(byId);
 }
 function resolveTraces(rendered, boardItems, now) {
-  const pool = [...Object.values(boardItems), ...rendered].filter((i) => i.type !== "arrow" && i.type !== "comment");
+  const everything = [...Object.values(boardItems), ...rendered];
+  const pool = everything.filter((i) => i.type !== "arrow" && i.type !== "comment");
+  const byId = new Map(everything.map((i) => [i.id, i]));
+  const viaArrow = (ref2) => {
+    if (!ref2.element)
+      return void 0;
+    const a = everything.find((i) => i.type === "arrow" && i.id.startsWith(`${ref2.key}.`) && i.data?.element === ref2.element);
+    return a?.from ? byId.get(a.from) : void 0;
+  };
   const wires = [];
   const unresolved = [];
   for (const it of rendered) {
@@ -32732,7 +33101,7 @@ function resolveTraces(rendered, boardItems, now) {
         unresolved.push({ item: it.id, trace: t, reason: "bad-ref" });
         continue;
       }
-      const target = traceTarget(pool, ref2);
+      const target = traceTarget(pool, ref2) ?? viaArrow(ref2);
       if (!target || target.id === it.id) {
         if (!target)
           unresolved.push({ item: it.id, trace: t, reason: "not-found" });
@@ -32797,6 +33166,7 @@ var contentSchemas = {
   wireframe: wireframeSchema,
   workflow: workflowSchema,
   kanban: kanbanSchema,
+  "domain-story": domainStorySchema,
   freeform: freeformSchema
 };
 function render(kind, content, opts = {}) {
@@ -32813,6 +33183,8 @@ function render(kind, content, opts = {}) {
       return renderWorkflow(content, opts);
     case "kanban":
       return renderKanban(content, opts);
+    case "domain-story":
+      return renderDomainStory(content, opts);
     case "freeform":
       return renderFreeform(content, opts);
     default: {
@@ -34519,6 +34891,40 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+// packages/canvas/dist/release.js
+import fs3 from "node:fs";
+import path4 from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+var __dirname2 = path4.dirname(fileURLToPath2(import.meta.url));
+var readJson = (p) => {
+  try {
+    return JSON.parse(fs3.readFileSync(p, "utf8"));
+  } catch {
+    return void 0;
+  }
+};
+function findRelease(from = __dirname2) {
+  let changelog = null;
+  let version2 = null;
+  let dir = from;
+  for (let i = 0; i < 6; i++) {
+    if (changelog === null && fs3.existsSync(path4.join(dir, "CHANGELOG.md")))
+      changelog = fs3.readFileSync(path4.join(dir, "CHANGELOG.md"), "utf8");
+    if (version2 === null && changelog !== null) {
+      const v2 = readJson(path4.join(dir, "package.json"))?.version;
+      if (typeof v2 === "string")
+        version2 = v2;
+    }
+    if (changelog !== null && version2 !== null)
+      break;
+    const parent = path4.dirname(dir);
+    if (parent === dir)
+      break;
+    dir = parent;
+  }
+  return { version: version2, changelog };
+}
+
 // packages/canvas/dist/thumb.js
 var LIGHT = {
   orange: "#ffb648",
@@ -34636,7 +35042,7 @@ function escapeAttr(s) {
 var W2 = 220;
 var H2 = 80;
 var GAP2 = 12;
-var overlaps = (a, b2) => a.x < b2.x + b2.w && b2.x < a.x + a.w && a.y < b2.y + b2.h && b2.y < a.y + a.h;
+var overlaps2 = (a, b2) => a.x < b2.x + b2.w && b2.x < a.x + a.w && a.y < b2.y + b2.h && b2.y < a.y + a.h;
 function autoPlaceComments(board, content) {
   if (!content || typeof content !== "object" || !Array.isArray(content.items))
     return content;
@@ -34674,7 +35080,7 @@ function findSpot(t, w2, h, taken) {
     for (const side of candidates) {
       const p = side(n2);
       const rect = { ...p, w: w2, h };
-      if (!taken.some((r) => overlaps(rect, r)))
+      if (!taken.some((r) => overlaps2(rect, r)))
         return p;
     }
   }
@@ -34682,8 +35088,8 @@ function findSpot(t, w2, h, taken) {
 }
 
 // packages/canvas/dist/server.js
-var __dirname2 = path4.dirname(fileURLToPath2(import.meta.url));
-var WEB_DIST = [path4.join(__dirname2, "web"), path4.resolve(__dirname2, "../web/dist")].find((d) => fs3.existsSync(path4.join(d, "index.html"))) ?? path4.resolve(__dirname2, "../web/dist");
+var __dirname3 = path5.dirname(fileURLToPath3(import.meta.url));
+var WEB_DIST = [path5.join(__dirname3, "web"), path5.resolve(__dirname3, "../web/dist")].find((d) => fs4.existsSync(path5.join(d, "index.html"))) ?? path5.resolve(__dirname3, "../web/dist");
 var MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -34705,18 +35111,18 @@ function studioArgv(template, project) {
 }
 var realOf = (p) => {
   try {
-    return fs3.realpathSync(p);
+    return fs4.realpathSync(p);
   } catch {
-    return path4.resolve(p);
+    return path5.resolve(p);
   }
 };
 function studioProjectOf(board, projects) {
   const claims = [board.meta?.project?.root, board.meta?.workflow?.file];
   for (const c of claims) {
-    if (typeof c !== "string" || !path4.isAbsolute(c))
+    if (typeof c !== "string" || !path5.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path4.sep));
+    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path5.sep));
     if (hit)
       return hit;
   }
@@ -34724,7 +35130,7 @@ function studioProjectOf(board, projects) {
 }
 function studioSessions(p) {
   try {
-    const j2 = JSON.parse(fs3.readFileSync(path4.join(p.root, ".awd", "studio", "status.json"), "utf8"));
+    const j2 = JSON.parse(fs4.readFileSync(path5.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
     const n2 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
@@ -34770,6 +35176,8 @@ function assertOps(ops) {
 function startServer(opts = {}) {
   const store = opts.store ?? createBoardRepository(process.env.AWD_CANVAS_STORE, opts.dir);
   const webDist = opts.webDist ?? WEB_DIST;
+  let cachedRelease;
+  const release = () => cachedRelease ??= findRelease(opts.releaseDir);
   const json2 = (res, status, body) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
@@ -34796,12 +35204,12 @@ function startServer(opts = {}) {
     return store.get(id);
   };
   const serveStatic = (res, rel) => {
-    const safe = path4.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-    const file2 = path4.join(webDist, safe);
-    if (!file2.startsWith(webDist) || !fs3.existsSync(file2) || fs3.statSync(file2).isDirectory())
+    const safe = path5.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+    const file2 = path5.join(webDist, safe);
+    if (!file2.startsWith(webDist) || !fs4.existsSync(file2) || fs4.statSync(file2).isDirectory())
       return false;
-    res.writeHead(200, { "content-type": MIME[path4.extname(file2)] ?? "application/octet-stream" });
-    fs3.createReadStream(file2).pipe(res);
+    res.writeHead(200, { "content-type": MIME[path5.extname(file2)] ?? "application/octet-stream" });
+    fs4.createReadStream(file2).pipe(res);
     return true;
   };
   const fallbackPage = (boards) => `<!doctype html><meta charset="utf-8"><title>awd-canvas</title>
@@ -34821,6 +35229,8 @@ function startServer(opts = {}) {
     if (parts[0] === "api") {
       if (parts[1] === "kinds" && method === "GET")
         return json2(res, 200, { kinds: diagramKinds });
+      if (parts[1] === "version" && method === "GET")
+        return json2(res, 200, release());
       if (parts[1] !== "boards")
         throw new HttpError(404, "not found");
       const id = parts[2];
@@ -35014,7 +35424,7 @@ function startServer(opts = {}) {
               args,
               cwd: project.root,
               env: { AWD_CANVAS_URL: `http://localhost:${port()}` },
-              logFile: studio.logDir ? path4.join(studio.logDir, `studio-${project.name}.log`) : void 0
+              logFile: studio.logDir ? path5.join(studio.logDir, `studio-${project.name}.log`) : void 0
             });
             return json2(res, 200, view(info));
           }
@@ -35047,8 +35457,8 @@ function startServer(opts = {}) {
         const file2 = resolveDocAsset(docsDir, decodeURIComponent(parts.slice(2).join("/")));
         if (!file2)
           throw new HttpError(404, "asset not found");
-        res.writeHead(200, { "content-type": MIME[path4.extname(file2)] ?? "application/octet-stream" });
-        return void fs3.createReadStream(file2).pipe(res);
+        res.writeHead(200, { "content-type": MIME[path5.extname(file2)] ?? "application/octet-stream" });
+        return void fs4.createReadStream(file2).pipe(res);
       }
       const rendered = renderDoc(docsDir, decodeURIComponent(parts[1]).replace(/\.md$/, ""));
       if (!rendered)
@@ -35057,7 +35467,7 @@ function startServer(opts = {}) {
     }
     if (method !== "GET")
       throw new HttpError(405, "method not allowed");
-    const hasUi = fs3.existsSync(path4.join(webDist, "index.html"));
+    const hasUi = fs4.existsSync(path5.join(webDist, "index.html"));
     if (parts[0] === "b" || parts.length === 0) {
       if (hasUi)
         return void serveStatic(res, "index.html");
@@ -35152,8 +35562,8 @@ function escapeHtml2(s) {
 
 // packages/canvas/dist/adapters/process/spawn.js
 import { spawn } from "node:child_process";
-import fs4 from "node:fs";
-import path5 from "node:path";
+import fs5 from "node:fs";
+import path6 from "node:path";
 
 // packages/canvas/dist/ports/processSupervisor.js
 var LOG_LINES = 50;
@@ -35171,8 +35581,8 @@ var SpawnSupervisor = class {
       return this.info(key);
     const e = { running: true, since: (/* @__PURE__ */ new Date()).toISOString(), log: cur?.log ?? [] };
     if (spec.logFile) {
-      fs4.mkdirSync(path5.dirname(spec.logFile), { recursive: true });
-      e.file = fs4.createWriteStream(spec.logFile, { flags: "a" });
+      fs5.mkdirSync(path6.dirname(spec.logFile), { recursive: true });
+      e.file = fs5.createWriteStream(spec.logFile, { flags: "a" });
     }
     this.entries.set(key, e);
     const push = (line) => {
@@ -35612,8 +36022,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -35728,11 +36138,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -39283,11 +39693,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path7) {
-  if (path7.length === 0) {
+function getDotPath(path8) {
+  if (path8.length === 0) {
     return "object root";
   }
-  return path7.reduce((acc, seg, index) => {
+  return path8.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -44952,12 +45362,13 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - user-journey: { persona, stages: [{text, actions?, touchpoints?, emotion: -2..2, pains?, opportunities?}] }
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }`;
 var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var text = (s) => ({ content: [{ type: "text", text: s }] });
 function createMcpServer(client = new CanvasClient()) {
-  const server = new McpServer({ name: "awd-canvas", version: "0.2.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "awd-canvas", version: "0.3.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
   server.registerTool("canvas_list_boards", { title: "List boards", description: "List every board on the canvas server with id, kind, title and current seq." }, async () => {
     const boards = await client.listBoards();
     if (!boards.length)
@@ -45303,6 +45714,23 @@ var demoBoards = [
         { id: "c-norisk", title: "Change sender address", column: "Human Review Passed", size: "S", labels: ["Risk:High"] }
       ]
     }
+  },
+  {
+    title: "Cinema box office \u2014 Domain Storytelling",
+    kind: "domain-story",
+    content: {
+      scope: { granularity: "coarse-grained", time: "as-is", purity: "digitalized" },
+      actors: ["Moviegoer", "Cashier", { text: "Ticket system", kind: "system" }],
+      workObjects: [{ text: "seat request", kind: "conversation" }, { text: "seating plan", kind: "info" }, { text: "ticket", kind: "document" }],
+      sentences: [
+        { actor: "Moviegoer", verb: "asks for", object: "seat request", to: "Cashier" },
+        { actor: "Cashier", verb: "looks up", object: "seating plan", to: "Ticket system", toLabel: "in" },
+        { actor: "Cashier", verb: "books", object: "ticket", to: "Ticket system", toLabel: "in" },
+        { actor: "Cashier", verb: "hands over", object: "ticket", to: "Moviegoer" }
+      ],
+      annotations: [{ on: "Cashier", text: "Cash only at the box office" }],
+      groups: [{ text: "Booking", members: ["seating plan", "ticket"] }]
+    }
   }
 ];
 
@@ -45328,25 +45756,25 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path6.dirname(d)) {
-    if (fs5.existsSync(path6.join(d, ".git")))
+  for (let d = dir; ; d = path7.dirname(d)) {
+    if (fs6.existsSync(path7.join(d, ".git")))
       return d;
-    if (path6.dirname(d) === d)
+    if (path7.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path6.dirname(path6.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path7.dirname(path7.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs5.realpathSync(path6.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path6.basename(root) }));
-  const bundled = fileURLToPath3(new URL("./awd.mjs", import.meta.url));
-  const awd = fs5.existsSync(bundled) ? bundled : fileURLToPath3(new URL("../../cli/bin/awd.js", import.meta.url));
+  const roots = [...new Set(dirs.map((d) => fs6.realpathSync(path7.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path7.basename(root) }));
+  const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
+  const awd = fs6.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path6.join(os2.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path7.join(os2.homedir(), "Library", "Logs", "awd") };
 }
 function flag(args, name) {
   const i = args.indexOf(name);
@@ -45359,7 +45787,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path6.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path7.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -45384,7 +45812,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs5.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs6.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

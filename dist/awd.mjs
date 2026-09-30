@@ -17082,7 +17082,7 @@ var init_sleep = __esm({
 var VERSION;
 var init_version = __esm({
   "node_modules/@anthropic-ai/sdk/version.mjs"() {
-    VERSION = "0.127.0";
+    VERSION = "0.129.0";
   }
 });
 
@@ -18746,22 +18746,6 @@ function findNewlineIndex(buffer, startIndex) {
   }
   return null;
 }
-function findDoubleNewlineIndex(buffer) {
-  const newline = 10;
-  const carriage = 13;
-  for (let i = 0; i < buffer.length - 1; i++) {
-    if (buffer[i] === newline && buffer[i + 1] === newline) {
-      return i + 2;
-    }
-    if (buffer[i] === carriage && buffer[i + 1] === carriage) {
-      return i + 2;
-    }
-    if (buffer[i] === carriage && buffer[i + 1] === newline && i + 3 < buffer.length && buffer[i + 2] === carriage && buffer[i + 3] === newline) {
-      return i + 4;
-    }
-  }
-  return -1;
-}
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
 var init_line = __esm({
   "node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs"() {
@@ -18829,8 +18813,8 @@ async function* _iterSSEMessages(response, controller) {
   const sseDecoder = new SSEDecoder();
   const lineDecoder = new LineDecoder();
   const iter = ReadableStreamToAsyncIterable(response.body);
-  for await (const sseChunk of iterSSEChunks(iter)) {
-    for (const line of lineDecoder.decode(sseChunk)) {
+  for await (const chunk of iter) {
+    for (const line of lineDecoder.decode(chunk)) {
       const sse = sseDecoder.decode(line);
       if (sse)
         yield sse;
@@ -18840,27 +18824,6 @@ async function* _iterSSEMessages(response, controller) {
     const sse = sseDecoder.decode(line);
     if (sse)
       yield sse;
-  }
-}
-async function* iterSSEChunks(iterator) {
-  let data = new Uint8Array();
-  for await (const chunk of iterator) {
-    if (chunk == null) {
-      continue;
-    }
-    const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk) : typeof chunk === "string" ? encodeUTF8(chunk) : chunk;
-    let newData = new Uint8Array(data.length + binaryChunk.length);
-    newData.set(data);
-    newData.set(binaryChunk, data.length);
-    data = newData;
-    let patternIndex;
-    while ((patternIndex = findDoubleNewlineIndex(data)) !== -1) {
-      yield data.subarray(0, patternIndex);
-      data = data.subarray(patternIndex);
-    }
-  }
-  if (data.length > 0) {
-    yield data;
   }
 }
 function partition(str4, delimiter2) {
@@ -19507,7 +19470,7 @@ var init_pagination = __esm({
 // node_modules/@anthropic-ai/sdk/internal/uploads.mjs
 function makeFile(fileBits, fileName2, options) {
   checkFileSupport();
-  return new File(fileBits, fileName2 ?? "unknown_file", options);
+  return new File(fileBits, fileName2 ?? "", options);
 }
 function getName(value, stripPath) {
   const val = typeof value === "object" && value !== null && ("name" in value && value.name && String(value.name) || "url" in value && value.url && String(value.url) || "filename" in value && value.filename && String(value.filename) || "path" in value && value.path && String(value.path)) || "";
@@ -19575,7 +19538,9 @@ var init_uploads = __esm({
       } else if (isAsyncIterable(value)) {
         form.append(key, makeFile([await new Response(ReadableStreamFrom(value)).blob()], getName(value, stripFilenames)));
       } else if (value instanceof Blob) {
-        form.append(key, makeFile([value], getName(value, stripFilenames) || void 0, { type: value.type }));
+        const isFile = typeof File !== "undefined" && value instanceof File;
+        const name = isFile ? value.name : getName(value, stripFilenames);
+        form.append(key, makeFile([value], name, { type: value.type }));
       } else if (Array.isArray(value)) {
         await Promise.all(value.map((entry) => addFormValue(form, key + "[]", entry, stripFilenames)));
       } else if (typeof value.then === "function") {
@@ -19595,7 +19560,7 @@ var init_uploads = __esm({
 async function toFile(value, name, options) {
   checkFileSupport();
   value = await value;
-  name || (name = getName(value, true));
+  name || (name = value instanceof File ? value.name : getName(value, true));
   if (isFileLike(value)) {
     if (value instanceof File && name == null && options == null) {
       return value;
@@ -20126,7 +20091,17 @@ var init_dreams = __esm({
     init_path();
     Dreams = class extends APIResource {
       /**
-       * Create a Dream
+       * Start an asynchronous job that uses past sessions to produce a reorganized
+       * version of a memory store and get back the dream to poll for the result.
+       *
+       * By default the dream writes its result to a new memory store and doesn't change
+       * the input memory store. The response has `status` set to `pending` and an empty
+       * `outputs` array. Poll the dream until `status` is `completed`, `failed`, or
+       * `canceled`.
+       *
+       * See the
+       * [Dreams guide](https://platform.claude.com/docs/en/managed-agents/dreams#create-a-dream)
+       * to learn more about creating dreams.
        *
        * @example
        * ```ts
@@ -20151,7 +20126,13 @@ var init_dreams = __esm({
         });
       }
       /**
-       * Get a Dream
+       * Get a dream by ID to check its status, output memory store, and token usage.
+       *
+       * Archived dreams are returned too.
+       *
+       * See the
+       * [Dreams guide](https://platform.claude.com/docs/en/managed-agents/dreams#track-progress)
+       * for how to poll a dream and what each status means.
        *
        * @example
        * ```ts
@@ -20174,7 +20155,13 @@ var init_dreams = __esm({
         });
       }
       /**
-       * List Dreams
+       * List the dreams in the workspace, newest first.
+       *
+       * Archived dreams are left out unless `include_archived` is `true`.
+       *
+       * See the
+       * [Dreams guide](https://platform.claude.com/docs/en/managed-agents/dreams#list-dreams)
+       * for how to page through dreams.
        *
        * @example
        * ```ts
@@ -20199,7 +20186,16 @@ var init_dreams = __esm({
         });
       }
       /**
-       * Archive a Dream
+       * Hide a `completed`, `failed`, or `canceled` dream from the default list of
+       * dreams.
+       *
+       * Archiving a `pending` or `running` dream returns a 400 error, so cancel it
+       * first. Archiving an archived dream returns it unchanged. An archived dream can
+       * still be fetched by ID. Archiving can't be undone.
+       *
+       * See the
+       * [Dreams guide](https://platform.claude.com/docs/en/managed-agents/dreams#archive-a-dream)
+       * to learn more about archiving dreams.
        *
        * @example
        * ```ts
@@ -20222,7 +20218,16 @@ var init_dreams = __esm({
         });
       }
       /**
-       * Cancel a Dream
+       * Stop a `pending` or `running` dream.
+       *
+       * The response shows `status` as `canceled`, unless the dream reached `completed`
+       * or `failed` first. `usage` can keep changing after the response. Canceling a
+       * `canceled` dream returns it unchanged. Canceling a `completed` or `failed` dream
+       * returns a 400 error.
+       *
+       * See the
+       * [Dreams guide](https://platform.claude.com/docs/en/managed-agents/dreams#cancel-a-dream)
+       * to learn more about canceling dreams.
        *
        * @example
        * ```ts
@@ -20274,6 +20279,10 @@ function collectStainlessHelpers(tools, messages) {
         for (const block of content) {
           if (wasCreatedByStainlessHelper(block)) {
             helpers.add(block[SDK_HELPER_SYMBOL]);
+          }
+          const definition = block?.tool?.definition;
+          if (wasCreatedByStainlessHelper(definition)) {
+            helpers.add(definition[SDK_HELPER_SYMBOL]);
           }
         }
       }
@@ -22244,311 +22253,311 @@ var init_SessionToolRunner = __esm({
           }
         }
       }
-      return SessionToolRunner2;
-    })();
-    _SessionToolRunner_requestOptions = function _SessionToolRunner_requestOptions2() {
-      return {
-        ...__classPrivateFieldGet(this, _SessionToolRunner_requestOpts, "f"),
-        headers: buildHeaders([helperHeader("session-tool-runner"), __classPrivateFieldGet(this, _SessionToolRunner_requestOpts, "f")?.headers]),
-        signal: __classPrivateFieldGet(this, _SessionToolRunner_controller, "f").signal
-      };
-    }, _SessionToolRunner_streamLoop = // ===== event stream =====
-    async function _SessionToolRunner_streamLoop2() {
-      const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
-      let backoff3 = STREAM_BACKOFF_START_MS;
-      while (!ctrl.signal.aborted) {
+      _SessionToolRunner_requestOptions = function _SessionToolRunner_requestOptions2() {
+        return {
+          ...__classPrivateFieldGet(this, _SessionToolRunner_requestOpts, "f"),
+          headers: buildHeaders([helperHeader("session-tool-runner"), __classPrivateFieldGet(this, _SessionToolRunner_requestOpts, "f")?.headers]),
+          signal: __classPrivateFieldGet(this, _SessionToolRunner_controller, "f").signal
+        };
+      }, _SessionToolRunner_streamLoop = // ===== event stream =====
+      async function _SessionToolRunner_streamLoop2() {
+        const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
+        let backoff3 = STREAM_BACKOFF_START_MS;
+        while (!ctrl.signal.aborted) {
+          try {
+            const stream2 = await this.client.beta.sessions.events.stream(this.sessionId, {}, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this));
+            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_reconcile).call(this);
+            for await (const ev of stream2) {
+              backoff3 = STREAM_BACKOFF_START_MS;
+              if (await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_handleStreamEvent).call(this, ev))
+                return;
+            }
+          } catch (e) {
+            ctrl.signal.throwIfAborted();
+            if (isFatal4xx(e)) {
+              __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").error("permanent stream failure, shutting down", { error: String(e) });
+              ctrl.abort();
+              throw e;
+            }
+            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("stream disconnected, reconnecting", {
+              error: String(e),
+              backoff_ms: backoff3
+            });
+          }
+          ctrl.signal.throwIfAborted();
+          await sleep(backoff3, ctrl.signal);
+          backoff3 = Math.min(backoff3 * 2, STREAM_BACKOFF_CAP_MS);
+        }
+      }, _SessionToolRunner_reconcile = /**
+       * Read full history before dispatching so a `tool_use` whose result appears
+       * later in the same history is not re-executed. Runs after the live stream is
+       * already attached (see {@link SessionToolRunner.#streamLoop}).
+       */
+      async function _SessionToolRunner_reconcile2() {
+        const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
+        const pending = [];
+        let lastWasEndTurn = false;
         try {
-          const stream2 = await this.client.beta.sessions.events.stream(this.sessionId, {}, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this));
-          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_reconcile).call(this);
-          for await (const ev of stream2) {
-            backoff3 = STREAM_BACKOFF_START_MS;
-            if (await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_handleStreamEvent).call(this, ev))
-              return;
+          for await (const ev of this.client.beta.sessions.events.list(this.sessionId, { limit: 1e3 }, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this))) {
+            __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_ingestHistory).call(this, ev, pending);
+            lastWasEndTurn = isEndTurnIdle(ev);
           }
         } catch (e) {
           ctrl.signal.throwIfAborted();
-          if (isFatal4xx(e)) {
-            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").error("permanent stream failure, shutting down", { error: String(e) });
-            ctrl.abort();
-            throw e;
-          }
-          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("stream disconnected, reconnecting", {
-            error: String(e),
-            backoff_ms: backoff3
-          });
+          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("reconcile list failed", { error: String(e) });
+          for (const ev of pending)
+            __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").delete(ev.id);
+          return;
         }
-        ctrl.signal.throwIfAborted();
-        await sleep(backoff3, ctrl.signal);
-        backoff3 = Math.min(backoff3 * 2, STREAM_BACKOFF_CAP_MS);
-      }
-    }, _SessionToolRunner_reconcile = /**
-     * Read full history before dispatching so a `tool_use` whose result appears
-     * later in the same history is not re-executed. Runs after the live stream is
-     * already attached (see {@link SessionToolRunner.#streamLoop}).
-     */
-    async function _SessionToolRunner_reconcile2() {
-      const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
-      const pending = [];
-      let lastWasEndTurn = false;
-      try {
-        for await (const ev of this.client.beta.sessions.events.list(this.sessionId, { limit: 1e3 }, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this))) {
-          __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_ingestHistory).call(this, ev, pending);
-          lastWasEndTurn = isEndTurnIdle(ev);
-        }
-      } catch (e) {
-        ctrl.signal.throwIfAborted();
-        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("reconcile list failed", { error: String(e) });
-        for (const ev of pending)
-          __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").delete(ev.id);
-        return;
-      }
-      const unanswered = pending.filter((ev) => !__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id));
-      __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").disarm();
-      for (const ev of unanswered)
-        await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
-      for (const held of [...__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").values()]) {
-        const verdict = __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").get(held.id);
-        if (verdict !== void 0)
-          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, verdict);
-      }
-      const outstanding = unanswered.filter((ev) => !__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id) && !__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id));
-      if (lastWasEndTurn && outstanding.length === 0)
-        __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").arm();
-      else
+        const unanswered = pending.filter((ev) => !__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id));
         __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").disarm();
-    }, _SessionToolRunner_ingestHistory = function _SessionToolRunner_ingestHistory2(ev, pending) {
-      if (ev.type === "agent.tool_use" || ev.type === "agent.custom_tool_use") {
-        __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").add(ev.id);
-        if (!__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id))
-          pending.push(ev);
-      } else if (ev.type === "user.tool_result") {
-        __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.tool_use_id);
-      } else if (ev.type === "user.custom_tool_result") {
-        __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.custom_tool_use_id);
-      } else if (ev.type === "user.tool_confirmation") {
-        if (!__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.tool_use_id))
-          __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
-      }
-    }, _SessionToolRunner_handleStreamEvent = /** Returns true when the runner should exit. */
-    async function _SessionToolRunner_handleStreamEvent2(ev) {
-      __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").noteEvent(ev);
-      switch (ev.type) {
-        case "agent.tool_use":
-        case "agent.custom_tool_use":
-          if (!__classPrivateFieldGet(this, _SessionToolRunner_seen, "f").has(ev.id)) {
-            __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").add(ev.id);
-            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
-          }
-          return false;
-        case "user.tool_confirmation":
-          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_noteConfirmation).call(this, ev);
-          return false;
-        case "user.tool_result":
+        for (const ev of unanswered)
+          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
+        for (const held of [...__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").values()]) {
+          const verdict = __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").get(held.id);
+          if (verdict !== void 0)
+            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, verdict);
+        }
+        const outstanding = unanswered.filter((ev) => !__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id) && !__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id));
+        if (lastWasEndTurn && outstanding.length === 0)
+          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").arm();
+        else
+          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").disarm();
+      }, _SessionToolRunner_ingestHistory = function _SessionToolRunner_ingestHistory2(ev, pending) {
+        if (ev.type === "agent.tool_use" || ev.type === "agent.custom_tool_use") {
+          __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").add(ev.id);
+          if (!__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id))
+            pending.push(ev);
+        } else if (ev.type === "user.tool_result") {
           __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.tool_use_id);
-          return false;
-        case "user.custom_tool_result":
+        } else if (ev.type === "user.custom_tool_result") {
           __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.custom_tool_use_id);
-          return false;
-        case "session.status_terminated":
-        case "session.deleted":
-          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("session terminated", {
-            component: "session-tool-runner",
-            session_id: this.sessionId
-          });
-          __classPrivateFieldGet(this, _SessionToolRunner_controller, "f").abort();
-          return true;
-        default:
-          return false;
-      }
-    }, _SessionToolRunner_routeToolEvent = // ===== confirmation gating (always_ask tools) =====
-    /**
-     * Dispatch `ev`, honoring its evaluated permission. A call the server gated
-     * (`evaluated_permission == "ask"`) is held until its `user.tool_confirmation`
-     * arrives. Fails closed: only an explicit `allow` verdict releases a gated
-     * call; a server-side `deny` overrides any recorded verdict; an unrecognized
-     * permission is held like `ask` and an unrecognized verdict is denied.
-     */
-    async function _SessionToolRunner_routeToolEvent2(ev) {
-      const permission = ev.evaluated_permission;
-      const verdict = permission === "deny" ? "deny" : __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").get(ev.id);
-      if (verdict === void 0) {
-        if (permission === void 0 || permission === "allow") {
-          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, void 0);
-        } else if (!__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id)) {
-          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call awaiting confirmation; holding", {
+        } else if (ev.type === "user.tool_confirmation") {
+          if (!__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.tool_use_id))
+            __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
+        }
+      }, _SessionToolRunner_handleStreamEvent = /** Returns true when the runner should exit. */
+      async function _SessionToolRunner_handleStreamEvent2(ev) {
+        __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").noteEvent(ev);
+        switch (ev.type) {
+          case "agent.tool_use":
+          case "agent.custom_tool_use":
+            if (!__classPrivateFieldGet(this, _SessionToolRunner_seen, "f").has(ev.id)) {
+              __classPrivateFieldGet(this, _SessionToolRunner_seen, "f").add(ev.id);
+              await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
+            }
+            return false;
+          case "user.tool_confirmation":
+            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_noteConfirmation).call(this, ev);
+            return false;
+          case "user.tool_result":
+            __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.tool_use_id);
+            return false;
+          case "user.custom_tool_result":
+            __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.custom_tool_use_id);
+            return false;
+          case "session.status_terminated":
+          case "session.deleted":
+            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("session terminated", {
+              component: "session-tool-runner",
+              session_id: this.sessionId
+            });
+            __classPrivateFieldGet(this, _SessionToolRunner_controller, "f").abort();
+            return true;
+          default:
+            return false;
+        }
+      }, _SessionToolRunner_routeToolEvent = // ===== confirmation gating (always_ask tools) =====
+      /**
+       * Dispatch `ev`, honoring its evaluated permission. A call the server gated
+       * (`evaluated_permission == "ask"`) is held until its `user.tool_confirmation`
+       * arrives. Fails closed: only an explicit `allow` verdict releases a gated
+       * call; a server-side `deny` overrides any recorded verdict; an unrecognized
+       * permission is held like `ask` and an unrecognized verdict is denied.
+       */
+      async function _SessionToolRunner_routeToolEvent2(ev) {
+        const permission = ev.evaluated_permission;
+        const verdict = permission === "deny" ? "deny" : __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").get(ev.id);
+        if (verdict === void 0) {
+          if (permission === void 0 || permission === "allow") {
+            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, void 0);
+          } else if (!__classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id)) {
+            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call awaiting confirmation; holding", {
+              component: "session-tool-runner",
+              session_id: this.sessionId,
+              tool: ev.name,
+              tool_use_id: ev.id
+            });
+            __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").set(ev.id, ev);
+            __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").block(ev.id);
+          }
+          return;
+        }
+        await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, ev, verdict);
+      }, _SessionToolRunner_noteConfirmation = /** Record an allow/deny verdict and release the held call it gates, if any. */
+      async function _SessionToolRunner_noteConfirmation2(ev) {
+        __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
+        const held = __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").get(ev.tool_use_id);
+        if (held === void 0)
+          return;
+        await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, ev.result);
+      }, _SessionToolRunner_applyVerdict = /**
+       * Dispatch or resolve a gated call according to its verdict.
+       *
+       * The idle-clock blocker accounting lives here: a denial retires the held
+       * call's blocker, while an allow keeps one on the call — taking it now if the
+       * verdict was already known when the call was routed, so it was never held —
+       * until `#execute` has finished with it. The countdown must not run over
+       * gated work that is still in flight.
+       */
+      async function _SessionToolRunner_applyVerdict2(ev, verdict) {
+        const wasHeld = __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").delete(ev.id);
+        if (verdict === "allow") {
+          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call confirmed", {
             component: "session-tool-runner",
             session_id: this.sessionId,
             tool: ev.name,
             tool_use_id: ev.id
           });
-          __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").set(ev.id, ev);
-          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").block(ev.id);
+          if (!wasHeld)
+            __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").block(ev.id);
+          try {
+            await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, "allow");
+          } finally {
+            __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
+          }
+          return;
         }
-        return;
-      }
-      await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, ev, verdict);
-    }, _SessionToolRunner_noteConfirmation = /** Record an allow/deny verdict and release the held call it gates, if any. */
-    async function _SessionToolRunner_noteConfirmation2(ev) {
-      __classPrivateFieldGet(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
-      const held = __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").get(ev.tool_use_id);
-      if (held === void 0)
-        return;
-      await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, ev.result);
-    }, _SessionToolRunner_applyVerdict = /**
-     * Dispatch or resolve a gated call according to its verdict.
-     *
-     * The idle-clock blocker accounting lives here: a denial retires the held
-     * call's blocker, while an allow keeps one on the call — taking it now if the
-     * verdict was already known when the call was routed, so it was never held —
-     * until `#execute` has finished with it. The countdown must not run over
-     * gated work that is still in flight.
-     */
-    async function _SessionToolRunner_applyVerdict2(ev, verdict) {
-      const wasHeld = __classPrivateFieldGet(this, _SessionToolRunner_awaitingConfirmation, "f").delete(ev.id);
-      if (verdict === "allow") {
-        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call confirmed", {
+        if (wasHeld)
+          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
+        __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.id);
+        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call denied; not executing", {
           component: "session-tool-runner",
           session_id: this.sessionId,
           tool: ev.name,
           tool_use_id: ev.id
         });
-        if (!wasHeld)
-          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").block(ev.id);
-        try {
-          await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, "allow");
-        } finally {
-          __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
-        }
-        return;
-      }
-      if (wasHeld)
-        __classPrivateFieldGet(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
-      __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(ev.id);
-      __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool call denied; not executing", {
-        component: "session-tool-runner",
-        session_id: this.sessionId,
-        tool: ev.name,
-        tool_use_id: ev.id
-      });
-      __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
-        event: ev,
-        toolUseId: ev.id,
-        name: ev.name,
-        isError: false,
-        posted: false,
-        confirmation: "deny"
-      });
-    }, _SessionToolRunner_surfaceCall = function _SessionToolRunner_surfaceCall2(call) {
-      __classPrivateFieldGet(this, _SessionToolRunner_results, "f").push(call);
-    }, _SessionToolRunner_execute = // ===== tool execution =====
-    async function _SessionToolRunner_execute2(ev, confirmation) {
-      var _a4, _b;
-      if (__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id))
-        return;
-      __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("executing tool", {
-        component: "session-tool-runner",
-        session_id: this.sessionId,
-        tool: ev.name,
-        tool_use_id: ev.id
-      });
-      __classPrivateFieldSet(this, _SessionToolRunner_inFlightCount, (_a4 = __classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f"), _a4++, _a4), "f");
-      try {
-        const tool = __classPrivateFieldGet(this, _SessionToolRunner_toolByName, "f").get(ev.name);
-        if (!tool) {
-          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool not owned by this runner; leaving the tool_use_id pending for its owner", {
-            component: "session-tool-runner",
-            session_id: this.sessionId,
-            tool: ev.name,
-            tool_use_id: ev.id
-          });
-          __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
-            event: ev,
-            toolUseId: ev.id,
-            name: ev.name,
-            isError: false,
-            posted: false,
-            confirmation
-          });
-          return;
-        }
-        let content;
-        let isError;
-        const toolCtrl = new AbortController();
-        const detachTool = linkAbort(__classPrivateFieldGet(this, _SessionToolRunner_controller, "f").signal, toolCtrl);
-        const timer = setTimeout(() => toolCtrl.abort(), TOOL_TIMEOUT_MS);
-        try {
-          const outcome = await runRunnableTool(tool, ev.input, {
-            toolUse: ev,
-            toolUseBlock: ev,
-            signal: toolCtrl.signal
-          });
-          content = outcome.content;
-          isError = outcome.isError;
-        } finally {
-          clearTimeout(timer);
-          detachTool();
-        }
-        const result = buildResultEvent(ev, isError, toSessionContent(content));
-        const posted = await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_sendResult).call(this, result, ev.id);
         __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
           event: ev,
-          result,
           toolUseId: ev.id,
           name: ev.name,
-          isError,
-          posted,
-          confirmation
+          isError: false,
+          posted: false,
+          confirmation: "deny"
         });
-      } finally {
-        __classPrivateFieldSet(this, _SessionToolRunner_inFlightCount, (_b = __classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f"), _b--, _b), "f");
-        if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") === 0)
-          __classPrivateFieldGet(this, _SessionToolRunner_onIdle, "f")?.call(this);
-      }
-    }, _SessionToolRunner_sendResult = async function _SessionToolRunner_sendResult2(result, toolUseId) {
-      const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
-      const start = Date.now();
-      let lastErr;
-      let attempt = 0;
-      while (true) {
-        attempt++;
-        ctrl.signal.throwIfAborted();
+      }, _SessionToolRunner_surfaceCall = function _SessionToolRunner_surfaceCall2(call) {
+        __classPrivateFieldGet(this, _SessionToolRunner_results, "f").push(call);
+      }, _SessionToolRunner_execute = // ===== tool execution =====
+      async function _SessionToolRunner_execute2(ev, confirmation) {
+        var _a4, _b;
+        if (__classPrivateFieldGet(this, _SessionToolRunner_answered, "f").has(ev.id))
+          return;
+        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("executing tool", {
+          component: "session-tool-runner",
+          session_id: this.sessionId,
+          tool: ev.name,
+          tool_use_id: ev.id
+        });
+        __classPrivateFieldSet(this, _SessionToolRunner_inFlightCount, (_a4 = __classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f"), _a4++, _a4), "f");
         try {
-          await this.client.beta.sessions.events.send(this.sessionId, { events: [result] }, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this));
-          __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(toolUseId);
-          return true;
-        } catch (e) {
-          lastErr = e;
-          if (isFatal4xx(e))
-            break;
-          const remainingMs = __classPrivateFieldGet(this, _SessionToolRunner_sendRetryWindowMs, "f") - (Date.now() - start);
-          if (remainingMs <= 0)
-            break;
-          const waitMs = Math.min(applyJitter(backoff(attempt - 1, SEND_BACKOFF_START_MS, SEND_BACKOFF_CAP_MS)), remainingMs);
-          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("tool result send failed; retrying", {
-            tool_use_id: toolUseId,
-            attempt,
-            backoff_ms: waitMs,
-            error: String(e)
+          const tool = __classPrivateFieldGet(this, _SessionToolRunner_toolByName, "f").get(ev.name);
+          if (!tool) {
+            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").info("tool not owned by this runner; leaving the tool_use_id pending for its owner", {
+              component: "session-tool-runner",
+              session_id: this.sessionId,
+              tool: ev.name,
+              tool_use_id: ev.id
+            });
+            __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
+              event: ev,
+              toolUseId: ev.id,
+              name: ev.name,
+              isError: false,
+              posted: false,
+              confirmation
+            });
+            return;
+          }
+          let content;
+          let isError;
+          const toolCtrl = new AbortController();
+          const detachTool = linkAbort(__classPrivateFieldGet(this, _SessionToolRunner_controller, "f").signal, toolCtrl);
+          const timer = setTimeout(() => toolCtrl.abort(), TOOL_TIMEOUT_MS);
+          try {
+            const outcome = await runRunnableTool(tool, ev.input, {
+              toolUse: ev,
+              toolUseBlock: ev,
+              signal: toolCtrl.signal
+            });
+            content = outcome.content;
+            isError = outcome.isError;
+          } finally {
+            clearTimeout(timer);
+            detachTool();
+          }
+          const result = buildResultEvent(ev, isError, toSessionContent(content));
+          const posted = await __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_sendResult).call(this, result, ev.id);
+          __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
+            event: ev,
+            result,
+            toolUseId: ev.id,
+            name: ev.name,
+            isError,
+            posted,
+            confirmation
           });
-          await sleep(waitMs, ctrl.signal);
+        } finally {
+          __classPrivateFieldSet(this, _SessionToolRunner_inFlightCount, (_b = __classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f"), _b--, _b), "f");
+          if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") === 0)
+            __classPrivateFieldGet(this, _SessionToolRunner_onIdle, "f")?.call(this);
         }
-      }
-      __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").error("failed to send tool result", {
-        tool_use_id: toolUseId,
-        attempts: attempt,
-        error: String(lastErr)
-      });
-      return false;
-    }, _SessionToolRunner_drain = /** Wait (bounded) for in-flight tool executions to finish during teardown. */
-    async function _SessionToolRunner_drain2() {
-      if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") === 0)
-        return;
-      await Promise.race([new Promise((r) => __classPrivateFieldSet(this, _SessionToolRunner_onIdle, r, "f")), sleep(DRAIN_TIMEOUT_MS)]);
-      __classPrivateFieldSet(this, _SessionToolRunner_onIdle, null, "f");
-      if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") > 0) {
-        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("drain timeout exceeded");
-      }
-    };
+      }, _SessionToolRunner_sendResult = async function _SessionToolRunner_sendResult2(result, toolUseId) {
+        const ctrl = __classPrivateFieldGet(this, _SessionToolRunner_controller, "f");
+        const start = Date.now();
+        let lastErr;
+        let attempt = 0;
+        while (true) {
+          attempt++;
+          ctrl.signal.throwIfAborted();
+          try {
+            await this.client.beta.sessions.events.send(this.sessionId, { events: [result] }, __classPrivateFieldGet(this, _SessionToolRunner_instances, "m", _SessionToolRunner_requestOptions).call(this));
+            __classPrivateFieldGet(this, _SessionToolRunner_answered, "f").add(toolUseId);
+            return true;
+          } catch (e) {
+            lastErr = e;
+            if (isFatal4xx(e))
+              break;
+            const remainingMs = __classPrivateFieldGet(this, _SessionToolRunner_sendRetryWindowMs, "f") - (Date.now() - start);
+            if (remainingMs <= 0)
+              break;
+            const waitMs = Math.min(applyJitter(backoff(attempt - 1, SEND_BACKOFF_START_MS, SEND_BACKOFF_CAP_MS)), remainingMs);
+            __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("tool result send failed; retrying", {
+              tool_use_id: toolUseId,
+              attempt,
+              backoff_ms: waitMs,
+              error: String(e)
+            });
+            await sleep(waitMs, ctrl.signal);
+          }
+        }
+        __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").error("failed to send tool result", {
+          tool_use_id: toolUseId,
+          attempts: attempt,
+          error: String(lastErr)
+        });
+        return false;
+      }, _SessionToolRunner_drain = /** Wait (bounded) for in-flight tool executions to finish during teardown. */
+      async function _SessionToolRunner_drain2() {
+        if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") === 0)
+          return;
+        await Promise.race([new Promise((r) => __classPrivateFieldSet(this, _SessionToolRunner_onIdle, r, "f")), sleep(DRAIN_TIMEOUT_MS)]);
+        __classPrivateFieldSet(this, _SessionToolRunner_onIdle, null, "f");
+        if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") > 0) {
+          __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("drain timeout exceeded");
+        }
+      };
+      return SessionToolRunner2;
+    })();
   }
 });
 
@@ -23450,643 +23459,646 @@ var init_memories = __esm({
         return true;
       }
     };
-    SessionMemoryStores = class {
-      constructor(client, opts) {
-        _SessionMemoryStores_instances.add(this);
-        _SessionMemoryStores_client.set(this, void 0);
-        _SessionMemoryStores_workdir.set(this, void 0);
-        _SessionMemoryStores_syncIntervalMs.set(this, void 0);
-        _SessionMemoryStores_syncDeletions.set(this, void 0);
-        _SessionMemoryStores_log.set(this, void 0);
-        _SessionMemoryStores_lastSyncAt.set(this, void 0);
-        _SessionMemoryStores_finished.set(this, false);
-        _SessionMemoryStores_stores.set(this, []);
-        __classPrivateFieldSet(this, _SessionMemoryStores_client, client, "f");
-        __classPrivateFieldSet(this, _SessionMemoryStores_workdir, opts.workdir, "f");
-        __classPrivateFieldSet(this, _SessionMemoryStores_syncIntervalMs, opts.syncIntervalMs ?? DEFAULT_MEMORY_SYNC_INTERVAL_MS, "f");
-        checkMemorySyncInterval(__classPrivateFieldGet(this, _SessionMemoryStores_syncIntervalMs, "f"), "syncIntervalMs");
-        __classPrivateFieldSet(this, _SessionMemoryStores_syncDeletions, opts.syncDeletions ?? "enabled", "f");
-        __classPrivateFieldSet(this, _SessionMemoryStores_log, loggerFor(client), "f");
-        __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
-      }
-      /**
-       * Every attached store's root directory.
-       *
-       * The worker lists these as the file tools' allowed roots so a store
-       * mounted outside the workdir stays reachable.
-       */
-      get roots() {
-        return __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((s) => s.files.root().path);
-      }
-      /**
-       * Root directories of stores attached read-only.
-       *
-       * The file tools consult this to refuse writes into read-only stores.
-       */
-      get readOnlyRoots() {
-        return __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").filter((s) => s.readOnly).map((s) => s.files.root().path);
-      }
-      /**
-       * Download every attached store's memories to disk.
-       *
-       * `session` arrives already fetched — one snapshot shared with the skills
-       * download, so the two cannot disagree about the resources.
-       */
-      async download(session) {
-        for (const resource of session.resources) {
-          if (resource.type !== "memory_store")
-            continue;
-          const root = __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_storeRoot).call(this, resource);
-          let store;
-          try {
-            store = {
-              memoryStoreId: resource.memory_store_id,
-              // utf8: a binary file is refused at put/get, not mid-sync.
-              files: await LocalFileStore.open(root, { utf8: true }),
-              readOnly: resource.access === "read_only",
-              baseline: /* @__PURE__ */ new Map(),
-              refusedShas: /* @__PURE__ */ new Map(),
-              pendingDeletes: /* @__PURE__ */ new Map()
-            };
-            if (!store.files.root().removedOnDispose) {
-              throw new SessionMemoryError(`something already exists at the memory store's path: ${root} (memory_store_id=${resource.memory_store_id}); it must not exist when the session starts`);
-            }
+    SessionMemoryStores = /* @__PURE__ */ (() => {
+      class SessionMemoryStores2 {
+        constructor(client, opts) {
+          _SessionMemoryStores_instances.add(this);
+          _SessionMemoryStores_client.set(this, void 0);
+          _SessionMemoryStores_workdir.set(this, void 0);
+          _SessionMemoryStores_syncIntervalMs.set(this, void 0);
+          _SessionMemoryStores_syncDeletions.set(this, void 0);
+          _SessionMemoryStores_log.set(this, void 0);
+          _SessionMemoryStores_lastSyncAt.set(this, void 0);
+          _SessionMemoryStores_finished.set(this, false);
+          _SessionMemoryStores_stores.set(this, []);
+          __classPrivateFieldSet(this, _SessionMemoryStores_client, client, "f");
+          __classPrivateFieldSet(this, _SessionMemoryStores_workdir, opts.workdir, "f");
+          __classPrivateFieldSet(this, _SessionMemoryStores_syncIntervalMs, opts.syncIntervalMs ?? DEFAULT_MEMORY_SYNC_INTERVAL_MS, "f");
+          checkMemorySyncInterval(__classPrivateFieldGet(this, _SessionMemoryStores_syncIntervalMs, "f"), "syncIntervalMs");
+          __classPrivateFieldSet(this, _SessionMemoryStores_syncDeletions, opts.syncDeletions ?? "enabled", "f");
+          __classPrivateFieldSet(this, _SessionMemoryStores_log, loggerFor(client), "f");
+          __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
+        }
+        /**
+         * Every attached store's root directory.
+         *
+         * The worker lists these as the file tools' allowed roots so a store
+         * mounted outside the workdir stays reachable.
+         */
+        get roots() {
+          return __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((s) => s.files.root().path);
+        }
+        /**
+         * Root directories of stores attached read-only.
+         *
+         * The file tools consult this to refuse writes into read-only stores.
+         */
+        get readOnlyRoots() {
+          return __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").filter((s) => s.readOnly).map((s) => s.files.root().path);
+        }
+        /**
+         * Download every attached store's memories to disk.
+         *
+         * `session` arrives already fetched — one snapshot shared with the skills
+         * download, so the two cannot disagree about the resources.
+         */
+        async download(session) {
+          for (const resource of session.resources) {
+            if (resource.type !== "memory_store")
+              continue;
+            const root = __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_storeRoot).call(this, resource);
+            let store;
             try {
-              await store.files.createRoot();
-            } catch (e) {
-              if (!isErrno(e))
-                throw e;
-              throw new SessionMemoryError(`cannot create the memory store's folder: ${root} (memory_store_id=${resource.memory_store_id}): ${e}; the worker host must make this mount path writable`, e);
-            }
-            await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_stampAndPull).call(this, store);
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("downloaded memories", {
-              count: store.baseline.size,
-              memory_store_id: store.memoryStoreId,
-              dest: store.files.root().path
-            });
-            __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").push(store);
-          } catch (e) {
-            if (store)
-              await store.files.dispose().catch(() => {
+              store = {
+                memoryStoreId: resource.memory_store_id,
+                // utf8: a binary file is refused at put/get, not mid-sync.
+                files: await LocalFileStore.open(root, { utf8: true }),
+                readOnly: resource.access === "read_only",
+                baseline: /* @__PURE__ */ new Map(),
+                refusedShas: /* @__PURE__ */ new Map(),
+                pendingDeletes: /* @__PURE__ */ new Map()
+              };
+              if (!store.files.root().removedOnDispose) {
+                throw new SessionMemoryError(`something already exists at the memory store's path: ${root} (memory_store_id=${resource.memory_store_id}); it must not exist when the session starts`);
+              }
+              try {
+                await store.files.createRoot();
+              } catch (e) {
+                if (!isErrno(e))
+                  throw e;
+                throw new SessionMemoryError(`cannot create the memory store's folder: ${root} (memory_store_id=${resource.memory_store_id}): ${e}; the worker host must make this mount path writable`, e);
+              }
+              await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_stampAndPull).call(this, store);
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("downloaded memories", {
+                count: store.baseline.size,
+                memory_store_id: store.memoryStoreId,
+                dest: store.files.root().path
               });
-            if (e instanceof SessionMemoryError)
-              throw e;
-            throw new SessionMemoryError(`failed to download memory store memory_store_id=${resource.memory_store_id}: ${e}`, e);
+              __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").push(store);
+            } catch (e) {
+              if (store)
+                await store.files.dispose().catch(() => {
+                });
+              if (e instanceof SessionMemoryError)
+                throw e;
+              throw new SessionMemoryError(`failed to download memory store memory_store_id=${resource.memory_store_id}: ${e}`, e);
+            }
           }
+          __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
         }
-        __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
-      }
-      /**
-       * The session's last sync — skips the delete wait, so calling it twice
-       * would undo the protection; it throws instead.
-       */
-      async finish() {
-        if (__classPrivateFieldGet(this, _SessionMemoryStores_finished, "f")) {
-          throw new AnthropicError("finish() was already called: it is the session's last sync and runs once");
+        /**
+         * The session's last sync — skips the delete wait, so calling it twice
+         * would undo the protection; it throws instead.
+         */
+        async finish() {
+          if (__classPrivateFieldGet(this, _SessionMemoryStores_finished, "f")) {
+            throw new AnthropicError("finish() was already called: it is the session's last sync and runs once");
+          }
+          __classPrivateFieldSet(this, _SessionMemoryStores_finished, true, "f");
+          await this.syncAll(true);
         }
-        __classPrivateFieldSet(this, _SessionMemoryStores_finished, true, "f");
-        await this.syncAll(true);
-      }
-      /** @internal — reconcile every store once; the tests' deterministic driver */
-      async syncAll(final) {
-        await Promise.all(__classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((store) => __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_syncStore).call(this, store, final)));
-        __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
-      }
-      /** Sync when `syncIntervalMs` has elapsed since the last one. Never throws. */
-      async syncIfDue() {
-        if (Date.now() - __classPrivateFieldGet(this, _SessionMemoryStores_lastSyncAt, "f") < __classPrivateFieldGet(this, _SessionMemoryStores_syncIntervalMs, "f"))
-          return;
-        await this.syncAll(false);
-      }
-      /**
-       * Upload new and changed files; send no deletes and pull nothing.
-       *
-       * The push-only rescue pass for a session ending on an error or
-       * cancel — best-effort, bounded by the caller: once `signal` aborts no
-       * further upload starts, each store cut off part-way logs how many
-       * changed files it had not finished uploading, and this resolves without
-       * waiting for requests already in flight. Each store uploads up to
-       * {@link UPLOAD_CONCURRENCY} files at a time. Skips read-only stores,
-       * refused files, files the server already holds, and folders that fail
-       * the marker check. Never throws.
-       */
-      async flushWrites(signal) {
-        await Promise.all(__classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((store) => __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_flushStore).call(this, store, signal)));
-      }
-      /**
-       * Remove every store directory that {@link SessionMemoryStores.download}
-       * created. Pre-existing directories are left alone — that is
-       * {@link FileStore.dispose}'s own rule. A folder that fails the marker
-       * check is kept too — sync left it as found, so must dispose.
-       */
-      async dispose() {
-        for (const store of __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f")) {
-          const root = store.files.root();
-          try {
-            const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
-            if (!scan.markerOk && Object.keys(scan.files).length > 0) {
-              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; leaving the memory store folder on disk`, {
-                root: root.path,
-                memory_store_id: store.memoryStoreId
+        /** @internal — reconcile every store once; the tests' deterministic driver */
+        async syncAll(final) {
+          await Promise.all(__classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((store) => __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_syncStore).call(this, store, final)));
+          __classPrivateFieldSet(this, _SessionMemoryStores_lastSyncAt, Date.now(), "f");
+        }
+        /** Sync when `syncIntervalMs` has elapsed since the last one. Never throws. */
+        async syncIfDue() {
+          if (Date.now() - __classPrivateFieldGet(this, _SessionMemoryStores_lastSyncAt, "f") < __classPrivateFieldGet(this, _SessionMemoryStores_syncIntervalMs, "f"))
+            return;
+          await this.syncAll(false);
+        }
+        /**
+         * Upload new and changed files; send no deletes and pull nothing.
+         *
+         * The push-only rescue pass for a session ending on an error or
+         * cancel — best-effort, bounded by the caller: once `signal` aborts no
+         * further upload starts, each store cut off part-way logs how many
+         * changed files it had not finished uploading, and this resolves without
+         * waiting for requests already in flight. Each store uploads up to
+         * {@link UPLOAD_CONCURRENCY} files at a time. Skips read-only stores,
+         * refused files, files the server already holds, and folders that fail
+         * the marker check. Never throws.
+         */
+        async flushWrites(signal) {
+          await Promise.all(__classPrivateFieldGet(this, _SessionMemoryStores_stores, "f").map((store) => __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_flushStore).call(this, store, signal)));
+        }
+        /**
+         * Remove every store directory that {@link SessionMemoryStores.download}
+         * created. Pre-existing directories are left alone — that is
+         * {@link FileStore.dispose}'s own rule. A folder that fails the marker
+         * check is kept too — sync left it as found, so must dispose.
+         */
+        async dispose() {
+          for (const store of __classPrivateFieldGet(this, _SessionMemoryStores_stores, "f")) {
+            const root = store.files.root();
+            try {
+              const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
+              if (!scan.markerOk && Object.keys(scan.files).length > 0) {
+                __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; leaving the memory store folder on disk`, {
+                  root: root.path,
+                  memory_store_id: store.memoryStoreId
+                });
+                continue;
+              }
+              await store.files.dispose();
+            } catch (e) {
+              if (!(e instanceof FileStoreError) && !isErrno(e))
+                throw e;
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to remove the memory store folder", {
+                root: store.files.root().path,
+                memory_store_id: store.memoryStoreId,
+                error: String(e)
               });
               continue;
             }
-            await store.files.dispose();
-          } catch (e) {
-            if (!(e instanceof FileStoreError) && !isErrno(e))
-              throw e;
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to remove the memory store folder", {
+            if (root.removedOnDispose) {
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("removed memory store dir", {
+                dest: root.path,
+                memory_store_id: store.memoryStoreId
+              });
+            }
+          }
+        }
+      }
+      _SessionMemoryStores_client = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_workdir = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_syncIntervalMs = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_syncDeletions = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_log = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_lastSyncAt = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_finished = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_stores = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_instances = /* @__PURE__ */ new WeakSet(), _SessionMemoryStores_storeRoot = function _SessionMemoryStores_storeRoot2(resource) {
+        if (resource.mount_path) {
+          if (!isPathLegal(resource.mount_path)) {
+            throw new SessionMemoryError(`memory store mount_path is not a clean absolute path: ${JSON.stringify(resource.mount_path)} (memory_store_id=${resource.memory_store_id})`);
+          }
+          return resource.mount_path;
+        }
+        return path4.join(__classPrivateFieldGet(this, _SessionMemoryStores_workdir, "f"), "memory", resource.name || resource.memory_store_id);
+      }, _SessionMemoryStores_scanMarker = async function _SessionMemoryStores_scanMarker2(store) {
+        const local = await store.files.hashtree();
+        const marker = local[MARKER_PATH];
+        delete local[MARKER_PATH];
+        if (marker === markerSha(store.memoryStoreId)) {
+          return { files: local, markerOk: true, distrustReason: null };
+        }
+        return {
+          files: local,
+          markerOk: false,
+          distrustReason: marker !== void 0 ? "the marker file does not match this store" : "the marker file is gone"
+        };
+      }, _SessionMemoryStores_syncStore = async function _SessionMemoryStores_syncStore2(store, final) {
+        try {
+          const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
+          const local = scan.files;
+          if (!scan.markerOk) {
+            if (Object.keys(local).length > 0) {
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; leaving the memory store folder as found and not syncing`, {
+                root: store.files.root().path,
+                memory_store_id: store.memoryStoreId
+              });
+              return;
+            }
+            await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_recover).call(this, store, "the folder or its marker is gone");
+            return;
+          }
+          if (Object.keys(local).length === 0 && store.baseline.size > 1) {
+            await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_recover).call(this, store, "every memory file is gone at once");
+            return;
+          }
+          const remote = /* @__PURE__ */ new Map();
+          for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId)) {
+            remote.set(rel, item);
+          }
+          const deletes = new DeletePass(__classPrivateFieldGet(this, _SessionMemoryStores_syncDeletions, "f"), Math.max(DELETE_CAP_FLOOR, Math.min(DELETE_CAP_CEILING, Math.floor(store.baseline.size / 4))), final);
+          const pulls = [];
+          const baseline = /* @__PURE__ */ new Map();
+          const paths = [.../* @__PURE__ */ new Set([...remote.keys(), ...Object.keys(local), ...store.baseline.keys()])].sort();
+          for (const rel of paths) {
+            const remoteItem = remote.get(rel);
+            const localSha = local[rel];
+            const baseSha = store.baseline.get(rel);
+            let sha;
+            if (localSha === void 0 && baseSha !== void 0 && remoteItem !== void 0 && remoteItem.content_sha256 === baseSha && !store.readOnly) {
+              sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_corroboratedDelete).call(this, store, rel, remoteItem, baseSha, deletes);
+            } else {
+              sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_syncPath).call(this, store, rel, remoteItem, localSha, pulls);
+            }
+            if (sha !== void 0)
+              baseline.set(rel, sha);
+          }
+          store.baseline = baseline;
+          await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_pullAll).call(this, store, pulls);
+          if (deletes.suppressed > 0) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").debug("remote deletes are disabled; locally deleted memories stay on the server", {
+              count: deletes.suppressed,
+              memory_store_id: store.memoryStoreId
+            });
+          }
+          if (deletes.capped > 0) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`delete cap reached: ${deletes.mode === "log_only" ? "would send" : "sent"} ${deletes.attempted} deletes, held ${deletes.capped} for later syncs`, { memory_store_id: store.memoryStoreId });
+          }
+        } catch (e) {
+          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory sync failed", { memory_store_id: store.memoryStoreId, error: String(e) });
+        }
+      }, _SessionMemoryStores_flushStore = async function _SessionMemoryStores_flushStore2(store, signal) {
+        const dirty = /* @__PURE__ */ new Map();
+        const unsent = /* @__PURE__ */ new Set();
+        const push = async () => {
+          if (store.readOnly)
+            return;
+          const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
+          if (!scan.markerOk) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; not uploading anything from the memory store folder`, {
               root: store.files.root().path,
+              memory_store_id: store.memoryStoreId
+            });
+            return;
+          }
+          for (const [rel, sha] of Object.entries(scan.files)) {
+            if (sha !== store.baseline.get(rel) && store.refusedShas.get(rel) !== sha) {
+              dirty.set(rel, sha);
+              unsent.add(rel);
+            }
+          }
+          if (dirty.size === 0 || signal?.aborted)
+            return;
+          const remote = /* @__PURE__ */ new Map();
+          for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId)) {
+            if (signal?.aborted)
+              return;
+            remote.set(rel, item);
+          }
+          const uploads = [];
+          for (const rel of [...dirty.keys()].sort()) {
+            const localSha = dirty.get(rel);
+            const baseSha = store.baseline.get(rel);
+            const existing = remote.get(rel);
+            if (existing !== void 0 && existing.content_sha256 === localSha) {
+              store.baseline.set(rel, existing.content_sha256);
+              unsent.delete(rel);
+              continue;
+            }
+            if (existing !== void 0 && existing.content_sha256 !== baseSha) {
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; the flush leaves the remote version", {
+                path: rel,
+                memory_store_id: store.memoryStoreId
+              });
+              unsent.delete(rel);
+              continue;
+            }
+            uploads.push([rel, localSha, existing]);
+          }
+          await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_uploadAll).call(this, store, uploads, unsent, signal);
+        };
+        try {
+          await settledOrAborted(push(), signal);
+          if (signal?.aborted && unsent.size > 0) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`memory flush cut off part-way; ${unsent.size} of ${dirty.size} changed files had not finished uploading`, { memory_store_id: store.memoryStoreId });
+          }
+        } catch (e) {
+          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory flush failed", { memory_store_id: store.memoryStoreId, error: String(e) });
+        }
+      }, _SessionMemoryStores_recover = /** Rebuild a destroyed folder from the server; sends no deletes, no uploads. */
+      async function _SessionMemoryStores_recover2(store, reason) {
+        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${reason}; re-downloading the memory store folder instead of syncing`, {
+          root: store.files.root().path,
+          memory_store_id: store.memoryStoreId
+        });
+        await store.files.createRoot();
+        await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_stampAndPull).call(this, store);
+      }, _SessionMemoryStores_stampAndPull = /**
+       * Write the marker, then pull every remote memory. Baseline is cleared
+       * first so a failed write never leaves an entry whose file is not on disk.
+       * Every memory is needed here, so the listing carries the content — pages
+       * cost far fewer round-trips than a request per memory.
+       */
+      async function _SessionMemoryStores_stampAndPull2(store) {
+        store.baseline = /* @__PURE__ */ new Map();
+        store.pendingDeletes.clear();
+        await store.files.put(MARKER_PATH, `version ${MARKER_VERSION}
+${store.memoryStoreId}`);
+        for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId, "full")) {
+          if (await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_write).call(this, store, rel, item.content ?? "")) {
+            store.baseline.set(rel, item.content_sha256);
+          }
+        }
+      }, _SessionMemoryStores_syncPath = /**
+       * Reconcile one path. Returns the sha to record in the baseline, or
+       * `undefined` to drop the path from it.
+       *
+       * `pulls` is an output: when the remote version should be written to disk,
+       * this appends `[rel, remote]` to it instead of writing — `rel` is the
+       * file to write, `remote` the listed memory whose content `#pullAll` will
+       * fetch and write there.
+       */
+      async function _SessionMemoryStores_syncPath2(store, rel, remote, localSha, pulls) {
+        const baseSha = store.baseline.get(rel);
+        if (localSha !== void 0) {
+          store.pendingDeletes.delete(rel);
+        }
+        if (!remote) {
+          if (localSha === void 0) {
+            store.pendingDeletes.delete(rel);
+            return void 0;
+          }
+          if (baseSha !== void 0) {
+            if (localSha === baseSha) {
+              const fresh = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_removeLocal).call(this, store, rel, baseSha);
+              if (fresh === void 0)
+                return void 0;
+              if (fresh === baseSha)
+                return baseSha;
+              localSha = fresh;
+            }
+            if (store.readOnly) {
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted remotely but edited locally; keeping the file, which a read-only store cannot push", { path: rel, memory_store_id: store.memoryStoreId });
+            } else if (store.refusedShas.get(rel) !== localSha) {
+              __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("memory deleted remotely but edited locally; re-creating it from the file", {
+                path: rel,
+                memory_store_id: store.memoryStoreId
+              });
+            }
+          }
+          if (store.readOnly)
+            return void 0;
+          if (store.refusedShas.get(rel) === localSha)
+            return void 0;
+          return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, void 0);
+        }
+        const remoteSha = remote.content_sha256;
+        const remoteChanged = remoteSha !== baseSha;
+        const locallyEdited = localSha !== void 0 && localSha !== baseSha && localSha !== remoteSha;
+        const localChanged = !store.readOnly && locallyEdited;
+        if (localSha === void 0 && baseSha !== void 0) {
+          if (remoteChanged) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted locally but changed remotely; restoring the remote version", {
+              path: rel,
+              memory_store_id: store.memoryStoreId
+            });
+            store.pendingDeletes.delete(rel);
+            pulls.push([rel, remote]);
+          }
+          return baseSha;
+        }
+        if (remoteChanged) {
+          if (localSha === remoteSha)
+            return remoteSha;
+          if (locallyEdited) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; keeping the remote version", {
+              path: rel,
+              memory_store_id: store.memoryStoreId
+            });
+          }
+          pulls.push([rel, remote]);
+          return baseSha;
+        }
+        if (localChanged) {
+          if (store.refusedShas.get(rel) === localSha)
+            return remoteSha;
+          return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, remote) ?? remoteSha;
+        }
+        return remoteSha;
+      }, _SessionMemoryStores_removeLocal = /**
+       * Remove the file for a memory the server no longer has, if it still holds
+       * `expectSha`. Returns `undefined` when the file is gone from disk,
+       * `expectSha` when it must stay in the baseline (I/O error), or the file's
+       * fresh sha when it was edited since the scan.
+       */
+      async function _SessionMemoryStores_removeLocal2(store, rel, expectSha) {
+        let freshSha;
+        try {
+          freshSha = await store.files.hashFile(rel);
+        } catch (e) {
+          if (!(e instanceof FileStoreError) && !isErrno(e))
+            throw e;
+          return expectSha;
+        }
+        if (freshSha === null)
+          return void 0;
+        if (freshSha !== expectSha)
+          return freshSha;
+        try {
+          await store.files.remove(rel);
+        } catch (e) {
+          if (!(e instanceof FileStoreError) && !isErrno(e))
+            throw e;
+          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to remove memory deleted remotely", {
+            path: rel,
+            memory_store_id: store.memoryStoreId,
+            error: String(e)
+          });
+          return expectSha;
+        }
+        return void 0;
+      }, _SessionMemoryStores_write = /**
+       * Write a memory's content to disk; `false` (and a warning) on failure.
+       *
+       * A `..` component in the wire path reaches here as {@link FileStoreError} —
+       * that is the escape guard.
+       */
+      async function _SessionMemoryStores_write2(store, rel, content) {
+        try {
+          await store.files.put(rel, content);
+        } catch (e) {
+          if (!(e instanceof FileStoreError) && !isErrno(e))
+            throw e;
+          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to write memory", {
+            path: rel,
+            memory_store_id: store.memoryStoreId,
+            error: String(e)
+          });
+          return false;
+        }
+        return true;
+      }, _SessionMemoryStores_pullAll = /**
+       * Fetch and write the given memories, {@link FETCH_CONCURRENCY} at a time.
+       *
+       * The sync's content pass: the listing carried no content, so each memory
+       * is fetched individually and written as it arrives. On success the path's
+       * baseline advances; on a failed fetch or write the old entry stays and the
+       * next sync retries. A 404 means the memory was deleted after the listing —
+       * the next sync reconciles it.
+       */
+      async function _SessionMemoryStores_pullAll2(store, pulls) {
+        if (pulls.length === 0)
+          return;
+        const pullOne = async (rel, listed) => {
+          let item;
+          try {
+            item = await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.retrieve(listed.id, {
+              memory_store_id: store.memoryStoreId,
+              view: "full"
+            });
+          } catch (e) {
+            if (isStatus(e, 404))
+              return;
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to fetch memory content", {
+              path: rel,
               memory_store_id: store.memoryStoreId,
               error: String(e)
             });
-            continue;
-          }
-          if (root.removedOnDispose) {
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("removed memory store dir", {
-              dest: root.path,
-              memory_store_id: store.memoryStoreId
-            });
-          }
-        }
-      }
-    };
-    _SessionMemoryStores_client = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_workdir = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_syncIntervalMs = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_syncDeletions = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_log = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_lastSyncAt = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_finished = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_stores = /* @__PURE__ */ new WeakMap(), _SessionMemoryStores_instances = /* @__PURE__ */ new WeakSet(), _SessionMemoryStores_storeRoot = function _SessionMemoryStores_storeRoot2(resource) {
-      if (resource.mount_path) {
-        if (!isPathLegal(resource.mount_path)) {
-          throw new SessionMemoryError(`memory store mount_path is not a clean absolute path: ${JSON.stringify(resource.mount_path)} (memory_store_id=${resource.memory_store_id})`);
-        }
-        return resource.mount_path;
-      }
-      return path4.join(__classPrivateFieldGet(this, _SessionMemoryStores_workdir, "f"), "memory", resource.name || resource.memory_store_id);
-    }, _SessionMemoryStores_scanMarker = async function _SessionMemoryStores_scanMarker2(store) {
-      const local = await store.files.hashtree();
-      const marker = local[MARKER_PATH];
-      delete local[MARKER_PATH];
-      if (marker === markerSha(store.memoryStoreId)) {
-        return { files: local, markerOk: true, distrustReason: null };
-      }
-      return {
-        files: local,
-        markerOk: false,
-        distrustReason: marker !== void 0 ? "the marker file does not match this store" : "the marker file is gone"
-      };
-    }, _SessionMemoryStores_syncStore = async function _SessionMemoryStores_syncStore2(store, final) {
-      try {
-        const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
-        const local = scan.files;
-        if (!scan.markerOk) {
-          if (Object.keys(local).length > 0) {
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; leaving the memory store folder as found and not syncing`, {
-              root: store.files.root().path,
-              memory_store_id: store.memoryStoreId
-            });
             return;
           }
-          await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_recover).call(this, store, "the folder or its marker is gone");
-          return;
-        }
-        if (Object.keys(local).length === 0 && store.baseline.size > 1) {
-          await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_recover).call(this, store, "every memory file is gone at once");
-          return;
-        }
-        const remote = /* @__PURE__ */ new Map();
-        for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId)) {
-          remote.set(rel, item);
-        }
-        const deletes = new DeletePass(__classPrivateFieldGet(this, _SessionMemoryStores_syncDeletions, "f"), Math.max(DELETE_CAP_FLOOR, Math.min(DELETE_CAP_CEILING, Math.floor(store.baseline.size / 4))), final);
-        const pulls = [];
-        const baseline = /* @__PURE__ */ new Map();
-        const paths = [.../* @__PURE__ */ new Set([...remote.keys(), ...Object.keys(local), ...store.baseline.keys()])].sort();
-        for (const rel of paths) {
-          const remoteItem = remote.get(rel);
-          const localSha = local[rel];
-          const baseSha = store.baseline.get(rel);
-          let sha;
-          if (localSha === void 0 && baseSha !== void 0 && remoteItem !== void 0 && remoteItem.content_sha256 === baseSha && !store.readOnly) {
-            sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_corroboratedDelete).call(this, store, rel, remoteItem, baseSha, deletes);
-          } else {
-            sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_syncPath).call(this, store, rel, remoteItem, localSha, pulls);
+          if (await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_write).call(this, store, rel, item.content ?? "")) {
+            store.baseline.set(rel, item.content_sha256);
           }
-          if (sha !== void 0)
-            baseline.set(rel, sha);
-        }
-        store.baseline = baseline;
-        await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_pullAll).call(this, store, pulls);
-        if (deletes.suppressed > 0) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").debug("remote deletes are disabled; locally deleted memories stay on the server", {
-            count: deletes.suppressed,
-            memory_store_id: store.memoryStoreId
-          });
-        }
-        if (deletes.capped > 0) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`delete cap reached: ${deletes.mode === "log_only" ? "would send" : "sent"} ${deletes.attempted} deletes, held ${deletes.capped} for later syncs`, { memory_store_id: store.memoryStoreId });
-        }
-      } catch (e) {
-        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory sync failed", { memory_store_id: store.memoryStoreId, error: String(e) });
-      }
-    }, _SessionMemoryStores_flushStore = async function _SessionMemoryStores_flushStore2(store, signal) {
-      const dirty = /* @__PURE__ */ new Map();
-      const unsent = /* @__PURE__ */ new Set();
-      const push = async () => {
-        if (store.readOnly)
-          return;
-        const scan = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_scanMarker).call(this, store);
-        if (!scan.markerOk) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${scan.distrustReason}; not uploading anything from the memory store folder`, {
-            root: store.files.root().path,
-            memory_store_id: store.memoryStoreId
-          });
-          return;
-        }
-        for (const [rel, sha] of Object.entries(scan.files)) {
-          if (sha !== store.baseline.get(rel) && store.refusedShas.get(rel) !== sha) {
-            dirty.set(rel, sha);
-            unsent.add(rel);
-          }
-        }
-        if (dirty.size === 0 || signal?.aborted)
-          return;
-        const remote = /* @__PURE__ */ new Map();
-        for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId)) {
-          if (signal?.aborted)
-            return;
-          remote.set(rel, item);
-        }
-        const uploads = [];
-        for (const rel of [...dirty.keys()].sort()) {
-          const localSha = dirty.get(rel);
-          const baseSha = store.baseline.get(rel);
-          const existing = remote.get(rel);
-          if (existing !== void 0 && existing.content_sha256 === localSha) {
-            store.baseline.set(rel, existing.content_sha256);
+        };
+        const queue = pulls[Symbol.iterator]();
+        const worker = async () => {
+          for (const [rel, listed] of queue)
+            await pullOne(rel, listed);
+        };
+        await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, pulls.length) }, worker));
+      }, _SessionMemoryStores_uploadAll = /**
+       * Upload the given files, {@link UPLOAD_CONCURRENCY} at a time, taking each
+       * path off `unsent` as its upload returns. No upload starts once `signal`
+       * aborts; the ones already in flight run to completion.
+       */
+      async function _SessionMemoryStores_uploadAll2(store, uploads, unsent, signal) {
+        const queue = uploads[Symbol.iterator]();
+        const worker = async () => {
+          for (const [rel, localSha, existing] of queue) {
+            if (signal?.aborted)
+              return;
+            const sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, existing);
             unsent.delete(rel);
+            if (sha !== void 0)
+              store.baseline.set(rel, sha);
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, uploads.length) }, worker));
+      }, _SessionMemoryStores_listMemories = /**
+       * The store's memories keyed by relative path (the wire path's leading `/`
+       * stripped — `#upload` re-prefixes it) — `basic` view (shas, no content) at
+       * {@link LIST_PAGE_SIZE} per page unless the caller needs `full` pages.
+       * `memory_prefix` rollups and the reserved marker path are skipped.
+       */
+      async function* _SessionMemoryStores_listMemories2(memoryStoreId, view = "basic") {
+        const limit2 = view === "basic" ? LIST_PAGE_SIZE : FULL_LIST_PAGE_SIZE;
+        for await (const item of __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.list(memoryStoreId, { view, limit: limit2 })) {
+          if (item.type !== "memory")
+            continue;
+          const rel = item.path.replace(/^\/+/, "");
+          if (rel === MARKER_PATH) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("the server listed the reserved marker path; skipping", {
+              path: item.path,
+              memory_store_id: memoryStoreId
+            });
             continue;
           }
-          if (existing !== void 0 && existing.content_sha256 !== baseSha) {
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; the flush leaves the remote version", {
-              path: rel,
-              memory_store_id: store.memoryStoreId
-            });
-            unsent.delete(rel);
-            continue;
-          }
-          uploads.push([rel, localSha, existing]);
+          yield [rel, item];
         }
-        await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_uploadAll).call(this, store, uploads, unsent, signal);
-      };
-      try {
-        await settledOrAborted(push(), signal);
-        if (signal?.aborted && unsent.size > 0) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`memory flush cut off part-way; ${unsent.size} of ${dirty.size} changed files had not finished uploading`, { memory_store_id: store.memoryStoreId });
-        }
-      } catch (e) {
-        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory flush failed", { memory_store_id: store.memoryStoreId, error: String(e) });
-      }
-    }, _SessionMemoryStores_recover = /** Rebuild a destroyed folder from the server; sends no deletes, no uploads. */
-    async function _SessionMemoryStores_recover2(store, reason) {
-      __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn(`${reason}; re-downloading the memory store folder instead of syncing`, {
-        root: store.files.root().path,
-        memory_store_id: store.memoryStoreId
-      });
-      await store.files.createRoot();
-      await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_stampAndPull).call(this, store);
-    }, _SessionMemoryStores_stampAndPull = /**
-     * Write the marker, then pull every remote memory. Baseline is cleared
-     * first so a failed write never leaves an entry whose file is not on disk.
-     * Every memory is needed here, so the listing carries the content — pages
-     * cost far fewer round-trips than a request per memory.
-     */
-    async function _SessionMemoryStores_stampAndPull2(store) {
-      store.baseline = /* @__PURE__ */ new Map();
-      store.pendingDeletes.clear();
-      await store.files.put(MARKER_PATH, `version ${MARKER_VERSION}
-${store.memoryStoreId}`);
-      for await (const [rel, item] of __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_listMemories).call(this, store.memoryStoreId, "full")) {
-        if (await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_write).call(this, store, rel, item.content ?? "")) {
-          store.baseline.set(rel, item.content_sha256);
-        }
-      }
-    }, _SessionMemoryStores_syncPath = /**
-     * Reconcile one path. Returns the sha to record in the baseline, or
-     * `undefined` to drop the path from it.
-     *
-     * `pulls` is an output: when the remote version should be written to disk,
-     * this appends `[rel, remote]` to it instead of writing — `rel` is the
-     * file to write, `remote` the listed memory whose content `#pullAll` will
-     * fetch and write there.
-     */
-    async function _SessionMemoryStores_syncPath2(store, rel, remote, localSha, pulls) {
-      const baseSha = store.baseline.get(rel);
-      if (localSha !== void 0) {
-        store.pendingDeletes.delete(rel);
-      }
-      if (!remote) {
-        if (localSha === void 0) {
-          store.pendingDeletes.delete(rel);
-          return void 0;
-        }
-        if (baseSha !== void 0) {
-          if (localSha === baseSha) {
-            const fresh = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_removeLocal).call(this, store, rel, baseSha);
-            if (fresh === void 0)
-              return void 0;
-            if (fresh === baseSha)
-              return baseSha;
-            localSha = fresh;
-          }
-          if (store.readOnly) {
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted remotely but edited locally; keeping the file, which a read-only store cannot push", { path: rel, memory_store_id: store.memoryStoreId });
-          } else if (store.refusedShas.get(rel) !== localSha) {
-            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("memory deleted remotely but edited locally; re-creating it from the file", {
-              path: rel,
-              memory_store_id: store.memoryStoreId
-            });
-          }
-        }
-        if (store.readOnly)
-          return void 0;
-        if (store.refusedShas.get(rel) === localSha)
-          return void 0;
-        return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, void 0);
-      }
-      const remoteSha = remote.content_sha256;
-      const remoteChanged = remoteSha !== baseSha;
-      const locallyEdited = localSha !== void 0 && localSha !== baseSha && localSha !== remoteSha;
-      const localChanged = !store.readOnly && locallyEdited;
-      if (localSha === void 0 && baseSha !== void 0) {
-        if (remoteChanged) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted locally but changed remotely; restoring the remote version", {
-            path: rel,
-            memory_store_id: store.memoryStoreId
-          });
-          store.pendingDeletes.delete(rel);
-          pulls.push([rel, remote]);
-        }
-        return baseSha;
-      }
-      if (remoteChanged) {
-        if (localSha === remoteSha)
-          return remoteSha;
-        if (locallyEdited) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; keeping the remote version", {
-            path: rel,
-            memory_store_id: store.memoryStoreId
-          });
-        }
-        pulls.push([rel, remote]);
-        return baseSha;
-      }
-      if (localChanged) {
-        if (store.refusedShas.get(rel) === localSha)
-          return remoteSha;
-        return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, remote) ?? remoteSha;
-      }
-      return remoteSha;
-    }, _SessionMemoryStores_removeLocal = /**
-     * Remove the file for a memory the server no longer has, if it still holds
-     * `expectSha`. Returns `undefined` when the file is gone from disk,
-     * `expectSha` when it must stay in the baseline (I/O error), or the file's
-     * fresh sha when it was edited since the scan.
-     */
-    async function _SessionMemoryStores_removeLocal2(store, rel, expectSha) {
-      let freshSha;
-      try {
-        freshSha = await store.files.hashFile(rel);
-      } catch (e) {
-        if (!(e instanceof FileStoreError) && !isErrno(e))
-          throw e;
-        return expectSha;
-      }
-      if (freshSha === null)
-        return void 0;
-      if (freshSha !== expectSha)
-        return freshSha;
-      try {
-        await store.files.remove(rel);
-      } catch (e) {
-        if (!(e instanceof FileStoreError) && !isErrno(e))
-          throw e;
-        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to remove memory deleted remotely", {
-          path: rel,
-          memory_store_id: store.memoryStoreId,
-          error: String(e)
-        });
-        return expectSha;
-      }
-      return void 0;
-    }, _SessionMemoryStores_write = /**
-     * Write a memory's content to disk; `false` (and a warning) on failure.
-     *
-     * A `..` component in the wire path reaches here as {@link FileStoreError} —
-     * that is the escape guard.
-     */
-    async function _SessionMemoryStores_write2(store, rel, content) {
-      try {
-        await store.files.put(rel, content);
-      } catch (e) {
-        if (!(e instanceof FileStoreError) && !isErrno(e))
-          throw e;
-        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to write memory", {
-          path: rel,
-          memory_store_id: store.memoryStoreId,
-          error: String(e)
-        });
-        return false;
-      }
-      return true;
-    }, _SessionMemoryStores_pullAll = /**
-     * Fetch and write the given memories, {@link FETCH_CONCURRENCY} at a time.
-     *
-     * The sync's content pass: the listing carried no content, so each memory
-     * is fetched individually and written as it arrives. On success the path's
-     * baseline advances; on a failed fetch or write the old entry stays and the
-     * next sync retries. A 404 means the memory was deleted after the listing —
-     * the next sync reconciles it.
-     */
-    async function _SessionMemoryStores_pullAll2(store, pulls) {
-      if (pulls.length === 0)
-        return;
-      const pullOne = async (rel, listed) => {
-        let item;
+      }, _SessionMemoryStores_upload = /**
+       * Push one local file; `undefined` keeps the old baseline so the next pass retries.
+       *
+       * A refusal the server would repeat (400/413, the utf-8 gate) enters
+       * `refusedShas`: warned once, retried only after the file changes.
+       */
+      async function _SessionMemoryStores_upload2(store, rel, localSha, existing) {
         try {
-          item = await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.retrieve(listed.id, {
+          const data = await store.files.get(rel);
+          if (data === null)
+            return void 0;
+          const content = decodeUTF8(data);
+          const item = existing ? await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.update(existing.id, {
             memory_store_id: store.memoryStoreId,
-            view: "full"
+            content,
+            precondition: { type: "content_sha256", content_sha256: existing.content_sha256 }
+          }) : await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.create(store.memoryStoreId, {
+            path: "/" + rel,
+            content
+          });
+          store.refusedShas.delete(rel);
+          return item.content_sha256;
+        } catch (e) {
+          if (existing && isStatus(e, 404)) {
+            return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload2).call(this, store, rel, localSha, void 0);
+          }
+          const permanent = e instanceof FileStoreError || isStatus(e, 400) || isStatus(e, 413);
+          if (existing && isStatus(e, 409)) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; the upload was refused and the local edit loses", {
+              path: rel,
+              memory_store_id: store.memoryStoreId
+            });
+          } else if (permanent && localSha !== void 0) {
+            store.refusedShas.set(rel, localSha);
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("the server rejected this memory file, so it stays un-synced until its content changes", { path: rel, memory_store_id: store.memoryStoreId, rejection: String(e) });
+          } else {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to upload memory", {
+              path: rel,
+              memory_store_id: store.memoryStoreId,
+              error: String(e)
+            });
+          }
+          return void 0;
+        }
+      }, _SessionMemoryStores_corroboratedDelete = /** Send the server delete only after the wait, the cap, and a fresh re-check all clear. */
+      async function _SessionMemoryStores_corroboratedDelete2(store, rel, remote, baseSha, deletes) {
+        if (deletes.mode === "disabled") {
+          deletes.suppressed++;
+          return baseSha;
+        }
+        let firstAbsent = store.pendingDeletes.get(rel);
+        if (firstAbsent === void 0) {
+          firstAbsent = Date.now();
+          store.pendingDeletes.set(rel, firstAbsent);
+        }
+        if (!deletes.waiveWindow && Date.now() - firstAbsent < DELETE_CORROBORATION_MS) {
+          return baseSha;
+        }
+        let markerOk;
+        let stillAbsent;
+        try {
+          markerOk = await store.files.hashFile(MARKER_PATH) === markerSha(store.memoryStoreId);
+          stillAbsent = await store.files.hashFile(rel) === null;
+        } catch (e) {
+          if (!(e instanceof FileStoreError) && !isErrno(e))
+            throw e;
+          markerOk = stillAbsent = false;
+        }
+        if (!markerOk)
+          return baseSha;
+        if (!stillAbsent) {
+          store.pendingDeletes.delete(rel);
+          return baseSha;
+        }
+        if (!deletes.takeSlot())
+          return baseSha;
+        if (deletes.mode === "log_only") {
+          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("log-only: sync would delete this memory on the server", {
+            path: rel,
+            memory_store_id: store.memoryStoreId
+          });
+          return baseSha;
+        }
+        const sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_deleteRemote).call(this, store, rel, remote, baseSha);
+        if (sha === void 0) {
+          store.pendingDeletes.delete(rel);
+        }
+        return sha;
+      }, _SessionMemoryStores_deleteRemote = async function _SessionMemoryStores_deleteRemote2(store, rel, remote, baseSha) {
+        try {
+          await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.delete(remote.id, {
+            memory_store_id: store.memoryStoreId,
+            expected_content_sha256: baseSha
           });
         } catch (e) {
           if (isStatus(e, 404))
-            return;
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to fetch memory content", {
-            path: rel,
-            memory_store_id: store.memoryStoreId,
-            error: String(e)
-          });
-          return;
+            return void 0;
+          if (isStatus(e, 409) || isStatus(e, 412)) {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted locally but changed remotely; keeping the remote version", {
+              path: rel,
+              memory_store_id: store.memoryStoreId
+            });
+          } else {
+            __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to delete memory", {
+              path: rel,
+              memory_store_id: store.memoryStoreId,
+              error: String(e)
+            });
+          }
+          return baseSha;
         }
-        if (await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_write).call(this, store, rel, item.content ?? "")) {
-          store.baseline.set(rel, item.content_sha256);
-        }
-      };
-      const queue = pulls[Symbol.iterator]();
-      const worker = async () => {
-        for (const [rel, listed] of queue)
-          await pullOne(rel, listed);
-      };
-      await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, pulls.length) }, worker));
-    }, _SessionMemoryStores_uploadAll = /**
-     * Upload the given files, {@link UPLOAD_CONCURRENCY} at a time, taking each
-     * path off `unsent` as its upload returns. No upload starts once `signal`
-     * aborts; the ones already in flight run to completion.
-     */
-    async function _SessionMemoryStores_uploadAll2(store, uploads, unsent, signal) {
-      const queue = uploads[Symbol.iterator]();
-      const worker = async () => {
-        for (const [rel, localSha, existing] of queue) {
-          if (signal?.aborted)
-            return;
-          const sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload).call(this, store, rel, localSha, existing);
-          unsent.delete(rel);
-          if (sha !== void 0)
-            store.baseline.set(rel, sha);
-        }
-      };
-      await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, uploads.length) }, worker));
-    }, _SessionMemoryStores_listMemories = /**
-     * The store's memories keyed by relative path (the wire path's leading `/`
-     * stripped — `#upload` re-prefixes it) — `basic` view (shas, no content) at
-     * {@link LIST_PAGE_SIZE} per page unless the caller needs `full` pages.
-     * `memory_prefix` rollups and the reserved marker path are skipped.
-     */
-    async function* _SessionMemoryStores_listMemories2(memoryStoreId, view = "basic") {
-      const limit2 = view === "basic" ? LIST_PAGE_SIZE : FULL_LIST_PAGE_SIZE;
-      for await (const item of __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.list(memoryStoreId, { view, limit: limit2 })) {
-        if (item.type !== "memory")
-          continue;
-        const rel = item.path.replace(/^\/+/, "");
-        if (rel === MARKER_PATH) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("the server listed the reserved marker path; skipping", {
-            path: item.path,
-            memory_store_id: memoryStoreId
-          });
-          continue;
-        }
-        yield [rel, item];
-      }
-    }, _SessionMemoryStores_upload = /**
-     * Push one local file; `undefined` keeps the old baseline so the next pass retries.
-     *
-     * A refusal the server would repeat (400/413, the utf-8 gate) enters
-     * `refusedShas`: warned once, retried only after the file changes.
-     */
-    async function _SessionMemoryStores_upload2(store, rel, localSha, existing) {
-      try {
-        const data = await store.files.get(rel);
-        if (data === null)
-          return void 0;
-        const content = decodeUTF8(data);
-        const item = existing ? await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.update(existing.id, {
-          memory_store_id: store.memoryStoreId,
-          content,
-          precondition: { type: "content_sha256", content_sha256: existing.content_sha256 }
-        }) : await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.create(store.memoryStoreId, {
-          path: "/" + rel,
-          content
-        });
-        store.refusedShas.delete(rel);
-        return item.content_sha256;
-      } catch (e) {
-        if (existing && isStatus(e, 404)) {
-          return await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_upload2).call(this, store, rel, localSha, void 0);
-        }
-        const permanent = e instanceof FileStoreError || isStatus(e, 400) || isStatus(e, 413);
-        if (existing && isStatus(e, 409)) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory changed both locally and remotely; the upload was refused and the local edit loses", {
-            path: rel,
-            memory_store_id: store.memoryStoreId
-          });
-        } else if (permanent && localSha !== void 0) {
-          store.refusedShas.set(rel, localSha);
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("the server rejected this memory file, so it stays un-synced until its content changes", { path: rel, memory_store_id: store.memoryStoreId, rejection: String(e) });
-        } else {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to upload memory", {
-            path: rel,
-            memory_store_id: store.memoryStoreId,
-            error: String(e)
-          });
-        }
+        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("propagated local deletion", { path: rel, memory_store_id: store.memoryStoreId });
         return void 0;
-      }
-    }, _SessionMemoryStores_corroboratedDelete = /** Send the server delete only after the wait, the cap, and a fresh re-check all clear. */
-    async function _SessionMemoryStores_corroboratedDelete2(store, rel, remote, baseSha, deletes) {
-      if (deletes.mode === "disabled") {
-        deletes.suppressed++;
-        return baseSha;
-      }
-      let firstAbsent = store.pendingDeletes.get(rel);
-      if (firstAbsent === void 0) {
-        firstAbsent = Date.now();
-        store.pendingDeletes.set(rel, firstAbsent);
-      }
-      if (!deletes.waiveWindow && Date.now() - firstAbsent < DELETE_CORROBORATION_MS) {
-        return baseSha;
-      }
-      let markerOk;
-      let stillAbsent;
-      try {
-        markerOk = await store.files.hashFile(MARKER_PATH) === markerSha(store.memoryStoreId);
-        stillAbsent = await store.files.hashFile(rel) === null;
-      } catch (e) {
-        if (!(e instanceof FileStoreError) && !isErrno(e))
-          throw e;
-        markerOk = stillAbsent = false;
-      }
-      if (!markerOk)
-        return baseSha;
-      if (!stillAbsent) {
-        store.pendingDeletes.delete(rel);
-        return baseSha;
-      }
-      if (!deletes.takeSlot())
-        return baseSha;
-      if (deletes.mode === "log_only") {
-        __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("log-only: sync would delete this memory on the server", {
-          path: rel,
-          memory_store_id: store.memoryStoreId
-        });
-        return baseSha;
-      }
-      const sha = await __classPrivateFieldGet(this, _SessionMemoryStores_instances, "m", _SessionMemoryStores_deleteRemote).call(this, store, rel, remote, baseSha);
-      if (sha === void 0) {
-        store.pendingDeletes.delete(rel);
-      }
-      return sha;
-    }, _SessionMemoryStores_deleteRemote = async function _SessionMemoryStores_deleteRemote2(store, rel, remote, baseSha) {
-      try {
-        await __classPrivateFieldGet(this, _SessionMemoryStores_client, "f").beta.memoryStores.memories.delete(remote.id, {
-          memory_store_id: store.memoryStoreId,
-          expected_content_sha256: baseSha
-        });
-      } catch (e) {
-        if (isStatus(e, 404))
-          return void 0;
-        if (isStatus(e, 409) || isStatus(e, 412)) {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("memory deleted locally but changed remotely; keeping the remote version", {
-            path: rel,
-            memory_store_id: store.memoryStoreId
-          });
-        } else {
-          __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").warn("failed to delete memory", {
-            path: rel,
-            memory_store_id: store.memoryStoreId,
-            error: String(e)
-          });
-        }
-        return baseSha;
-      }
-      __classPrivateFieldGet(this, _SessionMemoryStores_log, "f").info("propagated local deletion", { path: rel, memory_store_id: store.memoryStoreId });
-      return void 0;
-    };
+      };
+      return SessionMemoryStores2;
+    })();
   }
 });
 
@@ -24737,65 +24749,68 @@ ${out}`;
       };
       return BashSession2;
     })();
-    LineRangeCollector = class {
-      constructor(filePath, startLine, endLine, limit2) {
-        _LineRangeCollector_instances.add(this);
-        _LineRangeCollector_filePath.set(this, void 0);
-        _LineRangeCollector_startLine.set(this, void 0);
-        _LineRangeCollector_endLine.set(this, void 0);
-        _LineRangeCollector_start.set(this, void 0);
-        _LineRangeCollector_end.set(this, void 0);
-        _LineRangeCollector_limit.set(this, void 0);
-        _LineRangeCollector_line.set(this, 0);
-        _LineRangeCollector_collected.set(this, []);
-        _LineRangeCollector_collectedBytes.set(this, 0);
-        __classPrivateFieldSet(this, _LineRangeCollector_filePath, filePath, "f");
-        __classPrivateFieldSet(this, _LineRangeCollector_startLine, startLine, "f");
-        __classPrivateFieldSet(this, _LineRangeCollector_endLine, endLine, "f");
-        __classPrivateFieldSet(this, _LineRangeCollector_start, Math.max(0, startLine - 1), "f");
-        __classPrivateFieldSet(this, _LineRangeCollector_end, endLine > 0 ? endLine : Infinity, "f");
-        __classPrivateFieldSet(this, _LineRangeCollector_limit, limit2, "f");
-      }
-      rangeIsEmpty() {
-        return __classPrivateFieldGet(this, _LineRangeCollector_end, "f") <= __classPrivateFieldGet(this, _LineRangeCollector_start, "f");
-      }
-      rangeIsCollected() {
-        return __classPrivateFieldGet(this, _LineRangeCollector_line, "f") >= __classPrivateFieldGet(this, _LineRangeCollector_end, "f");
-      }
-      collectFrom(chunk) {
-        var _a4;
-        let lineStart = 0;
-        while (lineStart < chunk.length && !this.rangeIsCollected()) {
-          const newline = chunk.indexOf(10, lineStart);
-          const lineEnd = newline < 0 ? chunk.length : newline;
-          if (__classPrivateFieldGet(this, _LineRangeCollector_line, "f") >= __classPrivateFieldGet(this, _LineRangeCollector_start, "f")) {
-            __classPrivateFieldGet(this, _LineRangeCollector_instances, "m", _LineRangeCollector_collect).call(this, chunk.subarray(lineStart, lineEnd), newline >= 0);
+    LineRangeCollector = /* @__PURE__ */ (() => {
+      class LineRangeCollector2 {
+        constructor(filePath, startLine, endLine, limit2) {
+          _LineRangeCollector_instances.add(this);
+          _LineRangeCollector_filePath.set(this, void 0);
+          _LineRangeCollector_startLine.set(this, void 0);
+          _LineRangeCollector_endLine.set(this, void 0);
+          _LineRangeCollector_start.set(this, void 0);
+          _LineRangeCollector_end.set(this, void 0);
+          _LineRangeCollector_limit.set(this, void 0);
+          _LineRangeCollector_line.set(this, 0);
+          _LineRangeCollector_collected.set(this, []);
+          _LineRangeCollector_collectedBytes.set(this, 0);
+          __classPrivateFieldSet(this, _LineRangeCollector_filePath, filePath, "f");
+          __classPrivateFieldSet(this, _LineRangeCollector_startLine, startLine, "f");
+          __classPrivateFieldSet(this, _LineRangeCollector_endLine, endLine, "f");
+          __classPrivateFieldSet(this, _LineRangeCollector_start, Math.max(0, startLine - 1), "f");
+          __classPrivateFieldSet(this, _LineRangeCollector_end, endLine > 0 ? endLine : Infinity, "f");
+          __classPrivateFieldSet(this, _LineRangeCollector_limit, limit2, "f");
+        }
+        rangeIsEmpty() {
+          return __classPrivateFieldGet(this, _LineRangeCollector_end, "f") <= __classPrivateFieldGet(this, _LineRangeCollector_start, "f");
+        }
+        rangeIsCollected() {
+          return __classPrivateFieldGet(this, _LineRangeCollector_line, "f") >= __classPrivateFieldGet(this, _LineRangeCollector_end, "f");
+        }
+        collectFrom(chunk) {
+          var _a4;
+          let lineStart = 0;
+          while (lineStart < chunk.length && !this.rangeIsCollected()) {
+            const newline = chunk.indexOf(10, lineStart);
+            const lineEnd = newline < 0 ? chunk.length : newline;
+            if (__classPrivateFieldGet(this, _LineRangeCollector_line, "f") >= __classPrivateFieldGet(this, _LineRangeCollector_start, "f")) {
+              __classPrivateFieldGet(this, _LineRangeCollector_instances, "m", _LineRangeCollector_collect).call(this, chunk.subarray(lineStart, lineEnd), newline >= 0);
+            }
+            if (newline < 0)
+              break;
+            __classPrivateFieldSet(this, _LineRangeCollector_line, (_a4 = __classPrivateFieldGet(this, _LineRangeCollector_line, "f"), _a4++, _a4), "f");
+            lineStart = newline + 1;
           }
-          if (newline < 0)
-            break;
-          __classPrivateFieldSet(this, _LineRangeCollector_line, (_a4 = __classPrivateFieldGet(this, _LineRangeCollector_line, "f"), _a4++, _a4), "f");
-          lineStart = newline + 1;
+        }
+        text() {
+          return Buffer.concat(__classPrivateFieldGet(this, _LineRangeCollector_collected, "f"), __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f")).toString("utf8");
         }
       }
-      text() {
-        return Buffer.concat(__classPrivateFieldGet(this, _LineRangeCollector_collected, "f"), __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f")).toString("utf8");
-      }
-    };
-    _LineRangeCollector_filePath = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_startLine = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_endLine = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_start = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_end = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_limit = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_line = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_collected = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_collectedBytes = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_instances = /* @__PURE__ */ new WeakSet(), _LineRangeCollector_collect = function _LineRangeCollector_collect2(lineBytes, newlineTerminated) {
-      __classPrivateFieldGet(this, _LineRangeCollector_collected, "f").push(lineBytes);
-      __classPrivateFieldSet(this, _LineRangeCollector_collectedBytes, __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") + lineBytes.length, "f");
-      if (newlineTerminated && __classPrivateFieldGet(this, _LineRangeCollector_line, "f") + 1 < __classPrivateFieldGet(this, _LineRangeCollector_end, "f")) {
-        __classPrivateFieldGet(this, _LineRangeCollector_collected, "f").push(NEWLINE);
-        __classPrivateFieldSet(this, _LineRangeCollector_collectedBytes, __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") + NEWLINE.length, "f");
-      }
-      if (__classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") > __classPrivateFieldGet(this, _LineRangeCollector_limit, "f"))
-        throw __classPrivateFieldGet(this, _LineRangeCollector_instances, "m", _LineRangeCollector_overLimitError).call(this);
-    }, _LineRangeCollector_overLimitError = function _LineRangeCollector_overLimitError2() {
-      if (__classPrivateFieldGet(this, _LineRangeCollector_end, "f") - __classPrivateFieldGet(this, _LineRangeCollector_start, "f") === 1) {
-        return new ToolError(`read: line ${__classPrivateFieldGet(this, _LineRangeCollector_start, "f") + 1} of ${__classPrivateFieldGet(this, _LineRangeCollector_filePath, "f")} alone exceeds ${__classPrivateFieldGet(this, _LineRangeCollector_limit, "f")}-byte limit. The read tool cannot return part of a line, so view_range cannot narrow this further.`);
-      }
-      return new ToolError(`read: view_range [${__classPrivateFieldGet(this, _LineRangeCollector_startLine, "f")}, ${__classPrivateFieldGet(this, _LineRangeCollector_endLine, "f")}] of ${__classPrivateFieldGet(this, _LineRangeCollector_filePath, "f")} exceeds ${__classPrivateFieldGet(this, _LineRangeCollector_limit, "f")}-byte limit. Narrow the view_range to read a smaller portion.`);
-    };
+      _LineRangeCollector_filePath = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_startLine = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_endLine = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_start = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_end = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_limit = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_line = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_collected = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_collectedBytes = /* @__PURE__ */ new WeakMap(), _LineRangeCollector_instances = /* @__PURE__ */ new WeakSet(), _LineRangeCollector_collect = function _LineRangeCollector_collect2(lineBytes, newlineTerminated) {
+        __classPrivateFieldGet(this, _LineRangeCollector_collected, "f").push(lineBytes);
+        __classPrivateFieldSet(this, _LineRangeCollector_collectedBytes, __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") + lineBytes.length, "f");
+        if (newlineTerminated && __classPrivateFieldGet(this, _LineRangeCollector_line, "f") + 1 < __classPrivateFieldGet(this, _LineRangeCollector_end, "f")) {
+          __classPrivateFieldGet(this, _LineRangeCollector_collected, "f").push(NEWLINE);
+          __classPrivateFieldSet(this, _LineRangeCollector_collectedBytes, __classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") + NEWLINE.length, "f");
+        }
+        if (__classPrivateFieldGet(this, _LineRangeCollector_collectedBytes, "f") > __classPrivateFieldGet(this, _LineRangeCollector_limit, "f"))
+          throw __classPrivateFieldGet(this, _LineRangeCollector_instances, "m", _LineRangeCollector_overLimitError).call(this);
+      }, _LineRangeCollector_overLimitError = function _LineRangeCollector_overLimitError2() {
+        if (__classPrivateFieldGet(this, _LineRangeCollector_end, "f") - __classPrivateFieldGet(this, _LineRangeCollector_start, "f") === 1) {
+          return new ToolError(`read: line ${__classPrivateFieldGet(this, _LineRangeCollector_start, "f") + 1} of ${__classPrivateFieldGet(this, _LineRangeCollector_filePath, "f")} alone exceeds ${__classPrivateFieldGet(this, _LineRangeCollector_limit, "f")}-byte limit. The read tool cannot return part of a line, so view_range cannot narrow this further.`);
+        }
+        return new ToolError(`read: view_range [${__classPrivateFieldGet(this, _LineRangeCollector_startLine, "f")}, ${__classPrivateFieldGet(this, _LineRangeCollector_endLine, "f")}] of ${__classPrivateFieldGet(this, _LineRangeCollector_filePath, "f")} exceeds ${__classPrivateFieldGet(this, _LineRangeCollector_limit, "f")}-byte limit. Narrow the view_range to read a smaller portion.`);
+      };
+      return LineRangeCollector2;
+    })();
     WALK_MAX_DEPTH = 40;
     WALK_MAX_ENTRIES = 5e4;
   }
@@ -26497,33 +26512,33 @@ var init_parser = __esm({
           continue;
         }
         if (char === '"') {
-          let value = "";
+          const start = current + 1;
+          let end = start;
           let danglingQuote = false;
-          char = input2[++current];
-          while (char !== '"') {
-            if (current === input2.length) {
+          while (true) {
+            end = input2.indexOf('"', end);
+            if (end === -1) {
               danglingQuote = true;
               break;
             }
-            if (char === "\\") {
-              current++;
-              if (current === input2.length) {
-                danglingQuote = true;
-                break;
-              }
-              value += char + input2[current];
-              char = input2[++current];
-            } else {
-              value += char;
-              char = input2[++current];
+            let backslashes = 0;
+            let i = end - 1;
+            while (i >= start && input2[i] === "\\") {
+              backslashes++;
+              i--;
             }
+            if (backslashes % 2 === 0)
+              break;
+            end++;
           }
-          char = input2[++current];
-          if (!danglingQuote) {
+          if (danglingQuote) {
+            current = input2.length;
+          } else {
             tokens.push({
               type: "string",
-              value
+              value: input2.slice(start, end)
             });
+            current = end + 1;
           }
           continue;
         }
@@ -26547,7 +26562,8 @@ var init_parser = __esm({
           }
           tokens.push({
             type: "number",
-            value
+            value,
+            unterminated: current === input2.length
           });
           continue;
         }
@@ -26577,37 +26593,45 @@ var init_parser = __esm({
       return tokens;
     };
     strip = (tokens) => {
-      if (tokens.length === 0) {
-        return tokens;
-      }
-      let lastToken = tokens[tokens.length - 1];
-      switch (lastToken.type) {
-        case "separator":
-          tokens = tokens.slice(0, tokens.length - 1);
-          return strip(tokens);
-          break;
-        case "number":
-          let lastCharacterOfLastToken = lastToken.value[lastToken.value.length - 1];
-          if (lastCharacterOfLastToken === "." || lastCharacterOfLastToken === "-" || lastCharacterOfLastToken === "+" || lastCharacterOfLastToken === "e" || lastCharacterOfLastToken === "E") {
-            tokens = tokens.slice(0, tokens.length - 1);
-            return strip(tokens);
+      let open2 = [];
+      for (const token of tokens) {
+        if (token.type === "brace" || token.type === "paren") {
+          if (token.value === "{" || token.value === "[") {
+            open2.push(token.value);
+          } else {
+            open2.pop();
           }
-        case "string":
-          let tokenBeforeTheLastToken = tokens[tokens.length - 2];
-          if (tokenBeforeTheLastToken?.type === "delimiter") {
-            tokens = tokens.slice(0, tokens.length - 1);
-            return strip(tokens);
-          } else if (tokenBeforeTheLastToken?.type === "brace" && tokenBeforeTheLastToken.value === "{") {
-            tokens = tokens.slice(0, tokens.length - 1);
-            return strip(tokens);
-          }
-          break;
-        case "delimiter":
-          tokens = tokens.slice(0, tokens.length - 1);
-          return strip(tokens);
-          break;
+        }
       }
-      return tokens;
+      let innermostOpenBracket = open2[open2.length - 1];
+      let length = tokens.length;
+      let JSON_NUMBER = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?$/;
+      while (length > 0) {
+        let lastToken = tokens[length - 1];
+        switch (lastToken.type) {
+          case "separator":
+            length--;
+            continue;
+          case "number":
+            if (lastToken.unterminated || !JSON_NUMBER.test(lastToken.value)) {
+              length--;
+              continue;
+            }
+            break;
+          case "string":
+            let tokenBeforeTheLastToken = tokens[length - 2];
+            if (innermostOpenBracket === "{" && (tokenBeforeTheLastToken?.type === "delimiter" || tokenBeforeTheLastToken?.type === "brace" && tokenBeforeTheLastToken.value === "{")) {
+              length--;
+              continue;
+            }
+            break;
+          case "delimiter":
+            length--;
+            break;
+        }
+        break;
+      }
+      return tokens.slice(0, length);
     };
     unstrip = (tokens) => {
       let tail = [];
@@ -27333,34 +27357,123 @@ var init_BetaMessageStream = __esm({
   }
 });
 
-// node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs
-var DEFAULT_TOKEN_THRESHOLD, DEFAULT_SUMMARY_PROMPT;
-var init_CompactionControl = __esm({
-  "node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs"() {
-    DEFAULT_TOKEN_THRESHOLD = 1e5;
-    DEFAULT_SUMMARY_PROMPT = `You have been working on the task described above but have not yet completed it. Write a continuation summary that will allow you (or another instance of yourself) to resume work efficiently in a future context window where the conversation history will be replaced with this summary. Your summary should be structured, concise, and actionable. Include:
-1. Task Overview
-The user's core request and success criteria
-Any clarifications or constraints they specified
-2. Current State
-What has been completed so far
-Files created, modified, or analyzed (with paths if relevant)
-Key outputs or artifacts produced
-3. Important Discoveries
-Technical constraints or requirements uncovered
-Decisions made and their rationale
-Errors encountered and how they were resolved
-What approaches were tried that didn't work (and why)
-4. Next Steps
-Specific actions needed to complete the task
-Any blockers or open questions to resolve
-Priority order if multiple steps remain
-5. Context to Preserve
-User preferences or style requirements
-Domain-specific details that aren't obvious
-Any promises made to the user
-Be concise but complete\u2014err on the side of including information that would prevent duplicate work or repeated mistakes. Write in a way that enables immediate resumption of the task.
-Wrap your summary in <summary></summary> tags.`;
+// node_modules/@anthropic-ai/sdk/lib/internal/BetaToolRunnerStream.mjs
+var _BetaToolRunnerStream_instances, _BetaToolRunnerStream_onToolCall, _BetaToolRunnerStream_emitted, _BetaToolRunnerStream_readers, _BetaToolRunnerStream_toolCalls, _BetaToolRunnerStream_closed, _BetaToolRunnerStream_ready, _BetaToolRunnerStream_fallback, _BetaToolRunnerStream_track, _BetaToolRunnerStream_release, _BetaToolRunnerStream_removeReader, BetaToolRunnerStream;
+var init_BetaToolRunnerStream = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/internal/BetaToolRunnerStream.mjs"() {
+    init_tslib();
+    init_stainless_helper_header();
+    init_BetaMessageStream();
+    BetaToolRunnerStream = /* @__PURE__ */ (() => {
+      class BetaToolRunnerStream2 extends BetaMessageStream {
+        constructor(params, onToolCall) {
+          super(params);
+          _BetaToolRunnerStream_instances.add(this);
+          _BetaToolRunnerStream_onToolCall.set(this, void 0);
+          _BetaToolRunnerStream_emitted.set(this, 0);
+          _BetaToolRunnerStream_readers.set(this, []);
+          _BetaToolRunnerStream_toolCalls.set(this, []);
+          _BetaToolRunnerStream_closed.set(this, void 0);
+          _BetaToolRunnerStream_ready.set(this, []);
+          _BetaToolRunnerStream_fallback.set(this, false);
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_onToolCall, onToolCall, "f");
+        }
+        /** The `tool_use` blocks that have finished streaming, in the model's order */
+        get toolCalls() {
+          return __classPrivateFieldGet(this, _BetaToolRunnerStream_toolCalls, "f");
+        }
+        /** Sends the request as `client.beta.messages.stream()` does. */
+        static start(messages, params, options, onToolCall) {
+          const stream2 = new BetaToolRunnerStream2({ ...params, stream: true }, onToolCall);
+          for (const message of params.messages) {
+            stream2._addMessageParam(message);
+          }
+          stream2._run(() => stream2._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, [STAINLESS_HELPER_METHOD_HEADER]: "stream" } }));
+          return stream2;
+        }
+        _emit(event, ...args2) {
+          var _a4;
+          if (event !== "streamEvent" || this.ended) {
+            super._emit(event, ...args2);
+            return;
+          }
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_emitted, (_a4 = __classPrivateFieldGet(this, _BetaToolRunnerStream_emitted, "f"), _a4++, _a4), "f");
+          const [streamEvent, snapshot] = args2;
+          const block = streamEvent.type === "content_block_stop" ? snapshot.content[streamEvent.index] : void 0;
+          const closed = block?.type === "tool_use" ? block : void 0;
+          if (closed) {
+            __classPrivateFieldGet(this, _BetaToolRunnerStream_toolCalls, "f").push(closed);
+          }
+          super._emit(event, ...args2);
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_track).call(this, streamEvent, closed);
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_release).call(this);
+        }
+        [(_BetaToolRunnerStream_onToolCall = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_emitted = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_readers = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_toolCalls = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_closed = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_ready = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_fallback = /* @__PURE__ */ new WeakMap(), _BetaToolRunnerStream_instances = /* @__PURE__ */ new WeakSet(), Symbol.asyncIterator)]() {
+          const iterator = super[Symbol.asyncIterator]();
+          const reader = { handled: __classPrivateFieldGet(this, _BetaToolRunnerStream_emitted, "f") };
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_readers, "f").push(reader);
+          let holdsEvent = false;
+          return {
+            next: async () => {
+              if (holdsEvent) {
+                holdsEvent = false;
+                reader.handled++;
+                __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_release).call(this);
+              }
+              try {
+                const result = await iterator.next();
+                holdsEvent = !result.done;
+                if (result.done) {
+                  __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_removeReader).call(this, reader);
+                }
+                return result;
+              } catch (error62) {
+                __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_removeReader).call(this, reader);
+                throw error62;
+              }
+            },
+            return: async () => {
+              const result = iterator.return?.();
+              __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_removeReader).call(this, reader);
+              return await result ?? { value: void 0, done: true };
+            }
+          };
+        }
+      }
+      _BetaToolRunnerStream_track = function _BetaToolRunnerStream_track2(event, closed) {
+        if (__classPrivateFieldGet(this, _BetaToolRunnerStream_fallback, "f")) {
+          return;
+        }
+        if (event.type === "content_block_start" && event.content_block.type === "fallback") {
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_fallback, true, "f");
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_closed, void 0, "f");
+          return;
+        }
+        const movedOn = event.type === "content_block_start" || event.type === "message_delta" && event.delta.stop_reason === "tool_use";
+        if (__classPrivateFieldGet(this, _BetaToolRunnerStream_closed, "f") && movedOn) {
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_ready, "f").push({ toolUse: __classPrivateFieldGet(this, _BetaToolRunnerStream_closed, "f"), event: __classPrivateFieldGet(this, _BetaToolRunnerStream_emitted, "f") });
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_closed, void 0, "f");
+        }
+        if (closed) {
+          __classPrivateFieldSet(this, _BetaToolRunnerStream_closed, closed, "f");
+        }
+      }, _BetaToolRunnerStream_release = function _BetaToolRunnerStream_release2() {
+        if (this.errored || this.controller.signal.aborted) {
+          return;
+        }
+        const handled = Math.min(__classPrivateFieldGet(this, _BetaToolRunnerStream_emitted, "f"), ...__classPrivateFieldGet(this, _BetaToolRunnerStream_readers, "f").map((reader) => reader.handled));
+        while (__classPrivateFieldGet(this, _BetaToolRunnerStream_ready, "f")[0] && __classPrivateFieldGet(this, _BetaToolRunnerStream_ready, "f")[0].event <= handled) {
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_onToolCall, "f").call(this, __classPrivateFieldGet(this, _BetaToolRunnerStream_ready, "f").shift().toolUse);
+        }
+      }, _BetaToolRunnerStream_removeReader = function _BetaToolRunnerStream_removeReader2(reader) {
+        const index = __classPrivateFieldGet(this, _BetaToolRunnerStream_readers, "f").indexOf(reader);
+        if (index >= 0) {
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_readers, "f").splice(index, 1);
+          __classPrivateFieldGet(this, _BetaToolRunnerStream_instances, "m", _BetaToolRunnerStream_release).call(this);
+        }
+      };
+      return BetaToolRunnerStream2;
+    })();
   }
 });
 
@@ -27370,12 +27483,36 @@ function rejectCompactionParam(params) {
     throw new AnthropicError("`compaction` cannot be set on a tool runner: every request in the loop would compact again. Call `runner.compactBeforeNextTurn()` when the conversation should be compacted instead.");
   }
 }
+function rejectCompactionControl(params) {
+  if ("compactionControl" in params && params.compactionControl != null) {
+    throw new AnthropicError("`compactionControl` has been removed from the tool runner. Use server-side compaction instead: call `runner.compactBeforeNextTurn()` when the conversation should be compacted.");
+  }
+}
+function rejectRunToolsEagerlyWithoutStream(params) {
+  if (params.runToolsEagerly && !params.stream) {
+    throw new TypeError("`runToolsEagerly: true` needs `stream: true` in the tool runner's params, because a reply that isn't streamed arrives whole.");
+  }
+}
 function rejectCompactionEdit(params) {
   if (params.context_management?.edits?.some((edit) => edit.type.startsWith("compact_"))) {
     throw new AnthropicError("`compactBeforeNextTurn()` can't be used while `context_management` has a compaction edit, because the API doesn't accept a compaction block together with one. Remove the edit first.");
   }
 }
-async function generateToolResponse(params, lastMessage = params.messages.at(-1), requestOptions) {
+function withoutCompactionIncompatibleParams(params) {
+  const { context_management, stop_sequences, output_format, ...kept } = params;
+  const withoutFormat = ({ format, ...outputConfig }) => outputConfig;
+  if (kept.tool_choice?.type === "any" || kept.tool_choice?.type === "tool") {
+    delete kept.tool_choice;
+  }
+  if (kept.output_config) {
+    kept.output_config = withoutFormat(kept.output_config);
+  }
+  if (Array.isArray(kept.fallbacks)) {
+    kept.fallbacks = kept.fallbacks.map((fallback) => fallback.output_config ? { ...fallback, output_config: withoutFormat(fallback.output_config) } : fallback);
+  }
+  return kept;
+}
+async function generateToolResponse(runnable, available, lastMessage, requestOptions, calls) {
   if (!lastMessage || lastMessage.role !== "assistant" || !lastMessage.content || typeof lastMessage.content === "string") {
     return null;
   }
@@ -27383,40 +27520,51 @@ async function generateToolResponse(params, lastMessage = params.messages.at(-1)
   if (toolUseBlocks.length === 0) {
     return null;
   }
-  const available = availableToolNames(params);
-  const toolResults = await Promise.all(toolUseBlocks.map(async (toolUse) => {
-    const tool = params.tools.find((t) => ("name" in t ? t.name : "mcp_server_name" in t ? t.mcp_server_name : t.type) === toolUse.name);
-    if (!tool || !("run" in tool) || !available.has(toolUse.name)) {
-      return toolNotFoundResult(toolUse);
+  const toolResults = await Promise.all(toolUseBlocks.map((toolUse) => {
+    const call = calls?.get(toolUse.id);
+    if (call?.status === "started") {
+      return call.result;
     }
-    try {
-      let input2 = toolUse.input;
-      if ("parse" in tool && tool.parse) {
-        input2 = tool.parse(input2);
-      }
-      const result = await tool.run(input2, {
-        toolUse,
-        toolUseBlock: toolUse,
-        signal: requestOptions?.signal
-      });
-      return {
-        type: "tool_result",
-        tool_use_id: toolUse.id,
-        content: result
-      };
-    } catch (error62) {
-      return {
-        type: "tool_result",
-        tool_use_id: toolUse.id,
-        content: error62 instanceof ToolError ? error62.content : `Error: ${error62 instanceof Error ? error62.message : String(error62)}`,
-        is_error: true
-      };
-    }
+    const result = runToolCall(runnable, available, toolUse, requestOptions);
+    calls?.set(toolUse.id, { status: "started", result });
+    return result;
   }));
   return {
     role: "user",
     content: toolResults
   };
+}
+async function runToolCall(runnable, available, toolUse, requestOptions) {
+  const tool = available.has(toolUse.name) ? runnable.get(toolUse.name) : void 0;
+  if (!tool) {
+    return toolNotFoundResult(toolUse);
+  }
+  try {
+    let input2 = toolUse.input;
+    if ("parse" in tool && tool.parse) {
+      input2 = tool.parse(input2);
+    }
+    const result = await tool.run(input2, {
+      toolUse,
+      toolUseBlock: toolUse,
+      signal: requestOptions?.signal
+    });
+    return {
+      type: "tool_result",
+      tool_use_id: toolUse.id,
+      content: result
+    };
+  } catch (error62) {
+    return {
+      type: "tool_result",
+      tool_use_id: toolUse.id,
+      content: error62 instanceof ToolError ? error62.content : `Error: ${error62 instanceof Error ? error62.message : String(error62)}`,
+      is_error: true
+    };
+  }
+}
+function asContentParam(content) {
+  return content;
 }
 function toolNotFoundResult(toolUse) {
   return {
@@ -27425,23 +27573,6 @@ function toolNotFoundResult(toolUse) {
     content: `Error: Tool '${toolUse.name}' not found`,
     is_error: true
   };
-}
-function availableToolNames(params) {
-  const available = /* @__PURE__ */ new Set();
-  for (const tool of params.tools) {
-    if ("run" in tool) {
-      available.add(tool.name);
-    }
-  }
-  for (const message of params.messages) {
-    if (message.role !== "system" || typeof message.content === "string") {
-      continue;
-    }
-    for (const block of message.content) {
-      applyToolChange(block, available);
-    }
-  }
-  return available;
 }
 function applyToolChange(block, available) {
   switch (block.type) {
@@ -27452,7 +27583,7 @@ function applyToolChange(block, available) {
   }
 }
 function applyToolReference(block, available) {
-  const name = referencedToolName(block.tool);
+  const name = changedToolName(block.tool);
   if (name === void 0)
     return;
   if (block.type === "tool_removal") {
@@ -27461,10 +27592,12 @@ function applyToolReference(block, available) {
     available.add(name);
   }
 }
-function referencedToolName(ref2) {
-  switch (ref2.type) {
+function changedToolName(tool) {
+  switch (tool.type) {
     case "tool_reference":
-      return ref2.name;
+      return tool.name;
+    case "tool_definition":
+      return "name" in tool.definition ? tool.definition.name : void 0;
     default:
       return void 0;
   }
@@ -27491,17 +27624,17 @@ function determineNextStepFromStopReason(stopReason) {
       return "stop";
   }
 }
-var _BetaToolRunner_instances, _BetaToolRunner_consumed, _BetaToolRunner_mutated, _BetaToolRunner_state, _BetaToolRunner_options, _BetaToolRunner_message, _BetaToolRunner_stream, _BetaToolRunner_toolResponse, _BetaToolRunner_completion, _BetaToolRunner_iterationCount, _BetaToolRunner_compaction, _BetaToolRunner_turnPaused, _BetaToolRunner_checkAndCompact, _BetaToolRunner_send, _BetaToolRunner_compact, _BetaToolRunner_compactAfterFinalTurn, _BetaToolRunner_generateToolResponse, BetaToolRunner;
+var _BetaToolRunner_instances, _BetaToolRunner_consumed, _BetaToolRunner_mutated, _BetaToolRunner_state, _BetaToolRunner_options, _BetaToolRunner_message, _BetaToolRunner_stream, _BetaToolRunner_toolResponse, _BetaToolRunner_completion, _BetaToolRunner_iterationCount, _BetaToolRunner_compaction, _BetaToolRunner_calls, _BetaToolRunner_lastStopReason, _BetaToolRunner_toolOverrides, _BetaToolRunner_pendingToolChanges, _BetaToolRunner_send, _BetaToolRunner_streamThatStartsTools, _BetaToolRunner_startedCallsSettled, _BetaToolRunner_compact, _BetaToolRunner_runnableTools, _BetaToolRunner_availableToolNames, _BetaToolRunner_recordRemovalsFromHistory, _BetaToolRunner_compactAfterFinalTurn, _BetaToolRunner_generateToolResponse, _BetaToolRunner_flushPendingToolChanges, _BetaToolRunner_pendingToolChangesMessage, BetaToolRunner;
 var init_BetaToolRunner = __esm({
   "node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs"() {
     init_tslib();
     init_ToolError();
     init_error();
+    init_BetaToolRunnerStream();
     init_headers();
     init_promise();
     init_values();
     init_log();
-    init_CompactionControl();
     init_stainless_helper_header();
     BetaToolRunner = /* @__PURE__ */ (() => {
       class BetaToolRunner2 {
@@ -27518,15 +27651,22 @@ var init_BetaToolRunner = __esm({
           _BetaToolRunner_completion.set(this, void 0);
           _BetaToolRunner_iterationCount.set(this, 0);
           _BetaToolRunner_compaction.set(this, { status: "idle" });
-          _BetaToolRunner_turnPaused.set(this, false);
+          _BetaToolRunner_calls.set(this, void 0);
+          _BetaToolRunner_lastStopReason.set(this, null);
+          _BetaToolRunner_toolOverrides.set(this, /* @__PURE__ */ new Map());
+          _BetaToolRunner_pendingToolChanges.set(this, []);
           rejectCompactionParam(params);
+          rejectCompactionControl(params);
+          rejectRunToolsEagerlyWithoutStream(params);
           __classPrivateFieldSet(this, _BetaToolRunner_state, {
             params: {
               // You can't clone the entire params since there are functions as handlers.
               // You also don't really need to clone params.messages, but it probably will prevent a foot gun
               // somewhere.
               ...params,
-              messages: structuredClone(params.messages)
+              // Not structuredClone(): it throws on a function, and a runnable tool written by value into a
+              // `tool_addition` block has `run`. A JSON copy is the messages as they are sent, which drops it.
+              messages: JSON.parse(JSON.stringify(params.messages))
             }
           }, "f");
           const collected = collectStainlessHelpers(params.tools, params.messages);
@@ -27539,73 +27679,8 @@ var init_BetaToolRunner = __esm({
             ])
           }, "f");
           __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
-          if (params.compactionControl?.enabled) {
-            console.warn('Anthropic: The `compactionControl` parameter is deprecated and will be removed in a future version. Use server-side compaction instead by passing `edits: [{ type: "compact_20260112" }]` in the params passed to `toolRunner()`. See https://platform.claude.com/docs/en/build-with-claude/compaction');
-          }
         }
-        async *[(_BetaToolRunner_consumed = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_mutated = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_state = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_options = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_message = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_stream = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_toolResponse = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_completion = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_iterationCount = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_compaction = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_turnPaused = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_instances = /* @__PURE__ */ new WeakSet(), _BetaToolRunner_checkAndCompact = async function _BetaToolRunner_checkAndCompact2() {
-          const compactionControl = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.compactionControl;
-          if (!compactionControl || !compactionControl.enabled) {
-            return false;
-          }
-          let tokensUsed = 0;
-          if (__classPrivateFieldGet(this, _BetaToolRunner_message, "f") !== void 0) {
-            try {
-              const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
-              const totalInputTokens = message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0) + (message.usage.cache_read_input_tokens ?? 0);
-              tokensUsed = totalInputTokens + message.usage.output_tokens;
-            } catch {
-              return false;
-            }
-          }
-          const threshold = compactionControl.contextTokenThreshold ?? DEFAULT_TOKEN_THRESHOLD;
-          if (tokensUsed < threshold) {
-            return false;
-          }
-          const model = compactionControl.model ?? __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.model;
-          const summaryPrompt = compactionControl.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT;
-          const messages = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages;
-          if (messages[messages.length - 1].role === "assistant") {
-            const lastMessage = messages[messages.length - 1];
-            if (Array.isArray(lastMessage.content)) {
-              const nonToolBlocks = lastMessage.content.filter((block) => block.type !== "tool_use");
-              if (nonToolBlocks.length === 0) {
-                messages.pop();
-              } else {
-                lastMessage.content = nonToolBlocks;
-              }
-            }
-          }
-          const response = await this.client.beta.messages.create({
-            model,
-            messages: [
-              ...messages,
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: summaryPrompt
-                  }
-                ]
-              }
-            ],
-            max_tokens: __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_tokens
-          }, {
-            signal: __classPrivateFieldGet(this, _BetaToolRunner_options, "f").signal,
-            headers: buildHeaders([__classPrivateFieldGet(this, _BetaToolRunner_options, "f").headers, helperHeader("compaction")])
-          });
-          if (response.content[0]?.type !== "text") {
-            throw new AnthropicError("Expected text response for compaction");
-          }
-          __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages = [
-            {
-              role: "user",
-              content: response.content
-            }
-          ];
-          return true;
-        }, Symbol.asyncIterator)]() {
+        async *[(_BetaToolRunner_consumed = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_mutated = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_state = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_options = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_message = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_stream = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_toolResponse = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_completion = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_iterationCount = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_compaction = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_calls = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_lastStopReason = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_toolOverrides = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_pendingToolChanges = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_instances = /* @__PURE__ */ new WeakSet(), Symbol.asyncIterator)]() {
           var _a4;
           if (__classPrivateFieldGet(this, _BetaToolRunner_consumed, "f")) {
             throw new AnthropicError("Cannot iterate over a consumed stream");
@@ -27619,7 +27694,8 @@ var init_BetaToolRunner = __esm({
                 if (__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations && __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f") >= __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations) {
                   break;
                 }
-                if (__classPrivateFieldGet(this, _BetaToolRunner_compaction, "f").status === "scheduled" && !__classPrivateFieldGet(this, _BetaToolRunner_turnPaused, "f")) {
+                __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_flushPendingToolChanges).call(this);
+                if (__classPrivateFieldGet(this, _BetaToolRunner_compaction, "f").status === "scheduled" && determineNextStepFromStopReason(__classPrivateFieldGet(this, _BetaToolRunner_lastStopReason, "f")) !== "resume") {
                   yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_compact).call(this, __classPrivateFieldGet(this, _BetaToolRunner_compaction, "f").config);
                   continue;
                 }
@@ -27627,46 +27703,47 @@ var init_BetaToolRunner = __esm({
                 __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
                 __classPrivateFieldSet(this, _BetaToolRunner_iterationCount, (_a4 = __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f"), _a4++, _a4), "f");
                 __classPrivateFieldSet(this, _BetaToolRunner_message, void 0, "f");
-                const { max_iterations, compactionControl, ...params } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+                const { max_iterations, runToolsEagerly, ...params } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
                 yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_send).call(this, params);
-                const isCompacted = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_checkAndCompact).call(this);
-                if (!isCompacted) {
-                  if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
-                    const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
-                    const nextStep = determineNextStepFromStopReason(message.stop_reason);
-                    __classPrivateFieldSet(this, _BetaToolRunner_turnPaused, nextStep === "resume", "f");
-                    __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push({ role: message.role, content: message.content });
-                    const { container } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
-                    if (message.container) {
-                      if (container == null) {
-                        __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.container = message.container.id;
-                      } else if (typeof container === "object" && container.id == null) {
-                        __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.container = { ...container, id: message.container.id };
-                      }
+                if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+                  const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+                  const nextStep = determineNextStepFromStopReason(message.stop_reason);
+                  __classPrivateFieldSet(this, _BetaToolRunner_lastStopReason, message.stop_reason, "f");
+                  __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push({
+                    role: message.role,
+                    content: asContentParam(message.content)
+                  });
+                  const { container } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+                  if (message.container) {
+                    if (container == null) {
+                      __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.container = message.container.id;
+                    } else if (typeof container === "object" && container.id == null) {
+                      __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.container = { ...container, id: message.container.id };
                     }
-                    if (nextStep === "stop") {
-                      yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_compactAfterFinalTurn).call(this);
-                      break;
-                    }
-                    if (nextStep === "resume") {
-                      continue;
-                    }
-                  } else {
-                    __classPrivateFieldSet(this, _BetaToolRunner_turnPaused, false, "f");
                   }
-                  const toolMessage = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.at(-1));
-                  if (toolMessage) {
-                    __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push(toolMessage);
-                  } else if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+                  if (nextStep === "stop") {
                     yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_compactAfterFinalTurn).call(this);
                     break;
                   }
+                  if (nextStep === "resume") {
+                    continue;
+                  }
+                } else {
+                  __classPrivateFieldSet(this, _BetaToolRunner_lastStopReason, null, "f");
+                }
+                const toolMessage = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.at(-1));
+                if (toolMessage) {
+                  __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push(toolMessage);
+                } else if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+                  yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_compactAfterFinalTurn).call(this);
+                  break;
                 }
               } finally {
                 __classPrivateFieldGet(this, _BetaToolRunner_stream, "f")?.abort();
                 __classPrivateFieldSet(this, _BetaToolRunner_stream, void 0, "f");
               }
             }
+            await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_startedCallsSettled).call(this);
             if (!__classPrivateFieldGet(this, _BetaToolRunner_message, "f")) {
               throw new AnthropicError("ToolRunner concluded without a message from the server");
             }
@@ -27683,6 +27760,7 @@ var init_BetaToolRunner = __esm({
         setMessagesParams(paramsOrMutator) {
           const params = typeof paramsOrMutator === "function" ? paramsOrMutator(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params) : paramsOrMutator;
           rejectCompactionParam(params);
+          rejectRunToolsEagerlyWithoutStream(params);
           if (__classPrivateFieldGet(this, _BetaToolRunner_compaction, "f").status !== "idle") {
             rejectCompactionEdit(params);
           }
@@ -27702,7 +27780,9 @@ var init_BetaToolRunner = __esm({
         }
         /**
          * Get the tool response for the last message from the assistant.
-         * Avoids redundant tool executions by caching results.
+         * Avoids redundant tool executions by caching results. With `runToolsEagerly`, it reuses the calls of
+         * the reply that have started and runs the rest, including the ones `deferToolCall()` is holding, so that no
+         * call runs twice.
          *
          * @returns A promise that resolves to a BetaMessageParam containing tool results, or null if no tools need to be executed
          *
@@ -27718,6 +27798,65 @@ var init_BetaToolRunner = __esm({
             return null;
           }
           return __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, message, signal);
+        }
+        /**
+         * Hold a tool call of the current reply until you are done with the reply, which is when it runs without
+         * streaming: at the end of the loop body, or when you call `generateToolResponse()`.
+         *
+         * With `runToolsEagerly` the runner otherwise starts each call while the reply streams, as soon as
+         * the model has moved on from it: when the next block starts, or the reply stops with `tool_use`. A call
+         * never starts before your stream listeners and any `for await` over the stream have handled that event, so
+         * you can call this from either once you have seen the call. The other calls of the reply still start early.
+         * It does nothing for a call that has started, outside the loop body, and without `runToolsEagerly`.
+         *
+         * @param toolUse - The `tool_use` block of the call, or its id
+         *
+         * @example
+         * for await (const stream of runner) {
+         *   stream.on('contentBlock', (block) => {
+         *     if (block.type === 'tool_use' && block.name === 'delete_file') {
+         *       runner.deferToolCall(block);
+         *     }
+         *   });
+         *   await stream.finalMessage();
+         *   // No `delete_file` call has started yet.
+         * }
+         */
+        deferToolCall(toolUse) {
+          const id = typeof toolUse === "string" ? toolUse : toolUse.id;
+          if (__classPrivateFieldGet(this, _BetaToolRunner_calls, "f") && !__classPrivateFieldGet(this, _BetaToolRunner_calls, "f").has(id)) {
+            __classPrivateFieldGet(this, _BetaToolRunner_calls, "f").set(id, { status: "held" });
+          }
+        }
+        /**
+         * The tool calls of the current reply that `deferToolCall()` is holding, in the model's order, as their
+         * `tool_use` blocks. A call is in the list once its block has finished streaming, so read the list when you
+         * are done with the stream. A call that has started is not in it. It is empty without
+         * `runToolsEagerly`.
+         *
+         * Held calls are listed whatever the reply's `stop_reason`, because `generateToolResponse()` runs them
+         * whatever it is. After `max_tokens` the input of the last call can be cut off.
+         *
+         * @example
+         * for await (const stream of runner) {
+         *   stream.on('contentBlock', (block) => {
+         *     if (block.type === 'tool_use' && block.name === 'delete_file') {
+         *       runner.deferToolCall(block);
+         *     }
+         *   });
+         *   await stream.finalMessage();
+         *
+         *   const held = runner.deferredToolCalls;
+         *   if (held.length > 0 && !(await confirm(held))) break;
+         * }
+         */
+        get deferredToolCalls() {
+          const stream2 = __classPrivateFieldGet(this, _BetaToolRunner_stream, "f");
+          const calls = __classPrivateFieldGet(this, _BetaToolRunner_calls, "f");
+          if (!(stream2 instanceof BetaToolRunnerStream) || !calls) {
+            return [];
+          }
+          return stream2.toolCalls.filter((toolUse) => calls.get(toolUse.id)?.status === "held");
         }
         /**
          * Wait for the async iterator to complete. This works even if the async iterator hasn't yet started, and
@@ -27816,6 +27955,49 @@ var init_BetaToolRunner = __esm({
           __classPrivateFieldSet(this, _BetaToolRunner_compaction, { status: "scheduled", config: compaction ?? { type: "summarize" } }, "f");
         }
         /**
+         * Give the model more tools without changing `params.tools`, which would miss the prompt cache.
+         *
+         * Each tool's whole definition is sent in a `tool_addition` block with the next request, and a
+         * runnable tool replaces a runnable tool of the same name straight away, even for a call already in
+         * the message being handled. A call that started while the reply streamed keeps the old one. A raw
+         * definition is only sent: the runner never runs it, and stops running a tool of the same name.
+         * Requires the `inline-tools-2026-09-15` beta, which the runner does not add for you.
+         *
+         * @param tools - Runnable tools (for example from `betaZodTool()`) or raw tool definitions
+         *
+         * @example
+         * runner.addTools(queryDatabaseTool);
+         */
+        addTools(...tools) {
+          for (const tool of tools) {
+            if ("name" in tool) {
+              __classPrivateFieldGet(this, _BetaToolRunner_toolOverrides, "f").set(tool.name, "run" in tool ? tool : null);
+            }
+            __classPrivateFieldGet(this, _BetaToolRunner_pendingToolChanges, "f").push({ type: "addition", tool });
+          }
+        }
+        /**
+         * Take tools away from the model without changing `params.tools`, which would miss the prompt cache.
+         *
+         * The tools stop being run straight away: a call to one of them, even one in the message being
+         * handled, gets the same "not found" error result as a call to an unknown tool. A call that started
+         * while the reply streamed finishes as usual. The model is told in a `tool_removal` block with the
+         * next request. Use {@link addTools} to bring a tool back.
+         * Requires the `inline-tools-2026-09-15` beta, which the runner does not add for you.
+         *
+         * @param tools - The tools to remove, or their names
+         *
+         * @example
+         * runner.removeTools('query_database');
+         */
+        removeTools(...tools) {
+          for (const tool of tools) {
+            const name = typeof tool === "string" ? tool : tool.name;
+            __classPrivateFieldGet(this, _BetaToolRunner_toolOverrides, "f").set(name, null);
+            __classPrivateFieldGet(this, _BetaToolRunner_pendingToolChanges, "f").push({ type: "removal", name });
+          }
+        }
+        /**
          * Makes the ToolRunner directly awaitable, equivalent to calling .runUntilDone()
          * This allows using `await runner` instead of `await runner.runUntilDone()`
          */
@@ -27829,8 +28011,10 @@ var init_BetaToolRunner = __esm({
        * end of the iteration.
        */
       async function* _BetaToolRunner_send2(params) {
+        await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_startedCallsSettled).call(this);
+        __classPrivateFieldSet(this, _BetaToolRunner_calls, void 0, "f");
         if (params.stream) {
-          __classPrivateFieldSet(this, _BetaToolRunner_stream, this.client.beta.messages.stream({ ...params }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f")), "f");
+          __classPrivateFieldSet(this, _BetaToolRunner_stream, __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.runToolsEagerly ? __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_streamThatStartsTools).call(this, params) : this.client.beta.messages.stream({ ...params }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f")), "f");
           __classPrivateFieldSet(this, _BetaToolRunner_message, __classPrivateFieldGet(this, _BetaToolRunner_stream, "f").finalMessage(), "f");
           __classPrivateFieldGet(this, _BetaToolRunner_message, "f").catch(() => {
           });
@@ -27839,9 +28023,26 @@ var init_BetaToolRunner = __esm({
           __classPrivateFieldSet(this, _BetaToolRunner_message, this.client.beta.messages.create({ ...params, stream: false }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f")), "f");
           yield __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
         }
+      }, _BetaToolRunner_streamThatStartsTools = function _BetaToolRunner_streamThatStartsTools2(params) {
+        const calls = /* @__PURE__ */ new Map();
+        __classPrivateFieldSet(this, _BetaToolRunner_calls, calls, "f");
+        return BetaToolRunnerStream.start(this.client.beta.messages, params, __classPrivateFieldGet(this, _BetaToolRunner_options, "f"), (toolUse) => {
+          if (calls.has(toolUse.id)) {
+            return;
+          }
+          const result = runToolCall(__classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_runnableTools).call(this), __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_availableToolNames).call(this), toolUse, __classPrivateFieldGet(this, _BetaToolRunner_options, "f"));
+          result.catch(() => {
+          });
+          calls.set(toolUse.id, { status: "started", result });
+        });
+      }, _BetaToolRunner_startedCallsSettled = /** Waits for the calls of the last streamed reply that have started, whether or not their results were sent. */
+      async function _BetaToolRunner_startedCallsSettled2() {
+        const started = [...__classPrivateFieldGet(this, _BetaToolRunner_calls, "f")?.values() ?? []].filter((call) => call.status === "started");
+        await Promise.allSettled(started.map((call) => call.result));
       }, _BetaToolRunner_compact = async function* _BetaToolRunner_compact2(compaction) {
         rejectCompactionEdit(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params);
-        const { max_iterations, compactionControl, context_management, ...params } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+        const { max_iterations, runToolsEagerly, ...requestParams } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+        const params = withoutCompactionIncompatibleParams(requestParams);
         __classPrivateFieldSet(this, _BetaToolRunner_compaction, { status: "in_flight" }, "f");
         __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
         const lastMessage = __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
@@ -27849,6 +28050,7 @@ var init_BetaToolRunner = __esm({
           yield* __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_send).call(this, { ...params, compaction });
           const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
           if (message.content.some((block) => block.type === "compaction" && block.content)) {
+            __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_recordRemovalsFromHistory).call(this);
             __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages = [{ role: message.role, content: message.content }];
           } else {
             loggerFor(this.client).warn("Compaction produced no summary; keeping the conversation as it is.");
@@ -27856,6 +28058,45 @@ var init_BetaToolRunner = __esm({
           }
         } finally {
           __classPrivateFieldSet(this, _BetaToolRunner_compaction, { status: "idle" }, "f");
+        }
+      }, _BetaToolRunner_runnableTools = function _BetaToolRunner_runnableTools2() {
+        const runnable = /* @__PURE__ */ new Map();
+        for (const tool of __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.tools) {
+          if ("run" in tool) {
+            runnable.set(tool.name, tool);
+          }
+        }
+        for (const [name, tool] of __classPrivateFieldGet(this, _BetaToolRunner_toolOverrides, "f")) {
+          if (tool) {
+            runnable.set(name, tool);
+          } else {
+            runnable.delete(name);
+          }
+        }
+        return runnable;
+      }, _BetaToolRunner_availableToolNames = function _BetaToolRunner_availableToolNames2() {
+        const available = new Set(__classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_runnableTools).call(this).keys());
+        for (const message of [...__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages, __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_pendingToolChangesMessage).call(this)]) {
+          if (typeof message.content === "string") {
+            continue;
+          }
+          for (const block of message.content) {
+            if (message.role === "system") {
+              applyToolChange(block, available);
+            } else if (message.role === "assistant" && block.type === "compaction") {
+              for (const change of block.tool_changes ?? []) {
+                applyToolChange(change, available);
+              }
+            }
+          }
+        }
+        return available;
+      }, _BetaToolRunner_recordRemovalsFromHistory = function _BetaToolRunner_recordRemovalsFromHistory2() {
+        const available = __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_availableToolNames).call(this);
+        for (const name of __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_runnableTools).call(this).keys()) {
+          if (!available.has(name)) {
+            __classPrivateFieldGet(this, _BetaToolRunner_toolOverrides, "f").set(name, null);
+          }
         }
       }, _BetaToolRunner_compactAfterFinalTurn = async function* _BetaToolRunner_compactAfterFinalTurn2() {
         if (__classPrivateFieldGet(this, _BetaToolRunner_compaction, "f").status !== "scheduled") {
@@ -27872,11 +28113,29 @@ var init_BetaToolRunner = __esm({
         if (__classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f") !== void 0) {
           return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
         }
-        __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, generateToolResponse(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params, lastMessage, {
-          ...__classPrivateFieldGet(this, _BetaToolRunner_options, "f"),
-          signal
-        }), "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, generateToolResponse(__classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_runnableTools).call(this), __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_availableToolNames).call(this), lastMessage, { ...__classPrivateFieldGet(this, _BetaToolRunner_options, "f"), signal }, __classPrivateFieldGet(this, _BetaToolRunner_calls, "f")), "f");
         return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
+      }, _BetaToolRunner_flushPendingToolChanges = function _BetaToolRunner_flushPendingToolChanges2() {
+        if (__classPrivateFieldGet(this, _BetaToolRunner_lastStopReason, "f") === "pause_turn" || __classPrivateFieldGet(this, _BetaToolRunner_pendingToolChanges, "f").length === 0) {
+          return;
+        }
+        __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push(__classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_pendingToolChangesMessage).call(this));
+        __classPrivateFieldSet(this, _BetaToolRunner_pendingToolChanges, [], "f");
+      }, _BetaToolRunner_pendingToolChangesMessage = function _BetaToolRunner_pendingToolChangesMessage2() {
+        const content = [];
+        for (const change of __classPrivateFieldGet(this, _BetaToolRunner_pendingToolChanges, "f")) {
+          if (change.type === "removal") {
+            content.push({ type: "tool_removal", tool: { type: "tool_reference", name: change.name } });
+            continue;
+          }
+          let definition = change.tool;
+          if ("run" in change.tool) {
+            const { run, parse: parse5, close, ...rest } = change.tool;
+            definition = rest;
+          }
+          content.push({ type: "tool_addition", tool: { type: "tool_definition", definition } });
+        }
+        return { role: "system", content };
       };
       return BetaToolRunner2;
     })();
@@ -29364,11 +29623,13 @@ var init_rate_limits2 = __esm({
     init_path();
     RateLimits2 = class extends APIResource {
       /**
-       * List rate-limit overrides configured for a workspace.
+       * List a workspace's rate limits.
        *
-       * Returns only the groups and limiter types that have a workspace-level override.
-       * Groups without overrides inherit the organization limits and are not listed; use
-       * `GET /v1/organizations/rate_limits` to see those.
+       * By default, returns only the groups and limiter types that have a
+       * workspace-level override. With `include_inherited=true`, returns every group
+       * with organization-level limits the workspace can see, listing for each the
+       * values it inherits from the organization as well as its own overrides. Each
+       * value's `source` says which it is.
        *
        * When `limit` is omitted, every matching entry is returned in a single page; when
        * `limit` truncates the result, follow `next_page` to fetch the remaining entries.
@@ -33554,7 +33815,13 @@ var init_client = __esm({
             validatePositiveInteger("timeout", options.timeout);
           options.timeout = options.timeout ?? this.timeout;
           const { bodyHeaders, body } = this.buildBody({ options });
-          const reqHeaders = await this.buildHeaders({ options: inputOptions, method, bodyHeaders, retryCount });
+          const reqHeaders = await this.buildHeaders({
+            options: inputOptions,
+            method,
+            bodyHeaders,
+            retryCount,
+            timeout: options.timeout
+          });
           const req = {
             method,
             headers: reqHeaders,
@@ -33566,13 +33833,13 @@ var init_client = __esm({
           };
           return { req, url: url2, timeout: options.timeout };
         }
-        async buildHeaders({ options, method, bodyHeaders, retryCount }) {
+        async buildHeaders({ options, method, bodyHeaders, retryCount, timeout }) {
           const headers = buildHeaders([
             {
               Accept: "application/json",
               "User-Agent": this.getUserAgent(),
               "X-Stainless-Retry-Count": String(retryCount),
-              ...options.timeout ? { "X-Stainless-Timeout": String(Math.trunc(options.timeout / 1e3)) } : {},
+              "X-Stainless-Timeout": String(Math.trunc(timeout / 1e3)),
               ...getPlatformHeaders(),
               ...this._options.dangerouslyAllowBrowser ? { "anthropic-dangerous-direct-browser-access": "true" } : void 0,
               "anthropic-version": "2023-06-01"
@@ -33629,8 +33896,6 @@ var init_client = __esm({
         return this.baseURL !== "https://api.anthropic.com";
       };
       BaseAnthropic2.Anthropic = _a;
-      BaseAnthropic2.HUMAN_PROMPT = HUMAN_PROMPT;
-      BaseAnthropic2.AI_PROMPT = AI_PROMPT;
       BaseAnthropic2.DEFAULT_TIMEOUT = 6e5;
       BaseAnthropic2.AnthropicError = AnthropicError;
       BaseAnthropic2.APIError = APIError;
@@ -33646,6 +33911,8 @@ var init_client = __esm({
       BaseAnthropic2.PermissionDeniedError = PermissionDeniedError;
       BaseAnthropic2.UnprocessableEntityError = UnprocessableEntityError;
       BaseAnthropic2.toFile = toFile;
+      BaseAnthropic2.HUMAN_PROMPT = HUMAN_PROMPT;
+      BaseAnthropic2.AI_PROMPT = AI_PROMPT;
       return BaseAnthropic2;
     })();
     Anthropic = /* @__PURE__ */ (() => {
@@ -56960,6 +57227,145 @@ var init_userStoryMap = __esm({
   }
 });
 
+// packages/canvas/dist/diagrams/domainStory.js
+function normalizeDomainStory(raw) {
+  const c2 = domainStorySchema.parse(raw);
+  const alloc = idAllocator();
+  const asNamed = (v) => typeof v === "string" ? { text: v } : v;
+  const actors = c2.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const workObjects = c2.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
+  const unresolved = [];
+  const find = (list2, ref2) => list2.find((x) => x.id === ref2) ?? list2.find((x) => x.text === ref2) ?? list2.find((x) => x.id === slugify2(ref2));
+  const actorRef = (ref2, element, field) => {
+    const hit = find(actors, ref2);
+    if (hit)
+      return hit.id;
+    unresolved.push({ element, field, ref: ref2 });
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    actors.push(added);
+    return added.id;
+  };
+  let next = 1;
+  const sentences = c2.sentences.map((s) => {
+    const seq = s.seq ?? next;
+    next = Math.max(next, seq + 1);
+    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
+    const declared = s.object ? find(workObjects, s.object) : void 0;
+    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
+    return {
+      id,
+      seq,
+      actor: actorRef(s.actor, id, "actor"),
+      verb: s.verb,
+      ...declared ? { object: declared.id } : {},
+      ...s.object ? { objectText: declared?.text ?? s.object } : {},
+      objectKind: declared?.kind ?? "document",
+      to: to.map((r) => actorRef(r, id, "to")),
+      ...s.toLabel ? { toLabel: s.toLabel } : {},
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? []
+    };
+  });
+  const elementRef = (ref2, element, field) => {
+    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    if (!hit)
+      unresolved.push({ element, field, ref: ref2 });
+    return hit;
+  };
+  const groups = c2.groups.map((g) => {
+    const id = alloc(g.id, g.text, "group");
+    return { id, text: g.text, members: g.members.map((m) => elementRef(m, id, "members")).filter((x) => !!x) };
+  });
+  const annotations = c2.annotations.flatMap((a, i) => {
+    const id = alloc(a.id, `note-${i + 1}`, "note");
+    const on = elementRef(a.on, id, "on");
+    return on ? [{ id, on, text: a.text }] : [];
+  });
+  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, unresolved, dsModel: true };
+}
+function circled(n) {
+  return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
+}
+function checkDomainStory(content) {
+  const m = "dsModel" in content ? content : normalizeDomainStory(content);
+  const out = [];
+  for (const u of m.unresolved)
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u.element, message: `${u.field} "${u.ref}" matches no ${u.field === "actor" || u.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START });
+  for (const s of m.sentences) {
+    if (!s.objectText)
+      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START });
+  }
+  const seqs = [...new Set(m.sentences.map((s) => s.seq))].sort((a, b) => a - b);
+  seqs.forEach((n, i) => {
+    const expected = i === 0 ? 1 : seqs[i - 1] + 1;
+    if (n !== expected)
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START });
+  });
+  for (const n of seqs) {
+    const same = m.sentences.filter((s) => s.seq === n);
+    if (same.length > 1)
+      out.push({ rule: "sequence-shared", severity: "info", element: same[1].id, message: `${circled(n)} is used by ${same.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+  }
+  for (const o of m.workObjects) {
+    if (!m.sentences.some((s) => s.object === o.id))
+      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START });
+  }
+  for (const a of m.actors) {
+    if (!m.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
+      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START });
+    if (!DS_ACTOR_KINDS.includes(a.kind))
+      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START });
+  }
+  return out;
+}
+var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START;
+var init_domainStory = __esm({
+  "packages/canvas/dist/diagrams/domainStory.js"() {
+    init_zod();
+    init_ids2();
+    DS_ACTOR_KINDS = ["person", "group", "system"];
+    DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
+    named = () => external_exports.union([
+      external_exports.string(),
+      external_exports.object({
+        id: external_exports.string().optional(),
+        text: external_exports.string().min(1),
+        /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
+        kind: external_exports.string().optional()
+      })
+    ]);
+    domainStorySchema = external_exports.object({
+      scope: external_exports.object({
+        granularity: external_exports.enum(DS_GRANULARITY).optional(),
+        time: external_exports.enum(["as-is", "to-be"]).optional(),
+        purity: external_exports.enum(["pure", "digitalized"]).optional()
+      }).optional(),
+      actors: external_exports.array(named()).min(1),
+      workObjects: external_exports.array(named()).default([]),
+      sentences: external_exports.array(external_exports.object({
+        id: external_exports.string().optional(),
+        /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
+        seq: external_exports.number().int().positive().optional(),
+        /** The actor who acts (id or text). */
+        actor: external_exports.string().min(1),
+        /** The activity, a verb from the domain language. */
+        verb: external_exports.string().min(1),
+        /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
+        object: external_exports.string().optional(),
+        /** The actor(s) the work object goes to. */
+        to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
+        /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
+        toLabel: external_exports.string().optional(),
+        note: external_exports.string().optional(),
+        traces: external_exports.array(traceSchema).optional()
+      })).min(1),
+      groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
+      annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([])
+    });
+    QUICK_START = "domainstorytelling.org/quick-start-guide";
+  }
+});
+
 // packages/canvas/dist/diagrams/grammar.js
 function checkEventStorming(content) {
   const m = "kindOf" in content ? content : normalizeEventStorming(content);
@@ -57112,6 +57518,217 @@ var init_proposeStories = __esm({
     init_eventStorming();
     init_userStoryMap();
     lowerFirst = (s) => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+  }
+});
+
+// packages/canvas/dist/diagrams/egon.js
+function fromEgon(file2) {
+  const warnings = [];
+  const root = file2;
+  const story = Array.isArray(root) ? { businessObjects: root.filter((o) => o.type) } : root.domainStory ?? (typeof root.dst === "string" ? JSON.parse(root.dst) : root.dst) ?? {};
+  const objs = Array.isArray(story) ? story : story.businessObjects ?? [];
+  if (!objs.length)
+    throw new Error("no domain story found (expected { domainStory: { businessObjects: [...] } })");
+  const byId = new Map(objs.map((o) => [o.id, o]));
+  const alloc = idAllocator();
+  const ours = /* @__PURE__ */ new Map();
+  const actors = objs.filter((o) => o.type.startsWith(ACTOR)).map((o, i) => {
+    const icon = o.type.slice(ACTOR.length) || "Person";
+    const text = (o.name ?? "").trim() || `${icon} ${i + 1}`;
+    const id = alloc(void 0, text, "actor");
+    ours.set(o.id, id);
+    return { id, text, kind: lowerIcon(icon) };
+  });
+  const workObjects = objs.filter((o) => o.type.startsWith(OBJECT)).map((o, i) => {
+    const icon = o.type.slice(OBJECT.length) || "Document";
+    const text = (o.name ?? "").trim() || `${icon.toLowerCase()} ${i + 1}`;
+    const id = alloc(void 0, text, "object");
+    ours.set(o.id, id);
+    return { id, text, kind: lowerIcon(icon) };
+  });
+  const isActor = (id) => !!id && byId.get(id)?.type.startsWith(ACTOR);
+  const isObject2 = (id) => !!id && byId.get(id)?.type.startsWith(OBJECT);
+  const activities = objs.filter((o) => o.type === "domainStory:activity");
+  const starts = activities.filter((a) => isActor(a.source)).sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+  let next = 1;
+  const sentences = starts.map((a) => {
+    const seq = typeof a.number === "number" && a.number > 0 ? a.number : next;
+    next = Math.max(next, seq + 1);
+    const verb = (a.name ?? "").trim() || "does";
+    const id = alloc(void 0, `${seq}-${verb}`, "sentence");
+    ours.set(a.id, id);
+    if (isObject2(a.target)) {
+      const onward = activities.filter((b) => b.source === a.target && isActor(b.target));
+      const toLabel = onward.map((b) => (b.name ?? "").trim()).find(Boolean);
+      return { id, seq, actor: ours.get(a.source), verb, object: ours.get(a.target), ...onward.length ? { to: onward.map((b) => ours.get(b.target)) } : {}, ...toLabel ? { toLabel } : {} };
+    }
+    return { id, seq, actor: ours.get(a.source), verb, ...isActor(a.target) ? { to: [ours.get(a.target)] } : {} };
+  });
+  for (const a of activities)
+    if (!isActor(a.source) && !isObject2(a.source))
+      warnings.push(`activity ${a.id} starts at neither an actor nor a work object \u2014 skipped`);
+  const groups = objs.filter((o) => o.type === "domainStory:group").map((g, i) => ({ id: alloc(void 0, (g.name ?? "").trim() || `group ${i + 1}`, "group"), text: (g.name ?? "").trim() || `Group ${i + 1}`, members: (g.children ?? []).map((c2) => ours.get(c2)).filter((x) => !!x) }));
+  const annotations = objs.filter((o) => o.type === "domainStory:textAnnotation").flatMap((t) => {
+    const link = objs.find((c2) => c2.type === "domainStory:connection" && (c2.source === t.id || c2.target === t.id));
+    const other = link ? link.source === t.id ? link.target : link.source : void 0;
+    const on = other ? ours.get(other) : void 0;
+    if (!on) {
+      warnings.push(`annotation "${(t.text ?? "").slice(0, 40)}" is linked to nothing \u2014 skipped`);
+      return [];
+    }
+    return [{ on, text: t.text ?? "" }];
+  });
+  const s = story.scope ?? {};
+  const scope = { ...s.granularity ? { granularity: s.granularity } : {}, ...s.pointInTime ? { time: s.pointInTime } : {}, ...s.domainPurity ? { purity: s.domainPurity } : {} };
+  const content = {
+    ...Object.keys(scope).length ? { scope } : {},
+    actors,
+    workObjects,
+    sentences,
+    ...groups.length ? { groups } : {},
+    ...annotations.length ? { annotations } : {}
+  };
+  const meta3 = story;
+  return { content, ...meta3.title ? { title: meta3.title } : {}, ...meta3.description ? { description: meta3.description } : {}, warnings };
+}
+function toEgon(content, opts = {}) {
+  const m = normalizeDomainStory(content);
+  let n = 0;
+  const id = (p) => `${p}_${1e3 + ++n}`;
+  const objs = [];
+  const shapeOf = /* @__PURE__ */ new Map();
+  const COL4 = 250;
+  const at2 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
+  const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
+  const firstSeen = [];
+  for (const s of [...m.sentences].sort((a, b) => a.seq - b.seq))
+    for (const a of [s.actor, ...s.to])
+      if (!firstSeen.includes(a))
+        firstSeen.push(a);
+  for (const a of m.actors)
+    if (!firstSeen.includes(a.id))
+      firstSeen.push(a.id);
+  firstSeen.forEach((aid, i) => {
+    const a = m.actors.find((x) => x.id === aid);
+    const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at2(i, 0), pickedColor: "black" };
+    shapeOf.set(a.id, o);
+    objs.push(o);
+  });
+  const seqs = [...new Set(m.sentences.map((s) => s.seq))].sort((a, b) => a - b);
+  const icons = { actors: new Set(m.actors.map((a) => capIcon(a.kind))), workObjects: /* @__PURE__ */ new Set() };
+  for (const s of m.sentences) {
+    const col = seqs.indexOf(s.seq);
+    const stack = m.sentences.filter((x) => x.seq === s.seq).indexOf(s);
+    const actor = shapeOf.get(s.actor);
+    if (s.objectText) {
+      icons.workObjects.add(capIcon(s.objectKind));
+      const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at2(col, 1 + stack), pickedColor: "black" };
+      objs.push(wo);
+      shapeOf.set(s.id, wo);
+      objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
+      for (const r of s.to) {
+        const to = shapeOf.get(r);
+        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.toLabel ?? "", number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: "black" });
+      }
+    } else {
+      for (const r of s.to.length ? s.to : []) {
+        const to = shapeOf.get(r);
+        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: "black" });
+      }
+    }
+  }
+  for (const g of m.groups) {
+    const members2 = g.members.map((mid) => shapeOf.get(mid) ?? objs.find((o) => o.type.startsWith(OBJECT) && o.name === m.workObjects.find((w) => w.id === mid)?.text)).filter((o) => !!o);
+    if (!members2.length)
+      continue;
+    const xs = members2.map((o) => o.x ?? 0);
+    const ys = members2.map((o) => o.y ?? 0);
+    objs.push({ id: id("shape"), type: "domainStory:group", name: g.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members2.map((o) => o.id), pickedColor: "black" });
+  }
+  m.annotations.forEach((a, i) => {
+    const target = shapeOf.get(a.on);
+    const t = { id: id("shape"), type: "domainStory:textAnnotation", text: a.text, x: 100 + i * COL4, y: 100 + (seqs.length ? 3 : 2) * 200, width: 150, height: 60 };
+    objs.push(t);
+    if (target)
+      objs.push({ id: id("connection"), type: "domainStory:connection", source: t.id, target: target.id, waypoints: [center(t), center(target)] });
+  });
+  const iconMap = (names) => Object.fromEntries([...names].map((k) => [k, svg(k)]));
+  return {
+    iconSet: { name: "unprose", actors: iconMap(icons.actors), workObjects: iconMap(icons.workObjects) },
+    domainStory: {
+      businessObjects: objs,
+      title: opts.title ?? "",
+      description: opts.description ?? "",
+      version: "4.0.0",
+      scope: { ...m.scope.granularity ? { granularity: m.scope.granularity } : {}, ...m.scope.time ? { pointInTime: m.scope.time } : {}, ...m.scope.purity ? { domainPurity: m.scope.purity } : {} }
+    }
+  };
+}
+var ACTOR, OBJECT, lowerIcon, capIcon, GLYPH, svg;
+var init_egon = __esm({
+  "packages/canvas/dist/diagrams/egon.js"() {
+    init_ids2();
+    init_domainStory();
+    ACTOR = "domainStory:actor";
+    OBJECT = "domainStory:workObject";
+    lowerIcon = (icon) => icon.toLowerCase();
+    capIcon = (kind) => kind.charAt(0).toUpperCase() + kind.slice(1);
+    GLYPH = {
+      Person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/>',
+      Group: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5zM10 20c0-3 3-5 6-5s6 2 6 5z"/>',
+      System: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8v-2H8z"/>',
+      Document: '<path d="M6 2h8l4 4v16H6z"/>'
+    };
+    svg = (icon) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${GLYPH[icon] ?? '<rect x="4" y="4" width="16" height="16" rx="3"/>'}</svg>`;
+  }
+});
+
+// packages/canvas/dist/diagrams/proposeFromDomainStory.js
+function proposeFromDomainStory(content, opts) {
+  const m = "dsModel" in content ? content : normalizeDomainStory(content);
+  const existing = opts.existing ? normalizeUserStoryMap(opts.existing) : void 0;
+  const traced = new Set(existing?.activities.flatMap((a) => a.steps.flatMap((s) => s.stories.flatMap((st) => st.traces.map((t) => t.from)))) ?? []);
+  const activityByText = new Map(existing?.activities.map((a) => [a.text, a.id]) ?? []);
+  const stepByText = new Map(existing?.activities.flatMap((a) => a.steps.map((s) => [s.text, s.id])) ?? []);
+  const actor = (id) => m.actors.find((a) => a.id === id);
+  const story = { id: "story", text: opts.storyName ?? opts.dsKey };
+  const candidates = [];
+  for (const s of [...m.sentences].sort((a, b) => a.seq - b.seq)) {
+    const who = actor(s.actor);
+    if (who.kind === "system")
+      continue;
+    const ref2 = `${opts.dsKey}/${s.id}`;
+    if (traced.has(ref2))
+      continue;
+    const receivers = s.to.map((r) => actor(r).text);
+    const group = m.groups.find((g) => g.members.includes(s.id) || s.object && g.members.includes(s.object) || g.members.includes(s.actor)) ?? story;
+    candidates.push({
+      id: `from-${s.id}`,
+      text: `As ${who.text}, I ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${receivers.length ? ` ${s.toLabel ?? "to"} ${receivers.join(", ")}` : ""}`,
+      acceptance: [receivers.length && s.objectText ? `${s.objectText} reaches ${receivers.join(", ")}` : `Done: ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}`],
+      traces: [{ from: ref2, rel: "derived-from" }],
+      activity: { id: activityByText.get(group.text) ?? group.id, text: group.text },
+      step: { id: stepByText.get(who.text) ?? who.id, text: who.text },
+      person: who.text,
+      source: { kind: "sentence", id: s.id }
+    });
+  }
+  const activities = [];
+  for (const c2 of candidates) {
+    let a = activities.find((x) => x.id === c2.activity.id);
+    if (!a)
+      activities.push(a = { id: c2.activity.id, text: c2.activity.text, steps: [] });
+    let st = a.steps.find((x) => x.id === c2.step.id);
+    if (!st)
+      a.steps.push(st = { id: c2.step.id, text: c2.step.text, stories: [] });
+    st.stories.push({ id: c2.id, text: c2.text, acceptance: c2.acceptance, traces: c2.traces });
+  }
+  return { candidates, activities };
+}
+var init_proposeFromDomainStory = __esm({
+  "packages/canvas/dist/diagrams/proposeFromDomainStory.js"() {
+    init_domainStory();
+    init_userStoryMap();
   }
 });
 
@@ -57297,6 +57914,15 @@ var init_kanban = __esm({
   }
 });
 
+// packages/canvas/dist/templates/domain-story.js
+var init_domain_story = __esm({
+  "packages/canvas/dist/templates/domain-story.js"() {
+    init_domainStory();
+    init_util2();
+    init_domainStory();
+  }
+});
+
 // packages/canvas/dist/templates/frame.js
 var init_frame = __esm({
   "packages/canvas/dist/templates/frame.js"() {
@@ -57317,6 +57943,7 @@ var init_templates = __esm({
     init_wireframe();
     init_workflow();
     init_kanban();
+    init_domain_story();
     init_util2();
     init_util2();
     init_event_storming();
@@ -57325,6 +57952,7 @@ var init_templates = __esm({
     init_wireframe();
     init_workflow();
     init_frame();
+    init_domain_story();
     init_kanban();
     itemTypes = ["sticky", "text", "frame", "lane", "arrow", "comment", "wireframe", "card"];
     colorTokens = ["orange", "blue", "yellow", "pale-yellow", "lilac", "green", "pink", "red", "purple", "grey", "white"];
@@ -57354,6 +57982,7 @@ var init_templates = __esm({
       wireframe: wireframeSchema,
       workflow: workflowSchema,
       kanban: kanbanSchema,
+      "domain-story": domainStorySchema,
       freeform: freeformSchema
     };
     diagramKinds = Object.keys(contentSchemas);
@@ -57432,8 +58061,11 @@ var init_diagrams = __esm({
     init_ids2();
     init_eventStorming();
     init_userStoryMap();
+    init_domainStory();
     init_grammar();
     init_proposeStories();
+    init_egon();
+    init_proposeFromDomainStory();
     init_model();
     init_check();
   }
@@ -57446,8 +58078,10 @@ __export(design_exports, {
   cmdDesign: () => cmdDesign,
   cmdDesignLint: () => cmdDesignLint,
   drawDesign: () => drawDesign,
+  exportEgonFile: () => exportEgonFile,
   frameOf: () => frameOf,
   growFrame: () => growFrame,
+  importEgonFile: () => importEgonFile,
   lintDesign: () => lintDesign,
   parseDesignFile: () => parseDesignFile,
   proposalOps: () => proposalOps,
@@ -57515,6 +58149,8 @@ function lintDesign(d, file2) {
   const parsed = schema.safeParse(d.content);
   if (!parsed.success)
     return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
+  if (d.kind === "domain-story")
+    return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
   if (d.kind !== "event-storming")
     return unknown2;
   return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
@@ -57641,11 +58277,11 @@ async function proposeStoriesToBoard(esFile, usmFile, opts) {
   const api = canvasApi(base);
   const es = parseDesignFile(esFile, fs12.readFileSync(esFile, "utf8"));
   const usm = parseDesignFile(usmFile, fs12.readFileSync(usmFile, "utf8"));
-  if (es.kind !== "event-storming")
-    throw new Error(`${esFile} is a ${es.kind} diagram, not EventStorming`);
+  if (es.kind !== "event-storming" && es.kind !== "domain-story")
+    throw new Error(`${esFile} is a ${es.kind} diagram \u2014 propose stories from EventStorming or a domain story`);
   if (usm.kind !== "user-story-map")
     throw new Error(`${usmFile} is a ${usm.kind} diagram, not a story map`);
-  const { candidates } = proposeStories(es.content, { esKey: es.key, existing: usm.content });
+  const { candidates } = es.kind === "domain-story" ? proposeFromDomainStory(es.content, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content }) : proposeStories(es.content, { esKey: es.key, existing: usm.content });
   const board = await resolveBoard(api, opts.board);
   const { ops, proposed, skipped } = proposalOps(board, candidates, usm.key, es.key);
   const seq = ops.length ? (await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd design propose-stories: ${proposed} from ${es.key}` })).seq : void 0;
@@ -57687,7 +58323,25 @@ async function cmdDesign(args2, flags2) {
     console.log(`\u2714 ${r.proposed} story proposal(s) on ${r.base}/b/${r.boardId}${r.skipped ? ` (${r.skipped} already proposed)` : ""}${r.candidates === 0 ? " \u2014 nothing new: every command already has a story" : ""}. Accept them in a chat; the story-map file is not written until then.`);
     return true;
   }
-  throw new Error("usage: awd design draw|lint|propose-stories \u2026 (docs/diagrams.md)");
+  if (sub === "import-egon") {
+    const out = str(flags2.out);
+    if (!file2 || !out)
+      throw new Error("usage: awd design import-egon <story.egn> --out design/<name>.domain-story.yaml");
+    const r = importEgonFile(file2, out);
+    for (const w of r.warnings)
+      console.warn(`\u26A0 ${w}`);
+    console.log(`\u2714 ${path13.basename(file2)} \u2192 ${out} (${r.sentences} sentence(s)); draw it with awd design draw ${out} --board \u2026`);
+    return cmdDesignLint(out);
+  }
+  if (sub === "export-egon") {
+    const out = str(flags2.out);
+    if (!file2 || !out)
+      throw new Error("usage: awd design export-egon <design/<name>.domain-story.yaml> --out <story.egn>");
+    exportEgonFile(file2, out);
+    console.log(`\u2714 ${path13.basename(file2)} \u2192 ${out}; open it in Egon.io (https://egon.io) with Import`);
+    return true;
+  }
+  throw new Error("usage: awd design draw|lint|propose-stories|import-egon|export-egon \u2026 (docs/diagrams.md)");
 }
 function growFrame(frame, drawn, placed, pad = 20) {
   if (placed.has(frame.id))
@@ -57699,6 +58353,29 @@ function growFrame(frame, drawn, placed, pad = 20) {
   const w = Math.max(fw, ...boxes.map((b) => (b.x ?? 0) + (b.w ?? 0) + pad - fx));
   const h = Math.max(fh, ...boxes.map((b) => (b.y ?? 0) + (b.h ?? 0) + pad - fy));
   return w > fw || h > fh ? { kind: "update", id: frame.id, patch: { w, h } } : void 0;
+}
+function importEgonFile(file2, out) {
+  let text = fs12.readFileSync(file2, "utf8");
+  if (file2.endsWith(".svg")) {
+    const unescaped = text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&");
+    const m = unescaped.match(/<DST>([\s\S]*?)<\/DST>/);
+    if (!m)
+      throw new Error(`${file2}: no embedded domain story (<DST>) in this SVG`);
+    text = m[1].replace(/<!--|-->/g, "");
+  }
+  const r = fromEgon(JSON.parse(text));
+  const header = [`# Imported from Egon.io (${path13.basename(file2)}) by awd design import-egon.`, ...r.description ? [`# ${r.description.replace(/\n/g, " ")}`] : []].join("\n");
+  const body = import_yaml3.default.stringify({ ...r.title ? { title: r.title } : {}, ...r.content }, { lineWidth: 0 });
+  fs12.mkdirSync(path13.dirname(path13.resolve(out)), { recursive: true });
+  fs12.writeFileSync(out, `${header}
+${body}`);
+  return { sentences: (r.content.sentences ?? []).length, warnings: r.warnings };
+}
+function exportEgonFile(file2, out) {
+  const d = parseDesignFile(file2, fs12.readFileSync(file2, "utf8"));
+  if (d.kind !== "domain-story")
+    throw new Error(`${file2} is a ${d.kind} diagram, not a domain story`);
+  fs12.writeFileSync(out, JSON.stringify(toEgon(d.content, { title: d.title ?? d.key }), null, 2));
 }
 var import_yaml3, str, KIND_ALIASES, CARD_W3, CARD_H, GAP2, PAD2;
 var init_design = __esm({
@@ -57718,6 +58395,7 @@ var init_design = __esm({
       kanban: "kanban",
       wireframe: "wireframe",
       "domain-story": "domain-story",
+      dst: "domain-story",
       journey: "user-journey",
       "user-journey": "user-journey",
       workflow: "workflow"
@@ -57830,8 +58508,10 @@ var HELP = `awd \u2014 small event-driven agent workflows
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
   awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL]
               draws (or refreshes) one diagram frame from its file; the board keeps your layout (docs/diagrams.md)
-  awd design  lint <file>                # schema + the EventStorming grammar (book pages)
-  awd design  propose-stories <es file> --into <story-map file> --board <\u2026>   # story candidates as pending cards
+  awd design  lint <file>                # schema + the EventStorming / Domain Storytelling grammar
+  awd design  propose-stories <es | domain-story file> --into <story-map file> --board <\u2026>   # story candidates as pending cards
+  awd design  import-egon <story.egn | .egn.svg> --out design/<name>.domain-story.yaml   # from Egon.io
+  awd design  export-egon <domain-story file> --out <story.egn>                         # to Egon.io
   awd run     <workflow.yaml> [--port 4311] [--worker fake|claude-code|anthropic|cli|herdr] [--store file|memory] [--store-dir DIR] [--quiet]
               --worker is the default runner; each agent may pick its own runner:. --worker fake overrides all of them.
               --store memory keeps the event log in RAM (demos, tests); file (default) appends to <store-dir>/events.ndjson.

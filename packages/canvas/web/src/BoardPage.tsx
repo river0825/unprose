@@ -38,6 +38,8 @@ import { PanelResizer, usePanelWidth } from './components/PanelResizer'
 import { addWire, isFlowWire, pendingOf, pickEventOp, relabelOp, removeOps, rewireOp, undoOps } from './inspector/pending'
 import { StudioControl } from './components/StudioControl'
 import { isWorkflowScope } from './diagrams/frame'
+import { FrozenHeaders } from './flow/FrozenHeaders'
+import { captureIds, copySelectionAsImage, imageFileName } from './flow/copyImage'
 
 const GRID: [number, number] = [10, 10]
 const MULTI_SELECT_KEYS = ['Meta', 'Control', 'Shift']
@@ -398,6 +400,24 @@ function BoardInner({ id }: { id: string }) {
   )
   const deleteSelection = useCallback(() => deleteItems(selectedIds), [deleteItems, selectedIds])
 
+  // "Copy as image": the given items (a frame with its contents, the wires between them) as a PNG on the clipboard
+  const copyAsImage = useCallback(
+    async (ids: string[]) => {
+      const root = wrapRef.current?.querySelector<HTMLElement>('.react-flow')
+      if (!board || !root || !ids.length) return
+      const { nodes, edges } = captureIds(board, ids)
+      if (!nodes.size) return
+      const bounds = flow.getNodesBounds([...nodes])
+      try {
+        const how = await copySelectionAsImage({ root, nodes, edges, bounds, fileName: imageFileName(board.title) })
+        store.toast(how === 'copied' ? 'Copied as image' : 'Downloaded as image (the clipboard is not available here)')
+      } catch (err) {
+        store.toast(`Could not make an image: ${err instanceof Error ? err.message : String(err)}`, 'error')
+      }
+    },
+    [board, flow, store],
+  )
+
   const undoWire = useCallback(
     (iid: string) => {
       const it = board?.items[iid]
@@ -506,9 +526,13 @@ function BoardInner({ id }: { id: string }) {
   // the comment created by "Ask agent" hands off once its text is saved
   const pendingAsk = useRef<string | null>(null)
 
+  // the current selection, read by openMenu without re-creating the edit API on every selection change
+  const selectedRef = useRef<string[]>([])
+  selectedRef.current = selectedIds
   const openMenu = useCallback(
     (iid: string, x: number, y: number) => {
-      select([iid])
+      // right-clicking inside a multi-selection keeps it, so the menu (e.g. "Copy 3 items as image") acts on all of it
+      if (!selectedRef.current.includes(iid)) select([iid])
       setMenu({ itemId: iid, x, y, returnTo: document.activeElement as HTMLElement | null })
     },
     [select],
@@ -586,6 +610,11 @@ function BoardInner({ id }: { id: string }) {
         else store.undo()
         return
       }
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'c' && selectedIds.length) {
+        e.preventDefault()
+        void copyAsImage(selectedIds)
+        return
+      }
       if (mod && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         duplicate(selectedIds)
@@ -631,7 +660,7 @@ function BoardInner({ id }: { id: string }) {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage])
 
   // first load → fit, or centre the deep-linked item (?focus=<id>)
   const fitted = useRef(false)
@@ -722,6 +751,10 @@ function BoardInner({ id }: { id: string }) {
               e.preventDefault()
               openMenu(n.id, e.clientX, e.clientY)
             }}
+            onSelectionContextMenu={(e, sel) => {
+              e.preventDefault()
+              if (sel[0]) openMenu(sel[0].id, e.clientX, e.clientY)
+            }}
             onPaneClick={() => {
               setEditingId(null)
               if (tool === 'comment') setTool('select')
@@ -743,6 +776,7 @@ function BoardInner({ id }: { id: string }) {
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
+            <FrozenHeaders board={board} />
             <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
           </ReactFlow>
         </EditContext.Provider>
@@ -805,6 +839,8 @@ function BoardInner({ id }: { id: string }) {
           onColor={recolor}
           onDuplicate={(iid) => duplicate([iid])}
           onDelete={(iid) => deleteItems([iid])}
+          onCopyImage={(iid) => void copyAsImage(selectedIds.includes(iid) ? selectedIds : [iid])}
+          copyCount={selectedIds.includes(menu.itemId) ? selectedIds.length : 1}
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
         />

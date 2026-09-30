@@ -35,7 +35,8 @@ test('lint: schema errors stop a draw; the EventStorming grammar comes back as n
   assert.ok(broken.some((f) => f.severity === 'error' && f.message.startsWith('events')))
   // every kind with a schema is checked offline now (river0825/unprose#9): an empty wireframe is an error
   assert.ok(lintDesign({ key: 'k', kind: 'wireframe', content: {} }).some((f) => f.severity === 'error' && f.message.startsWith('screens')))
-  assert.equal(lintDesign({ key: 'k', kind: 'domain-story', content: {} })[0].severity, 'info', 'a kind without a schema still says so')
+  assert.ok(lintDesign({ key: 'k', kind: 'domain-story', content: {} }).some((f) => f.severity === 'error' && f.message.startsWith('actors')), 'domain stories are checked offline too')
+  assert.equal(lintDesign({ key: 'k', kind: 'freeform', content: {} })[0].severity, 'info', 'a kind without a schema still says so')
 })
 
 // A board after `awd design draw` of both files (the parts the proposal needs).
@@ -154,4 +155,54 @@ test('#6: a draw lists the traces it could not draw', async () => {
     '⚠ 1 trace(s) not drawn:',
     '  kb.card.c —groups→ old/x: target not found on the board',
   ])
+})
+
+// ── Domain Storytelling (docs/diagrams.md §6b) ──────────────────────────────
+
+test('domain stories: .domain-story.yaml and .dst.yaml name the kind; lint runs the pictographic rules', async () => {
+  const { KIND_ALIASES: aliases } = await import('../src/design.js')
+  assert.equal(aliases.dst, 'domain-story')
+  const d = parseDesignFile('/x/design/claims.dst.yaml', 'actors: [Clerk]\nworkObjects: [unused]\nsentences:\n  - { actor: Clerk, verb: files, object: claim, colour: red }\n')
+  assert.deepEqual([d.key, d.kind], ['claims-dst', 'domain-story'])
+  const f = lintDesign(d)
+  assert.ok(f.some((x) => x.message.startsWith('unknown field `colour`')), 'unknown fields are reported')
+  assert.ok(f.some((x) => x.severity === 'warning' && /"unused" is in no sentence/.test(x.message)), 'grammar findings')
+  assert.equal(f.filter((x) => x.severity === 'error').length, 0)
+})
+
+test('Egon.io: import an .egn story, export it back, and read a story embedded in an .egn.svg', async () => {
+  const os = await import('node:os')
+  const { importEgonFile, exportEgonFile } = await import('../src/design.js')
+  const { fromEgon } = await import('@awd/canvas/diagrams')
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'egon-'))
+  const out = path.join(tmp, 'design', 'box-office.domain-story.yaml')
+  const r = importEgonFile(path.join(dir, 'box-office.egn'), out)
+  assert.equal(r.sentences, 2)
+  assert.deepEqual(r.warnings, ['annotation "loose note" is linked to nothing — skipped'])
+  const d = parseDesignFile(out, fs.readFileSync(out, 'utf8'))
+  assert.deepEqual([d.kind, d.title], ['domain-story', 'Box office'])
+  const c = d.content as { scope: unknown; actors: Array<{ text: string; kind: string }>; sentences: Array<{ seq: number; verb: string; to?: string[]; toLabel?: string }>; groups: unknown[]; annotations: unknown[] }
+  assert.deepEqual(c.scope, { granularity: 'coarse-grained', time: 'as-is', purity: 'digitalized' })
+  assert.deepEqual(c.actors.map((a) => `${a.text}:${a.kind}`), ['Moviegoer:person', 'Cashier:person', 'Ticket system:system'])
+  assert.deepEqual(c.sentences.map((s) => [s.seq, s.verb, s.to, s.toLabel ?? null]), [[1, 'asks for', ['cashier'], null], [2, 'books', ['ticket-system'], 'in']])
+  assert.equal(c.groups.length, 1)
+  assert.equal(c.annotations.length, 1)
+  assert.equal(lintDesign(d).filter((x) => x.severity !== 'info').length, 0, 'the imported file lints clean')
+
+  // export → import again keeps the story
+  const egn = path.join(tmp, 'back.egn')
+  exportEgonFile(out, egn)
+  const exported = JSON.parse(fs.readFileSync(egn, 'utf8'))
+  assert.equal(exported.domainStory.title, 'Box office')
+  assert.ok(exported.iconSet.actors.Person && exported.iconSet.actors.System && exported.iconSet.workObjects.Conversation)
+  const types = exported.domainStory.businessObjects.map((o: { type: string }) => o.type)
+  assert.ok(types.includes('domainStory:actorPerson') && types.includes('domainStory:workObjectDocument') && types.includes('domainStory:group') && types.includes('domainStory:textAnnotation'))
+  const again = fromEgon(exported)
+  assert.deepEqual(again.content.sentences!.map((s) => [s.seq, s.verb, s.toLabel ?? null]), [[1, 'asks for', null], [2, 'books', 'in']])
+
+  // an .egn.svg with the story embedded (XML-escaped, as Egon writes it)
+  const svg = path.join(tmp, 'story.egn.svg')
+  const json = fs.readFileSync(path.join(dir, 'box-office.egn'), 'utf8')
+  fs.writeFileSync(svg, `<svg xmlns="http://www.w3.org/2000/svg"><g/>\n<text class='hiddenDomainStory' style='font-size: 0'>\n&lt;DST&gt;${json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}&lt;/DST&gt;\n</text>\n</svg>`)
+  assert.equal(importEgonFile(svg, path.join(tmp, 'from-svg.domain-story.yaml')).sentences, 2)
 })

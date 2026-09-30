@@ -4,6 +4,7 @@
 import { parse } from 'yaml'
 import type { Board, Item } from '../../../src/model'
 import { checkEventStorming } from '../../../src/diagrams/grammar'
+import { checkDomainStory } from '../../../src/diagrams/domainStory'
 import { esFindings, type Finding } from './es'
 import { membersOf } from './frame'
 
@@ -35,9 +36,19 @@ export function itemOfElement(board: Board, frameId: string, element: string | u
   return membersOf(board, frameId).find((it) => it.data?.element === element || it.id.endsWith(`.${element}`))
 }
 
-/** Grammar findings for an EventStorming frame. */
-export function frameFindings(board: Board, frame: Item, key: string, level?: string, source?: string): Finding[] {
+/** Grammar findings for an EventStorming or Domain Storytelling frame. */
+export function frameFindings(board: Board, frame: Item, key: string, level?: string, source?: string, kind = 'event-storming'): Finding[] {
   const content = diagramContent(board, key, source)
+  if (kind === 'domain-story') {
+    if (!content || typeof content !== 'object') return []
+    try {
+      return checkDomainStory(content as Parameters<typeof checkDomainStory>[0])
+        .filter((f) => f.severity === 'warning')
+        .map((f) => ({ elementId: itemOfElement(board, frame.id, f.element)?.id ?? frame.id, message: f.message, page: f.page }))
+    } catch {
+      return []
+    }
+  }
   if (content && typeof content === 'object') {
     try {
       return checkEventStorming(content as Parameters<typeof checkEventStorming>[0])

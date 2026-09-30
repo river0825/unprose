@@ -1,0 +1,74 @@
+/* Frozen headers: pinned copies of a frame's column / row titles (flow/FrozenHeaders.tsx). Above the
+   nodes (the renderer is z 4), below React Flow's panels (minimap, controls: z 5). */
+.frozen-headers {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fh-clip {
+  position: absolute;
+  overflow: hidden;
+}
+.fh-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: color-mix(in srgb, var(--chrome) 92%, transparent);
+  border-bottom: 1px solid var(--rule-2);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+.fh-left {
+  position: absolute;
+  left: 0;
+  background: color-mix(in srgb, var(--chrome) 92%, transparent);
+  border-right: 1px solid var(--rule-2);
+  box-shadow: 1px 0 3px rgb(0 0 0 / 8%);
+}
+.fh-cell {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fh-col {
+  display: flex;
+  align-items: center;
+  border-left: 1px solid var(--rule);
+}
+.fh-row {
+  left: 0;
+  border-top: 1px solid var(--rule);
+}
+.fh-row span {
+  position: sticky;
+  top: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fh-corner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  background: var(--chrome);
+  border-right: 1px solid var(--rule-2);
+  border-bottom: 1px solid var(--rule-2);
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 1;
+}

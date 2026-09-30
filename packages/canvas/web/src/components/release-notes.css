@@ -1,0 +1,17 @@
+/* Markdown maps ## (a version) to h5 and ### (Added/Fixed…) to h6.
+   Version button (bottom of the rail) and the release-notes dialog. Tokens from styles.css. */
+.rail-btn.version-btn { height: auto; min-height: 32px; padding: 4px 0; }
+.version-text { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink-3); }
+.version-btn:hover .version-text, .version-btn:focus-visible .version-text { color: var(--ink); }
+.version-dot { position: absolute; top: 3px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--marker, var(--ink)); box-shadow: 0 0 0 2px var(--chrome); }
+
+.sheet.release-notes { width: min(760px, 100%); }
+.release-version { margin-left: 6px; font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.sheet-body.release-body { display: block; padding: 4px 20px 20px; }
+.release-body .md { font-size: 13.5px; line-height: 1.55; }
+.release-body .md h5 { font-size: 16px; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
+.release-body .md h5:first-child { margin-top: 12px; }
+.release-body .md h6 { font-size: 13.5px; margin: 14px 0 4px; color: var(--ink-2); }
+.release-body .md ul { padding-left: 20px; }
+.release-body .md li { margin: 3px 0; }
+.release-body:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }

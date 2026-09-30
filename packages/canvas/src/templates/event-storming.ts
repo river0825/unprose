@@ -299,7 +299,7 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   const PHASE_H = 32
   const phasesH = phaseRows.length ? phaseRows.length * (PHASE_H + STACK) + GAP : 0
   phaseBars.forEach((b, i) => {
-    items.push(make({ id: itemId('phase', b.ph.id), type: 'text', x: PAD + b.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b.to - b.from) * COL + STICKY_W, h: PHASE_H, text: b.ph.text, role: 'phase', color: ES_COLORS.phase, data: { element: b.ph.id, from: b.ph.from, to: b.ph.to } }, now))
+    items.push(make({ id: itemId('phase', b.ph.id), type: 'text', x: PAD + b.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b.to - b.from) * COL + STICKY_W, h: PHASE_H, text: b.ph.text, role: 'phase', color: ES_COLORS.phase, data: { element: b.ph.id, from: b.ph.from, to: b.ph.to, header: 'column' } }, now))
   })
 
   // Timeline: one band per swimlane (or one band with no lane).
@@ -337,7 +337,7 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   const width = PAD * 2 + lastRank * COL + PIVOTAL_W
   const laneItems: Item[] = m.lanes.map((name, i) => {
     const key = laneKeys[i]
-    const base = make({ id: laneIds.get(key)!, type: 'lane', x: 0, y: bandTop.get(key)! - LANE_HEADER, w: width, h: bandH.get(key)! + LANE_HEADER, text: name, role: 'lane', color: 'grey', order: i }, now)
+    const base = make({ id: laneIds.get(key)!, type: 'lane', x: 0, y: bandTop.get(key)! - LANE_HEADER, w: width, h: bandH.get(key)! + LANE_HEADER, text: name, role: 'lane', color: 'grey', order: i, data: { header: 'row' } }, now)
     return fit(base, items.filter((it) => it.parent === base.id), PAD, LANE_HEADER)
   })
   const laneW = Math.max(width, ...laneItems.map((l) => l.x + l.w))

@@ -12,6 +12,7 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       ['F', 'Add frame'],
       ['C', 'Comment on an item'],
       [`${MOD} D`, 'Duplicate the selection'],
+      [`${MOD} Shift C`, 'Copy the selection as an image (also in the right-click menu)'],
     ],
   },
   {

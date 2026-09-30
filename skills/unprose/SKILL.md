@@ -30,6 +30,8 @@ For the CLI, pass `--canvas <url>`.
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).
+    A domain story tells one scenario as sentences (actor → verb → work object → receiver); move stories to and
+    from Egon.io with `awd design import-egon` / `export-egon` (docs/diagrams.md §6b).
   - `awd design lint <file>` — schema + EventStorming grammar (with book page references).
   - `awd design propose-stories <es file> --into <story map file> --board …` — story candidates from
     EventStorming, drawn as dashed proposals (never written until the person accepts).

@@ -18,8 +18,10 @@ const HELP = `awd — small event-driven agent workflows
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
   awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL]
               draws (or refreshes) one diagram frame from its file; the board keeps your layout (docs/diagrams.md)
-  awd design  lint <file>                # schema + the EventStorming grammar (book pages)
-  awd design  propose-stories <es file> --into <story-map file> --board <…>   # story candidates as pending cards
+  awd design  lint <file>                # schema + the EventStorming / Domain Storytelling grammar
+  awd design  propose-stories <es | domain-story file> --into <story-map file> --board <…>   # story candidates as pending cards
+  awd design  import-egon <story.egn | .egn.svg> --out design/<name>.domain-story.yaml   # from Egon.io
+  awd design  export-egon <domain-story file> --out <story.egn>                         # to Egon.io
   awd run     <workflow.yaml> [--port 4311] [--worker fake|claude-code|anthropic|cli|herdr] [--store file|memory] [--store-dir DIR] [--quiet]
               --worker is the default runner; each agent may pick its own runner:. --worker fake overrides all of them.
               --store memory keeps the event log in RAM (demos, tests); file (default) appends to <store-dir>/events.ndjson.

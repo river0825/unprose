@@ -1,0 +1,188 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { normalizeDomainStory, checkDomainStory, readSentence, circled, type DomainStoryContent } from '../src/diagrams/domainStory.js'
+import { renderDomainStory, countCrossings } from '../src/templates/domain-story.js'
+import { unknownContentFields } from '../src/diagrams/check.js'
+import type { Item } from '../src/model.js'
+
+const now = '2026-09-30T00:00:00Z'
+const story: DomainStoryContent = {
+  scope: { granularity: 'coarse-grained', time: 'to-be', purity: 'digitalized' },
+  actors: ['Customer', { id: 'clerk', text: 'Clerk' }, { text: 'Policy system', kind: 'system' }],
+  workObjects: [{ id: 'form', text: 'application form' }, { text: 'policy', kind: 'document' }],
+  sentences: [
+    { actor: 'Customer', verb: 'sends', object: 'form', to: 'clerk' },
+    { actor: 'clerk', verb: 'checks', object: 'form' },
+    { actor: 'clerk', verb: 'enters', object: 'policy', to: 'Policy system', toLabel: 'into' },
+    { actor: 'Policy system', verb: 'notifies', to: 'Customer' },
+  ],
+  annotations: [{ on: 'clerk', text: 'Only in office hours' }],
+  groups: [{ text: 'Back office', members: ['clerk', 'Policy system'] }],
+}
+
+test('normalize: stable ids, sequence numbers in order, references by id or text', () => {
+  const m = normalizeDomainStory(story)
+  assert.deepEqual(m.actors.map((a) => [a.id, a.kind]), [['customer', 'person'], ['clerk', 'person'], ['policy-system', 'system']])
+  assert.deepEqual(m.sentences.map((s) => s.seq), [1, 2, 3, 4])
+  assert.equal(m.sentences[0].object, 'form')
+  assert.equal(m.sentences[0].objectText, 'application form')
+  assert.deepEqual(m.sentences[2].to, ['policy-system'])
+  assert.equal(m.unresolved.length, 0)
+  assert.equal(readSentence(m, m.sentences[0]), '① Customer sends application form to Clerk')
+  assert.equal(readSentence(m, m.sentences[2]), '③ Clerk enters policy into Policy system')
+  assert.equal(circled(21), '(21)')
+})
+
+test('grammar: unknown actors, missing work objects, sequence gaps and shared numbers, unused elements', () => {
+  const findings = checkDomainStory({
+    actors: ['A', 'Idle'],
+    workObjects: ['orphan'],
+    sentences: [
+      { seq: 1, actor: 'A', verb: 'writes', object: 'note', to: 'Ghost' },
+      { seq: 1, actor: 'A', verb: 'calls', object: 'phone' },
+      { seq: 3, actor: 'A', verb: 'waves' },
+    ],
+  })
+  const rules = findings.map((f) => f.rule).sort()
+  assert.deepEqual(rules, ['actor-unused', 'sentence-without-object', 'sequence-gap', 'sequence-shared', 'unresolved-reference', 'work-object-unused'])
+  assert.ok(findings.every((f) => f.page), 'every finding says where the rule comes from')
+  assert.deepEqual(checkDomainStory(story).filter((f) => f.severity === 'warning'), [])
+})
+
+const overlap = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+const mid = (i: Item) => ({ x: i.x + i.w / 2, y: i.y + i.h / 2 })
+
+test('pictographic story: actors once, a pictogram per work object, numbers and verbs on the arrows', () => {
+  const items = renderDomainStory(story, { scope: 'ds', now })
+  const actors = items.filter((i) => i.role === 'actor')
+  assert.equal(actors.length, 3, 'every actor appears once')
+  assert.ok(actors.every((a) => a.data?.ds === 'actor' && a.text && !/[👤👥🖥]/u.test(a.text)), 'actors are pictograms: the name is plain text, the icon comes from data.kind')
+  assert.equal(actors.find((a) => a.text === 'Policy system')!.data?.kind, 'system')
+  const objects = items.filter((i) => i.role === 'work-object')
+  assert.equal(objects.length, 3, 'one work object per activity that has one')
+  assert.ok(objects.every((o) => o.data?.ds === 'object'))
+  assert.equal(objects.find((o) => o.data?.seq === 1)!.data!.sentence, '① Customer sends application form to Clerk')
+  // no board item carries "① verb": the number is data.seq on the activity arrow, the verb its label
+  assert.ok(!items.some((i) => i.type !== 'arrow' && /^[①-⑳] /.test(i.text ?? '')), 'no sentence card')
+  const activities = items.filter((i) => i.role === 'activity')
+  assert.deepEqual(activities.map((a) => a.data?.seq).sort(), [1, 2, 3, 4])
+  assert.deepEqual(activities.map((a) => a.label).sort(), ['checks', 'enters', 'notifies', 'sends'])
+  assert.ok(activities.every((a) => a.data?.ds), 'the web draws these as numbered domain-story arrows')
+  // a sentence without a work object is one arrow actor → actor, carrying the sentence's element id
+  const direct = activities.find((a) => a.label === 'notifies')!
+  assert.equal(direct.from, 'ds.actor.policy-system')
+  assert.equal(direct.to, 'ds.actor.customer')
+  assert.equal(direct.data?.element, '4-notifies')
+  assert.equal(items.filter((i) => i.role === 'activity-to').length, 2)
+  assert.equal(items.find((i) => i.role === 'activity-to' && i.label === 'into')!.to, 'ds.actor.policy-system')
+  // no lifelines, rows or activity cards any more
+  assert.ok(!items.some((i) => /lifeline|activity-node/.test(i.role ?? '')))
+  // pictograms and notes never overlap; the group encloses its members; the annotation is linked
+  const boxes = items.filter((i) => i.type !== 'arrow' && i.role !== 'group')
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) assert.ok(!overlap(boxes[i], boxes[j]), `${boxes[i].id} overlaps ${boxes[j].id}`)
+  const group = items.find((i) => i.role === 'group')!
+  for (const id of ['ds.actor.clerk', 'ds.actor.policy-system']) {
+    const b = items.find((i) => i.id === id)!
+    assert.ok(b.x >= group.x && b.y >= group.y && b.x + b.w <= group.x + group.w && b.y + b.h <= group.y + group.h, `${id} inside the group`)
+  }
+  assert.ok(items.some((i) => i.role === 'annotation-link' && i.to === 'ds.actor.clerk'))
+  assert.match(items.find((i) => i.role === 'scope')!.text!, /coarse-grained · to-be · digitalized/)
+  const legend = items.filter((i) => i.role === 'legend').map((i) => i.data?.ds)
+  assert.ok(legend.includes('legend-actor') && legend.includes('legend-object') && legend.includes('legend-activity'), 'the legend shows the icons and the numbered arrow')
+})
+
+test('actors are placed freely, not on one row; work objects sit on the way from actor to receiver', () => {
+  const items = renderDomainStory(
+    { actors: ['顧客', 'Clerk', { text: 'Policy system', kind: 'system' }, 'Auditor', 'Archive'], sentences: [
+      { actor: '顧客', verb: '寄出', object: 'form', to: 'Clerk' },
+      { actor: 'Clerk', verb: 'forwards', object: 'form', to: 'Auditor' },
+      { actor: 'Auditor', verb: 'approves', object: 'decision', to: '顧客' },
+      { actor: 'Clerk', verb: 'enters', object: 'policy', to: 'Policy system', toLabel: 'into' },
+      { actor: 'Clerk', verb: 'files', object: 'copy', to: 'Archive' },
+      { actor: 'Policy system', verb: 'notifies', to: '顧客' },
+    ] },
+    { scope: 'ds', now },
+  )
+  const byId = new Map(items.map((i) => [i.id, i]))
+  const actors = items.filter((i) => i.role === 'actor')
+  assert.equal(new Set(actors.map((a) => a.text)).size, actors.length, 'every actor appears once')
+  assert.ok(new Set(actors.map((a) => a.y)).size > 1, 'actors are not all on one row')
+  const first = actors.find((a) => a.text === '顧客')!
+  assert.ok(actors.every((a) => a.x >= first.x), 'the first actor is on the left')
+  for (const o of items.filter((i) => i.role === 'work-object')) {
+    const from = byId.get(items.find((i) => i.role === 'activity' && i.to === o.id)!.from!)!
+    const outs = items.filter((i) => i.role === 'activity-to' && i.from === o.id).map((a) => byId.get(a.to!)!)
+    if (!outs.length) continue
+    const [a, b, c] = [mid(from), mid(o), mid(outs[0])]
+    // between: closer to the middle of the way than to either end's far side
+    const along = ((b.x - a.x) * (c.x - a.x) + (b.y - a.y) * (c.y - a.y)) / ((c.x - a.x) ** 2 + (c.y - a.y) ** 2 || 1)
+    assert.ok(along > 0.15 && along < 0.85, `${o.text} lies on the way from ${from.text} to ${outs[0].text} (t = ${along.toFixed(2)})`)
+  }
+  const boxes = items.filter((i) => i.type !== 'arrow' && i.role !== 'group')
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) assert.ok(!overlap(boxes[i], boxes[j]), `${boxes[i].id} overlaps ${boxes[j].id}`)
+  // fewer (or no more) crossings than the naive picture: every actor on one row, objects half-way
+  const segs = (list: Item[]) => {
+    const b = new Map(list.map((i) => [i.id, i]))
+    return list.filter((i) => i.role === 'activity' || i.role === 'activity-to').map((a) => [mid(b.get(a.from!)!), mid(b.get(a.to!)!)] as [{ x: number; y: number }, { x: number; y: number }])
+  }
+  const naive = items.map((i) => {
+    if (i.role === 'actor') return { ...i, x: actors.indexOf(i) * 400, y: 0 }
+    return i
+  })
+  const nb = new Map(naive.map((i) => [i.id, i]))
+  const naive2 = naive.map((i) => {
+    if (i.role !== 'work-object') return i
+    const a = nb.get(items.find((x) => x.role === 'activity' && x.to === i.id)!.from!)!
+    const r = items.find((x) => x.role === 'activity-to' && x.from === i.id)
+    const b = r ? nb.get(r.to!)! : { ...a, x: a.x + 200 }
+    return { ...i, x: (a.x + b.x) / 2, y: 150 }
+  })
+  assert.ok(countCrossings(segs(items)) <= countCrossings(segs(naive2)), 'not worse than the naive layout')
+})
+
+test('traces on a sentence travel with its work object; a sentence with no work object puts them on its actor', () => {
+  const items = renderDomainStory(
+    { actors: ['A', 'B'], sentences: [
+      { actor: 'A', verb: 'asks', object: 'q', to: 'B', traces: [{ from: 'es/ask', rel: 'relates' }] },
+      { actor: 'B', verb: 'calls', to: 'A', traces: [{ from: 'es/call', rel: 'derived-from' }] },
+    ] },
+    { scope: 'ds', now },
+  )
+  assert.deepEqual(items.find((i) => i.role === 'work-object')!.data!.traces, [{ from: 'es/ask', rel: 'relates' }])
+  assert.deepEqual(items.find((i) => i.id === 'ds.actor.b')!.data!.traces, [{ from: 'es/call', rel: 'derived-from' }])
+})
+
+test('the layout is deterministic', () => {
+  const a = JSON.stringify(renderDomainStory(story, { scope: 'ds', now }))
+  const b = JSON.stringify(renderDomainStory(story, { scope: 'ds', now }))
+  assert.equal(a, b)
+})
+
+test('unknown fields in a domain story file are reported', () => {
+  const found = unknownContentFields('domain-story', { actors: ['A'], sentences: [{ actor: 'A', verb: 'x', colour: 'red' }], stories: [] })
+  assert.deepEqual(found.map((u) => `${u.path}.${u.field}`).sort(), ['(root).stories', 'sentences[0].colour'].sort())
+})
+
+test('story proposals from a domain story: people and groups propose, systems do not', async () => {
+  const { proposeFromDomainStory } = await import('../src/diagrams/proposeFromDomainStory.js')
+  const { candidates, activities } = proposeFromDomainStory(story, { dsKey: 'claims-ds', storyName: 'Claims' })
+  assert.deepEqual(candidates.map((c) => c.text), ['As Customer, I sends application form to Clerk', 'As Clerk, I checks application form', 'As Clerk, I enters policy into Policy system'])
+  assert.deepEqual(candidates[0].traces, [{ from: 'claims-ds/1-sends', rel: 'derived-from' }])
+  assert.deepEqual(candidates[0].acceptance, ['application form reaches Clerk'])
+  assert.equal(candidates[1].activity.text, 'Back office', 'a sentence in a group goes under that group')
+  assert.equal(candidates[0].activity.text, 'Claims')
+  assert.equal(candidates[0].source.kind, 'sentence')
+  assert.deepEqual(activities.map((a) => a.text), ['Claims', 'Back office'])
+  const again = proposeFromDomainStory(story, { dsKey: 'claims-ds', existing: { releases: [], activities: [{ text: 'Claims', steps: [{ text: 'Customer', stories: [{ text: 'x', traces: [{ from: 'claims-ds/1-sends', rel: 'derived-from' }] }] }] }] } })
+  assert.equal(again.candidates.length, 2, 'already traced sentences are not proposed again')
+})
+
+test('a trace into a sentence without a work object reaches its actor', async () => {
+  const { resolveTraces } = await import('../src/templates/frame.js')
+  const ds = renderDomainStory({ actors: ['A', 'B'], sentences: [{ id: 'call', actor: 'B', verb: 'calls', to: 'A' }] }, { scope: 'k', now })
+  const story = { id: 'sm.story.s', type: 'card', x: 0, y: 0, w: 10, h: 10, data: { element: 's', traces: [{ from: 'k/call', rel: 'derived-from' }] }, createdBy: 'agent', updatedBy: 'agent', updatedAt: now } as Item
+  const board = Object.fromEntries(ds.map((i) => [i.id, i]))
+  const { wires, unresolved } = resolveTraces([story], board, now)
+  assert.deepEqual(unresolved, [])
+  assert.equal(wires[0].to, 'k.actor.b')
+})

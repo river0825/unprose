@@ -43,6 +43,8 @@ const common = {
 await build({ ...common, entryPoints: ['packages/cli/dist/index.js'], outfile: path.join(out, 'awd.mjs') })
 await build({ ...common, entryPoints: ['packages/canvas/dist/cli.js'], outfile: path.join(out, 'canvas.mjs') })
 fs.cpSync(path.join(root, 'packages/canvas/web/dist'), path.join(out, 'web'), { recursive: true })
+// the release notes the bundled server shows (GET /api/version); the repo root has them too, but a copied dist/ may not
+if (fs.existsSync(path.join(root, 'CHANGELOG.md'))) fs.copyFileSync(path.join(root, 'CHANGELOG.md'), path.join(out, 'CHANGELOG.md'))
 
 const size = (p) => {
   const st = fs.statSync(p)

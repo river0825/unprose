@@ -6,6 +6,7 @@ import { CommentBadge, ThreadBody } from '../CommentThread'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { SCALES_FONT, fontOf } from '../font'
+import { DsIconNode } from './DsIconNode'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -244,6 +245,7 @@ export function CommentNode({ data, selected }: NodeProps<ItemNode>) {
 }
 
 export const nodeTypes = {
+  dsIcon: DsIconNode,
   sticky: StickyNode,
   text: TextNode,
   frame: FrameNode,

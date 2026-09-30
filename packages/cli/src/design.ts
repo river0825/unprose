@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { checkEventStorming, contentSchemaFor, proposeStories, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
+import { checkDomainStory, checkEventStorming, contentSchemaFor, fromEgon, proposeFromDomainStory, proposeStories, toEgon, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
@@ -26,6 +26,7 @@ export const KIND_ALIASES: Record<string, string> = {
   kanban: 'kanban',
   wireframe: 'wireframe',
   'domain-story': 'domain-story',
+  dst: 'domain-story',
   journey: 'user-journey',
   'user-journey': 'user-journey',
   workflow: 'workflow',
@@ -120,6 +121,7 @@ export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
   const unknown: DesignFinding[] = unknownContentFields(d.kind, d.content).map((u) => ({ severity: 'warning', message: `unknown field \`${u.field}\` at ${u.path} — it is not part of ${d.kind} and will be ignored` }))
   const parsed = schema.safeParse(d.content)
   if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
+  if (d.kind === 'domain-story') return [...unknown, ...checkDomainStory(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
   if (d.kind !== 'event-storming') return unknown
   return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
 }
@@ -270,9 +272,12 @@ export async function proposeStoriesToBoard(esFile: string, usmFile: string, opt
   const api = canvasApi(base)
   const es = parseDesignFile(esFile, fs.readFileSync(esFile, 'utf8'))
   const usm = parseDesignFile(usmFile, fs.readFileSync(usmFile, 'utf8'))
-  if (es.kind !== 'event-storming') throw new Error(`${esFile} is a ${es.kind} diagram, not EventStorming`)
+  if (es.kind !== 'event-storming' && es.kind !== 'domain-story') throw new Error(`${esFile} is a ${es.kind} diagram — propose stories from EventStorming or a domain story`)
   if (usm.kind !== 'user-story-map') throw new Error(`${usmFile} is a ${usm.kind} diagram, not a story map`)
-  const { candidates } = proposeStories(es.content as never, { esKey: es.key, existing: usm.content as never })
+  const { candidates } =
+    es.kind === 'domain-story'
+      ? proposeFromDomainStory(es.content as never, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content as never })
+      : proposeStories(es.content as never, { esKey: es.key, existing: usm.content as never })
   const board = await resolveBoard(api, opts.board)
   const { ops, proposed, skipped } = proposalOps(board, candidates, usm.key, es.key)
   const seq = ops.length ? (await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design propose-stories: ${proposed} from ${es.key}` })).seq : undefined
@@ -311,7 +316,22 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     console.log(`✔ ${r.proposed} story proposal(s) on ${r.base}/b/${r.boardId}${r.skipped ? ` (${r.skipped} already proposed)` : ''}${r.candidates === 0 ? ' — nothing new: every command already has a story' : ''}. Accept them in a chat; the story-map file is not written until then.`)
     return true
   }
-  throw new Error('usage: awd design draw|lint|propose-stories … (docs/diagrams.md)')
+  if (sub === 'import-egon') {
+    const out = str(flags.out)
+    if (!file || !out) throw new Error('usage: awd design import-egon <story.egn> --out design/<name>.domain-story.yaml')
+    const r = importEgonFile(file, out)
+    for (const w of r.warnings) console.warn(`⚠ ${w}`)
+    console.log(`✔ ${path.basename(file)} → ${out} (${r.sentences} sentence(s)); draw it with awd design draw ${out} --board …`)
+    return cmdDesignLint(out)
+  }
+  if (sub === 'export-egon') {
+    const out = str(flags.out)
+    if (!file || !out) throw new Error('usage: awd design export-egon <design/<name>.domain-story.yaml> --out <story.egn>')
+    exportEgonFile(file, out)
+    console.log(`✔ ${path.basename(file)} → ${out}; open it in Egon.io (https://egon.io) with Import`)
+    return true
+  }
+  throw new Error('usage: awd design draw|lint|propose-stories|import-egon|export-egon … (docs/diagrams.md)')
 }
 
 /**
@@ -326,4 +346,31 @@ export function growFrame(frame: BoardItem, drawn: BoardItem[], placed: Set<stri
   const w = Math.max(fw, ...boxes.map((b) => (b.x ?? 0) + (b.w ?? 0) + pad - fx))
   const h = Math.max(fh, ...boxes.map((b) => (b.y ?? 0) + (b.h ?? 0) + pad - fy))
   return w > fw || h > fh ? { kind: 'update', id: frame.id, patch: { w, h } } : undefined
+}
+
+// ── Egon.io interop (docs/diagrams.md §6b) ──────────────────────────────────
+
+/** Read an Egon.io story (`.egn`, or `.egn.svg` with the story embedded) and write it as a domain-story file. */
+export function importEgonFile(file: string, out: string): { sentences: number; warnings: string[] } {
+  let text = fs.readFileSync(file, 'utf8')
+  if (file.endsWith('.svg')) {
+    // Egon embeds the story as <DST>…</DST> in a hidden, XML-escaped <text> (older files: in a comment)
+    const unescaped = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&')
+    const m = unescaped.match(/<DST>([\s\S]*?)<\/DST>/)
+    if (!m) throw new Error(`${file}: no embedded domain story (<DST>) in this SVG`)
+    text = m[1].replace(/<!--|-->/g, '')
+  }
+  const r = fromEgon(JSON.parse(text))
+  const header = [`# Imported from Egon.io (${path.basename(file)}) by awd design import-egon.`, ...(r.description ? [`# ${r.description.replace(/\n/g, ' ')}`] : [])].join('\n')
+  const body = YAML.stringify({ ...(r.title ? { title: r.title } : {}), ...r.content }, { lineWidth: 0 })
+  fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true })
+  fs.writeFileSync(out, `${header}\n${body}`)
+  return { sentences: (r.content.sentences ?? []).length, warnings: r.warnings }
+}
+
+/** Write a domain-story file as an Egon.io `.egn` story. */
+export function exportEgonFile(file: string, out: string): void {
+  const d = parseDesignFile(file, fs.readFileSync(file, 'utf8'))
+  if (d.kind !== 'domain-story') throw new Error(`${file} is a ${d.kind} diagram, not a domain story`)
+  fs.writeFileSync(out, JSON.stringify(toEgon(d.content as never, { title: d.title ?? d.key }), null, 2))
 }

@@ -91,6 +91,7 @@ Each diagram is one file in `design/`. Several can share one board and link to e
 |---|---|---|---|
 | EventStorming | discuss how the system behaves, step by step | `design/<name>.es.yaml` | <img src="docs/images/thumb-es.png" width="260" alt="EventStorming"> |
 | Story map | decide what to build first (release lines) | `design/<name>.story-map.yaml` | <img src="docs/images/thumb-story-map.png" width="150" alt="Story map"> |
+| Domain Storytelling | tell one concrete scenario in pictographic sentences (import/export with [Egon.io](https://egon.io)) | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
 | Kanban | track the work | `design/<name>.kanban.yaml` | <img src="docs/images/thumb-kanban.png" width="260" alt="Kanban"> |
 | Wireframe | sketch a screen | `design/<name>.wireframe.yaml` | <img src="docs/images/thumb-wireframe.png" width="260" alt="Wireframe"> |
 | Workflow | describe an agent pipeline you can run | `<name>.workflow.yaml` | <img src="docs/images/thumb-workflow.png" width="260" alt="Workflow"> |

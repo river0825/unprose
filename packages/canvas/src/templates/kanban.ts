@@ -92,7 +92,7 @@ export function renderKanban(raw: KanbanContent, opts: RenderOpts = {}): Item[] 
       y += h + CARD_GAP
     })
     const laneH = Math.max(COLUMN_MIN_H, y + COLUMN_PAD)
-    lanes.push(make({ id: laneId, type: 'lane', x, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: 'column', color: 'grey', order: ci, data: { name: col.name, element: slugify(col.name) || `column-${ci + 1}`, ...(col.wip ? { wip: col.wip } : {}) } }, now))
+    lanes.push(make({ id: laneId, type: 'lane', x, y: 0, w: COLUMN_W, h: laneH, text: col.name, role: 'column', color: 'grey', order: ci, data: { name: col.name, element: slugify(col.name) || `column-${ci + 1}`, header: 'column', ...(col.wip ? { wip: col.wip } : {}) } }, now))
   })
   // Every column is as tall as the tallest one so they read as one board.
   const tallest = Math.max(...lanes.map((l) => l.h))

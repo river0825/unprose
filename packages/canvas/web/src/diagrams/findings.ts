@@ -9,24 +9,24 @@ const cache = new Map<string, Finding[]>()
 const cacheKey = (board: Board, frameId: string) => `${board.id}:${frameId}:${board.seq}`
 
 /** Sync: the last file-based result for this board state, else the drawn-items reading. */
-export function knownFindings(board: Board, frame: Item, level?: string): Finding[] {
-  return cache.get(cacheKey(board, frame.id)) ?? esFindings(board, frame.id, level)
+export function knownFindings(board: Board, frame: Item, level?: string, kind = 'event-storming'): Finding[] {
+  return cache.get(cacheKey(board, frame.id)) ?? (kind === 'event-storming' ? esFindings(board, frame.id, level) : [])
 }
 
 /** Findings for a frame's panel: starts with `knownFindings`, then the file-based check once it loads. */
-export function useFrameFindings(board: Board, frame: Item, key: string, level?: string, source?: string): Finding[] {
-  const [found, setFound] = useState<Finding[]>(() => knownFindings(board, frame, level))
+export function useFrameFindings(board: Board, frame: Item, key: string, level?: string, source?: string, kind = 'event-storming'): Finding[] {
+  const [found, setFound] = useState<Finding[]>(() => knownFindings(board, frame, level, kind))
   useEffect(() => {
     let live = true
-    setFound(knownFindings(board, frame, level))
+    setFound(knownFindings(board, frame, level, kind))
     void import('./content').then(({ frameFindings }) => {
-      const f = frameFindings(board, frame, key, level, source)
+      const f = frameFindings(board, frame, key, level, source, kind)
       cache.set(cacheKey(board, frame.id), f)
       if (live) setFound(f)
     })
     return () => {
       live = false
     }
-  }, [board, frame, key, level, source])
+  }, [board, frame, key, level, source, kind])
   return found
 }

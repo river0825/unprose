@@ -38,7 +38,7 @@ test('rendering is deterministic: same content → same ids and geometry', () =>
 })
 
 test('all diagram kinds are covered', () => {
-  assert.deepEqual([...diagramKinds].sort(), ['event-storming', 'freeform', 'kanban', 'user-journey', 'user-story-map', 'wireframe', 'workflow'])
+  assert.deepEqual([...diagramKinds].sort(), ['domain-story', 'event-storming', 'freeform', 'kanban', 'user-journey', 'user-story-map', 'wireframe', 'workflow'])
 })
 
 test('event storming: big-picture drops commands/policies, process keeps them', () => {

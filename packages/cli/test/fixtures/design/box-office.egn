@@ -1,0 +1,24 @@
+{
+  "iconSet": { "name": "", "actors": { "Person": "<svg/>", "System": "<svg/>" }, "workObjects": { "Document": "<svg/>", "Conversation": "<svg/>" } },
+  "domainStory": {
+    "title": "Box office",
+    "description": "Buying a ticket at the counter",
+    "version": "2.2.1",
+    "scope": { "granularity": "coarse-grained", "pointInTime": "as-is", "domainPurity": "digitalized" },
+    "businessObjects": [
+      { "type": "domainStory:actorPerson", "name": "Moviegoer", "id": "shape_1", "x": 100, "y": 100, "pickedColor": "black" },
+      { "type": "domainStory:actorPerson", "name": "Cashier", "id": "shape_2", "x": 400, "y": 100, "pickedColor": "black" },
+      { "type": "domainStory:actorSystem", "name": "Ticket system", "id": "shape_3", "x": 700, "y": 100, "pickedColor": "black" },
+      { "type": "domainStory:workObjectConversation", "name": "seat request", "id": "shape_4", "x": 250, "y": 300, "pickedColor": "black" },
+      { "type": "domainStory:workObjectDocument", "name": "ticket", "id": "shape_5", "x": 550, "y": 300, "pickedColor": "black" },
+      { "type": "domainStory:activity", "name": "asks for", "id": "connection_1", "number": 1, "source": "shape_1", "target": "shape_4", "waypoints": [] },
+      { "type": "domainStory:activity", "name": "", "id": "connection_2", "source": "shape_4", "target": "shape_2", "waypoints": [] },
+      { "type": "domainStory:activity", "name": "books", "id": "connection_3", "number": 2, "source": "shape_2", "target": "shape_5", "waypoints": [] },
+      { "type": "domainStory:activity", "name": "in", "id": "connection_4", "source": "shape_5", "target": "shape_3", "waypoints": [] },
+      { "type": "domainStory:group", "name": "Counter", "id": "shape_6", "x": 50, "y": 50, "children": ["shape_1", "shape_2"] },
+      { "type": "domainStory:textAnnotation", "text": "Cash only", "id": "shape_7", "x": 400, "y": 500 },
+      { "type": "domainStory:connection", "id": "connection_5", "source": "shape_7", "target": "shape_2", "waypoints": [] },
+      { "type": "domainStory:textAnnotation", "text": "loose note", "id": "shape_8", "x": 700, "y": 500 }
+    ]
+  }
+}

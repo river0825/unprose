@@ -216,4 +216,21 @@ export const demoBoards: Array<{ title: string; kind: DiagramKind; content: unkn
       ],
     },
   },
+  {
+    title: 'Cinema box office — Domain Storytelling',
+    kind: 'domain-story',
+    content: {
+      scope: { granularity: 'coarse-grained', time: 'as-is', purity: 'digitalized' },
+      actors: ['Moviegoer', 'Cashier', { text: 'Ticket system', kind: 'system' }],
+      workObjects: [{ text: 'seat request', kind: 'conversation' }, { text: 'seating plan', kind: 'info' }, { text: 'ticket', kind: 'document' }],
+      sentences: [
+        { actor: 'Moviegoer', verb: 'asks for', object: 'seat request', to: 'Cashier' },
+        { actor: 'Cashier', verb: 'looks up', object: 'seating plan', to: 'Ticket system', toLabel: 'in' },
+        { actor: 'Cashier', verb: 'books', object: 'ticket', to: 'Ticket system', toLabel: 'in' },
+        { actor: 'Cashier', verb: 'hands over', object: 'ticket', to: 'Moviegoer' },
+      ],
+      annotations: [{ on: 'Cashier', text: 'Cash only at the box office' }],
+      groups: [{ text: 'Booking', members: ['seating plan', 'ticket'] }],
+    },
+  },
 ]
