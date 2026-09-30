@@ -6,6 +6,18 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-30
+
+### Added
+- **Upgrade from the canvas:** the version button says **update** when a newer release is out (checked
+  server-side against GitHub, cached 6 h; a private repo is checked with `GITHUB_TOKEN` / `GH_TOKEN` or the
+  `gh` login), and the release notes dialog shows its notes with **Upgrade to v…**. Upgrade runs what fits the
+  install — `claude plugin update unprose@unprose`, `git pull --ff-only` (+ `npm ci && npm run build` in a dev
+  checkout, refused while tracked files are dirty), or a checksum-verified runtime download — then hands the
+  port to the new version and the pages reconnect; if the new server does not come up, the old one keeps
+  serving. Only from a page on the canvas's own machine (`POST /api/update` answers `403` through a tunnel).
+  `GET /api/update`, `GET /api/update/status`; `UNPROSE_UPDATE_CHECK=0` turns it off.
+
 ## [0.4.1] — 2026-09-30
 
 ### Fixed
@@ -165,7 +177,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/river0825/unprose/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/river0825/unprose/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/river0825/unprose/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/river0825/unprose/compare/v0.3.0...v0.3.1

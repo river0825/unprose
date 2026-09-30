@@ -756,6 +756,7 @@ function BoardInner({ id }: { id: string }) {
         setColor={setColor}
         tool={tool}
         setTool={setTool}
+        onToast={(t) => store.toast(t)}
         onAdd={(k) => addItem(k)}
         onDelete={deleteSelection}
         selectedCount={selectedIds.length}

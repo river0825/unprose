@@ -8,7 +8,9 @@ import { NotFound, type BoardRepository } from './ports/boardRepository.js'
 import type { ProcessInfo, ProcessSupervisor } from './ports/processSupervisor.js'
 import { createBoardRepository } from './adapters/boards/index.js'
 import { hasProjects } from './ports/boardRepository.js'
-import { moveRoute, ProjectHttpError, projectsRoute, resolveProject } from './projectsApi.js'
+import { isLocalRequest, moveRoute, ProjectHttpError, projectsRoute, resolveProject } from './projectsApi.js'
+import type { Handoff, UpdateService } from './updater.js'
+import { redactPaths } from './updatePolicy.js'
 import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
 import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, resolveTraces, type FrameRequest } from './templates/index.js'
 import { DIAGRAM_KEY } from './diagrams/ids.js'
@@ -48,6 +50,10 @@ export interface ServerOptions {
   releaseDir?: string
   /** Projects this server may start `awd studio` for (docs/diagrams.md §8). Absent: no board is studio-capable. */
   studio?: StudioConfig
+  /** Upgrading the canvas from the canvas (docs/canvas.md "Updating"). Absent: GET /api/update says it is off. */
+  update?: UpdateService
+  /** Replaces process.exit after a successful upgrade handoff (tests). */
+  exit?: (code: number) => void
 }
 
 /** One project the owner allowed studio for, resolved at startup — never taken from a board or a request. */
@@ -238,6 +244,60 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
 <p>The web UI is not built yet — run <code>npm run build -w @awd/canvas-web</code> (see <code>docs/canvas.md</code>). The API and MCP server work regardless.</p>
 <h2>Boards</h2><ul>${boards.map((b) => `<li><a href="/api/boards/${b.id}">${escapeHtml(b.title)}</a> <small>(${b.kind}, seq ${b.seq})</small></li>`).join('') || '<li><em>none yet</em></li>'}</ul>`
 
+  // ---- Updating the canvas itself (docs/canvas.md "Updating") ----
+  /** Every open page on every board gets upgrade progress. */
+  // sockets opened from this machine; everyone else (a tunnel) gets update messages without local paths
+  const localSockets = new WeakSet<WebSocket>()
+  const broadcast = (msg: WsMessage) => {
+    const full = JSON.stringify(msg)
+    const redacted = JSON.stringify(redactPaths(msg))
+    for (const c of wss.clients) if (c.readyState === WebSocket.OPEN) c.send(localSockets.has(c) ? full : redacted)
+  }
+  const handoff = (): Handoff => ({
+    port: listeningPort,
+    emit: (e) => broadcast(e),
+    pause: () =>
+      new Promise<void>((resolve) => {
+        broadcast({ type: 'update', phase: 'restarting', message: 'restarting on the new version — this page reconnects by itself', at: new Date().toISOString() })
+        for (const c of wss.clients) c.close(1012, 'restarting')
+        server.close(() => resolve())
+        server.closeAllConnections?.()
+      }),
+    resume: () =>
+      new Promise<void>((resolve, reject) => {
+        server.once('error', reject)
+        server.listen(listeningPort, () => {
+          server.off('error', reject)
+          resolve()
+        })
+      }),
+    exit: (code) => {
+      opts.studio?.supervisor.stopAll()
+      ;(opts.exit ?? process.exit)(code)
+    },
+  })
+  const updateRoute = async (req: http.IncomingMessage, res: http.ServerResponse, method: string, sub: string | undefined, url: URL) => {
+    const up = opts.update
+    const local = isLocalRequest(req)
+    // the canvas has no login: a page reached from elsewhere (a tunnel) must not learn where things live on this machine
+    const reply = (r: http.ServerResponse, status: number, body: unknown) => json(r, status, local ? body : redactPaths(body))
+    if (!sub && method === 'GET') {
+      if (!up) return reply(res, 200, { current: release().version, available: false, install: 'unknown', supported: false, canUpgrade: false, error: 'update checks are not set up on this server', command: '' })
+      const c = await up.check(url.searchParams.get('refresh') === '1')
+      const canUpgrade = local && c.supported
+      const why = !c.supported ? c.reason : !local ? 'upgrading is only possible from a page opened on this machine (http://localhost…)' : undefined
+      return reply(res, 200, { ...c, canUpgrade, ...(why ? { reason: why } : {}) })
+    }
+    if (sub === 'status' && method === 'GET') return reply(res, 200, up ? up.status() : { running: false, log: [] })
+    if (!sub && method === 'POST') {
+      if (!local) throw new HttpError(403, 'upgrading is only possible from this machine (the canvas has no login)')
+      if (!up) throw new HttpError(400, 'update checks are not set up on this server')
+      const r = await up.start(handoff())
+      return reply(res, r.started ? 202 : 409, r)
+    }
+    throw new HttpError(405, 'method not allowed')
+  }
+
   const handle = async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const method = req.method ?? 'GET'
@@ -254,6 +314,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       // pid: lets the plugin tell a canvas it started (and may restart after an update) from one the person runs
       if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid })
       if (parts[1] === 'projects' && !parts[2]) return projectReply(res, () => projectsRoute(store, req, method, () => readBody(req)))
+      if (parts[1] === 'update') return updateRoute(req, res, method, parts[2], url)
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]
@@ -514,6 +575,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     return typeof addr === 'object' && addr ? addr.port : (opts.port ?? 4400)
   }
 
+  let listeningPort = opts.port ?? 4400
   const server = http.createServer((req, res) => {
     handle(req, res).catch((err: unknown) => {
       if (res.headersSent) return void res.end()
@@ -535,6 +597,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       return
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
+      if (isLocalRequest(req)) localSockets.add(ws)
       const send = (msg: WsMessage) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg))
       send({ type: 'hello', board: store.get(board.id)! })
       // Tell the person whether an agent is currently waiting on this board.
@@ -564,6 +627,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     server.listen(opts.port ?? 4400, () => {
       const addr = server.address()
       const port = typeof addr === 'object' && addr ? addr.port : (opts.port ?? 4400)
+      listeningPort = port
       resolve({
         server,
         store,

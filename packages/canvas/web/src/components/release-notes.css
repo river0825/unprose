@@ -15,3 +15,20 @@
 .release-body .md ul { padding-left: 20px; }
 .release-body .md li { margin: 3px 0; }
 .release-body:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
+
+/* ── An upgrade is available (docs/canvas.md "Updating") ───────────────── */
+.rail-btn.version-btn.has-update { flex-direction: column; gap: 1px; }
+.version-update { display: block; font-size: 8.5px; line-height: 1; font-weight: 600; letter-spacing: 0.02em; color: var(--marker, var(--ink)); }
+.version-dot.update { background: var(--c-green, var(--marker)); }
+.update-banner { margin: 14px 0 6px; padding: 12px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--marker, var(--ink)); border-radius: 8px; background: var(--paper); }
+.update-head { font-size: 14px; }
+.update-link { margin-left: 8px; font-size: 12.5px; }
+.update-notes { margin: 8px 0 0; }
+.update-notes summary { cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+.update-notes .md { margin-top: 6px; }
+.update-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.update-why { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); }
+.update-why code { font-size: 12px; overflow-wrap: anywhere; }
+.update-progress { margin: 8px 0 0; font-size: 12.5px; }
+.update-error { margin: 8px 0 0; font-size: 12.5px; color: var(--c-red, #b42318); }
+.update-check-error { margin: 12px 0 0; font-size: 12.5px; }

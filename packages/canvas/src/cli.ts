@@ -9,6 +9,10 @@ import { startServer, type StudioConfig } from './server.js'
 import { createBoardRepository, defaultBoardsDir, isInsidePluginCache } from './adapters/boards/index.js'
 import { hasProjects } from './ports/boardRepository.js'
 import { SpawnSupervisor } from './adapters/process/index.js'
+import { ChildInstaller, FakeUpdateSource, GitHubReleaseSource, ProcessLauncher } from './adapters/update/index.js'
+import { UpdateService } from './updater.js'
+import { detectInstall } from './updatePolicy.js'
+import { findRelease } from './release.js'
 import { runMcp } from './mcp.js'
 import { CanvasClient } from './client.js'
 import { render, diagramKinds, contentSchemas } from './templates/index.js'
@@ -62,6 +66,43 @@ function studioConfig(args: string[]): StudioConfig | undefined {
   return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path.join(os.homedir(), 'Library', 'Logs', 'awd') }
 }
 
+/**
+ * Upgrading from the canvas (docs/canvas.md "Updating"): how this server was installed, where releases come
+ * from (UNPROSE_UPDATE_REPO, default river0825/unprose), off with UNPROSE_UPDATE_CHECK=0.
+ * UNPROSE_UPDATE_FAKE_LATEST=<version> pretends that version is out — for trying the UI only.
+ */
+function updateService(env: NodeJS.ProcessEnv): UpdateService {
+  const repo = env.UNPROSE_UPDATE_REPO || 'river0825/unprose'
+  const entry = (() => {
+    try {
+      return fs.realpathSync(process.argv[1] ?? '')
+    } catch {
+      return process.argv[1] ?? ''
+    }
+  })()
+  const install = detectInstall(entry, env, (p) => fs.existsSync(p))
+  const current = findRelease().version
+  const off = env.UNPROSE_UPDATE_CHECK === '0'
+  const fake = env.UNPROSE_UPDATE_FAKE_LATEST
+  const source = off ? undefined : fake ? new FakeUpdateSource({ version: fake, source: 'fake (UNPROSE_UPDATE_FAKE_LATEST)', notes: `### Added\n- A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env })
+  const home = os.homedir()
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path.join(env.CLAUDE_PLUGIN_DATA, 'canvas.json') : path.join(home, '.awd', 'plugin', 'canvas.json')
+  return new UpdateService({
+    current,
+    install,
+    source,
+    installer: new ChildInstaller({ repo }),
+    launcher: new ProcessLauncher(),
+    entry,
+    argv: process.argv.slice(2),
+    env: Object.fromEntries(Object.entries(env).filter((e): e is [string, string] => typeof e[1] === 'string')),
+    cacheFile: fake ? undefined : path.join(home, '.awd', 'update-check.json'),
+    logFile: path.join(home, '.awd', 'canvas-upgrade.log'),
+    stateFile,
+    launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== '0' && /awd|unprose/i.test(env.XPC_SERVICE_NAME),
+  })
+}
+
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name)
   if (i === -1) return undefined
@@ -84,7 +125,7 @@ async function main() {
         const p = store.registerProject(root) // fails loudly on a typo, at startup
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`)
       }
-      const s = await startServer({ port, store, studio })
+      const s = await startServer({ port, store, studio, update: updateService(process.env) })
       const where = storeKind === 'memory' ? 'in memory' : `in ${(s.store as { dir?: string }).dir ?? dir}`
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`)
       for (const p of studio?.projects ?? []) console.log(`  studio can be started from the web for boards of ${p.root}`)

@@ -2279,7 +2279,7 @@ var require_websocket = __commonJS({
     var http2 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash2 } = __require("crypto");
+    var { randomBytes, createHash: createHash3 } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -2960,7 +2960,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash2("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -3329,7 +3329,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http2 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash2 } = __require("crypto");
+    var { createHash: createHash3 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -3636,7 +3636,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash2("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -6587,9 +6587,9 @@ var require_compile = __commonJS({
       if (_sch)
         return _sch;
       const rootId = (0, resolve_1.getFullPath)(this.opts.uriResolver, sch.root.baseId);
-      const { es5, lines } = this.opts.code;
+      const { es5, lines: lines2 } = this.opts.code;
       const { ownProperties } = this.opts;
-      const gen = new codegen_1.CodeGen(this.scope, { es5, lines, ownProperties });
+      const gen = new codegen_1.CodeGen(this.scope, { es5, lines: lines2, ownProperties });
       let _ValidationError;
       if (sch.$async) {
         _ValidationError = gen.scopeValue("Error", {
@@ -6952,8 +6952,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path9) {
-      let input2 = path9;
+    function removeDotSegments(path11) {
+      let input2 = path11;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -7362,8 +7362,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path9 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path9 && path9 !== "/" ? path9 : void 0;
+        const path11 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path11 && path11 !== "/" ? path11 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -8040,8 +8040,8 @@ var require_core = __commonJS({
         this._loading = {};
         this._cache = /* @__PURE__ */ new Map();
         opts = this.opts = { ...opts, ...requiredOptions(opts) };
-        const { es5, lines } = this.opts.code;
-        this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines });
+        const { es5, lines: lines2 } = this.opts.code;
+        this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines: lines2 });
         this.logger = getLogger(opts.logger);
         const formatOpt = opts.validateFormats;
         opts.validateFormats = false;
@@ -10876,12 +10876,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs8, exportName) {
+    function addFormats(ajv, list2, fs10, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs8[f]);
+        ajv.addFormat(f, fs10[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -10890,10 +10890,10 @@ var require_dist = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs7 from "node:fs";
-import os3 from "node:os";
-import path8 from "node:path";
-import { execFile as execFile2 } from "node:child_process";
+import fs9 from "node:fs";
+import os4 from "node:os";
+import path10 from "node:path";
+import { execFile as execFile4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
@@ -11513,6 +11513,105 @@ async function moveRoute(store, req, id, readBody) {
   return { status: 200, body: { board: id, project } };
 }
 
+// packages/canvas/dist/updatePolicy.js
+function parseVersion(v2) {
+  const m2 = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(v2.trim());
+  if (!m2)
+    return void 0;
+  const pre = m2[4] ? m2[4].split(".").map((p) => /^\d+$/.test(p) ? Number(p) : p) : [];
+  return { major: Number(m2[1]), minor: Number(m2[2]), patch: Number(m2[3]), pre };
+}
+function compareVersions(a, b2) {
+  const x2 = parseVersion(a);
+  const y2 = parseVersion(b2);
+  if (!x2 || !y2)
+    return x2 ? 1 : y2 ? -1 : 0;
+  for (const k2 of ["major", "minor", "patch"])
+    if (x2[k2] !== y2[k2])
+      return x2[k2] - y2[k2];
+  if (!x2.pre.length || !y2.pre.length)
+    return x2.pre.length ? -1 : y2.pre.length ? 1 : 0;
+  for (let i = 0; i < Math.max(x2.pre.length, y2.pre.length); i++) {
+    const p = x2.pre[i];
+    const q2 = y2.pre[i];
+    if (p === void 0)
+      return -1;
+    if (q2 === void 0)
+      return 1;
+    if (p === q2)
+      continue;
+    if (typeof p === "number" && typeof q2 === "number")
+      return p - q2;
+    if (typeof p === "number")
+      return -1;
+    if (typeof q2 === "number")
+      return 1;
+    return p < q2 ? -1 : 1;
+  }
+  return 0;
+}
+var isNewer = (latest, current) => !!latest && !!current && compareVersions(latest, current) > 0;
+var norm = (p) => p.replace(/\\/g, "/").replace(/\/+$/, "");
+var dirname = (p) => norm(p).replace(/\/[^/]*$/, "") || "/";
+var join = (...parts) => norm(parts.join("/"));
+function detectInstall(entry, env, exists) {
+  const e = norm(entry);
+  const cache = /^(.*\/plugins\/cache\/[^/]+\/[^/]+\/[^/]+)(?:\/|$)/.exec(e);
+  if (cache)
+    return { kind: "plugin", root: cache[1] };
+  if (env.CLAUDE_PLUGIN_ROOT)
+    return { kind: "plugin", root: norm(env.CLAUDE_PLUGIN_ROOT) };
+  const bundle = /^(.*\/runtime\/[^/]+)\/canvas\.mjs$/.exec(e);
+  if (bundle)
+    return { kind: "bundle", root: bundle[1] };
+  for (let d = dirname(e), i = 0; i < 8 && d !== "/"; d = dirname(d), i++) {
+    if (exists(join(d, ".git")))
+      return { kind: "checkout", root: d, build: exists(join(d, "packages")) };
+  }
+  return { kind: "unknown", unsupported: "this canvas was not started from a plugin install, a runtime bundle or a git checkout" };
+}
+function planUpgrade(install, latest, pluginRef = "unprose@unprose") {
+  if (install.kind === "plugin")
+    return { steps: [{ phase: "installing", command: "claude", args: ["plugin", "update", pluginRef] }], command: `claude plugin update ${pluginRef}` };
+  if (install.kind === "checkout" && install.root) {
+    const cwd = install.root;
+    const steps = [{ phase: "installing", command: "git", args: ["pull", "--ff-only"], cwd }];
+    if (install.build)
+      steps.push({ phase: "installing", command: "npm", args: ["ci"], cwd }, { phase: "building", command: "npm", args: ["run", "build"], cwd });
+    return { steps, requireClean: cwd, command: `cd ${cwd} && git pull --ff-only${install.build ? " && npm ci && npm run build" : ""}` };
+  }
+  if (install.kind === "bundle" && install.root) {
+    const dir = join(dirname(install.root), latest);
+    return { steps: [], download: { version: latest, dir }, command: `download unprose-runtime-v${latest}.tgz from the GitHub release into ${dir}` };
+  }
+  return { steps: [], command: "reinstall Unprose (see the README)" };
+}
+function nextEntry(install, entry, latest) {
+  if (install.kind === "plugin" && install.root)
+    return join(dirname(install.root), latest, "scripts", "canvas.mjs");
+  if (install.kind === "bundle" && install.root)
+    return join(dirname(install.root), latest, "canvas.mjs");
+  return norm(entry);
+}
+function nextArgs(install, argvAfterEntry) {
+  if (install.kind !== "plugin")
+    return argvAfterEntry;
+  return argvAfterEntry[0] === "serve" ? argvAfterEntry.slice(1) : argvAfterEntry;
+}
+function redactPaths(value) {
+  const ABS = /(?:\/(?:Users|home|root|private|var|opt|tmp|mnt|srv)\/[^\s'"`]*)|(?:[A-Za-z]:\\[^\s'"`]*)/g;
+  const walk = (v2) => {
+    if (typeof v2 === "string")
+      return v2.replace(ABS, "<unprose folder>");
+    if (Array.isArray(v2))
+      return v2.map(walk);
+    if (v2 && typeof v2 === "object")
+      return Object.fromEntries(Object.entries(v2).map(([k2, x2]) => [k2, walk(x2)]));
+    return v2;
+  };
+  return walk(value);
+}
+
 // packages/canvas/dist/diff.js
 var short = (s, n2 = 60) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
@@ -11585,7 +11684,7 @@ function containerOf(board, item) {
   return best;
 }
 function summarize(board, changes, opts = {}) {
-  const lines = [];
+  const lines2 = [];
   const folded = /* @__PURE__ */ new Map();
   const find = finder(board, changes);
   for (const ch of changes) {
@@ -11606,14 +11705,14 @@ function summarize(board, changes, opts = {}) {
           const on = find(root.target);
           const text2 = short(it.text, 200);
           if (root.id !== it.id)
-            lines.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text2}" [thread ${root.id}]`);
+            lines2.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text2}" [thread ${root.id}]`);
           else
-            lines.push(`${prefix} added comment${on ? ` on ${nameOf(on, board)}` : ""}: "${text2}" [thread ${it.id}]`);
+            lines2.push(`${prefix} added comment${on ? ` on ${nameOf(on, board)}` : ""}: "${text2}" [thread ${it.id}]`);
         } else if (it.type === "arrow") {
-          lines.push(`${prefix} connected ${nameOf(board.items[it.from ?? ""] ?? ch.before[it.from ?? ""], board)} \u2192 ${nameOf(board.items[it.to ?? ""] ?? ch.before[it.to ?? ""], board)}${it.label ? ` ("${short(it.label)}")` : ""}`);
+          lines2.push(`${prefix} connected ${nameOf(board.items[it.from ?? ""] ?? ch.before[it.from ?? ""], board)} \u2192 ${nameOf(board.items[it.to ?? ""] ?? ch.before[it.to ?? ""], board)}${it.label ? ` ("${short(it.label)}")` : ""}`);
         } else {
           const parent = containerName(it.parent, board, changes);
-          lines.push(`${prefix} added ${nameOf(it, board)}${parent ? ` in ${parent}` : ""}`);
+          lines2.push(`${prefix} added ${nameOf(it, board)}${parent ? ` in ${parent}` : ""}`);
         }
         continue;
       }
@@ -11622,7 +11721,7 @@ function summarize(board, changes, opts = {}) {
         if (removedRoot(was2))
           continue;
         const replies = ch.ops.filter((o) => o.kind === "remove" && removedRoot(ch.before[o.id]) === op.id).length;
-        lines.push(`${prefix} removed ${nameOf(was2, board)}${replies ? ` and its ${replies} repl${replies === 1 ? "y" : "ies"}` : ""}`);
+        lines2.push(`${prefix} removed ${nameOf(was2, board)}${replies ? ` and its ${replies} repl${replies === 1 ? "y" : "ies"}` : ""}`);
         continue;
       }
       const was = ch.before[op.id];
@@ -11678,14 +11777,14 @@ function summarize(board, changes, opts = {}) {
         continue;
       }
       if (parts.length)
-        lines.push(`${prefix} ${name}: ${parts.join("; ")}`);
+        lines2.push(`${prefix} ${name}: ${parts.join("; ")}`);
     }
     if (ch.note && ch.ops.length === 0)
-      lines.push(`${prefix} ${ch.note}`);
+      lines2.push(`${prefix} ${ch.note}`);
   }
   if (folded.size)
-    lines.push(foldedLine(board, changes, folded));
-  return lines;
+    lines2.push(foldedLine(board, changes, folded));
+  return lines2;
 }
 function foldedLine(board, changes, folded) {
   const all = [...folded.values()];
@@ -12680,10 +12779,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path9) {
-  if (!path9)
+function getElementAtPath(obj, path11) {
+  if (!path11)
     return obj;
-  return path9.reduce((acc, key) => acc?.[key], obj);
+  return path11.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -13023,11 +13122,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path9, issues) {
+function prefixIssues(path11, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path9);
+    iss.path.unshift(path11);
     return iss;
   });
 }
@@ -13477,16 +13576,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path9 = []) => {
+  const processError = (error63, path11 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path9, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -13525,17 +13624,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path9 = []) => {
+  const processError = (error63, path11 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path9, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -13574,8 +13673,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path9) {
+  const path11 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path11) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -13591,14 +13690,14 @@ function toDotPath(_path) {
   return segs.join("");
 }
 function prettifyError(error62) {
-  const lines = [];
+  const lines2 = [];
   const issues = [...error62.issues].sort((a, b2) => (a.path ?? []).length - (b2.path ?? []).length);
   for (const issue2 of issues) {
-    lines.push(`\u2716 ${issue2.message}`);
+    lines2.push(`\u2716 ${issue2.message}`);
     if (issue2.path?.length)
-      lines.push(`  \u2192 at ${toDotPath(issue2.path)}`);
+      lines2.push(`  \u2192 at ${toDotPath(issue2.path)}`);
   }
-  return lines.join("\n");
+  return lines2.join("\n");
 }
 
 // node_modules/zod/v4/core/parse.js
@@ -14433,9 +14532,9 @@ var Doc = class {
       return;
     }
     const content = arg;
-    const lines = content.split("\n").filter((x2) => x2);
-    const minIndent = Math.min(...lines.map((x2) => x2.length - x2.trimStart().length));
-    const dedented = lines.map((x2) => x2.slice(minIndent)).map((x2) => " ".repeat(this.indent * 2) + x2);
+    const lines2 = content.split("\n").filter((x2) => x2);
+    const minIndent = Math.min(...lines2.map((x2) => x2.length - x2.trimStart().length));
+    const dedented = lines2.map((x2) => x2.slice(minIndent)).map((x2) => " ".repeat(this.indent * 2) + x2);
     for (const line of dedented) {
       this.content.push(line);
     }
@@ -27278,13 +27377,13 @@ function _promise(Class2, innerType) {
 }
 // @__NO_SIDE_EFFECTS__
 function _custom(Class2, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
+  const norm2 = normalizeParams(_params);
+  norm2.abort ?? (norm2.abort = true);
   const schema = new Class2({
     type: "custom",
     check: "custom",
     fn,
-    ...norm
+    ...norm2
   });
   return schema;
 }
@@ -30677,13 +30776,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path9 = ref2.slice(1).split("/").filter(Boolean);
-  if (path9.length === 0) {
+  const path11 = ref2.slice(1).split("/").filter(Boolean);
+  if (path11.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path9[0] === defsKey) {
-    const key = path9[1] === void 0 ? void 0 : decodeJSONPointerSegment(path9[1]);
+  if (path11[0] === defsKey) {
+    const key = path11[1] === void 0 ? void 0 : decodeJSONPointerSegment(path11[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -32848,9 +32947,9 @@ var COLUMN_HEADER = 44;
 var COLUMN_MIN_H = 600;
 var COLUMN_GAP = 12;
 function cardHeight(card) {
-  const lines = Math.max(1, Math.ceil(card.title.length / 26));
+  const lines2 = Math.max(1, Math.ceil(card.title.length / 26));
   const meta3 = (card.labels?.length ?? 0) > 0 || card.size || card.assignee ? 24 : 0;
-  return Math.max(96, 16 + lines * 18 + 16 + meta3);
+  return Math.max(96, 16 + lines2 * 18 + 16 + meta3);
 }
 var columnId = (scope, name) => stableId(scope, "column", name);
 var cardId = (scope, idOrTitle) => `${scope}.card.${idOrTitle.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "card"}`;
@@ -35475,6 +35574,60 @@ function startServer(opts = {}) {
 <h1>awd-canvas</h1>
 <p>The web UI is not built yet \u2014 run <code>npm run build -w @awd/canvas-web</code> (see <code>docs/canvas.md</code>). The API and MCP server work regardless.</p>
 <h2>Boards</h2><ul>${boards.map((b2) => `<li><a href="/api/boards/${b2.id}">${escapeHtml2(b2.title)}</a> <small>(${b2.kind}, seq ${b2.seq})</small></li>`).join("") || "<li><em>none yet</em></li>"}</ul>`;
+  const localSockets = /* @__PURE__ */ new WeakSet();
+  const broadcast = (msg) => {
+    const full = JSON.stringify(msg);
+    const redacted = JSON.stringify(redactPaths(msg));
+    for (const c of wss.clients)
+      if (c.readyState === import_websocket.default.OPEN)
+        c.send(localSockets.has(c) ? full : redacted);
+  };
+  const handoff2 = () => ({
+    port: listeningPort,
+    emit: (e) => broadcast(e),
+    pause: () => new Promise((resolve) => {
+      broadcast({ type: "update", phase: "restarting", message: "restarting on the new version \u2014 this page reconnects by itself", at: (/* @__PURE__ */ new Date()).toISOString() });
+      for (const c of wss.clients)
+        c.close(1012, "restarting");
+      server.close(() => resolve());
+      server.closeAllConnections?.();
+    }),
+    resume: () => new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(listeningPort, () => {
+        server.off("error", reject);
+        resolve();
+      });
+    }),
+    exit: (code) => {
+      opts.studio?.supervisor.stopAll();
+      (opts.exit ?? process.exit)(code);
+    }
+  });
+  const updateRoute = async (req, res, method, sub, url2) => {
+    const up = opts.update;
+    const local = isLocalRequest(req);
+    const reply = (r, status, body) => json2(r, status, local ? body : redactPaths(body));
+    if (!sub && method === "GET") {
+      if (!up)
+        return reply(res, 200, { current: release().version, available: false, install: "unknown", supported: false, canUpgrade: false, error: "update checks are not set up on this server", command: "" });
+      const c = await up.check(url2.searchParams.get("refresh") === "1");
+      const canUpgrade = local && c.supported;
+      const why = !c.supported ? c.reason : !local ? "upgrading is only possible from a page opened on this machine (http://localhost\u2026)" : void 0;
+      return reply(res, 200, { ...c, canUpgrade, ...why ? { reason: why } : {} });
+    }
+    if (sub === "status" && method === "GET")
+      return reply(res, 200, up ? up.status() : { running: false, log: [] });
+    if (!sub && method === "POST") {
+      if (!local)
+        throw new HttpError(403, "upgrading is only possible from this machine (the canvas has no login)");
+      if (!up)
+        throw new HttpError(400, "update checks are not set up on this server");
+      const r = await up.start(handoff2());
+      return reply(res, r.started ? 202 : 409, r);
+    }
+    throw new HttpError(405, "method not allowed");
+  };
   const handle = async (req, res) => {
     const url2 = new URL(req.url ?? "/", "http://localhost");
     const method = req.method ?? "GET";
@@ -35491,6 +35644,8 @@ function startServer(opts = {}) {
         return json2(res, 200, { ...release(), pid: process.pid });
       if (parts[1] === "projects" && !parts[2])
         return projectReply(res, () => projectsRoute(store, req, method, () => readBody(req)));
+      if (parts[1] === "update")
+        return updateRoute(req, res, method, parts[2], url2);
       if (parts[1] !== "boards")
         throw new HttpError(404, "not found");
       const id = parts[2];
@@ -35589,9 +35744,9 @@ function startServer(opts = {}) {
         const author = url2.searchParams.get("author");
         const who = isAuthor(author) ? author : void 0;
         const changes = store.changes(id, { since, author: who }).filter((c) => !isBookkeeping(c));
-        const lines = summarize(store.get(id), changes);
+        const lines2 = summarize(store.get(id), changes);
         const cur = readByAgent(id, changes, who);
-        return json2(res, 200, { since, seq: cur.seq, lines, count: changes.length });
+        return json2(res, 200, { since, seq: cur.seq, lines: lines2, count: changes.length });
       }
       if (sub === "wait" && method === "GET") {
         const since = Number(url2.searchParams.get("since") ?? board.seq);
@@ -35605,9 +35760,9 @@ function startServer(opts = {}) {
         const wake = wakeRaw;
         const who = isAuthor(author) ? author : void 0;
         const changes = await store.waitFor(id, since, timeout, who, { quietMs, wake });
-        const lines = summarize(store.get(id), changes, { collapseMoves: wake !== "any" });
+        const lines2 = summarize(store.get(id), changes, { collapseMoves: wake !== "any" });
         const cur = readByAgent(id, changes, who);
-        return json2(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines });
+        return json2(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines: lines2 });
       }
       if (sub === "cards") {
         const cardIdParam = parts[4];
@@ -35782,6 +35937,7 @@ function startServer(opts = {}) {
     const addr = server.address();
     return typeof addr === "object" && addr ? addr.port : opts.port ?? 4400;
   };
+  let listeningPort = opts.port ?? 4400;
   const server = http.createServer((req, res) => {
     handle(req, res).catch((err) => {
       if (res.headersSent)
@@ -35805,6 +35961,8 @@ function startServer(opts = {}) {
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
+      if (isLocalRequest(req))
+        localSockets.add(ws);
       const send = (msg) => ws.readyState === import_websocket.default.OPEN && ws.send(JSON.stringify(msg));
       send({ type: "hello", board: store.get(board.id) });
       send({ type: "presence", author: "agent", at: (/* @__PURE__ */ new Date()).toISOString(), watching: store.watchers(board.id) > 0 });
@@ -35833,6 +35991,7 @@ function startServer(opts = {}) {
     server.listen(opts.port ?? 4400, () => {
       const addr = server.address();
       const port2 = typeof addr === "object" && addr ? addr.port : opts.port ?? 4400;
+      listeningPort = port2;
       resolve({
         server,
         store,
@@ -35900,9 +36059,9 @@ var SpawnSupervisor = class {
     for (const stream of [child.stdout, child.stderr]) {
       let rest = "";
       stream?.on("data", (d) => {
-        const lines = (rest + d.toString("utf8")).split("\n");
-        rest = lines.pop() ?? "";
-        for (const l of lines)
+        const lines2 = (rest + d.toString("utf8")).split("\n");
+        rest = lines2.pop() ?? "";
+        for (const l of lines2)
           if (l.trim())
             push(l);
       });
@@ -35947,11 +36106,364 @@ var SpawnSupervisor = class {
   }
 };
 
-// packages/canvas/dist/mcp.js
+// packages/canvas/dist/adapters/update/github.js
 import { execFile } from "node:child_process";
+var runGh = (p) => new Promise((resolve, reject) => execFile("gh", ["api", p], { timeout: 15e3, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => err ? reject(new Error((stderr || err.message).trim())) : resolve(stdout)));
+function releaseFrom(j2, source) {
+  if (!j2.tag_name)
+    throw new Error("the release has no tag");
+  return { version: j2.tag_name.replace(/^v/, ""), notes: j2.body ?? void 0, url: j2.html_url, source };
+}
+var GitHubReleaseSource = class {
+  o;
+  constructor(o) {
+    this.o = o;
+  }
+  async latest() {
+    const env = this.o.env ?? process.env;
+    const f = this.o.fetch ?? fetch;
+    const url2 = `https://api.github.com/repos/${this.o.repo}/releases/latest`;
+    const tries = [];
+    let notFound = false;
+    const get = async (headers, source) => {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), this.o.timeoutMs ?? 1e4);
+      try {
+        const r = await f(url2, { headers: { accept: "application/vnd.github+json", "user-agent": "unprose-canvas", ...headers }, signal: ctl.signal });
+        if (r.ok)
+          return releaseFrom(await r.json(), source);
+        if (r.status === 404)
+          notFound = true;
+        tries.push(`${source}: HTTP ${r.status}`);
+      } catch (e) {
+        tries.push(`${source}: ${e.message}`);
+      } finally {
+        clearTimeout(timer);
+      }
+      return void 0;
+    };
+    const pub = await get({}, "github");
+    if (pub)
+      return pub;
+    const token = env.GITHUB_TOKEN || env.GH_TOKEN;
+    if (token) {
+      const r = await get({ authorization: `Bearer ${token}` }, "github (token)");
+      if (r)
+        return r;
+    }
+    try {
+      return releaseFrom(JSON.parse(await (this.o.gh ?? runGh)(`repos/${this.o.repo}/releases/latest`)), "gh");
+    } catch (e) {
+      tries.push(`gh: ${e.message.split("\n")[0]}`);
+    }
+    if (notFound && !token)
+      throw new Error("cannot check (private repository): set GITHUB_TOKEN or log in with gh");
+    throw new Error(`cannot check for updates (${tries.join("; ")})`);
+  }
+};
+
+// packages/canvas/dist/adapters/update/installer.js
+import { createHash as createHash2 } from "node:crypto";
+import { execFile as execFile2, spawn as spawn2 } from "node:child_process";
 import fs6 from "node:fs";
 import os2 from "node:os";
 import path7 from "node:path";
+var lines = (onLine) => {
+  let rest = "";
+  return (chunk) => {
+    const text2 = rest + chunk.toString("utf8");
+    const parts = text2.split(/\r?\n/);
+    rest = parts.pop() ?? "";
+    for (const p of parts)
+      if (p.trim())
+        onLine(p);
+  };
+};
+var execText = (cmd, args, cwd) => new Promise((resolve, reject) => execFile2(cmd, args, { cwd, maxBuffer: 16 * 1024 * 1024 }, (err, out, errOut) => err ? reject(new Error((errOut || err.message).trim())) : resolve(out)));
+var ChildInstaller = class {
+  o;
+  constructor(o) {
+    this.o = o;
+  }
+  run(cmd, onLine) {
+    return new Promise((resolve, reject) => {
+      const child = spawn2(cmd.command, cmd.args, { cwd: cmd.cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+      child.stdout.on("data", lines(onLine));
+      child.stderr.on("data", lines(onLine));
+      child.on("error", (e) => reject(new Error(`${cmd.command}: ${e.message}`)));
+      child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`${[cmd.command, ...cmd.args].join(" ")} exited with ${code}`)));
+    });
+  }
+  async dirtyFiles(cwd) {
+    const out = await execText("git", ["status", "--porcelain", "--untracked-files=no"], cwd);
+    return out.split("\n").map((l) => l.slice(3).trim()).filter(Boolean);
+  }
+  async downloadRuntime(version2, dir, onLine) {
+    const name = `unprose-runtime-v${version2}.tgz`;
+    const base = (process.env.AWD_RUNTIME_URL || this.o.base || `https://github.com/${this.o.repo}/releases/download`).replace(/\/$/, "");
+    const tmp = fs6.mkdtempSync(path7.join(os2.tmpdir(), "unprose-upgrade-"));
+    try {
+      const tgz = path7.join(tmp, name);
+      const sum = path7.join(tmp, `${name}.sha256`);
+      try {
+        for (const [file2, url2] of [[tgz, `${base}/v${version2}/${name}`], [sum, `${base}/v${version2}/${name}.sha256`]]) {
+          onLine(`downloading ${url2}`);
+          const r = await fetch(url2);
+          if (!r.ok)
+            throw new Error(`HTTP ${r.status} for ${url2}`);
+          fs6.writeFileSync(file2, Buffer.from(await r.arrayBuffer()));
+        }
+      } catch (e) {
+        onLine(`direct download failed (${e.message}); trying gh release download`);
+        await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
+      }
+      const want = fs6.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
+      const got = createHash2("sha256").update(fs6.readFileSync(tgz)).digest("hex");
+      if (!want || want !== got)
+        throw new Error(`checksum mismatch for ${name}`);
+      const out = path7.join(tmp, "x");
+      fs6.mkdirSync(out);
+      await execText("tar", ["-xzf", tgz, "-C", out]);
+      fs6.mkdirSync(path7.dirname(dir), { recursive: true });
+      fs6.rmSync(dir, { recursive: true, force: true });
+      fs6.renameSync(out, dir);
+      onLine(`unpacked into ${dir}`);
+    } finally {
+      fs6.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+  exists(p) {
+    return fs6.existsSync(p);
+  }
+};
+var ProcessLauncher = class {
+  spawnDetached(entry, args, env, logFile) {
+    fs6.mkdirSync(path7.dirname(logFile), { recursive: true });
+    const fd = fs6.openSync(logFile, "a");
+    const child = spawn2(process.execPath, [entry, ...args], { detached: true, stdio: ["ignore", fd, fd], env });
+    child.unref();
+    fs6.closeSync(fd);
+    return child.pid ?? -1;
+  }
+  async probeVersion(port) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 800);
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/api/version`, { signal: ctl.signal });
+      if (!r.ok)
+        return void 0;
+      const j2 = await r.json();
+      return typeof j2.version === "string" ? j2.version : void 0;
+    } catch {
+      return void 0;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  alive(pid) {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  kill(pid) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+    }
+  }
+};
+
+// packages/canvas/dist/adapters/update/fake.js
+var FakeUpdateSource = class {
+  release;
+  calls = 0;
+  constructor(release) {
+    this.release = release;
+  }
+  async latest() {
+    this.calls++;
+    if (this.release instanceof Error)
+      throw this.release;
+    return this.release;
+  }
+};
+
+// packages/canvas/dist/updater.js
+import fs7 from "node:fs";
+import path8 from "node:path";
+var SIX_HOURS = 6 * 60 * 60 * 1e3;
+var ERROR_TTL = 30 * 60 * 1e3;
+var LOG_LINES2 = 200;
+var UpdateService = class {
+  o;
+  cache;
+  checking;
+  job = { running: false, log: [] };
+  constructor(o) {
+    this.o = o;
+    try {
+      if (o.cacheFile) {
+        const c = JSON.parse(fs7.readFileSync(o.cacheFile, "utf8"));
+        if (c.current === o.current)
+          this.cache = c;
+      }
+    } catch {
+    }
+  }
+  now() {
+    return this.o.now?.() ?? Date.now();
+  }
+  /** The install can upgrade itself (who may ask is the server's call). */
+  get supported() {
+    const i = this.o.install;
+    if (i.unsupported)
+      return { ok: false, reason: i.unsupported };
+    if (!this.o.current)
+      return { ok: false, reason: "the running version is unknown" };
+    return { ok: true };
+  }
+  fresh(c) {
+    if (!c)
+      return false;
+    const age = this.now() - Date.parse(c.checkedAt);
+    return age < (c.error ? ERROR_TTL : this.o.ttlMs ?? SIX_HOURS);
+  }
+  async lookup(refresh) {
+    if (!refresh && this.fresh(this.cache))
+      return this.cache;
+    if (this.checking)
+      return this.checking;
+    const src = this.o.source;
+    this.checking = src.latest().then((r) => ({ latest: r.version, notes: r.notes, url: r.url, source: r.source, checkedAt: new Date(this.now()).toISOString(), current: this.o.current })).catch((e) => ({ error: e.message, checkedAt: new Date(this.now()).toISOString(), current: this.o.current })).then((c) => {
+      this.cache = c;
+      try {
+        if (this.o.cacheFile) {
+          fs7.mkdirSync(path8.dirname(this.o.cacheFile), { recursive: true });
+          fs7.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
+        }
+      } catch {
+      }
+      return c;
+    }).finally(() => this.checking = void 0);
+    return this.checking;
+  }
+  async check(refresh = false) {
+    const s = this.supported;
+    const base = { current: this.o.current, install: this.o.install.kind, supported: s.ok, reason: s.reason };
+    const command = (latest) => planUpgrade(this.o.install, latest ?? this.o.current ?? "0.0.0", this.o.pluginRef).command;
+    if (!this.o.source)
+      return { ...base, available: false, error: "update checks are off (UNPROSE_UPDATE_CHECK=0)", command: command() };
+    const c = await this.lookup(refresh);
+    return { ...base, latest: c.latest, available: isNewer(c.latest, this.o.current ?? void 0), notes: c.notes, url: c.url, checkedAt: c.checkedAt, source: c.source, error: c.error, command: command(c.latest) };
+  }
+  status() {
+    return { ...this.job, log: [...this.job.log] };
+  }
+  /** Start the upgrade in the background. Resolves once it has started (or with why it cannot). */
+  async start(h) {
+    if (this.job.running)
+      return { started: false, error: "an upgrade is already running" };
+    const s = this.supported;
+    if (!s.ok)
+      return { started: false, error: s.reason };
+    const c = await this.check(true);
+    if (!c.latest)
+      return { started: false, error: c.error ?? "no release found" };
+    if (!c.available)
+      return { started: false, error: `already on the latest version (v${this.o.current})` };
+    this.job = { running: true, phase: "checking", message: `upgrading to v${c.latest}`, version: c.latest, startedAt: new Date(this.now()).toISOString(), log: [] };
+    void this.run(c.latest, h);
+    return { started: true, version: c.latest };
+  }
+  say(h, phase, message) {
+    this.job.phase = phase;
+    this.job.message = message;
+    h.emit({ type: "update", phase, message, at: new Date(this.now()).toISOString(), version: this.job.version });
+  }
+  line = (l) => {
+    this.job.log.push(l);
+    if (this.job.log.length > LOG_LINES2)
+      this.job.log.splice(0, this.job.log.length - LOG_LINES2);
+  };
+  fail(h, message) {
+    this.say(h, "failed", message);
+    this.job.running = false;
+  }
+  async run(latest, h) {
+    const { installer, launcher, install } = this.o;
+    const plan = planUpgrade(install, latest, this.o.pluginRef);
+    try {
+      this.say(h, "checking", `preparing the upgrade to v${latest}`);
+      if (plan.requireClean) {
+        const dirty = await installer.dirtyFiles(plan.requireClean);
+        if (dirty.length)
+          return this.fail(h, `not upgrading: tracked files have uncommitted changes (${dirty.slice(0, 5).join(", ")}${dirty.length > 5 ? " \u2026" : ""}). Commit or stash them, or run: ${plan.command}`);
+      }
+      for (const step of plan.steps) {
+        this.say(h, step.phase, `${[step.command, ...step.args].join(" ")}`);
+        await installer.run(step, this.line);
+      }
+      if (plan.download) {
+        this.say(h, "installing", `downloading the v${latest} runtime`);
+        await installer.downloadRuntime(plan.download.version, plan.download.dir, this.line);
+      }
+      const entry = nextEntry(install, this.o.entry, latest);
+      if (!installer.exists(entry))
+        return this.fail(h, `the new version is not where it should be (${entry}); run: ${plan.command}`);
+      this.say(h, "restarting", `restarting on v${latest}`);
+      if (this.o.launchd) {
+        setTimeout(() => h.exit(0), 300);
+        return;
+      }
+      await h.pause();
+      const pid = launcher.spawnDetached(entry, nextArgs(install, this.o.argv), this.o.env, this.o.logFile);
+      const until = this.now() + (this.o.bootTimeoutMs ?? 15e3);
+      let answered;
+      while (this.now() < until) {
+        answered = await launcher.probeVersion(h.port);
+        if (answered && answered !== this.o.current)
+          break;
+        await new Promise((r) => setTimeout(r, this.o.pollMs ?? 250));
+      }
+      if (!answered || answered === this.o.current) {
+        launcher.kill(pid);
+        await h.resume();
+        return this.fail(h, `the new server did not come up on port ${h.port}; still on v${this.o.current}. Its output: ${this.o.logFile}`);
+      }
+      this.recordState(pid, answered, entry);
+      this.job.phase = "done";
+      this.job.message = `upgraded to v${answered}`;
+      this.job.running = false;
+      h.exit(0);
+    } catch (e) {
+      this.fail(h, `${e.message}${plan.command ? ` \u2014 to do it by hand: ${plan.command}` : ""}`);
+    }
+  }
+  /** Keep the plugin's canvas.json pointing at the running canvas, so the next session does not restart it. */
+  recordState(pid, version2, entry) {
+    const f = this.o.stateFile;
+    if (!f)
+      return;
+    try {
+      const s = JSON.parse(fs7.readFileSync(f, "utf8"));
+      if (s.pid !== (this.o.pid ?? process.pid))
+        return;
+      const root = this.o.install.kind === "plugin" ? path8.dirname(path8.dirname(entry)) : s.root;
+      const runtime = this.o.install.kind === "plugin" ? path8.join(String(root), "dist") : path8.dirname(entry);
+      fs7.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
+    } catch {
+    }
+  }
+};
+
+// packages/canvas/dist/mcp.js
+import { execFile as execFile3 } from "node:child_process";
+import fs8 from "node:fs";
+import os3 from "node:os";
+import path9 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -36327,8 +36839,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path9, errorMaps, issueData } = params;
-  const fullPath = [...path9, ...issueData.path || []];
+  const { data, path: path11, errorMaps, issueData } = params;
+  const fullPath = [...path11, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -36443,11 +36955,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path9, key) {
+  constructor(parent, value, path11, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path9;
+    this._path = path11;
     this._key = key;
   }
   get path() {
@@ -39998,11 +40510,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path9) {
-  if (path9.length === 0) {
+function getDotPath(path11) {
+  if (path11.length === 0) {
     return "object root";
   }
-  return path9.reduce((acc, seg, index) => {
+  return path11.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -45696,20 +46208,20 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }`;
 var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var text = (s) => ({ content: [{ type: "text", text: s }] });
-function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os2.homedir()) {
-  const start = path7.resolve(env.CLAUDE_PROJECT_DIR || cwd);
-  for (let d = start; ; d = path7.dirname(d)) {
-    if (fs6.existsSync(path7.join(d, ".git")))
+function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.homedir()) {
+  const start = path9.resolve(env.CLAUDE_PROJECT_DIR || cwd);
+  for (let d = start; ; d = path9.dirname(d)) {
+    if (fs8.existsSync(path9.join(d, ".git")))
       return d;
-    if (path7.dirname(d) === d)
+    if (path9.dirname(d) === d)
       break;
   }
-  if (start === path7.resolve(home) || path7.dirname(start) === start)
+  if (start === path9.resolve(home) || path9.dirname(start) === start)
     return void 0;
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "awd-canvas", version: "0.4.1" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "awd-canvas", version: "0.5.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
   server.registerTool("canvas_list_boards", {
     title: "List boards",
     description: `List boards with id, kind, title, current seq and project. By default only this session's project${opts.project ? ` (${opts.project})` : ""}; pass all: true for every project (and the personal space).`,
@@ -45738,7 +46250,7 @@ ${CONTENT_HELP}`,
     const n2 = Object.keys(board.items).length;
     const url2 = client.boardUrl(board.id);
     if (process.platform === "darwin" && process.env.AWD_CANVAS_NO_OPEN !== "1")
-      execFile("open", [url2], () => {
+      execFile3("open", [url2], () => {
       });
     return text(`created board ${board.id} (${kind}, ${n2} items, seq ${board.seq}) and opened it in the browser
 url: ${url2}
@@ -45834,7 +46346,7 @@ ${r.lines.join("\n")}`);
   server.registerTool("canvas_open", { title: "Open a board in the browser", description: "Print the board URL and open it in the default browser (macOS).", inputSchema: { id: external_exports.string() } }, async ({ id }) => {
     const url2 = client.boardUrl(id);
     if (process.platform === "darwin")
-      execFile("open", [url2], () => {
+      execFile3("open", [url2], () => {
       });
     return text(url2);
   });
@@ -46128,25 +46640,57 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path8.dirname(d)) {
-    if (fs7.existsSync(path8.join(d, ".git")))
+  for (let d = dir; ; d = path10.dirname(d)) {
+    if (fs9.existsSync(path10.join(d, ".git")))
       return d;
-    if (path8.dirname(d) === d)
+    if (path10.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path8.dirname(path8.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path10.dirname(path10.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs7.realpathSync(path8.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path8.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs9.realpathSync(path10.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path10.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs7.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs9.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path8.join(os3.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path10.join(os4.homedir(), "Library", "Logs", "awd") };
+}
+function updateService(env) {
+  const repo = env.UNPROSE_UPDATE_REPO || "river0825/unprose";
+  const entry = (() => {
+    try {
+      return fs9.realpathSync(process.argv[1] ?? "");
+    } catch {
+      return process.argv[1] ?? "";
+    }
+  })();
+  const install = detectInstall(entry, env, (p) => fs9.existsSync(p));
+  const current = findRelease().version;
+  const off = env.UNPROSE_UPDATE_CHECK === "0";
+  const fake = env.UNPROSE_UPDATE_FAKE_LATEST;
+  const source = off ? void 0 : fake ? new FakeUpdateSource({ version: fake, source: "fake (UNPROSE_UPDATE_FAKE_LATEST)", notes: `### Added
+- A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env });
+  const home = os4.homedir();
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path10.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path10.join(home, ".awd", "plugin", "canvas.json");
+  return new UpdateService({
+    current,
+    install,
+    source,
+    installer: new ChildInstaller({ repo }),
+    launcher: new ProcessLauncher(),
+    entry,
+    argv: process.argv.slice(2),
+    env: Object.fromEntries(Object.entries(env).filter((e) => typeof e[1] === "string")),
+    cacheFile: fake ? void 0 : path10.join(home, ".awd", "update-check.json"),
+    logFile: path10.join(home, ".awd", "canvas-upgrade.log"),
+    stateFile,
+    launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
+  });
 }
 function flag(args, name) {
   const i = args.indexOf(name);
@@ -46159,7 +46703,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path8.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path10.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -46171,13 +46715,13 @@ async function main() {
         const p = store.registerProject(root);
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
       }
-      const s = await startServer({ port, store, studio });
+      const s = await startServer({ port, store, studio, update: updateService(process.env) });
       const where = storeKind === "memory" ? "in memory" : `in ${s.store.dir ?? dir}`;
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`);
       for (const p of studio?.projects ?? [])
         console.log(`  studio can be started from the web for boards of ${p.root}`);
       if (args.includes("--open") && process.platform === "darwin")
-        execFile2("open", [s.url], () => {
+        execFile4("open", [s.url], () => {
         });
       process.on("exit", () => studio?.supervisor.stopAll());
       const stop = () => s.close().then(() => process.exit(0));
@@ -46191,7 +46735,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs7.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs9.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

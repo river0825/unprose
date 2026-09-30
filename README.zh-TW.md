@@ -137,6 +137,13 @@ Event、command、system、policy 依時間由左到右排列。
 延伸閱讀（英文）：[diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
 [workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md)。
 
+## 更新
+
+canvas 左下角的版本號會提示有新版：出現 **update**，打開 release notes 就能看到新版內容和 **Upgrade** 按鈕。
+Upgrade 會依你的安裝方式執行對應的指令（`claude plugin update unprose@unprose`、`git pull` 加 build，或下載新的
+runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只有在 canvas 所在的那台機器上開的頁面（`http://localhost…`）
+才能按；透過 tunnel 開的頁面會改顯示要自己執行的指令。細節見 [docs/canvas.md → Updating](docs/canvas.md#updating)。
+
 ## 安全
 
 Board **目前沒有登入機制**，任何連得到的人都能讀取和修改。請只在 `localhost` 使用，

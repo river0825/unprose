@@ -34,6 +34,8 @@ export const COLOR_NAMES: Record<string, string> = {
 export type Tool = 'select' | 'comment'
 
 interface Props {
+  /** Short notices (e.g. "Upgraded to v…" after an upgrade). */
+  onToast?: (text: string) => void
   color: ColorToken
   setColor: (c: ColorToken) => void
   tool: Tool
@@ -107,7 +109,7 @@ const Icon = {
   ),
 }
 
-export function Rail({ color, setColor, tool, setTool, onAdd, onDelete, selectedCount, onFit, onUndo, onRedo, canUndo, canRedo, onHelp }: Props) {
+export function Rail({ color, setColor, tool, setTool, onAdd, onDelete, selectedCount, onFit, onUndo, onRedo, canUndo, canRedo, onHelp, onToast }: Props) {
   const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
   const [popOpen, setPopOpen] = useState(false)
   const popRef = useRef<HTMLDivElement>(null)
@@ -191,7 +193,7 @@ export function Rail({ color, setColor, tool, setTool, onAdd, onDelete, selected
       <button className="rail-btn" aria-label="Keyboard shortcuts (?)" data-tip="Keyboard shortcuts  ?" onClick={onHelp}>
         {Icon.help}
       </button>
-      <VersionButton />
+      <VersionButton onToast={onToast} />
 
       {popOpen && (
         <div ref={popRef} className="swatch-pop" role="group" aria-label="Sticky colour" style={{ ['--pop-top' as string]: '52px' }}>

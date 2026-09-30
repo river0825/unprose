@@ -120,6 +120,9 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
 | GET | `/api/boards/:id/studio` | | `{ capable, running, pid?, since?, exitedAt?, exitCode?, log: string[] (last 50), sessions?: { open, max, queued } }` — `capable: false` unless the board's `meta.workflow.file` is one of the server's `--studio` files |
 | POST | `/api/boards/:id/studio` | `{ action: 'start' \| 'stop' }` | same shape; `403` for a board that is not studio-capable, `400` for another action. Start is idempotent; one child per workflow; no auto-restart |
 | GET | `/api/kinds` | | `{ kinds }` |
+| GET | `/api/update` | `?refresh=1` | `{ current, latest?, available, notes?, url?, checkedAt, source, error?, install: 'plugin'\|'checkout'\|'bundle'\|'unknown', supported, canUpgrade, reason?, command }` — the newest GitHub release (cached 6 h); `canUpgrade` only for a page on this machine |
+| POST | `/api/update` | | `202 { started, version }` — upgrade and restart on the new version (see "Updating"); `403` unless the caller is on this machine, `409 { error }` when it cannot start (up to date, dirty checkout, unsupported install) |
+| GET | `/api/update/status` | | `{ running, phase?, message?, version?, log: string[] }` — the current or last upgrade job |
 | WS | `/ws/:id` | | `{ type:'hello', board }` then `{ type:'change', change }` per change |
 
 Every `Change` carries `before` — a snapshot of each touched item before the change — so diffs never need a second read. CORS is open.
@@ -329,3 +332,35 @@ The workflow board a runtime draws (`awd graph … --canvas`) also shows **live 
 - **Agent → you:** `canvas_focus` / `POST /api/boards/:id/focus` shows "Agent wants to show you …" with **Go** and
   **Dismiss**; *Follow agent* (remembered per viewer) makes the page jump without asking. Only the latest request
   is shown.
+
+## Updating
+
+The version button at the bottom of the rail checks GitHub for a newer release (on load and every six hours,
+server-side, cached in `~/.awd/update-check.json`). When one exists the button says **update** and the release
+notes dialog shows the new version's notes and **Upgrade to v…**. What Upgrade does depends on how the canvas
+was installed:
+
+| Install | Upgrade runs | Then starts |
+|---|---|---|
+| Claude Code plugin (`~/.claude/plugins/cache/…`) | `claude plugin update unprose@unprose` | the new version directory's `scripts/canvas.mjs` (it fetches a missing runtime) |
+| git checkout with `packages/` | `git pull --ff-only && npm ci && npm run build` (refused while tracked files have uncommitted changes) | the same entry, rebuilt |
+| git clone of the published repo (`dist/` committed) | `git pull --ff-only` | the same entry |
+| runtime bundle (`…/runtime/<version>/canvas.mjs`) | download `unprose-runtime-v<latest>.tgz` (checksum-verified; `gh release download` for a private repo) | `…/runtime/<latest>/canvas.mjs` |
+
+The restart hands the port over: the old server tells every open page (`{ type: 'update', phase: 'restarting' }`
+over the WebSocket), stops listening and starts the new one with the same arguments; once the new server
+answers `GET /api/version` with a new version the old one exits, and pages reconnect and reload. If the new
+server does not answer within 15 s, the old one listens again and reports the failure (its output:
+`~/.awd/canvas-upgrade.log`). A canvas the plugin started keeps its `canvas.json` pointing at the new process.
+A canvas run by launchd (`XPC_SERVICE_NAME` naming an awd/unprose job) just exits after installing and launchd
+starts it again.
+
+- **Only from this machine:** the canvas has no login, so `POST /api/update` answers `403` to any caller that
+  is not on loopback or that came through a proxy/tunnel (`X-Forwarded-For`, `CF-Connecting-IP` …). Pages
+  opened through a tunnel see the notice and the command to run by hand, with the button disabled.
+- **Private repository:** the check uses the public API, then `GITHUB_TOKEN` / `GH_TOKEN`, then the `gh` CLI's
+  login; without any it says so ("cannot check (private repository)").
+- **Settings:** `UNPROSE_UPDATE_REPO` (default `river0825/unprose`), `UNPROSE_UPDATE_CHECK=0` turns checks off.
+  `UNPROSE_UPDATE_FAKE_LATEST=<version>` pretends that version is out — for trying the UI and for tests only;
+  do not click Upgrade with it on a real install.
+

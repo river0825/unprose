@@ -142,6 +142,15 @@ Next: more diagram kinds, Trello / Jira / Linear sync, sign-in for shared boards
 More reading: [diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
 [workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md).
 
+## Updating
+
+The version in the canvas's bottom-left corner tells you when a newer release is out: it says **update**, and
+its release notes show what's new with an **Upgrade** button. Upgrade runs the right command for how you
+installed Unprose (`claude plugin update unprose@unprose`, `git pull` + build, or a new runtime download) and
+restarts the canvas on the new version; the page reconnects by itself. It only works from a page opened on
+the canvas's own machine (`http://localhost…`); through a tunnel you get the command to run instead. Details:
+[docs/canvas.md → Updating](docs/canvas.md#updating).
+
 ## Safety
 
 The board has **no sign-in yet**. Anyone who can reach it can read and edit it. Keep it on

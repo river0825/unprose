@@ -108,6 +108,8 @@ export type WsMessage =
    * its frame item); empty with `frame` set means a legacy board's whole diagram.
    */
   | { type: 'focus'; ids: string[]; frame?: string; note?: string; author: Author; at: string }
+  /** Upgrading the canvas itself (docs/canvas.md "Updating"): progress for every open page; `restarting` means reconnect. */
+  | { type: 'update'; phase: 'checking' | 'installing' | 'building' | 'restarting' | 'done' | 'failed'; message: string; at: string; version?: string }
 
 /** Default sticky colour per event-storming role — the book's palette (hotspots are purple, p.307). */
 export const EVENT_STORMING_COLORS: Record<string, ColorToken> = {

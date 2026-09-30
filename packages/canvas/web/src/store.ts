@@ -181,6 +181,10 @@ export function useBoard(id: string): BoardStore {
           if (m.author === 'agent') setAgentWatching(Boolean(m.watching))
         } else if (m.type === 'focus') {
           setFocusRequest(m) // only the latest one is kept
+        } else if (m.type === 'update') {
+          // the canvas is upgrading itself (docs/canvas.md "Updating"); the page reconnects on its own
+          if (m.phase === 'restarting') toast(`The canvas is restarting on ${m.version ? `v${m.version}` : 'a new version'} — it reconnects by itself`)
+          else if (m.phase === 'failed') toast(`Upgrade failed: ${m.message}`, 'error')
         } else if (m.type === 'storage') {
           setStorageError(m.ok ? null : m.message)
           toast(m.ok ? m.message : `Changes are not being saved: ${m.message}`, m.ok ? 'info' : 'error')
