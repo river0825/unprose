@@ -46221,7 +46221,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "awd-canvas", version: "0.5.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "awd-canvas", version: "0.5.1" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
   server.registerTool("canvas_list_boards", {
     title: "List boards",
     description: `List boards with id, kind, title, current seq and project. By default only this session's project${opts.project ? ` (${opts.project})` : ""}; pass all: true for every project (and the personal space).`,

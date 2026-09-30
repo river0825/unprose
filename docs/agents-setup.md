@@ -43,8 +43,13 @@ when it starts):
      `${CLAUDE_PLUGIN_DATA}/canvas.json`, which survives updates;
    - the canvas it started runs another version → stops it and starts the new one (the old version folder is
      deleted by Claude Code 14 days after an update, which would otherwise break it);
-   - a canvas you started yourself is never touched — you get one line: "a canvas vX is already running … not
-     started by the plugin; restart it to get vY".
+   - a canvas started by hand from the plugin (e.g. an agent ran `node <plugin>/scripts/canvas.mjs`) runs
+     another version → the same: stopped and started from the new version, keeping its options (`--dir` …).
+     It is recognised by its command line: a `canvas.mjs` in one of the plugin's version folders in the plugin
+     cache, or in the data dir's runtime copies;
+   - any other canvas you started yourself (a checkout, another folder) is never touched — you get one line:
+     "a canvas vX is already running … not started by the plugin; restart it to get vY".
+   `/reload-plugins` does not run the SessionStart hook, but it restarts the MCP server, which runs this check.
    A remote canvas is never started or stopped; you only get a note if its version differs.
 3. The `canvas_autostart` option (or `AWD_CANVAS_AUTOSTART=0`) turns step 2 off (you start the canvas yourself). The hook prints at most a few
    short lines, and nothing when all is well. Its log: `${CLAUDE_PLUGIN_DATA}/canvas.log`.

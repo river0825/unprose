@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   assetName, autostartOff, boardsDirFor, canvasTarget, decideCanvas, ensureCanvas, ensureRuntime, findRuntime,
-  isLocal, parseSha256, pidAlive, probeCanvas, readState, runtimeCandidates, setting,
+  isLocal, parseSha256, pidAlive, pluginCanvasArgs, probeCanvas, processArgs, readState, runtimeCandidates, setting,
 } from '../runtime.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -87,6 +87,24 @@ test('canvas decisions after an update', () => {
   assert.equal(decideCanvas({ ...remote, probe: { reachable: false }, state: null }).action, 'note')
   assert.match(decideCanvas({ ...remote, probe: { reachable: true, version: '0.3.0' }, state: null }).message, /leaves it alone/)
   assert.equal(decideCanvas({ ...remote, probe: { reachable: true, version: '0.3.1' }, state: null }).action, 'none')
+  // started by hand but running the plugin's code → restarted on the new version, keeping its options
+  const adopted = decideCanvas({ ...base, probe: { reachable: true, version: '0.3.0', pid: 7 }, state: null, adopt: ['--dir', '/b'] })
+  assert.deepEqual([adopted.action, adopted.pid, adopted.args], ['restart', 7, ['--dir', '/b']])
+})
+
+test('a canvas running the plugin’s code (any installed version or its runtime copy) is the plugin’s to restart', () => {
+  const cache = '/h/.claude/plugins/cache/unprose/unprose'
+  const o = { root: `${cache}/0.5.0`, data: '/h/.claude/plugins/data/unprose' }
+  assert.deepEqual(pluginCanvasArgs(['node', `${cache}/0.4.0/dist/canvas.mjs`, 'serve', '--port', '4400', '--dir', '/b'], o), ['--dir', '/b'])
+  assert.deepEqual(pluginCanvasArgs(['node', `${cache}/0.4.0/scripts/canvas.mjs`, '--port=4400'], o), [])
+  assert.deepEqual(pluginCanvasArgs(['node', `${o.data}/runtime/0.4.0/canvas.mjs`, 'serve'], o), [])
+  // anything else: a checkout, another plugin, the MCP server
+  assert.equal(pluginCanvasArgs(['node', '/h/code/unprose/scripts/canvas.mjs'], o), undefined)
+  assert.equal(pluginCanvasArgs(['node', '/h/.claude/plugins/cache/other/x/1.0.0/dist/canvas.mjs'], o), undefined)
+  assert.equal(pluginCanvasArgs(['node', `${cache}/0.4.0/scripts/mcp.mjs`], o), undefined)
+  // a plugin loaded from a checkout (not the cache): its sibling folders are not plugin versions
+  assert.equal(pluginCanvasArgs(['node', '/h/code/other/dist/canvas.mjs'], { root: '/h/code/unprose', data: o.data }), undefined)
+  assert.ok(processArgs(process.pid).some((a) => a.endsWith('node') || a.includes('node')), 'reads this process’s own command line')
 })
 
 test("the plugin's MCP server resolves to the plugin's scripts/mcp.mjs, never the user's project", () => {
@@ -197,6 +215,26 @@ test('first session after an update: start the canvas, restart it on the new ver
   assert.match(notes.join('\n'), /not started by the plugin/)
   assert.equal(pidAlive(foreign.pid), true)
   assert.equal((await probeCanvas(env2.AWD_CANVAS_URL)).version, '0.9.0')
+})
+
+test('after an update, a canvas started by hand from the plugin is restarted on the new version with its options', { skip: !built && 'run npm run build first', timeout: 120_000 }, async () => {
+  const data = path.join(tmp, 'data-c')
+  const port = await freePort()
+  const env = { AWD_CANVAS_URL: `http://127.0.0.1:${port}` }
+  const v1 = plugin('plugins/cache/unprose/unprose/0.9.0', '0.9.0')
+  const v2 = plugin('plugins/cache/unprose/unprose/0.9.1', '0.9.1')
+  const dir = path.join(tmp, 'boards-by-hand')
+  // an agent restarted the canvas itself: no plugin state records it
+  const byHand = spawn(process.execPath, [path.join(v1, 'dist/canvas.mjs'), 'serve', '--port', String(port), '--dir', dir], { stdio: 'ignore' })
+  started.push(byHand.pid)
+  for (let i = 0; i < 100 && !(await probeCanvas(env.AWD_CANVAS_URL)).reachable; i++) await new Promise((r) => setTimeout(r, 100))
+  const r = await ensureCanvas({ runtime: findRuntime({ root: v2, data }), root: v2, data, env, log: () => {} })
+  assert.equal(r.action, 'restart')
+  started.push(r.pid)
+  assert.equal(pidAlive(byHand.pid), false, 'the old canvas is stopped')
+  assert.equal((await probeCanvas(env.AWD_CANVAS_URL)).version, '0.9.1')
+  assert.deepEqual(readState(data).args, ['--dir', dir], 'its board folder is kept')
+  assert.ok(processArgs(r.pid).includes(dir))
 })
 
 test('an install without dist/ downloads its runtime from the release (checksum verified)', { skip: !built && 'run npm run build first', timeout: 120_000 }, async () => {

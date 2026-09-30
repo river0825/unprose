@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-09-30
+
+### Fixed
+- **A plugin update restarts the canvas even when it was started by hand.** Before, only a canvas the plugin
+  had started itself was restarted; one an agent (or you) had started from the plugin folder kept running the
+  old version after an update. Now a canvas running the plugin's own code, from any of its installed versions,
+  is restarted on the new version with the same options (`--dir` …). A canvas started from a checkout or any
+  other folder is still left alone.
+
 ## [0.5.0] — 2026-09-30
 
 ### Added
@@ -177,7 +186,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/river0825/unprose/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/river0825/unprose/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/river0825/unprose/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/river0825/unprose/compare/v0.3.1...v0.4.0

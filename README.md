@@ -41,7 +41,7 @@ That's it. Open Claude Code in any project and follow **Your first session** bel
   It runs as installed and looks after itself: at the start of every session it makes sure its runtime is
   there (fetching this version's from the GitHub release if the install lacks it) and that a canvas is
   running on `http://localhost:4400` — started for you, and **restarted on the new version after
-  `/plugin` update**. A canvas you started yourself, or a remote one (`AWD_CANVAS_URL`), is never touched;
+  `/plugin` update**. A canvas you started yourself from elsewhere (a checkout), or a remote one (`AWD_CANVAS_URL`), is never touched;
   you get a one-line note if its version differs. Turn the automatic start off with the plugin option `canvas_autostart` (in `/config`) or `AWD_CANVAS_AUTOSTART=0`; point it at another canvas with the `canvas_url` option.
 - **Codex:** add to `~/.codex/config.toml`, and copy [AGENTS.md](AGENTS.md) into your project:
   ```toml

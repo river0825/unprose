@@ -1,6 +1,6 @@
 {
   "name": "unprose",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A shared visual canvas where people and AI agents talk designs through — EventStorming, story maps, kanban, wireframes and workflows, each backed by a file the agent edits.",
   "author": {
     "name": "Unprose contributors"
@@ -39,7 +39,7 @@
     "canvas_autostart": {
       "type": "boolean",
       "title": "Start the canvas automatically",
-      "description": "Start a local canvas at the start of each session and restart it on the new version after a plugin update. It never touches a canvas you started yourself.",
+      "description": "Start a local canvas at the start of each session and restart it on the new version after a plugin update. It never touches a canvas you started from outside the plugin.",
       "default": true
     }
   }

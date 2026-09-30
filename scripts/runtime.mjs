@@ -186,7 +186,7 @@ export function autostartOff(env = process.env) {
  * probe: { reachable, version?, pid? } from GET /api/version; state: canvas.json or null;
  * alive(pid) → boolean. Returns { action: 'none' | 'start' | 'restart' | 'note', message? }.
  */
-export function decideCanvas({ target, probe, state, alive = () => false, version, autostart = true, startIfDown = true }) {
+export function decideCanvas({ target, probe, state, alive = () => false, version, autostart = true, startIfDown = true, adopt }) {
   const v = (x) => (x ? `v${x}` : 'an unknown version')
   if (!isLocal(target)) {
     if (probe.reachable && version && probe.version && probe.version !== version) return { action: 'note', message: `the canvas at ${target} runs ${v(probe.version)}; the plugin is v${version} (it is not on this machine, so the plugin leaves it alone)` }
@@ -202,8 +202,39 @@ export function decideCanvas({ target, probe, state, alive = () => false, versio
   // ours: the pid it answers with is the one we started (older canvases do not answer a pid: fall back to the live pid on the same target)
   const ours = managedState && (probe.pid ? probe.pid === state.pid : true)
   if (probe.version === version) return { action: 'none' }
-  if (ours) return { action: 'restart', message: `restarting the canvas: ${v(probe.version)} → v${version}` }
+  if (ours) return { action: 'restart', pid: state.pid, args: state.args, message: `restarting the canvas: ${v(probe.version)} → v${version}` }
+  // started by hand (an agent, a shell) but running this plugin's code: still the plugin's to keep current
+  if (adopt && probe.pid) return { action: 'restart', pid: probe.pid, args: adopt, message: `restarting the canvas (started by hand from the plugin): ${v(probe.version)} → v${version}` }
   return { action: 'note', message: `a canvas ${v(probe.version)} is already running on ${target} (not started by the plugin); restart it to get v${version}` }
+}
+
+/** A local process's arguments: /proc (exact) on Linux, else `ps` (split on spaces). [] when unknown. */
+export function processArgs(pid) {
+  try {
+    return fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').filter(Boolean)
+  } catch {}
+  const r = spawnSync('ps', ['-o', 'command=', '-p', String(pid)], { encoding: 'utf8' })
+  return r.status === 0 ? r.stdout.trim().split(/\s+/).filter(Boolean) : []
+}
+
+/**
+ * A canvas process running this plugin's code — any installed version (a sibling folder in the plugin
+ * cache) or a runtime copy in the data dir — may be restarted on the plugin's version, whoever started it.
+ * Returns its serve options (without `serve` and `--port`), or undefined for any other process. Pure.
+ */
+export function pluginCanvasArgs(argv, { root = pluginRoot, data = dataDir() } = {}) {
+  const inCache = /[\\/]plugins[\\/]cache[\\/]/.test(root + path.sep)
+  const under = (p, dir) => path.resolve(p).startsWith(path.resolve(dir) + path.sep)
+  const i = argv.findIndex((a) => /canvas\.m?js$/.test(a) && ((inCache && under(a, path.dirname(root))) || under(a, path.join(data, 'runtime'))))
+  if (i < 0) return undefined
+  const rest = argv.slice(i + 1)
+  if (rest[0] === 'serve') rest.shift()
+  const out = []
+  for (let j = 0; j < rest.length; j++) {
+    if (rest[j] === '--port') j++
+    else if (!rest[j].startsWith('--port=')) out.push(rest[j])
+  }
+  return out
 }
 
 export async function probeCanvas(target, timeoutMs = 1500) {
@@ -288,12 +319,12 @@ export function boardsDirFor(root = pluginRoot, env = process.env) {
   return !inCache && fs.existsSync(legacy) ? legacy : undefined
 }
 
-function startCanvas({ runtime, target, data, boardsDir }) {
+function startCanvas({ runtime, target, data, boardsDir, extra = [] }) {
   const port = portOf(target)
   fs.mkdirSync(data, { recursive: true })
   const logFile = path.join(data, 'canvas.log')
   const fd = fs.openSync(logFile, 'a')
-  const args = [runtime.canvas, 'serve', '--port', String(port), ...(boardsDir ? ['--dir', boardsDir] : [])]
+  const args = [runtime.canvas, 'serve', '--port', String(port), ...(boardsDir && !extra.includes('--dir') ? ['--dir', boardsDir] : []), ...extra]
   const child = spawn(process.execPath, args, { detached: true, stdio: ['ignore', fd, fd], env: { ...process.env, AWD_CANVAS_URL: target } })
   child.unref()
   fs.closeSync(fd)
@@ -310,7 +341,8 @@ export async function ensureCanvas({ runtime, root = pluginRoot, data = dataDir(
   return withLock(data, async () => {
     const probe = await probeCanvas(target)
     const state = readState(data)
-    const d = decideCanvas({ target, probe, state, alive: pidAlive, version, autostart: !autostartOff(env), startIfDown })
+    const adopt = isLocal(target) && probe.pid && probe.version !== version ? pluginCanvasArgs(processArgs(probe.pid), { root, data }) : undefined
+    const d = decideCanvas({ target, probe, state, alive: pidAlive, version, autostart: !autostartOff(env), startIfDown, adopt })
     if (d.action === 'none') return { action: 'none', target, version: probe.version }
     if (d.action === 'note') {
       log(d.message)
@@ -322,11 +354,13 @@ export async function ensureCanvas({ runtime, root = pluginRoot, data = dataDir(
     }
     if (d.action === 'restart') {
       log(d.message)
-      await stopPid(state.pid)
+      await stopPid(d.pid)
     }
+    // a restarted canvas keeps its options (--dir, --studio-project, …); a new one gets the plugin's
+    const extra = (d.action === 'restart' && d.args) || []
     const boardsDir = boardsDirFor(root, env)
-    const { pid, logFile } = startCanvas({ runtime, target, data, boardsDir })
-    writeState(data, { pid, target, port: portOf(target), version, root, runtime: runtime.dir, startedAt: new Date().toISOString(), boardsDir: boardsDir ?? null })
+    const { pid, logFile } = startCanvas({ runtime, target, data, boardsDir, extra })
+    writeState(data, { pid, target, port: portOf(target), version, root, runtime: runtime.dir, startedAt: new Date().toISOString(), boardsDir: boardsDir ?? null, ...(extra.length ? { args: extra } : {}) })
     for (let i = 0; i < 100; i++) {
       const p = await probeCanvas(target, 800)
       if (p.reachable) {
