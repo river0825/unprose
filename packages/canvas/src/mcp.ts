@@ -25,7 +25,7 @@ const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_ite
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
 export function createMcpServer(client = new CanvasClient()): McpServer {
-  const server = new McpServer({ name: 'awd-canvas', version: '0.3.0' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
+  const server = new McpServer({ name: 'awd-canvas', version: '0.3.1' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
 
   server.registerTool(
     'canvas_list_boards',

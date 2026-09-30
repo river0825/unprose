@@ -37,8 +37,10 @@ claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/
   /plugin marketplace add river0825/unprose
   /plugin install unprose@unprose
   ```
-  裝好就能用，不需要 build。啟動 board：
-  `node ~/.claude/plugins/cache/unprose/unprose/<version>/scripts/canvas.mjs`，或直接請 Claude「啟動 Unprose canvas」，skill 知道怎麼做。
+  裝好就能用，而且會自己維護：每次開始 session 時，它會確認執行檔存在（安裝的副本裡沒有時，會從 GitHub release
+  下載這個版本的），並確認 `http://localhost:4400` 有 canvas 在跑——沒有就幫你啟動，**`/plugin` 更新後會用新版本
+  重啟**。你自己啟動的 canvas 或遠端的 canvas（`AWD_CANVAS_URL`）一律不動，版本不同時只會提示一行。
+  不想自動啟動，在 `/config` 關掉 plugin 選項 `canvas_autostart`（或設 `AWD_CANVAS_AUTOSTART=0`）；要連到別的 canvas，設 `canvas_url` 選項。
 - **Codex**：加到 `~/.codex/config.toml`，並把 [AGENTS.md](AGENTS.md) 複製到你的專案：
   ```toml
   [mcp_servers.awd-canvas]

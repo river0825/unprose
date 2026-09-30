@@ -1,5 +1,5 @@
 node_modules/
-dist/
+packages/**/dist/
 *.log
 .DS_Store
 .awd/
@@ -10,6 +10,3 @@ dist/
 
 # reference book (large, not ours to redistribute)
 Introducing Eventstorming.pdf
-
-# the bundled plugin runtime ships in this repository (scripts/bundle.mjs)
-!/dist/

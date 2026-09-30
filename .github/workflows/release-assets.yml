@@ -1,0 +1,32 @@
+# Attach the plugin runtime to every published release: unprose-runtime-v<version>.tgz (+ .sha256) from the
+# committed dist/. An installed plugin without dist/ downloads it for its version (scripts/runtime.mjs).
+# scripts/release-assets.sh does the same by hand; --clobber keeps both idempotent.
+name: release-assets
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: package dist/
+        run: |
+          set -euo pipefail
+          test -f dist/canvas.mjs && test -f dist/awd.mjs
+          v="${GITHUB_REF_NAME#v}"
+          [ "$(node -p "require('./dist/package.json').version")" = "$v" ] || { echo "dist/ is not v$v"; exit 1; }
+          name="unprose-runtime-v$v.tgz"
+          tar -czf "$name" -C dist .
+          sha256sum "$name" > "$name.sha256"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+      - name: upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "$NAME" "$NAME.sha256" --clobber

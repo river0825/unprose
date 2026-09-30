@@ -22,11 +22,36 @@ Below, `<unprose>` is the absolute path of that checkout.
 /plugin install unprose@unprose
 ```
 
-The plugin's `.mcp.json` starts `node ${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs`, which runs the bundled server in
-`dist/` — nothing to install or build. Start the canvas with `node <plugin dir>/scripts/canvas.mjs`.
+The plugin declares its MCP server in `.claude-plugin/plugin.json` (`mcpServers`): `node
+${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs`, which runs the bundled server in `dist/` — nothing to install or build.
+Two plugin options (`/config`, or the dialog when the plugin is enabled) reach it as `${user_config.*}`:
+`canvas_url` (default `http://localhost:4400`; a remote address or a board link works) and `canvas_autostart`
+(default on). The environment variables `AWD_CANVAS_URL` / `AWD_CANVAS_AUTOSTART` still work for the hook. The plugin also starts the canvas for you (see **Updates** below);
+to start it by hand: `node <plugin dir>/scripts/canvas.mjs`.
 
-**As a project MCP server** (no plugin): the repository's own `.mcp.json` works when Claude Code is started
-in the checkout (`${CLAUDE_PLUGIN_ROOT:-.}` falls back to the current directory). From another project:
+### Updates: the plugin keeps itself runnable
+
+Claude Code copies each plugin version into its own folder and has no post-update hook, so the plugin checks
+at the start of every session (`hooks/hooks.json` → `scripts/ensure.mjs`; the MCP server runs the same check
+when it starts):
+
+1. **Runtime** — the plugin's `dist/`, else this version's copy in `${CLAUDE_PLUGIN_DATA}/runtime/<version>/`,
+   else it downloads `unprose-runtime-v<version>.tgz` from the GitHub release (checked against its `.sha256`)
+   into that folder. In a dev checkout it runs `npm run build` instead. If nothing works it prints the fix.
+2. **Canvas** (only when `AWD_CANVAS_URL` is local — `localhost` / `127.0.0.1`, default `:4400`):
+   - nothing answers → starts one (boards in `$AWD_BOARDS_DIR`, else `~/.awd/boards`) and records it in
+     `${CLAUDE_PLUGIN_DATA}/canvas.json`, which survives updates;
+   - the canvas it started runs another version → stops it and starts the new one (the old version folder is
+     deleted by Claude Code 14 days after an update, which would otherwise break it);
+   - a canvas you started yourself is never touched — you get one line: "a canvas vX is already running … not
+     started by the plugin; restart it to get vY".
+   A remote canvas is never started or stopped; you only get a note if its version differs.
+3. The `canvas_autostart` option (or `AWD_CANVAS_AUTOSTART=0`) turns step 2 off (you start the canvas yourself). The hook prints at most a few
+   short lines, and nothing when all is well. Its log: `${CLAUDE_PLUGIN_DATA}/canvas.log`.
+
+**As a project MCP server** (no plugin): register it for your project (the public repository ships no root
+`.mcp.json` — a plugin's root `.mcp.json` is loaded too, and one with `${CLAUDE_PLUGIN_ROOT:-.}` resolved to
+the user's project, so the MCP server never started):
 
 ```bash
 claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node <unprose>/scripts/mcp.mjs
@@ -69,9 +94,8 @@ canvas HTTP API (`docs/canvas.md`).
 
 ## Not verified yet
 
-- The plugin install commands above follow the Claude Code plugin conventions (`.claude-plugin/plugin.json`,
-  `marketplace.json`, root `.mcp.json`, `${CLAUDE_PLUGIN_ROOT}`); `${VAR:-default}` expansion in
-  `.mcp.json` is what lets one file serve both the plugin and a plain checkout. Neither has been exercised
-  end to end from a published marketplace.
+- Plugin configs use plain `${CLAUDE_PLUGIN_ROOT}` / `${user_config.KEY}` only — Claude Code substitutes
+  `${NAME}` in MCP `command` / `args` / `env` and hook commands, not shell forms like `${VAR:-default}`
+  (the export refuses them). `claude plugin validate` passes on the exported tree.
 - The Codex `config.toml` table shape (`[mcp_servers.<name>]` with `command` / `args` / `env`) is the
   documented form at the time of writing; check your Codex version's docs if it rejects it.

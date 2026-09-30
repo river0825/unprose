@@ -18,9 +18,12 @@ and annotate, and a rule set that keeps it honest:
 
 - MCP server `awd-canvas` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
   `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
-  It needs a running canvas server. Start it in the background from the plugin (or repo) root — two
-  directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400,
-  boards in `~/.awd/boards`). No install or build is needed: the plugin ships its runtime in `dist/`.
+  It needs a running canvas server. As a plugin, it is started for you at the start of each session (and
+  restarted on the new version after a plugin update); a note in the session says so if it had to act. If
+  none is running (e.g. the `canvas_autostart` option is off), start it in the background from the plugin (or repo) root —
+  two directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400,
+  boards in `~/.awd/boards`). No install or build is needed; if the runtime is missing, `node
+  <root>/scripts/ensure.mjs` fetches it for this version.
 
 **Canvas somewhere else** (a tunnel, another machine, `https://canvas.example.com`): set
 `AWD_CANVAS_URL` to its address before the agent starts — a pasted board link (`…/b/<id>`) works too, the

@@ -1,6 +1,6 @@
 {
   "name": "unprose",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A shared visual canvas where people and AI agents talk designs through — EventStorming, story maps, kanban, wireframes and workflows, each backed by a file the agent edits.",
   "author": {
     "name": "Unprose contributors"
@@ -16,5 +16,31 @@
     "canvas",
     "mcp",
     "human-in-the-loop"
-  ]
+  ],
+  "mcpServers": {
+    "awd-canvas": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs"
+      ],
+      "env": {
+        "AWD_CANVAS_URL": "${user_config.canvas_url}",
+        "AWD_CANVAS_AUTOSTART": "${user_config.canvas_autostart}"
+      }
+    }
+  },
+  "userConfig": {
+    "canvas_url": {
+      "type": "string",
+      "title": "Canvas URL",
+      "description": "Where the Unprose canvas runs. A local address (localhost / 127.0.0.1) is started for you and kept on the plugin's version; a remote one is only used, never started or stopped. A board link works too.",
+      "default": "http://localhost:4400"
+    },
+    "canvas_autostart": {
+      "type": "boolean",
+      "title": "Start the canvas automatically",
+      "description": "Start a local canvas at the start of each session and restart it on the new version after a plugin update. It never touches a canvas you started yourself.",
+      "default": true
+    }
+  }
 }

@@ -35230,7 +35230,7 @@ function startServer(opts = {}) {
       if (parts[1] === "kinds" && method === "GET")
         return json2(res, 200, { kinds: diagramKinds });
       if (parts[1] === "version" && method === "GET")
-        return json2(res, 200, release());
+        return json2(res, 200, { ...release(), pid: process.pid });
       if (parts[1] !== "boards")
         throw new HttpError(404, "not found");
       const id = parts[2];
@@ -45368,7 +45368,7 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var text = (s) => ({ content: [{ type: "text", text: s }] });
 function createMcpServer(client = new CanvasClient()) {
-  const server = new McpServer({ name: "awd-canvas", version: "0.3.0" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "awd-canvas", version: "0.3.1" }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` });
   server.registerTool("canvas_list_boards", { title: "List boards", description: "List every board on the canvas server with id, kind, title and current seq." }, async () => {
     const boards = await client.listBoards();
     if (!boards.length)

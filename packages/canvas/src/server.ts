@@ -211,7 +211,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     // ---- API ----
     if (parts[0] === 'api') {
       if (parts[1] === 'kinds' && method === 'GET') return json(res, 200, { kinds: diagramKinds })
-      if (parts[1] === 'version' && method === 'GET') return json(res, 200, release())
+      // pid: lets the plugin tell a canvas it started (and may restart after an update) from one the person runs
+      if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid })
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]

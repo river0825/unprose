@@ -1,0 +1,12 @@
+{
+  "description": "Unprose: after an install or update, make the plugin runnable (bundled runtime) and keep the canvas on the plugin's version.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/ensure.mjs\"", "timeout": 120 }
+        ]
+      }
+    ]
+  }
+}

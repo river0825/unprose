@@ -45,6 +45,9 @@ await build({ ...common, entryPoints: ['packages/canvas/dist/cli.js'], outfile: 
 fs.cpSync(path.join(root, 'packages/canvas/web/dist'), path.join(out, 'web'), { recursive: true })
 // the release notes the bundled server shows (GET /api/version); the repo root has them too, but a copied dist/ may not
 if (fs.existsSync(path.join(root, 'CHANGELOG.md'))) fs.copyFileSync(path.join(root, 'CHANGELOG.md'), path.join(out, 'CHANGELOG.md'))
+// and its version beside them: a runtime unpacked away from the repo (the plugin's data dir) still knows it
+const rootPkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify({ name: 'unprose-runtime', version: rootPkg.version, private: true, type: 'module' }, null, 2) + '\n')
 
 const size = (p) => {
   const st = fs.statSync(p)

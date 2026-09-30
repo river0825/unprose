@@ -1,8 +1,13 @@
 #!/usr/bin/env node
-// `node scripts/awd.mjs <command> …` — the awd CLI from the bundled plugin (dist/awd.mjs) or a dev checkout.
+// `node scripts/awd.mjs <command> …` — the awd CLI from the plugin's runtime (dist/, the data dir's copy for
+// this version, or a dev checkout's build; downloaded if the install has none).
 import { pathToFileURL } from 'node:url'
-import { entry } from './entry.mjs'
+import { ensureRuntime } from './runtime.mjs'
 
-const cli = entry('awd')
-process.argv = [process.argv[0], cli, ...process.argv.slice(2)]
-await import(pathToFileURL(cli).href)
+const { runtime, reason } = await ensureRuntime({ log: (s) => process.stderr.write(`unprose: ${s}\n`) })
+if (!runtime) {
+  process.stderr.write(`unprose: ${reason}\n`)
+  process.exit(1)
+}
+process.argv = [process.argv[0], runtime.awd, ...process.argv.slice(2)]
+await import(pathToFileURL(runtime.awd).href)

@@ -1,26 +1,14 @@
-// Which build to run: the bundled plugin runtime in dist/ (published plugin, no install needed —
-// river0825/unprose#4), else the workspace build of a dev checkout. Used by the launchers in scripts/.
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+// Which build to run, without downloading anything: the plugin's dist/ (the published bundle), this
+// version's runtime in the plugin data dir (fetched by scripts/ensure.mjs), else a dev checkout's
+// workspace build. For the async version that also downloads or builds, see ensureRuntime in runtime.mjs.
+import { findRuntime, fixHint, pluginRoot } from './runtime.mjs'
 
-export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-
-const CANDIDATES = {
-  canvas: ['dist/canvas.mjs', 'packages/canvas/dist/cli.js'],
-  awd: ['dist/awd.mjs', 'packages/cli/bin/awd.js'],
-}
+export const root = pluginRoot
 
 /** Absolute path of the `canvas` or `awd` entry, or exit with the command that makes one. */
 export function entry(name) {
-  for (const rel of CANDIDATES[name]) {
-    const p = path.join(root, rel)
-    if (fs.existsSync(p)) return p
-  }
-  process.stderr.write(
-    `unprose: no ${name} build found in ${root} (looked for ${CANDIDATES[name].join(', ')}).\n` +
-      `  In a checkout: (cd "${root}" && npm install && npm run build)\n` +
-      `  The published plugin ships dist/ — reinstall it if dist/ is missing.\n`,
-  )
+  const rt = findRuntime()
+  if (rt) return rt[name]
+  process.stderr.write(`unprose: no ${name} build found for ${root}.\n  Fix: ${fixHint(root)}\n  (or run: node "${root}/scripts/ensure.mjs")\n`)
   process.exit(1)
 }

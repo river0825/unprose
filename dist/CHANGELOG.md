@@ -6,6 +6,30 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-09-30
+
+### Added
+- The plugin keeps itself runnable after an install or update: a SessionStart hook (and the MCP server when it
+  starts) makes sure the runtime exists — the plugin's `dist/`, else this version's copy in the plugin data dir,
+  else downloaded from the GitHub release and checksum-verified — and keeps a local canvas on the plugin's
+  version: started if none answers, **restarted on the new version after `/plugin` update**, never touching a
+  canvas you started or a remote one. `AWD_CANVAS_AUTOSTART=0` turns the canvas part off. Every release now
+  carries `unprose-runtime-v<version>.tgz` (`scripts/release-assets.sh`, and a workflow as a safety net).
+- `GET /api/version` also returns the server's `pid`, so the plugin can tell a canvas it started from yours.
+
+### Fixed
+- 0.3.0 installed without its runtime (no `dist/`), so the MCP server failed ("Failed to reconnect to
+  plugin:unprose:awd-canvas") and the canvas had to be built by hand: the public `.gitignore`'s `dist/` +
+  `!/dist/` re-include was not honoured by the plugin copy. The public repo no longer ignores the root `dist/`
+  at all, and the export fails if any rule would (`git check-ignore`). Reported from real use in another project.
+- The plugin's MCP server failed to start in every project ("Failed to reconnect to plugin:unprose:awd-canvas";
+  its log: `Cannot find module '<your project>/scripts/mcp.mjs'`): the root `.mcp.json` used
+  `${CLAUDE_PLUGIN_ROOT:-.}/scripts/mcp.mjs`, which Claude Code does not expand like a shell, so it resolved to
+  the project directory. The server is now declared in `.claude-plugin/plugin.json` with plain
+  `${CLAUDE_PLUGIN_ROOT}`, the public repo ships no root `.mcp.json`, and the export rejects any `${VAR:-…}`
+  in plugin configs. New plugin options `canvas_url` and `canvas_autostart` replace the environment defaults.
+
+
 ## [0.3.0] — 2026-09-30
 
 ### Added
@@ -111,7 +135,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/river0825/unprose/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/river0825/unprose/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/river0825/unprose/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/river0825/unprose/releases/tag/v0.1.0

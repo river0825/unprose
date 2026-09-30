@@ -17,6 +17,7 @@ Unprose to discuss designs with a person on a shared canvas.
 
 ```bash
 node scripts/canvas.mjs       # canvas on http://localhost:4400 — runs as shipped (dist/), no build
+# as a Claude Code plugin the canvas is started (and restarted after updates) for you — AWD_CANVAS_AUTOSTART=0 turns that off
 # working on Unprose itself: npm install && npm run build; `npm start` also runs an example workflow
 ```
 

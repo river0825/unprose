@@ -36,7 +36,7 @@ test('no CHANGELOG anywhere: both are null', () => {
   assert.deepEqual(findRelease(lonely), { version: null, changelog: null })
 })
 
-test('GET /api/version answers { version, changelog }', async () => {
+test('GET /api/version answers { version, changelog, pid }', async () => {
   const srv = await startServer({ port: 0, store: createBoardRepository('memory'), releaseDir: nested })
   try {
     const r = await fetch(`${srv.url}/api/version`)
@@ -44,6 +44,7 @@ test('GET /api/version answers { version, changelog }', async () => {
     const body = (await r.json()) as { version: string; changelog: string }
     assert.equal(body.version, '9.8.7')
     assert.match(body.changelog, /a thing/)
+    assert.equal((body as unknown as { pid: number }).pid, process.pid, 'the pid tells a plugin-managed canvas from one the person runs')
   } finally {
     await srv.close()
   }
