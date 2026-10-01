@@ -8,6 +8,7 @@ import { describePending, eventOf, itemOfNode, nodeIdOf, pendingOf, yamlIntent, 
 import { useModelChoice } from '../inspector/useModel'
 import { chatsFor } from '../inspector/chat'
 import '../inspector.css'
+import { PanelLink } from '../inspector/panelNav'
 
 interface Props {
   board: Board
@@ -28,9 +29,9 @@ function Block({ board, nodeId, onSelect }: { board: Board; nodeId: string | und
   const { it, name } = nameOf(board, nodeId)
   if (!it) return <span className="mono">{name}</span>
   return (
-    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${name}`}>
+    <PanelLink id={it.id} name={name} className="wire-block" onSelect={onSelect}>
       {name}
-    </button>
+    </PanelLink>
   )
 }
 

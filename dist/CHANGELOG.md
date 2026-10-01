@@ -6,6 +6,13 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.5] — 2026-10-01
+
+### Changed
+- Clicking a connected block or wire in the side panel (Connected, Wiring, traces) now shows it on the board — the
+  view moves there and it flashes — and the panel stays on what you were reading. The small **›** beside the link
+  opens that item's details instead.
+
 ## [0.6.4] — 2026-10-01
 
 ### Changed
@@ -259,7 +266,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/river0825/unprose/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/river0825/unprose/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/river0825/unprose/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/river0825/unprose/compare/v0.6.1...v0.6.2

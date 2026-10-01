@@ -139,18 +139,20 @@ function BoardInner({ id }: { id: string }) {
   // a link under the pointer in the side panel lights up the item(s) it points at on the board
   const [panelHover, setPanelHover] = useState<string[]>([])
   const onHoverItems = useCallback((ids: string[]) => setPanelHover((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids)), [])
+  // "show it on the board" from a panel link: the view moves there and the item flashes for a moment
+  const [flashIds, setFlashIds] = useState<string[]>([])
   const shownNodes = useMemo(() => {
-    if (!panelHover.length) return nodes
-    const on = new Set(panelHover)
+    if (!panelHover.length && !flashIds.length) return nodes
+    const on = new Set([...panelHover, ...flashIds])
     return nodes.map((n) => (on.has(n.id) ? { ...n, className: `${n.className ?? ''} panel-hover` } : n))
-  }, [nodes, panelHover])
+  }, [nodes, panelHover, flashIds])
 
   // owns / delegates wires are agent relations, not events: faint unless one of their ends is selected (docs/studio.md §7)
   const shownEdges = useMemo(() => {
     // only workflow diagrams draw owns / delegates wires, on a workflow board or in a workflow frame
     if (!board) return edges
     const sel = new Set(selectedIds)
-    const hover = new Set(panelHover)
+    const hover = new Set([...panelHover, ...flashIds])
     return edges.map((e) => {
       const role = board.items[e.id]?.role
       const lit = hover.has(e.id) ? ' panel-hover' : ''
@@ -158,7 +160,7 @@ function BoardInner({ id }: { id: string }) {
       const on = e.selected || sel.has(e.source) || sel.has(e.target)
       return { ...e, className: (on ? 'wire-agent on' : 'wire-agent') + lit }
     })
-  }, [board, edges, selectedIds, panelHover])
+  }, [board, edges, selectedIds, panelHover, flashIds])
 
   const onNodesChange = useCallback((changes: NodeChange<ItemNode>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns))
@@ -187,6 +189,19 @@ function BoardInner({ id }: { id: string }) {
       flow.fitView({ nodes: ids.map((i) => ({ id: i })), padding: 0.4, duration: 300, maxZoom: 1.2 })
     },
     [flow],
+  )
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reveal = useCallback(
+    (ids: string[]) => {
+      if (!board) return
+      // a wire is shown by its two ends; a block by itself
+      const nodesOf = ids.flatMap((i) => (board.items[i]?.type === 'arrow' ? [board.items[i].from, board.items[i].to].filter((x): x is string => !!x) : [i]))
+      locate(nodesOf)
+      setFlashIds(ids)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => setFlashIds([]), 1600)
+    },
+    [board, locate],
   )
 
   // "Take me there": fit the view to these items and select them (the palette, ?frame= links, canvas_focus).
@@ -874,6 +889,7 @@ function BoardInner({ id }: { id: string }) {
           selectedIds={selectedIds}
           sourceRequest={sourceRequest}
           onHoverItems={onHoverItems}
+          onReveal={reveal}
           onComment={(tid, text) => void addComment(tid, text)}
           onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
           onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}
@@ -893,7 +909,9 @@ function BoardInner({ id }: { id: string }) {
             select(sid ? [sid] : [])
             if (sid) {
               const it = board.items[sid]
-              if (it) flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
+              // a wire has no place of its own on the board: show its two ends
+              if (it?.type === 'arrow') locate([it.from, it.to].filter((x): x is string => !!x))
+              else if (it) flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
             }
           }}
         />

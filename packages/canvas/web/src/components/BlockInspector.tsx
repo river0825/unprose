@@ -15,6 +15,7 @@ import '../inspector.css'
 // the large view with Edit mode (docs/studio.md §9), loaded the first time a script is opened
 const SourceDialog = lazy(() => import('./SourceDialog'))
 import { Connections } from './Connections'
+import { PanelLink } from '../inspector/panelNav'
 import { consumersOf, parseListen, producersOf, wireFor } from '../inspector/wiring'
 import type { DiscussArg } from '../inspector/diff'
 
@@ -643,10 +644,10 @@ const blockName = (it: Item) => it.text?.split('\n')[0].trim() || it.id
 
 function BlockLink({ it, onSelect, note }: { it: Item; onSelect: (id: string) => void; note?: string }) {
   return (
-    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${blockName(it)}`}>
+    <PanelLink id={it.id} name={blockName(it)} className="wire-block" onSelect={onSelect}>
       {blockName(it)}
       {note ? <span className="wire-note">{note}</span> : null}
-    </button>
+    </PanelLink>
   )
 }
 
@@ -654,9 +655,9 @@ function BlockLink({ it, onSelect, note }: { it: Item; onSelect: (id: string) =>
 function EventChip({ event, wire, onSelect }: { event: string; wire: Item | undefined; onSelect: (id: string) => void }) {
   if (!wire) return <span className="insp-chip mono">{event}</span>
   return (
-    <button type="button" className="insp-chip mono wire-chip" data-item-link={wire.id} onClick={() => onSelect(wire.id)} title="Select this wire on the board">
+    <PanelLink id={wire.id} name={`the wire ${event}`} className="insp-chip mono wire-chip" onSelect={onSelect}>
       {event}
-    </button>
+    </PanelLink>
   )
 }
 

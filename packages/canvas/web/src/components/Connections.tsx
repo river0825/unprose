@@ -1,6 +1,7 @@
 // What a wire joins, or what an item is wired to — in the panel, so a link hidden
-// behind other items on the board can still be followed. Clicking a node selects it.
+// behind other items on the board can still be followed. Clicking one shows it on the board; › opens it.
 import type { Board, Item } from '../../../src/model'
+import { PanelLink } from '../inspector/panelNav'
 
 const nameOf = (it: Item | undefined) => {
   const t = it?.text?.split('\n')[0].trim()
@@ -12,11 +13,11 @@ function NodeButton({ board, id, onSelect }: { board: Board; id: string | undefi
   const it = id ? board.items[id] : undefined
   if (!it) return <span className="muted">{id ? 'missing item' : 'nothing'}</span>
   return (
-    <button type="button" className="conn-node" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${nameOf(it)}`}>
+    <PanelLink id={it.id} name={nameOf(it)} className="conn-node" onSelect={onSelect}>
       <span className={`conn-dot c-${it.color ?? 'grey'}`} aria-hidden="true" />
       {nameOf(it)}
       {it.role && it.role !== 'card' ? <span className="conn-role">{it.role.replace(/-/g, ' ')}</span> : null}
-    </button>
+    </PanelLink>
   )
 }
 
@@ -52,9 +53,9 @@ export function Connections({ board, item, onSelect }: { board: Board; item: Ite
             <li key={a.id}>
               <NodeButton board={board} id={other(a)} onSelect={onSelect} />
               {wireName(a) ? <span className="conn-label">{wireName(a)}</span> : null}
-              <button type="button" className="link conn-wire" data-item-link={a.id} onClick={() => onSelect(a.id)} aria-label={`Select the wire ${wireName(a) || ''}`}>
+              <PanelLink id={a.id} name={`the wire ${wireName(a) || ''}`.trim()} className="link conn-wire" onSelect={onSelect}>
                 wire
-              </button>
+              </PanelLink>
             </li>
           ))}
         </ul>

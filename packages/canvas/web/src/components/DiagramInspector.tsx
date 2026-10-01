@@ -13,16 +13,17 @@ import { MODELS, type DiscussModel } from '../inspector/detail'
 import { useModelChoice } from '../inspector/useModel'
 import { useFrozen } from '../flow/freeze'
 import { headerGroups } from '../flow/headerStrips'
+import { PanelLink } from '../inspector/panelNav'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
 function ItemLink({ it, onSelect }: { it: Item | undefined; onSelect: (id: string) => void }) {
   if (!it) return <span className="muted">missing item</span>
   return (
-    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${nameOf(it)}`}>
+    <PanelLink id={it.id} name={nameOf(it)} className="wire-block" onSelect={onSelect}>
       {nameOf(it)}
       {it.role ? <span className="wire-note">{it.role.replace(/-/g, ' ')}</span> : null}
-    </button>
+    </PanelLink>
   )
 }
 
@@ -179,9 +180,9 @@ export function DiagramElementPanel({
                     </>
                   )}
                   {where ? <span className="wire-note">{KIND_NAMES[where.kind] ?? where.kind}</span> : null}
-                  <button type="button" className="link conn-wire" data-item-link={t.wire.id} onClick={() => onSelect(t.wire.id)} aria-label="Select the trace wire">
+                  <PanelLink id={t.wire.id} name="the trace wire" className="link conn-wire" onSelect={onSelect}>
                     wire
-                  </button>
+                  </PanelLink>
                 </li>
               )
             })}

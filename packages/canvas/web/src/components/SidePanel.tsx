@@ -16,6 +16,7 @@ import type { DiscussArg } from '../inspector/diff'
 import { DiagramElementPanel, DiagramFramePanel } from './DiagramInspector'
 import { diagramData, diagramOf } from '../diagrams/frame'
 import { Linkified } from '../flow/Linkified'
+import { PanelNavContext, type PanelNav } from '../inspector/panelNav'
 
 interface Props {
   board: Board
@@ -47,6 +48,8 @@ interface Props {
   onDismiss: (id: string) => void
   /** the board items a link under the pointer (or keyboard focus) points at; [] when none */
   onHoverItems?: (ids: string[]) => void
+  /** show items on the board (move there, flash) without selecting them — a click on a Connected / Wiring link */
+  onReveal?: (ids: string[]) => void
 }
 
 /** The ids a panel link points at: any element marked \`data-item-link="<id> <id>…"\` (one handler for every list). */
@@ -83,7 +86,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss, onHoverItems }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
@@ -121,7 +124,11 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
   const visible = changes.filter((c) => filter === 'all' || c.author === filter)
   const needYou = useMemo(() => chatsNeedingYou(board), [board])
 
+  // Connected / Wiring links: a click shows the item on the board, › opens it (inspector/panelNav.tsx)
+  const panelNav = useMemo<PanelNav | null>(() => (onReveal ? { reveal: onReveal, open: (id) => onSelect(id) } : null), [onReveal, onSelect])
+
   return (
+    <PanelNavContext.Provider value={panelNav}>
     <aside
       id="board-panel"
       className="panel"
@@ -295,6 +302,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
         ) : null}
       </div>
     </aside>
+    </PanelNavContext.Provider>
   )
 }
 
