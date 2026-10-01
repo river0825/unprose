@@ -23,6 +23,8 @@ interface Props {
   selectedId: string | null
   /** the whole selection (the Chat tab is about all of it) */
   selectedIds: string[]
+  /** "open this block's source" from the canvas: shows the Inspector, which opens the large view */
+  sourceRequest?: { id: string; mode: 'view' | 'edit'; n: number } | null
   onComment: (targetId: string, text: string) => void
   /** chat with the selection: a comment marked `data.discuss = { model, about }` (docs/studio.md §2b) */
   onChat: (ids: string[], text: string, model: DiscussModel) => void
@@ -73,7 +75,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
@@ -98,6 +100,9 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
   useEffect(() => {
     if (isBlock || isWire || selectedDiagram || inDiagram) setTab('item')
   }, [selectedId, isBlock, isWire, Boolean(selectedDiagram), inDiagram])
+  useEffect(() => {
+    if (sourceRequest) setTab('item')
+  }, [sourceRequest?.n])
 
   const comments = selected
     ? Object.values(board.items)
@@ -219,6 +224,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
             }}
             onAnchoredComment={onAnchoredComment}
             onReply={onReply}
+            sourceRequest={sourceRequest?.id === selected.id ? sourceRequest : undefined}
           />
         ) : selected ? (
           <ItemDetail

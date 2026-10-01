@@ -22,6 +22,7 @@ function Shell({
   resizable = false,
   selected = false,
   style,
+  onDouble,
 }: {
   item: Item
   pulse: boolean
@@ -31,6 +32,8 @@ function Shell({
   resizable?: boolean
   selected?: boolean
   style?: React.CSSProperties
+  /** what a double-click does instead of editing the text */
+  onDouble?: () => void
 }) {
   const edit = useEdit()
   const [liveH, setLiveH] = useState<number | null>(null)
@@ -69,7 +72,8 @@ function Shell({
       onPointerCancel={clearPress}
       onDoubleClick={(e) => {
         e.stopPropagation()
-        edit.startEdit(item.id)
+        if (onDouble) onDouble()
+        else edit.startEdit(item.id)
       }}
       onClick={(e) => {
         if (edit.attachTarget) {
@@ -104,6 +108,37 @@ function Text({ item, className, placeholder }: { item: Item; className?: string
 /** Role is told in text as well as colour. */
 function RoleLabel({ role }: { role?: string }) {
   return role ? <span className="role-label">{role.replace(/-/g, ' ')}</span> : null
+}
+
+/** A workflow script block: the file its command runs (or none for an inline command). */
+export function scriptOf(item: Item): { file?: string } | undefined {
+  const d = item.data?.detail as { kind?: string; file?: unknown } | undefined
+  return d?.kind === 'script' ? { file: typeof d.file === 'string' ? d.file : undefined } : undefined
+}
+
+const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
+
+/** On a script block: open its source (view, then Edit in the dialog). A double-click on the block does the same. */
+function ScriptButton({ item, file }: { item: Item; file?: string }) {
+  const edit = useEdit()
+  const name = file?.split('/').pop() ?? 'command'
+  return (
+    <button
+      type="button"
+      className="node-source nodrag nopan"
+      title={file ? `View or edit ${file}` : 'View or edit the command'}
+      aria-label={file ? `View or edit ${file}` : 'View or edit the command'}
+      onPointerDown={stop}
+      onMouseDown={stop}
+      onDoubleClick={stop}
+      onClick={(e) => {
+        e.stopPropagation()
+        edit.openSource(item.id, 'view')
+      }}
+    >
+      <span aria-hidden="true">‹/›</span> {name}
+    </button>
+  )
 }
 
 export function StickyNode({ data, selected }: NodeProps<ItemNode>) {
@@ -176,6 +211,7 @@ export function LaneNode({ data, selected }: NodeProps<ItemNode>) {
 export function CardNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse } = data
   const accent = item.color ? colorVar(item.color) : undefined
+  const edit = useEdit()
   if (item.role === 'card') {
     // kanban card: title, then labels / assignee / size as plain text badges
     const labels = Array.isArray(item.data?.labels) ? (item.data.labels as unknown[]).filter((l): l is string => typeof l === 'string') : []
@@ -198,9 +234,20 @@ export function CardNode({ data, selected }: NodeProps<ItemNode>) {
       </Shell>
     )
   }
+  // a workflow script block: its source opens from the ‹/› chip or a double-click
+  const script = scriptOf(item)
   return (
-    <Shell item={item} pulse={pulse} selected={selected} resizable className={accent && item.color !== 'white' ? 'card tinted' : 'card'} style={accent ? { ['--card-accent' as string]: accent } : undefined}>
+    <Shell
+      item={item}
+      pulse={pulse}
+      selected={selected}
+      resizable
+      className={accent && item.color !== 'white' ? 'card tinted' : 'card'}
+      style={accent ? { ['--card-accent' as string]: accent } : undefined}
+      onDouble={script ? () => edit.openSource(item.id, 'view') : undefined}
+    >
       <Text item={item} placeholder="Write here" />
+      {script && <ScriptButton item={item} file={script.file} />}
       <RoleLabel role={item.role} />
     </Shell>
   )

@@ -73,6 +73,13 @@ button.insp-source:hover {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* View / Edit on a section (a script's source): right of the heading */
+.insp-sec-actions {
+  float: right;
+  display: flex;
+  gap: 6px;
+  margin: 0 0 4px 8px;
+}
 .insp-note {
   font-weight: 400;
   font-size: 11.5px;

@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-10-01
+
+### Added
+- **View and edit a script from its block.** A workflow script block shows a `‹/› <file>` button on the canvas
+  (a double-click on the block does the same) that opens the script in the large editor, and the Inspector's
+  Source section has **View** and **Edit** buttons; Edit opens it ready to type. As before, an edit is sent to
+  the AI as a proposal, reviewed with you in the thread, then applied to the file. A step whose command names no
+  file gets View / Edit on its command, opening the workflow yaml at the step's lines.
+
 ## [0.6.0] — 2026-10-01
 
 ### Added
@@ -217,7 +226,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/river0825/unprose/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/river0825/unprose/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/river0825/unprose/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/river0825/unprose/compare/v0.5.0...v0.5.1

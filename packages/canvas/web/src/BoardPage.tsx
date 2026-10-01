@@ -352,6 +352,9 @@ function BoardInner({ id }: { id: string }) {
     [board, commit, setOpenComment],
   )
 
+  // a script block's "open the source": select it, and the Inspector opens the large view (docs/studio.md §9)
+  const [sourceRequest, setSourceRequest] = useState<{ id: string; mode: 'view' | 'edit'; n: number } | null>(null)
+
   const startEdit = useCallback(
     (iid: string) => {
       if (board?.items[iid]?.type === 'comment') setCommentOpen(iid, true)
@@ -613,6 +616,10 @@ function BoardInner({ id }: { id: string }) {
       reply: (rootId, text) => {
         if (text.trim()) addComment(rootId, text.trim())
       },
+      openSource: (iid, mode) => {
+        select([iid])
+        setSourceRequest({ id: iid, mode, n: Date.now() })
+      },
     }),
     [editingId, board, draftComment, commit, tool, addComment, openMenu, handoff, select, startEdit, commitLabel, resize, bend, setCommentOpen],
   )
@@ -854,6 +861,7 @@ function BoardInner({ id }: { id: string }) {
           changes={store.changes}
           selectedId={selectedId}
           selectedIds={selectedIds}
+          sourceRequest={sourceRequest}
           onComment={(tid, text) => void addComment(tid, text)}
           onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
           onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}

@@ -1,7 +1,7 @@
 // Inspector for one workflow block (docs/studio.md §4): what it is, in words a
 // person can read. Its texts (persona, prompt, script, yaml) take line comments
 // (§5); talking about the whole block happens in the Chat tab (§2b).
-import { useState, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react'
 import type { Author, Board, Item } from '../../../src/model'
 import { anchoredOn, filesOf, yamlRange, type Anchor, type TextSource } from '../inspector/anchor'
 import { chatsFor } from '../inspector/chat'
@@ -11,6 +11,9 @@ import { isBusy, signFor } from '../inspector/status'
 import { timeAgo } from '../time'
 import { TextView } from './TextView'
 import '../inspector.css'
+
+// the large view with Edit mode (docs/studio.md §9), loaded the first time a script is opened
+const SourceDialog = lazy(() => import('./SourceDialog'))
 import { Connections } from './Connections'
 import { consumersOf, parseListen, producersOf, wireFor } from '../inspector/wiring'
 import type { DiscussArg } from '../inspector/diff'
@@ -29,6 +32,8 @@ interface Props {
   onOpenFile: OpenFile
   onAnchoredComment: (target: string, text: string, anchor: Anchor, discuss?: DiscussArg) => void
   onReply: (rootId: string, text: string) => void
+  /** "open the source" from the script block on the canvas (a new \`n\` each time) */
+  sourceRequest?: { mode: 'view' | 'edit'; n: number }
 }
 
 /** What every commentable text in the Inspector needs. */
@@ -43,7 +48,7 @@ interface TextCtx {
 
 const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 
-export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onToast, onOpenFile, onAnchoredComment, onReply }: Props) {
+export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onToast, onOpenFile, onAnchoredComment, onReply, sourceRequest }: Props) {
   const files = filesOf(board)
   const ctx: TextCtx = { board, item, files, onOpenFile, onAnchoredComment, onReply }
   const range = yamlRange(item)
@@ -79,7 +84,7 @@ export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onTo
         {detail.kind === 'agent' && typeof detail.frontmatter?.description === 'string' && <p className="insp-desc">{detail.frontmatter.description}</p>}
       </header>
 
-      <KindBody board={board} item={item} detail={detail} config={config} onSelect={onSelect} ctx={ctx} />
+      <KindBody board={board} item={item} detail={detail} config={config} onSelect={onSelect} ctx={ctx} sourceRequest={sourceRequest} />
 
       {range && detail.source && files[detail.source.workflow] !== undefined && (
         <Section title="Definition" note={`${detail.source.workflow}:${range.start}–${range.end}`}>
@@ -148,7 +153,7 @@ function blockTitle(item: Item, d: BlockDetail): string {
 
 // ---------------------------------------------------------------- per kind
 
-function KindBody({ board, item, detail: d, config, onSelect, ctx }: { board: Board; item: Item; detail: BlockDetail; config: Record<string, unknown>; onSelect: (id: string) => void; ctx: TextCtx }) {
+function KindBody({ board, item, detail: d, config, onSelect, ctx, sourceRequest }: { board: Board; item: Item; detail: BlockDetail; config: Record<string, unknown>; onSelect: (id: string) => void; ctx: TextCtx; sourceRequest?: Props['sourceRequest'] }) {
   const retry = config.retry as { max?: number; backoff?: string | number } | undefined
   const timeout = typeof config.timeout === 'string' ? config.timeout : undefined
   const limits = (retry || timeout) && (
@@ -359,13 +364,28 @@ function KindBody({ board, item, detail: d, config, onSelect, ctx }: { board: Bo
         </>
       )
     }
-    case 'script':
+    case 'script': {
+      // what View / Edit open: the script file, else (an inline command) the step's lines in the workflow yaml
+      const fileText = d.file ? (ctx.files[d.file] ?? (d.truncated ? undefined : d.code)) : undefined
+      const yamlFile = d.source?.workflow
+      const yamlText = yamlFile ? ctx.files[yamlFile] : undefined
+      const target: ScriptTarget | undefined =
+        d.file && fileText !== undefined
+          ? { text: fileText, file: d.file }
+          : !d.file && yamlFile && yamlText !== undefined
+            ? { text: yamlText, file: yamlFile, line: yamlRange(item)?.start ?? d.source?.line }
+            : undefined
       return (
         <>
-          <Section title="Command">
+          <Section title="Command" actions={!d.file && target ? <ScriptActions ctx={ctx} target={target} request={sourceRequest} what="the command (its lines in the workflow yaml)" /> : undefined}>
             <pre className="insp-cmd mono">{d.run ?? str(config.run) ?? ''}</pre>
           </Section>
-          <Section title="Source" note={d.file} onNote={d.file && ctx.files[d.file] !== undefined ? () => ctx.onOpenFile(d.file!) : undefined}>
+          <Section
+            title="Source"
+            note={d.file}
+            onNote={d.file && ctx.files[d.file] !== undefined ? () => ctx.onOpenFile(d.file!) : undefined}
+            actions={d.file && target ? <ScriptActions ctx={ctx} target={target} request={sourceRequest} what={d.file} /> : undefined}
+          >
             {d.file && (ctx.files[d.file] ?? d.code) !== undefined ? (
               <>
                 <Commentable ctx={ctx} text={ctx.files[d.file] ?? d.code!} src={{ file: d.file }} summary="Show source" />
@@ -374,12 +394,13 @@ function KindBody({ board, item, detail: d, config, onSelect, ctx }: { board: Bo
             ) : d.code ? (
               <Code text={d.code} summary="Script source" open />
             ) : (
-              <p className="muted">{d.file ? 'The file could not be read.' : 'The command does not name a file in the repo.'}</p>
+              <p className="muted">{d.file ? 'The file could not be read.' : 'The command does not name a file in the repo — Edit above changes the command in the workflow yaml.'}</p>
             )}
           </Section>
           {limits}
         </>
       )
+    }
     case 'trigger':
       return (
         <Section title="Starts a run">
@@ -430,9 +451,10 @@ function ChatLink({ board, item, onOpenChat }: { board: Board; item: Item; onOpe
 
 // ---------------------------------------------------------------- bits
 
-function Section({ title, note, onNote, children }: { title: string; note?: string; onNote?: () => void; children: ReactNode }) {
+function Section({ title, note, onNote, actions, children }: { title: string; note?: string; onNote?: () => void; actions?: ReactNode; children: ReactNode }) {
   return (
     <section className="insp-sec">
+      {actions && <div className="insp-sec-actions">{actions}</div>}
       <h3>
         {title}
         {note &&
@@ -446,6 +468,53 @@ function Section({ title, note, onNote, children }: { title: string; note?: stri
       </h3>
       {children}
     </section>
+  )
+}
+
+// ---------------------------------------------------------------- script source
+
+interface ScriptTarget {
+  text: string
+  file: string
+  /** where to put the cursor (an inline command's line in the workflow yaml) */
+  line?: number
+}
+
+/**
+ * View / Edit for a script: the large view with syntax highlighting and line comments; Edit turns the
+ * draft into a request to the AI, which reviews it with the person and then writes the file (§9).
+ * A request from the canvas (the block's ‹/› button or a double-click) opens it too.
+ */
+function ScriptActions({ ctx, target, request, what }: { ctx: TextCtx; target: ScriptTarget; request?: { mode: 'view' | 'edit'; n: number }; what: string }) {
+  const [open, setOpen] = useState<'view' | 'edit' | null>(null)
+  useEffect(() => {
+    if (request) setOpen(request.mode)
+  }, [request?.n])
+  return (
+    <>
+      <button type="button" className="small" onClick={() => setOpen('view')} aria-haspopup="dialog" title={`View ${what} with syntax highlighting and line comments`}>
+        View
+      </button>
+      <button type="button" className="small" onClick={() => setOpen('edit')} aria-haspopup="dialog" title={`Edit ${what}; the AI reviews your edit with you before the file changes`}>
+        Edit
+      </button>
+      {open && (
+        <Suspense fallback={null}>
+          <SourceDialog
+            board={ctx.board}
+            text={target.text}
+            src={{ file: target.file }}
+            label={target.file}
+            targetFor={() => ctx.item.id}
+            onAnchoredComment={ctx.onAnchoredComment}
+            onReply={ctx.onReply}
+            onClose={() => setOpen(null)}
+            focusLine={target.line}
+            startInEdit={open === 'edit'}
+          />
+        </Suspense>
+      )}
+    </>
   )
 }
 

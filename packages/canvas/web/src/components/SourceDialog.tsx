@@ -28,6 +28,8 @@ export interface SourceDialogProps {
   onClose: () => void
   /** put the cursor on this line when opening */
   focusLine?: number
+  /** open in Edit mode (the draft is still only a request to the AI) */
+  startInEdit?: boolean
 }
 
 /** The language for a path, else the file's `#!` line (the prompt is markdown). Each parser is its own chunk. */
@@ -148,7 +150,7 @@ function saveDraft(key: string, d: Draft | undefined) {
   }
 }
 
-export default function SourceDialog({ board, text, src, label, targetFor, onAnchoredComment, onReply, onClose, focusLine }: SourceDialogProps) {
+export default function SourceDialog({ board, text, src, label, targetFor, onAnchoredComment, onReply, onClose, focusLine, startInEdit }: SourceDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null)
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
@@ -267,6 +269,12 @@ export default function SourceDialog({ board, text, src, label, targetFor, onAnc
     setSent(null)
     v.focus()
   }
+
+  // opened from an Edit button: start editing once the editor exists (the effect above made it)
+  useEffect(() => {
+    if (startInEdit) setMode(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const jump = (line: number, endLine = line) => {
     const v = view.current

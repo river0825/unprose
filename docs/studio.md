@@ -436,6 +436,11 @@ opens a large dialog (≈ 90vw × 85vh) with a code editor (CodeMirror 6, loaded
 syntax highlighting by file type (`.yaml/.yml`, `.md`, `.sh`, `.py`, `.json`, `.ts/.js`; the prompt as
 markdown), search (⌘F), light/dark themes from the app tokens.
 
+**Script blocks** open it directly: the block on the canvas carries a `‹/› <file>` button (a double-click on
+the block does the same), and the Inspector's Source section has **View** and **Edit** (Edit opens the dialog
+in Edit mode). A step whose command names no file in the repo gets View / Edit on its Command instead: they
+open the workflow yaml at the step's lines, so the command itself is what gets edited.
+
 - **Read mode** (default): the same line comments as the panel — gutter markers, select lines (click /
   shift-click the gutter, or select text) → Comment / Ask AI; threads shown beside or under the line.
 - **Edit mode**: the text becomes editable. Nothing is saved to disk from the web. **Ask AI to apply** posts

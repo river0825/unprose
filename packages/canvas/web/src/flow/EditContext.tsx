@@ -27,6 +27,8 @@ export interface EditApi {
   setCommentOpen: (id: string, open: boolean) => void
   /** add a reply to a comment thread; empty text is ignored */
   reply: (rootId: string, text: string) => void
+  /** a workflow script block: open its source in the large view (`edit`: straight in Edit mode) */
+  openSource: (id: string, mode: 'view' | 'edit') => void
 }
 
 export const EditContext = createContext<EditApi>({
@@ -41,6 +43,7 @@ export const EditContext = createContext<EditApi>({
   bend: () => undefined,
   setCommentOpen: () => undefined,
   reply: () => undefined,
+  openSource: () => undefined,
 })
 
 export const useEdit = () => useContext(EditContext)

@@ -940,6 +940,28 @@ textarea.selected-title:focus {
   color: inherit;
   line-height: inherit;
 }
+/* a script block's "open the source" chip (bottom left; the role label is bottom right) */
+.node-source {
+  position: absolute;
+  left: 6px;
+  bottom: 3px;
+  max-width: calc(100% - 52px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  color: inherit;
+  font: 500 10.5px/1.4 var(--font-mono);
+  padding: 0 5px;
+  cursor: pointer;
+}
+.node-source:hover,
+.node-source:focus-visible {
+  background: var(--paper);
+  border-color: var(--marker, currentColor);
+}
 .role-label {
   position: absolute;
   right: 6px;
