@@ -628,6 +628,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       const addr = server.address()
       const port = typeof addr === 'object' && addr ? addr.port : (opts.port ?? 4400)
       listeningPort = port
+      // a plugin canvas follows `claude plugin update`, run from anywhere: restart on the newly installed version
+      const followMs = Number(process.env.UNPROSE_FOLLOW_INSTALLED_MS ?? 10_000) // 0 turns following off
+      const stopFollowing = (followMs > 0 && opts.update?.followInstalled(handoff, followMs)) || (() => undefined)
       resolve({
         server,
         store,
@@ -635,6 +638,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         url: `http://localhost:${port}`,
         close: () =>
           new Promise<void>((r) => {
+            stopFollowing()
             opts.studio?.supervisor.stopAll()
             for (const c of wss.clients) c.terminate()
             wss.close()

@@ -6,6 +6,16 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.3] — 2026-10-01
+
+### Fixed
+- **Updating from a terminal restarts the canvas.** `claude plugin update unprose@unprose` run outside a session left
+  the canvas on the old version until the next session, because Claude Code runs nothing after an update. A canvas
+  running from the plugin now watches Claude Code's install record and, within about ten seconds of an update,
+  restarts on the new version by itself — same port, same boards, the open pages reconnect. If the new version does
+  not come up, the old one keeps serving. (`UNPROSE_FOLLOW_INSTALLED_MS=0` turns it off.) A canvas older than this
+  version has to be restarted once to start following.
+
 ## [0.6.2] — 2026-10-01
 
 ### Added
@@ -233,7 +243,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/river0825/unprose/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/river0825/unprose/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/river0825/unprose/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/river0825/unprose/compare/v0.5.2...v0.6.0

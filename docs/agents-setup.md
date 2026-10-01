@@ -31,6 +31,14 @@ to start it by hand: `node <plugin dir>/scripts/canvas.mjs`.
 
 ### Updates: the plugin keeps itself runnable
 
+**Updating from a terminal** (`claude plugin update unprose@unprose`, no session running): Claude Code has no
+post-update hook, so the canvas follows the update itself. A canvas running from the plugin reads Claude Code's
+install record (`~/.claude/plugins/installed_plugins.json`, or under `$CLAUDE_CONFIG_DIR`) every 10 s; when a newer
+version of this plugin is installed it restarts on it — the same port handoff as the Upgrade button, the same
+options (`--dir` …), open pages reconnect; if the new server does not come up, the old one keeps serving and that
+version is not retried. `UNPROSE_FOLLOW_INSTALLED_MS` changes the interval (`0` turns it off). A canvas older than
+0.6.3 does not follow yet: restart it once (a new session, `/reload-plugins`, or `node <plugin>/scripts/ensure.mjs`).
+
 Claude Code copies each plugin version into its own folder and has no post-update hook, so the plugin checks
 at the start of every session (`hooks/hooks.json` → `scripts/ensure.mjs`; the MCP server runs the same check
 when it starts):

@@ -158,6 +158,9 @@ Upgrade 會依你的安裝方式執行對應的指令（`claude plugin update un
 runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只有在 canvas 所在的那台機器上開的頁面（`http://localhost…`）
 才能按；透過 tunnel 開的頁面會改顯示要自己執行的指令。細節見 [docs/canvas.md → Updating](docs/canvas.md#updating)。
 
+在終端機更新也可以：執行 `claude plugin update unprose@unprose` 之後，從 plugin 啟動的 canvas 大約十秒內會發現新版，
+自動用新版重新啟動，port 和 board 都不變。
+
 ## 安全
 
 Board **目前沒有登入機制**，任何連得到的人都能讀取和修改。請只在 `localhost` 使用，

@@ -165,6 +165,9 @@ restarts the canvas on the new version; the page reconnects by itself. It only w
 the canvas's own machine (`http://localhost…`); through a tunnel you get the command to run instead. Details:
 [docs/canvas.md → Updating](docs/canvas.md#updating).
 
+Updating from a terminal works too: after `claude plugin update unprose@unprose`, a canvas running from the plugin
+notices the new version within about ten seconds and restarts on it by itself, keeping its port and boards.
+
 ## Safety
 
 The board has **no sign-in yet**. Anyone who can reach it can read and edit it. Keep it on

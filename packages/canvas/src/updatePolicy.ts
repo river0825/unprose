@@ -133,6 +133,29 @@ export function nextArgs(install: Install, argvAfterEntry: string[]): string[] {
   return argvAfterEntry[0] === 'serve' ? argvAfterEntry.slice(1) : argvAfterEntry
 }
 
+/**
+ * After `claude plugin update` (run anywhere — a terminal, another session): the newer version of THIS plugin
+ * that Claude Code recorded in ~/.claude/plugins/installed_plugins.json, if any. Entries are matched by their
+ * installPath sitting next to this server's version directory (same marketplace and plugin). Pure.
+ */
+export function installedUpdate(json: unknown, root: string | undefined, current: string | null, exists: (p: string) => boolean): { version: string; root: string } | undefined {
+  if (!root || !current || !json || typeof json !== 'object') return undefined
+  const parent = dirname(root)
+  const plugins = (json as { plugins?: Record<string, unknown> }).plugins
+  let best: { version: string; root: string } | undefined
+  for (const list of Object.values(plugins ?? {})) {
+    for (const e of Array.isArray(list) ? list : []) {
+      const p = typeof e?.installPath === 'string' ? norm(e.installPath) : undefined
+      const v = typeof e?.version === 'string' ? e.version : undefined
+      if (!p || !v || dirname(p) !== parent || p === norm(root)) continue
+      if (!isNewer(v, current) || (best && !isNewer(v, best.version))) continue
+      if (!exists(join(p, 'scripts', 'canvas.mjs'))) continue
+      best = { version: v, root: p }
+    }
+  }
+  return best
+}
+
 /** The CHANGELOG section of one version ("## [0.4.1] — …" up to the next "## "), without its heading. */
 export function notesOf(changelog: string, version: string): string | undefined {
   const lines = changelog.split('\n')

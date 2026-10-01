@@ -245,6 +245,40 @@ test('after an update, a canvas started by hand from the plugin is restarted on 
   assert.ok(processArgs(r.pid).includes(dir))
 })
 
+test('claude plugin update in a terminal: a running plugin canvas restarts on the new version by itself', { skip: !built && 'run npm run build first', timeout: 120_000 }, async () => {
+  const port = await freePort()
+  const url = `http://127.0.0.1:${port}`
+  const v1 = plugin('follow/plugins/cache/unprose/unprose/0.9.0', '0.9.0')
+  const v2 = plugin('follow/plugins/cache/unprose/unprose/0.9.1', '0.9.1')
+  for (const v of [v1, v2]) {
+    fs.mkdirSync(path.join(v, 'scripts'), { recursive: true })
+    for (const f of ['canvas.mjs', 'runtime.mjs']) fs.copyFileSync(path.join(repo, 'scripts', f), path.join(v, 'scripts', f))
+  }
+  const config = path.join(tmp, 'follow', 'claude-config')
+  const record = (root, version) => {
+    fs.mkdirSync(path.join(config, 'plugins'), { recursive: true })
+    fs.writeFileSync(path.join(config, 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'unprose@unprose': [{ scope: 'user', installPath: root, version }] } }))
+  }
+  record(v1, '0.9.0')
+  const env = { ...process.env, CLAUDE_CONFIG_DIR: config, UNPROSE_FOLLOW_INSTALLED_MS: '200', UNPROSE_UPDATE_CHECK: '0', HOME: path.join(tmp, 'follow') }
+  const old = spawn(process.execPath, [path.join(v1, 'dist/canvas.mjs'), 'serve', '--port', String(port), '--dir', path.join(tmp, 'follow-boards')], { env, stdio: 'ignore' })
+  started.push(old.pid)
+  for (let i = 0; i < 100 && !(await probeCanvas(url)).reachable; i++) await new Promise((r) => setTimeout(r, 100))
+  assert.equal((await probeCanvas(url)).version, '0.9.0')
+  record(v2, '0.9.1') // what `claude plugin update unprose@unprose` writes
+  let now
+  for (let i = 0; i < 150; i++) {
+    now = await probeCanvas(url)
+    if (now.version === '0.9.1') break
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  assert.equal(now?.version, '0.9.1', 'the canvas restarted on the new version')
+  if (now.pid) started.push(now.pid)
+  for (let i = 0; i < 50 && pidAlive(old.pid); i++) await new Promise((r) => setTimeout(r, 100))
+  assert.equal(pidAlive(old.pid), false, 'the old server exited')
+  assert.ok(processArgs(now.pid).includes(path.join(tmp, 'follow-boards')), 'with the same board folder')
+})
+
 test('an install without dist/ downloads its runtime from the release (checksum verified)', { skip: !built && 'run npm run build first', timeout: 120_000 }, async () => {
   const version = '0.9.2'
   const src = plugin('src-0.9.2', version)

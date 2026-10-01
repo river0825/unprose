@@ -99,6 +99,7 @@ function updateService(env: NodeJS.ProcessEnv): UpdateService {
     cacheFile: fake ? undefined : path.join(home, '.awd', 'update-check.json'),
     logFile: path.join(home, '.awd', 'canvas-upgrade.log'),
     stateFile,
+    installedFile: path.join(env.CLAUDE_CONFIG_DIR || path.join(home, '.claude'), 'plugins', 'installed_plugins.json'),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== '0' && /awd|unprose/i.test(env.XPC_SERVICE_NAME),
   })
 }

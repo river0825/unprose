@@ -10,3 +10,6 @@ packages/**/dist/
 
 # reference book (large, not ours to redistribute)
 Introducing Eventstorming.pdf
+
+# this repo's own boards live in boards/; a canvas that registers the repo as a project (tests, agents) stores here
+.unprose/

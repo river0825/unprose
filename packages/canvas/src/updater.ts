@@ -4,7 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Installer, Launcher, UpdateSource } from './ports/update.js'
-import { isNewer, nextArgs, nextEntry, planUpgrade, type Install, type InstallKind, type Phase } from './updatePolicy.js'
+import { installedUpdate, isNewer, nextArgs, nextEntry, planUpgrade, type Install, type InstallKind, type Phase } from './updatePolicy.js'
 
 export interface UpdateCheck {
   current: string | null
@@ -71,6 +71,8 @@ export interface UpdateServiceOptions {
   logFile: string
   /** The plugin's canvas.json (${CLAUDE_PLUGIN_DATA}/canvas.json), updated when this process is the one it records. */
   stateFile?: string
+  /** Claude Code's record of installed plugins (~/.claude/plugins/installed_plugins.json): a plugin canvas follows it. */
+  installedFile?: string
   /** Started by launchd with KeepAlive: exit after installing and let launchd start the new version. */
   launchd?: boolean
   pluginRef?: string
@@ -216,33 +218,86 @@ export class UpdateService {
       if (!installer.exists(entry)) return this.fail(h, `the new version is not where it should be (${entry}); run: ${plan.command}`)
 
       this.say(h, 'restarting', `restarting on v${latest}`)
-      if (this.o.launchd) {
-        // launchd (KeepAlive) starts the same command again, which now runs the new code
-        setTimeout(() => h.exit(0), 300)
-        return
-      }
-      await h.pause()
-      const pid = launcher.spawnDetached(entry, nextArgs(install, this.o.argv), this.o.env, this.o.logFile)
-      const until = this.now() + (this.o.bootTimeoutMs ?? 15_000)
-      let answered: string | undefined
-      while (this.now() < until) {
-        answered = await launcher.probeVersion(h.port)
-        if (answered && answered !== this.o.current) break
-        await new Promise((r) => setTimeout(r, this.o.pollMs ?? 250))
-      }
-      if (!answered || answered === this.o.current) {
-        launcher.kill(pid)
-        await h.resume()
-        return this.fail(h, `the new server did not come up on port ${h.port}; still on v${this.o.current}. Its output: ${this.o.logFile}`)
-      }
-      this.recordState(pid, answered, entry)
-      this.job.phase = 'done'
-      this.job.message = `upgraded to v${answered}`
-      this.job.running = false
-      h.exit(0)
+      await this.restartOn(entry, h)
     } catch (e) {
       this.fail(h, `${(e as Error).message}${plan.command ? ` — to do it by hand: ${plan.command}` : ''}`)
     }
+  }
+
+  /** Hand the port to a server started from `entry`; if it does not come up, keep serving. */
+  private async restartOn(entry: string, h: Handoff): Promise<void> {
+    const { launcher, install } = this.o
+    if (this.o.launchd) {
+      // launchd (KeepAlive) starts the same command again, which now runs the new code
+      setTimeout(() => h.exit(0), 300)
+      return
+    }
+    await h.pause()
+    const pid = launcher.spawnDetached(entry, nextArgs(install, this.o.argv), this.o.env, this.o.logFile)
+    const until = this.now() + (this.o.bootTimeoutMs ?? 15_000)
+    let answered: string | undefined
+    while (this.now() < until) {
+      answered = await launcher.probeVersion(h.port)
+      if (answered && answered !== this.o.current) break
+      await new Promise((r) => setTimeout(r, this.o.pollMs ?? 250))
+    }
+    if (!answered || answered === this.o.current) {
+      launcher.kill(pid)
+      await h.resume()
+      return this.fail(h, `the new server did not come up on port ${h.port}; still on v${this.o.current}. Its output: ${this.o.logFile}`)
+    }
+    this.recordState(pid, answered, entry)
+    this.job.phase = 'done'
+    this.job.message = `upgraded to v${answered}`
+    this.job.running = false
+    h.exit(0)
+  }
+
+  /** A newer version of this plugin that Claude Code has installed (`claude plugin update`), if any. */
+  installedNewer(): { version: string; entry: string } | undefined {
+    const { install, installedFile } = this.o
+    if (install.kind !== 'plugin' || !installedFile) return undefined
+    let json: unknown
+    try {
+      json = JSON.parse(fs.readFileSync(installedFile, 'utf8'))
+    } catch {
+      return undefined
+    }
+    const found = installedUpdate(json, install.root, this.o.current, (p) => this.o.installer.exists(p))
+    return found && { version: found.version, entry: path.join(found.root, 'scripts', 'canvas.mjs') }
+  }
+
+  /**
+   * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
+   * install record every `everyMs` and, when a newer version of itself is installed, restarts on it (the same
+   * port handoff as Upgrade; the pages reconnect). Returns a stop function.
+   */
+  followInstalled(handoff: () => Handoff, everyMs = 10_000): () => void {
+    // under launchd the same (old) command would come back: leave that setup to its own restart
+    if (this.o.install.kind !== 'plugin' || !this.o.installedFile || this.o.launchd) return () => undefined
+    let busy = false
+    const tried = new Set<string>() // a version that failed to come up is not retried every tick
+    const tick = async () => {
+      if (busy || this.job.running) return
+      const next = this.installedNewer()
+      if (!next || tried.has(next.version)) return
+      busy = true
+      tried.add(next.version)
+      const h = handoff()
+      this.job = { running: true, phase: 'restarting', message: `the plugin was updated to v${next.version}`, version: next.version, startedAt: new Date(this.now()).toISOString(), log: [] }
+      try {
+        this.say(h, 'restarting', `the plugin was updated to v${next.version} — restarting on it`)
+        await this.restartOn(next.entry, h)
+      } catch (e) {
+        this.fail(h, `could not restart on v${next.version}: ${(e as Error).message}`)
+      } finally {
+        busy = false
+      }
+    }
+    const timer = setInterval(() => void tick(), everyMs)
+    timer.unref?.()
+    void tick()
+    return () => clearInterval(timer)
   }
 
   /** Keep the plugin's canvas.json pointing at the running canvas, so the next session does not restart it. */

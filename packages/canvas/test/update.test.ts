@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { compareVersions, detectInstall, isNewer, nextArgs, nextEntry, notesOf, planUpgrade } from '../src/updatePolicy.js'
+import { compareVersions, detectInstall, installedUpdate, isNewer, nextArgs, nextEntry, notesOf, planUpgrade } from '../src/updatePolicy.js'
 import { UpdateService, type Handoff, type UpdateEvent } from '../src/updater.js'
 import { FakeInstaller, FakeLauncher, FakeUpdateSource } from '../src/adapters/update/index.js'
 import { releaseFrom, GitHubReleaseSource } from '../src/adapters/update/github.js'
@@ -259,4 +259,66 @@ test('a remote page never sees this machine\'s paths in the update answer', asyn
   assert.equal(out.install.root, '<unprose folder>')
   assert.equal(out.log[0], '<unprose folder> npm ci')
   assert.equal(out.n, 3)
+})
+
+test('installedUpdate: the newer version of this plugin that claude plugin update installed', () => {
+  const exists = (p: string) => p !== '/c/m/unprose/0.7.0/scripts/canvas.mjs'
+  const json = {
+    version: 2,
+    plugins: {
+      'unprose@m': [
+        { scope: 'user', installPath: '/c/m/unprose/0.6.2', version: '0.6.2' },
+        { scope: 'project', installPath: '/c/m/unprose/0.6.1', version: '0.6.1' },
+      ],
+      'other@m': [{ installPath: '/c/m/other/9.9.9', version: '9.9.9' }],
+    },
+  }
+  assert.deepEqual(installedUpdate(json, '/c/m/unprose/0.6.0', '0.6.0', exists), { version: '0.6.2', root: '/c/m/unprose/0.6.2' })
+  assert.equal(installedUpdate(json, '/c/m/unprose/0.6.2', '0.6.2', exists), undefined, 'already on it')
+  assert.equal(installedUpdate({ plugins: { 'unprose@m': [{ installPath: '/c/m/unprose/0.7.0', version: '0.7.0' }] } }, '/c/m/unprose/0.6.0', '0.6.0', exists), undefined, 'the new folder has no launcher yet')
+  assert.equal(installedUpdate('nonsense', '/c/m/unprose/0.6.0', '0.6.0', exists), undefined)
+})
+
+test('a plugin canvas follows claude plugin update: restarts on the newly installed version, once', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'follow-'))
+  const installedFile = path.join(dir, 'installed_plugins.json')
+  const write = (v: string) => fs.writeFileSync(installedFile, JSON.stringify({ version: 2, plugins: { 'unprose@unprose': [{ scope: 'user', installPath: '/c/u/u/' + v, version: v }] } }))
+  write('0.6.0')
+  const installer = new FakeInstaller()
+  installer.files.add('/c/u/u/0.6.3/scripts/canvas.mjs')
+  const launcher = new FakeLauncher('0.6.3')
+  const svc = new UpdateService({ current: '0.6.0', install: { kind: 'plugin', root: '/c/u/u/0.6.0' }, installer, launcher, entry: '/c/u/u/0.6.0/dist/canvas.mjs', argv: ['serve', '--port', '4400', '--dir', '/b'], env: {}, logFile: '/tmp/x.log', installedFile, pollMs: 5 })
+  const { h, events, calls } = fakeHandoff()
+  const stop = svc.followInstalled(() => h, 10)
+  await new Promise((r) => setTimeout(r, 40))
+  assert.deepEqual(launcher.spawned, [], 'nothing newer installed: keeps running')
+  write('0.6.3') // claude plugin update unprose@unprose, in a terminal
+  await waitFor(() => calls.includes('exit 0'))
+  stop()
+  assert.deepEqual(launcher.spawned, [{ entry: '/c/u/u/0.6.3/scripts/canvas.mjs', args: ['--port', '4400', '--dir', '/b'] }])
+  assert.match(events.map((e) => e.message).join('\n'), /the plugin was updated to v0\.6\.3/)
+  assert.equal(svc.status().phase, 'done')
+
+  // a checkout (or no install record) never follows
+  const checkout = new UpdateService({ current: '0.6.0', install: { kind: 'checkout', root: '/r' }, installer, launcher: new FakeLauncher('0.6.3'), entry: '/r/e.js', argv: [], env: {}, logFile: '/tmp/x.log', installedFile })
+  const off = checkout.followInstalled(() => h, 10)
+  await new Promise((r) => setTimeout(r, 30))
+  off()
+})
+
+test('a version that does not come up is not retried every tick', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'follow-'))
+  const installedFile = path.join(dir, 'installed_plugins.json')
+  fs.writeFileSync(installedFile, JSON.stringify({ plugins: { 'unprose@unprose': [{ installPath: '/c/u/u/0.6.3', version: '0.6.3' }] } }))
+  const installer = new FakeInstaller()
+  installer.files.add('/c/u/u/0.6.3/scripts/canvas.mjs')
+  const launcher = new FakeLauncher(undefined)
+  const svc = new UpdateService({ current: '0.6.0', install: { kind: 'plugin', root: '/c/u/u/0.6.0' }, installer, launcher, entry: '/c/u/u/0.6.0/dist/canvas.mjs', argv: ['serve'], env: {}, logFile: '/tmp/x.log', installedFile, bootTimeoutMs: 30, pollMs: 5 })
+  const { h, calls } = fakeHandoff()
+  const stop = svc.followInstalled(() => h, 10)
+  await waitFor(() => svc.status().phase === 'failed')
+  await new Promise((r) => setTimeout(r, 60))
+  stop()
+  assert.equal(launcher.spawned.length, 1)
+  assert.deepEqual(calls, ['pause', 'resume'])
 })

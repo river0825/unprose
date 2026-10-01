@@ -11598,6 +11598,27 @@ function nextArgs(install, argvAfterEntry) {
     return argvAfterEntry;
   return argvAfterEntry[0] === "serve" ? argvAfterEntry.slice(1) : argvAfterEntry;
 }
+function installedUpdate(json2, root, current, exists) {
+  if (!root || !current || !json2 || typeof json2 !== "object")
+    return void 0;
+  const parent = dirname(root);
+  const plugins = json2.plugins;
+  let best;
+  for (const list2 of Object.values(plugins ?? {})) {
+    for (const e of Array.isArray(list2) ? list2 : []) {
+      const p = typeof e?.installPath === "string" ? norm(e.installPath) : void 0;
+      const v2 = typeof e?.version === "string" ? e.version : void 0;
+      if (!p || !v2 || dirname(p) !== parent || p === norm(root))
+        continue;
+      if (!isNewer(v2, current) || best && !isNewer(v2, best.version))
+        continue;
+      if (!exists(join(p, "scripts", "canvas.mjs")))
+        continue;
+      best = { version: v2, root: p };
+    }
+  }
+  return best;
+}
 function redactPaths(value) {
   const ABS = /(?:\/(?:Users|home|root|private|var|opt|tmp|mnt|srv)\/[^\s'"`]*)|(?:[A-Za-z]:\\[^\s'"`]*)/g;
   const walk = (v2) => {
@@ -35992,12 +36013,15 @@ function startServer(opts = {}) {
       const addr = server.address();
       const port2 = typeof addr === "object" && addr ? addr.port : opts.port ?? 4400;
       listeningPort = port2;
+      const followMs = Number(process.env.UNPROSE_FOLLOW_INSTALLED_MS ?? 1e4);
+      const stopFollowing = followMs > 0 && opts.update?.followInstalled(handoff2, followMs) || (() => void 0);
       resolve({
         server,
         store,
         port: port2,
         url: `http://localhost:${port2}`,
         close: () => new Promise((r) => {
+          stopFollowing();
           opts.studio?.supervisor.stopAll();
           for (const c of wss.clients)
             c.terminate();
@@ -36414,33 +36438,86 @@ var UpdateService = class {
       if (!installer.exists(entry))
         return this.fail(h, `the new version is not where it should be (${entry}); run: ${plan.command}`);
       this.say(h, "restarting", `restarting on v${latest}`);
-      if (this.o.launchd) {
-        setTimeout(() => h.exit(0), 300);
-        return;
-      }
-      await h.pause();
-      const pid = launcher.spawnDetached(entry, nextArgs(install, this.o.argv), this.o.env, this.o.logFile);
-      const until = this.now() + (this.o.bootTimeoutMs ?? 15e3);
-      let answered;
-      while (this.now() < until) {
-        answered = await launcher.probeVersion(h.port);
-        if (answered && answered !== this.o.current)
-          break;
-        await new Promise((r) => setTimeout(r, this.o.pollMs ?? 250));
-      }
-      if (!answered || answered === this.o.current) {
-        launcher.kill(pid);
-        await h.resume();
-        return this.fail(h, `the new server did not come up on port ${h.port}; still on v${this.o.current}. Its output: ${this.o.logFile}`);
-      }
-      this.recordState(pid, answered, entry);
-      this.job.phase = "done";
-      this.job.message = `upgraded to v${answered}`;
-      this.job.running = false;
-      h.exit(0);
+      await this.restartOn(entry, h);
     } catch (e) {
       this.fail(h, `${e.message}${plan.command ? ` \u2014 to do it by hand: ${plan.command}` : ""}`);
     }
+  }
+  /** Hand the port to a server started from `entry`; if it does not come up, keep serving. */
+  async restartOn(entry, h) {
+    const { launcher, install } = this.o;
+    if (this.o.launchd) {
+      setTimeout(() => h.exit(0), 300);
+      return;
+    }
+    await h.pause();
+    const pid = launcher.spawnDetached(entry, nextArgs(install, this.o.argv), this.o.env, this.o.logFile);
+    const until = this.now() + (this.o.bootTimeoutMs ?? 15e3);
+    let answered;
+    while (this.now() < until) {
+      answered = await launcher.probeVersion(h.port);
+      if (answered && answered !== this.o.current)
+        break;
+      await new Promise((r) => setTimeout(r, this.o.pollMs ?? 250));
+    }
+    if (!answered || answered === this.o.current) {
+      launcher.kill(pid);
+      await h.resume();
+      return this.fail(h, `the new server did not come up on port ${h.port}; still on v${this.o.current}. Its output: ${this.o.logFile}`);
+    }
+    this.recordState(pid, answered, entry);
+    this.job.phase = "done";
+    this.job.message = `upgraded to v${answered}`;
+    this.job.running = false;
+    h.exit(0);
+  }
+  /** A newer version of this plugin that Claude Code has installed (`claude plugin update`), if any. */
+  installedNewer() {
+    const { install, installedFile } = this.o;
+    if (install.kind !== "plugin" || !installedFile)
+      return void 0;
+    let json2;
+    try {
+      json2 = JSON.parse(fs7.readFileSync(installedFile, "utf8"));
+    } catch {
+      return void 0;
+    }
+    const found = installedUpdate(json2, install.root, this.o.current, (p) => this.o.installer.exists(p));
+    return found && { version: found.version, entry: path8.join(found.root, "scripts", "canvas.mjs") };
+  }
+  /**
+   * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
+   * install record every `everyMs` and, when a newer version of itself is installed, restarts on it (the same
+   * port handoff as Upgrade; the pages reconnect). Returns a stop function.
+   */
+  followInstalled(handoff2, everyMs = 1e4) {
+    if (this.o.install.kind !== "plugin" || !this.o.installedFile || this.o.launchd)
+      return () => void 0;
+    let busy = false;
+    const tried = /* @__PURE__ */ new Set();
+    const tick = async () => {
+      if (busy || this.job.running)
+        return;
+      const next = this.installedNewer();
+      if (!next || tried.has(next.version))
+        return;
+      busy = true;
+      tried.add(next.version);
+      const h = handoff2();
+      this.job = { running: true, phase: "restarting", message: `the plugin was updated to v${next.version}`, version: next.version, startedAt: new Date(this.now()).toISOString(), log: [] };
+      try {
+        this.say(h, "restarting", `the plugin was updated to v${next.version} \u2014 restarting on it`);
+        await this.restartOn(next.entry, h);
+      } catch (e) {
+        this.fail(h, `could not restart on v${next.version}: ${e.message}`);
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = setInterval(() => void tick(), everyMs);
+    timer.unref?.();
+    void tick();
+    return () => clearInterval(timer);
   }
   /** Keep the plugin's canvas.json pointing at the running canvas, so the next session does not restart it. */
   recordState(pid, version2, entry) {
@@ -46260,7 +46337,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.2" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.6.3" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",
@@ -46738,6 +46815,7 @@ function updateService(env) {
     cacheFile: fake ? void 0 : path10.join(home, ".awd", "update-check.json"),
     logFile: path10.join(home, ".awd", "canvas-upgrade.log"),
     stateFile,
+    installedFile: path10.join(env.CLAUDE_CONFIG_DIR || path10.join(home, ".claude"), "plugins", "installed_plugins.json"),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
   });
 }

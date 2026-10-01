@@ -354,6 +354,10 @@ The workflow board a runtime draws (`awd graph … --canvas`) also shows **live 
 
 ## Updating
 
+A plugin canvas also follows `claude plugin update` run from a terminal: every 10 s it reads Claude Code's
+`installed_plugins.json`, and when a newer version of this plugin is installed it restarts on it with the handoff
+below (`UNPROSE_FOLLOW_INSTALLED_MS`, `0` = off; see docs/agents-setup.md → Updates).
+
 The version button at the bottom of the rail checks GitHub for a newer release (on load and every six hours,
 server-side, cached in `~/.awd/update-check.json`). When one exists the button says **update** and the release
 notes dialog shows the new version's notes and **Upgrade to v…**. What Upgrade does depends on how the canvas
