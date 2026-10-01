@@ -2,6 +2,7 @@ import { MarkerType, type Edge, type Node } from '@xyflow/react'
 import type { Board, Item } from '../../../src/model'
 import { KIND_NAMES, diagramData } from '../diagrams/frame'
 import { knownFindings } from '../diagrams/findings'
+import { autoSides, type Box } from './route'
 
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
@@ -106,8 +107,7 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
           id: it.id,
           source: it.from,
           target: it.to,
-          sourceHandle: side(it.data?.fromSide, 'right'),
-          targetHandle: side(it.data?.toSide, 'left'),
+          ...wireSides(it, byId, stacked),
           label: it.label ?? it.text,
           type: 'item',
           // a trace joins two diagrams (來自 / 組成 / 畫面): dotted, muted, never re-pointed as flow (docs/diagrams.md §2)
@@ -149,7 +149,54 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
       })
     }
   }
+  spreadPorts(edges, byId, stacked)
   return { nodes, edges }
+}
+
+const boxOf = (it: Item, stacked: Map<string, { x: number; y: number }>): Box => ({ ...(stacked.get(it.id) ?? { x: it.x, y: it.y }), w: it.w, h: it.h })
+
+function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: number; y: number }>): { sourceHandle: string; targetHandle: string } {
+  const auto = autoSides(boxOf(byId[it.from!], stacked), boxOf(byId[it.to!], stacked))
+  return { sourceHandle: side(it.data?.fromSide, auto.fromSide), targetHandle: side(it.data?.toSide, auto.toSide) }
+}
+
+/** Spacing between wires that share a side of a box, in px. */
+const PORT_GAP = 16
+
+/**
+ * Wires that share a side of a box no longer meet in its one handle: they are spread along that
+ * side (ports), sorted by where their other end is so neighbours do not cross. Each edge gets
+ * `data.port = { s, t, si, ti, sn, tn }`: the offsets from the handle along the side, its rank and the count.
+ */
+export function spreadPorts(edges: Edge[], byId: Board['items'], stacked: Map<string, { x: number; y: number }>): void {
+  const groups = new Map<string, Array<{ e: Edge; end: 's' | 't'; key: number }>>()
+  for (const e of edges) {
+    if (e.type !== 'item') continue
+    const [src, tgt] = [byId[e.source], byId[e.target]]
+    if (!src || !tgt || (e.data as { item?: Item } | undefined)?.item?.data?.ds) continue
+    const [sb, tb] = [boxOf(src, stacked), boxOf(tgt, stacked)]
+    const along = (side: string, other: Box) => (side === 'left' || side === 'right' ? other.y + other.h / 2 : other.x + other.w / 2)
+    for (const [end, id, sideName, other] of [['s', e.source, e.sourceHandle!, tb], ['t', e.target, e.targetHandle!, sb]] as const) {
+      const k = `${id}|${sideName}`
+      if (!groups.has(k)) groups.set(k, [])
+      groups.get(k)!.push({ e, end, key: along(sideName, other) })
+    }
+  }
+  for (const [k, list] of groups) {
+    const [id, sideName] = k.split('|')
+    const it = byId[id]
+    const len = sideName === 'left' || sideName === 'right' ? it.h : it.w
+    // a loop under the box: the wire that goes furthest back starts outermost, so loops nest instead of crossing
+    list.sort((a, b) => a.key - b.key || (a.e.id < b.e.id ? -1 : 1))
+    const gap = Math.min(PORT_GAP, (len * 0.8) / Math.max(1, list.length))
+    list.forEach((p, i) => {
+      const d = (p.e.data ??= {}) as { port?: Record<string, number> }
+      const port = (d.port ??= {})
+      port[p.end] = (i - (list.length - 1) / 2) * gap
+      port[`${p.end}i`] = i
+      port[`${p.end}n`] = list.length
+    })
+  }
 }
 
 /** Kanban columns: cards are shown stacked top → bottom in the order of their model `y`, so a dropped card snaps into the pile. */

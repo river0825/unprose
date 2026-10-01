@@ -61,7 +61,7 @@ export function blockDetails(wf: WorkflowSource, opts: DetailOptions): BlockDeta
   }
   for (const s of def.steps) {
     const common = { source: source('steps', s.id), ...yaml('steps', s.id), listens: s.on.map((l) => (l.if ? `${l.event} if ${l.if}` : l.event)), emits: [...s.outcomes, 'failed', 'timeout'].map((o) => `${s.id}.${o}`) }
-    nodes[s.id] = { ...stepDetail(s, wf, rel, exists, opts.readFile), ...common }
+    nodes[s.id] = { ...stepDetail(s, wf, rel, exists, opts.readFile, root), ...common }
   }
 
   const agents: Record<string, BlockDetail> = {}
@@ -92,10 +92,15 @@ export function blockDetails(wf: WorkflowSource, opts: DetailOptions): BlockDeta
   return { nodes, agents }
 }
 
-function stepDetail(s: StepDef, wf: WorkflowSource, rel: (abs: string) => string, exists: (abs: string) => boolean, readFile: DetailOptions['readFile']): Record<string, unknown> & { kind: string } {
+function stepDetail(s: StepDef, wf: WorkflowSource, rel: (abs: string) => string, exists: (abs: string) => boolean, readFile: DetailOptions['readFile'], root: string): Record<string, unknown> & { kind: string } {
   if (s.kind === 'script') {
-    // the first word of `run` that is a file next to the workflow, e.g. `bash scripts/card_info.sh {{ key }}`
-    const file = s.run.split(/\s+/).filter((w) => w && !w.includes('{{')).map((w) => path.resolve(s.cwd ? path.resolve(wf.dir, s.cwd) : wf.dir, w)).find((abs) => abs.startsWith(wf.dir + path.sep) && exists(abs))
+    // the first word of `run` that is a file in the repo, e.g. `bash scripts/card_info.sh {{ key }}` or
+    // `python3 ../scripts/state.py release {{ key }}` (a script beside the workflow's folder); quotes and
+    // `--opt=<path>` are looked through
+    const base = s.cwd ? path.resolve(wf.dir, s.cwd) : wf.dir
+    const words = s.run.split(/\s+/).flatMap((w) => [w, w.includes('=') ? w.slice(w.indexOf('=') + 1) : '']).map((w) => w.replace(/^['"]|['";|&)]+$/g, ''))
+    const inRepo = (abs: string) => abs === root || abs.startsWith(root + path.sep) || abs.startsWith(wf.dir + path.sep)
+    const file = words.filter((w) => w && !w.includes('{{') && !w.startsWith('-')).map((w) => path.resolve(base, w)).find((abs) => inRepo(abs) && exists(abs))
     const text = file ? readFile(file) : undefined
     return { kind: 'script', run: s.run, file: file ? rel(file) : undefined, code: text?.slice(0, MAX_SOURCE), ...(text && text.length > MAX_SOURCE ? { truncated: true } : {}) }
   }

@@ -1,8 +1,12 @@
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, getStraightPath, useInternalNode, useReactFlow, type EdgeProps } from '@xyflow/react'
-import { useRef, useState } from 'react'
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, getStraightPath, useInternalNode, useReactFlow, useStore, type EdgeProps, type ReactFlowState } from '@xyflow/react'
+import { useMemo, useRef, useState } from 'react'
 import type { Item } from '../../../src/model'
 import { EditableText } from './EditableText'
 import { useEdit } from './EditContext'
+import { useWireFocus } from './wireFocus'
+import { bestLoop, bestTurn, freeLabelSpot, type Box } from './route'
+import { isContainer } from './boardToFlow'
+import './wires.css'
 
 type Point = { x: number; y: number }
 
@@ -22,6 +26,46 @@ function floatingEnd(a: { x: number; y: number; w: number; h: number }, b: { x: 
   const hh = a.h / 2 + 6
   const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity)
   return { x: ca.x + dx * t, y: ca.y + dy * t }
+}
+
+type Port = { s?: number; t?: number; si?: number; ti?: number; sn?: number; tn?: number }
+const portOf = (data: unknown): Port => ((data as { port?: Port } | undefined)?.port ?? {})
+const shift = (x: number, y: number, side: string | undefined, d = 0): [number, number] => (side === 'left' || side === 'right' ? [x, y + d] : [x + d, y])
+
+const nodesOf = (s: ReactFlowState) => s.nodes
+const lookupOf = (s: ReactFlowState) => s.nodeLookup
+
+/** Every box a wire should not run through or put its label on: not containers, not comments. */
+function useBoxes(): Array<Box & { id: string }> {
+  const nodes = useStore(nodesOf) // re-route when any box moves
+  const lookup = useStore(lookupOf)
+  return useMemo(() => {
+    const out: Array<Box & { id: string }> = []
+    for (const n of lookup.values()) {
+      const it = (n.data as { item?: Item } | undefined)?.item
+      if (n.hidden || !it || it.type === 'comment' || isContainer(it)) continue
+      out.push({ id: n.id, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? it.w, h: n.measured?.height ?? n.height ?? it.h })
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, lookup])
+}
+
+/** A polyline of axis-aligned runs with rounded corners. */
+function roundedPath(pts: Point[], r = 8): string {
+  let d = `M ${pts[0].x},${pts[0].y}`
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [a, b, c] = [pts[i - 1], pts[i], pts[i + 1]]
+    const k = Math.min(r, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2)
+    const u = (p: Point, q: Point) => {
+      const l = Math.hypot(q.x - p.x, q.y - p.y) || 1
+      return { x: (q.x - p.x) / l, y: (q.y - p.y) / l }
+    }
+    const [ua, uc] = [u(b, a), u(b, c)]
+    d += ` L ${b.x + ua.x * k},${b.y + ua.y * k} Q ${b.x},${b.y} ${b.x + uc.x * k},${b.y + uc.y * k}`
+  }
+  const z = pts[pts.length - 1]
+  return `${d} L ${z.x},${z.y}`
 }
 
 /** A quadratic curve from s to t that passes through p. */
@@ -54,7 +98,48 @@ export function ItemEdge(props: EdgeProps) {
     const [f, g] = [floatingEnd(box(srcNode), box(tgtNode)), floatingEnd(box(tgtNode), box(srcNode))]
     ;[sourceX, sourceY, targetX, targetY] = [f.x, f.y, g.x, g.y]
   }
-  const [stepPath, lx, ly] = ds ? getStraightPath({ sourceX, sourceY, targetX, targetY }) : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
+  // Wires sharing a side are spread along it (boardToFlow spreadPorts), so they do not all meet in one point.
+  const port = portOf(data)
+  if (!ds) {
+    ;[sourceX, sourceY] = shift(sourceX, sourceY, sourcePosition, port.s)
+    ;[targetX, targetY] = shift(targetX, targetY, targetPosition, port.t)
+  }
+  // A long forward wire runs along its source's row and turns just before its target, in the gap in front
+  // of it, instead of turning halfway — where a column of boxes usually stands. Wires into one side turn at
+  // staggered distances so they do not cross each other on the way in.
+  const forward = sourcePosition === 'right' && targetPosition === 'left'
+  const late = !ds && forward && targetX - sourceX > 300
+  const fromAbove = sourceY < targetY
+  const allBoxes = useBoxes()
+  const routeBoxes = useMemo(() => allBoxes.filter((b) => b.id !== source && b.id !== target), [allBoxes, source, target])
+  const prefer = late ? targetX - 22 - 7 * (fromAbove ? (port.ti ?? 0) : (port.tn ?? 1) - 1 - (port.ti ?? 0)) : (sourceX + targetX) / 2
+  // among the turns that cross the fewest boxes, the one nearest the preferred turn
+  const turnAt = !ds && !bendOf(data) && forward && targetX - sourceX > 24 ? bestTurn(sourceX, sourceY, targetX, targetY, routeBoxes, prefer) : undefined
+  // A loop under both boxes (a fix round going back): the one going furthest back runs outermost,
+  // and it drops below any box in its way rather than through it.
+  const loop = sourcePosition === 'bottom' && targetPosition === 'bottom'
+  const boxOfNode = (n: typeof srcNode) => (n ? { x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? 0, h: n.measured?.height ?? n.height ?? 0 } : undefined)
+  const [srcBox, tgtBox] = [boxOfNode(srcNode), boxOfNode(tgtNode)]
+  const chosen = loop && !ds && !bendOf(data) && srcBox && tgtBox ? bestLoop(srcBox, tgtBox, routeBoxes, 22 + 9 * ((port.sn ?? 1) - 1 - (port.si ?? 0)), port.s, port.t) : undefined
+  if (chosen) [sourceX, sourceY, targetX, targetY] = [chosen.sx, chosen.sy, chosen.tx, chosen.ty]
+  const loopY = chosen?.y
+  const [stepPath, sx, sy] = ds
+    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+    : loopY !== undefined
+    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: sourceX, y: loopY }, { x: targetX, y: loopY }, { x: targetX, y: targetY }]), (sourceX + targetX) / 2, loopY]
+    : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, centerX: turnAt, borderRadius: 8 })
+  // the label sits on the wire's own run out of its source (or into its target), never on a box
+  const labelText = typeof label === 'string' ? label : ''
+  const lw = Math.min(220, labelText.length * 7.6 + 14)
+  const lh = labelText.length * 7.6 + 14 > 220 ? 34 : 20
+  const spot = !labelText
+    ? undefined
+    : turnAt !== undefined
+    ? freeLabelSpot(sourceX + 4, turnAt - 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt + 4, targetX - 4, targetY, lw, lh, allBoxes)
+    : loopY !== undefined
+    ? freeLabelSpot(targetX, sourceX, loopY, lw, lh, allBoxes)
+    : undefined
+  const [lx, ly] = spot ? [spot.x, spot.y] : [sx, sy]
   const path = point ? curveThrough({ x: sourceX, y: sourceY }, point, { x: targetX, y: targetY }) : stepPath
   // the circle sits a little along the line, clear of the actor icon and its name
   const len = Math.hypot(targetX - sourceX, targetY - sourceY) || 1
@@ -79,7 +164,8 @@ export function ItemEdge(props: EdgeProps) {
   const isTrace = (data as { item?: Item } | undefined)?.item?.role === 'trace'
   const sourceSelected = srcNode?.selected
   const targetSelected = tgtNode?.selected
-  const quiet = isTrace && !selected && !editing && !sourceSelected && !targetSelected
+  const focus = useWireFocus(source, target, selected)
+  const quiet = (isTrace && !selected && !editing && !sourceSelected && !targetSelected) || (focus === 'off' && !editing)
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || editing) return
@@ -105,7 +191,7 @@ export function ItemEdge(props: EdgeProps) {
 
   return (
     <>
-      <BaseEdge id={id} path={path} markerEnd={markerEnd} interactionWidth={16} style={style} />
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} interactionWidth={16} style={style} className={focus ? `wire-focus-${focus}` : undefined} />
       {seq !== undefined && (
         <EdgeLabelRenderer>
           <div className="ds-seq nodrag nopan" aria-label={`activity ${seq}`} style={{ transform: `translate(-50%, -50%) translate(${seqAt.x}px, ${seqAt.y}px)` }}>

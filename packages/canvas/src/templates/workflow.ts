@@ -2,6 +2,7 @@
 // Triggers form layer 0; each step's layer = 1 + max layer of its predecessors.
 import { z } from 'zod'
 import type { ColorToken, Item } from '../model.js'
+import { layered } from './layered.js'
 import { GAP, LANE_HEADER, PAD, STICKY_H, STICKY_W, arrow, fit, make, offsetAll, type RenderOpts } from './util.js'
 
 export const workflowSchema = z.object({
@@ -63,7 +64,6 @@ const KIND_COLOR: Record<string, ColorToken> = {
 
 /** Columns leave room for the widest wire label (monospace ≈ 7.5 px a character, wrapped at 220 px by the UI). */
 const labelGap = (labels: string[]) => Math.min(250, Math.max(GAP * 3, Math.max(0, ...labels.map((l) => l.length)) * 7.5 + 30))
-const ROW = STICKY_H + GAP
 const AGENT_W = 200
 const AGENT_H = 96
 const AGENT_GAP = 24
@@ -77,32 +77,15 @@ export function renderWorkflow(raw: WorkflowContent, opts: RenderOpts = {}): Ite
   const nodeId = (n: string) => `${scope}.node.${n}`
   const items: Item[] = []
 
-  // Layering with cycle tolerance: iterate relaxations, cap at N passes.
-  const preds = new Map<string, string[]>()
-  for (const n of c.nodes) preds.set(n.id, [])
-  for (const e of c.edges) if (preds.has(e.to) && preds.has(e.from)) preds.get(e.to)!.push(e.from)
-  const layer = new Map<string, number>()
-  for (const n of c.nodes) layer.set(n.id, n.kind === 'trigger' ? 0 : 1)
-  for (let pass = 0; pass < c.nodes.length + 1; pass++) {
-    let changed = false
-    for (const n of c.nodes) {
-      if (n.kind === 'trigger') continue
-      const ps = preds.get(n.id)!
-      const want = ps.length ? Math.max(...ps.map((p) => layer.get(p)!)) + 1 : 1
-      if (want > layer.get(n.id)! && want < c.nodes.length + 2) {
-        layer.set(n.id, want)
-        changed = true
-      }
-    }
-    if (!changed) break
-  }
-
-  const byLayer = new Map<number, string[]>()
-  for (const n of c.nodes) {
-    const l = layer.get(n.id)!
-    if (!byLayer.has(l)) byLayer.set(l, [])
-    byLayer.get(l)!.push(n.id)
-  }
+  // Layered layout (./layered.ts): loops are drawn back instead of pushing their nodes to the right,
+  // each column is ordered to cut crossings, and a long wire gets a free lane on its source's row.
+  const known = new Set(c.nodes.map((n) => n.id))
+  const lay = layered(
+    c.nodes.map((n) => ({ id: n.id, source: n.kind === 'trigger', h: STICKY_H })),
+    c.edges.map((e) => ({ from: e.from, to: e.to })),
+    { gap: GAP + 10 },
+  )
+  const layer = lay.layer
 
   // The Agents frame sits above the graph; the graph moves down by its height.
   const agentId = (a: string) => `${scope}.agent.${a}`
@@ -112,14 +95,14 @@ export function renderWorkflow(raw: WorkflowContent, opts: RenderOpts = {}): Ite
   const labelOf = (n: (typeof c.nodes)[number]) => n.label ?? n.id
   for (const n of c.nodes) {
     const l = layer.get(n.id)!
-    const row = byLayer.get(l)!.indexOf(n.id)
+    const row = [...layer].filter(([id, k]) => k === l && lay.y.get(id)! < lay.y.get(n.id)!).length
     items.push(
       make(
         {
           id: nodeId(n.id),
           type: 'card',
           x: PAD + l * COL,
-          y: graphTop + row * ROW,
+          y: graphTop + lay.y.get(n.id)!,
           w: STICKY_W,
           h: STICKY_H,
           text: labelOf(n),
@@ -134,7 +117,7 @@ export function renderWorkflow(raw: WorkflowContent, opts: RenderOpts = {}): Ite
   }
   // One wire per event subscription: "when <from> emits <event> (and if …), <to> runs" (docs/studio.md §7).
   for (const e of c.edges) {
-    if (!preds.has(e.from) || !preds.has(e.to)) continue
+    if (!known.has(e.from) || !known.has(e.to)) continue
     const name = e.event ? (e.resume ? `resume: ${e.event}` : e.event) : e.label
     const label = [name, e.condition ? `if ${e.condition}` : undefined].filter(Boolean).join(' ')
     const data = e.event ? { event: { event: e.event, from: e.from, to: e.to, ...(e.condition ? { condition: e.condition } : {}), ...(e.resume ? { resume: true } : {}) } } : undefined
@@ -170,7 +153,7 @@ export function renderWorkflow(raw: WorkflowContent, opts: RenderOpts = {}): Ite
     )
     items.unshift(frame, ...cards)
     for (const a of c.agents) {
-      for (const step of a.steps) if (preds.has(step)) items.push(arrow(scope, agentId(a.id), nodeId(step), now, undefined, 'owns'))
+      for (const step of a.steps) if (known.has(step)) items.push(arrow(scope, agentId(a.id), nodeId(step), now, undefined, 'owns'))
       for (const d of a.delegates ?? []) if (c.agents.some((x) => x.id === d)) items.push(arrow(scope, agentId(a.id), agentId(d), now, 'delegates', 'delegates'))
     }
   }

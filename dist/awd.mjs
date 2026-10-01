@@ -34936,7 +34936,7 @@ function blockDetails(wf, opts) {
   }
   for (const s of def2.steps) {
     const common = { source: source("steps", s.id), ...yaml("steps", s.id), listens: s.on.map((l) => l.if ? `${l.event} if ${l.if}` : l.event), emits: [...s.outcomes, "failed", "timeout"].map((o) => `${s.id}.${o}`) };
-    nodes[s.id] = { ...stepDetail(s, wf, rel, exists, opts.readFile), ...common };
+    nodes[s.id] = { ...stepDetail(s, wf, rel, exists, opts.readFile, root), ...common };
   }
   const agents = {};
   const stepsOf = (id, byRole = false) => def2.steps.filter((s) => s.kind === "ai" && (byRole ? !s.ai.agent && s.ai.role === id : s.ai.agent === id)).map((s) => s.id);
@@ -34965,9 +34965,12 @@ function blockDetails(wf, opts) {
   }
   return { nodes, agents };
 }
-function stepDetail(s, wf, rel, exists, readFile2) {
+function stepDetail(s, wf, rel, exists, readFile2, root) {
   if (s.kind === "script") {
-    const file2 = s.run.split(/\s+/).filter((w2) => w2 && !w2.includes("{{")).map((w2) => path8.resolve(s.cwd ? path8.resolve(wf.dir, s.cwd) : wf.dir, w2)).find((abs) => abs.startsWith(wf.dir + path8.sep) && exists(abs));
+    const base = s.cwd ? path8.resolve(wf.dir, s.cwd) : wf.dir;
+    const words = s.run.split(/\s+/).flatMap((w2) => [w2, w2.includes("=") ? w2.slice(w2.indexOf("=") + 1) : ""]).map((w2) => w2.replace(/^['"]|['";|&)]+$/g, ""));
+    const inRepo = (abs) => abs === root || abs.startsWith(root + path8.sep) || abs.startsWith(wf.dir + path8.sep);
+    const file2 = words.filter((w2) => w2 && !w2.includes("{{") && !w2.startsWith("-")).map((w2) => path8.resolve(base, w2)).find((abs) => inRepo(abs) && exists(abs));
     const text3 = file2 ? readFile2(file2) : void 0;
     return { kind: "script", run: s.run, file: file2 ? rel(file2) : void 0, code: text3?.slice(0, MAX_SOURCE), ...text3 && text3.length > MAX_SOURCE ? { truncated: true } : {} };
   }
@@ -57903,11 +57906,18 @@ var init_wireframe = __esm({
   }
 });
 
+// packages/canvas/dist/templates/layered.js
+var init_layered = __esm({
+  "packages/canvas/dist/templates/layered.js"() {
+  }
+});
+
 // packages/canvas/dist/templates/workflow.js
-var workflowSchema, ROW;
+var workflowSchema;
 var init_workflow = __esm({
   "packages/canvas/dist/templates/workflow.js"() {
     init_zod();
+    init_layered();
     init_util2();
     workflowSchema = external_exports.object({
       name: external_exports.string().optional(),
@@ -57943,7 +57953,6 @@ var init_workflow = __esm({
         detail: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
       })).default([])
     });
-    ROW = STICKY_H + GAP;
   }
 });
 
@@ -74234,7 +74243,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os2.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.3" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.6.4" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",

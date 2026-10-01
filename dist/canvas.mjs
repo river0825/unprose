@@ -32792,6 +32792,168 @@ function renderWireframe(raw, opts = {}) {
   return offsetAll(items, opts.at);
 }
 
+// packages/canvas/dist/templates/layered.js
+function layered(nodes, edges, opts = {}) {
+  const gap = opts.gap ?? 40;
+  const laneH = opts.laneH ?? 20;
+  const known = new Map(nodes.map((n2) => [n2.id, n2]));
+  const valid = edges.map((e) => known.has(e.from) && known.has(e.to));
+  const out = new Map(nodes.map((n2) => [n2.id, []]));
+  edges.forEach((e, i) => valid[i] && out.get(e.from).push(i));
+  const back = edges.map((e, i) => valid[i] && e.from === e.to);
+  const state = /* @__PURE__ */ new Map();
+  const roots = [...nodes.filter((n2) => n2.source), ...nodes.filter((n2) => !n2.source)];
+  for (const r of roots) {
+    if (state.get(r.id))
+      continue;
+    const stack = [{ id: r.id, next: 0 }];
+    state.set(r.id, 1);
+    while (stack.length) {
+      const top2 = stack[stack.length - 1];
+      const outs = out.get(top2.id);
+      if (top2.next >= outs.length) {
+        state.set(top2.id, 2);
+        stack.pop();
+        continue;
+      }
+      const ei = outs[top2.next++];
+      const to = edges[ei].to;
+      const s = state.get(to) ?? 0;
+      if (s === 1)
+        back[ei] = true;
+      else if (s === 0) {
+        state.set(to, 1);
+        stack.push({ id: to, next: 0 });
+      }
+    }
+  }
+  const forward = edges.map((e, i) => valid[i] && !back[i] && e.from !== e.to ? e : void 0);
+  const preds = new Map(nodes.map((n2) => [n2.id, []]));
+  const succs = new Map(nodes.map((n2) => [n2.id, []]));
+  for (const e of forward)
+    if (e)
+      preds.get(e.to).push(e.from), succs.get(e.from).push(e.to);
+  const indeg = new Map(nodes.map((n2) => [n2.id, preds.get(n2.id).length]));
+  const queue = nodes.filter((n2) => indeg.get(n2.id) === 0).map((n2) => n2.id);
+  const layer = /* @__PURE__ */ new Map();
+  for (let qi = 0; qi < queue.length; qi++) {
+    const id = queue[qi];
+    const ps = preds.get(id);
+    layer.set(id, known.get(id).source ? 0 : ps.length ? Math.max(...ps.map((p) => layer.get(p))) + 1 : 1);
+    for (const s of succs.get(id)) {
+      indeg.set(s, indeg.get(s) - 1);
+      if (indeg.get(s) === 0)
+        queue.push(s);
+    }
+  }
+  for (const n2 of nodes)
+    if (!layer.has(n2.id))
+      layer.set(n2.id, 1);
+  const depth = Math.max(0, ...layer.values());
+  const layers = Array.from({ length: depth + 1 }, () => []);
+  const slotUp = /* @__PURE__ */ new Map();
+  const slotDown = /* @__PURE__ */ new Map();
+  const link = (a, b2) => {
+    if (!slotDown.has(a))
+      slotDown.set(a, []);
+    if (!slotUp.has(b2))
+      slotUp.set(b2, []);
+    slotDown.get(a).push(b2);
+    slotUp.get(b2).push(a);
+  };
+  for (const n2 of nodes)
+    layers[layer.get(n2.id)].push({ id: n2.id, h: n2.h, dummy: false });
+  forward.forEach((e, i) => {
+    if (!e)
+      return;
+    let prev = e.from;
+    for (let l = layer.get(e.from) + 1; l < layer.get(e.to); l++) {
+      const id = `\0${i}:${l}`;
+      layers[l].push({ id, h: laneH, dummy: true });
+      link(prev, id);
+      prev = id;
+    }
+    link(prev, e.to);
+  });
+  const pos = /* @__PURE__ */ new Map();
+  const index = () => layers.forEach((ls) => ls.forEach((s, i) => pos.set(s.id, i)));
+  index();
+  const crossings = () => {
+    let c = 0;
+    for (let l = 0; l < layers.length - 1; l++) {
+      const segs = [];
+      for (const s of layers[l])
+        for (const d of slotDown.get(s.id) ?? [])
+          segs.push([pos.get(s.id), pos.get(d)]);
+      for (let i = 0; i < segs.length; i++)
+        for (let j2 = i + 1; j2 < segs.length; j2++)
+          if ((segs[i][0] - segs[j2][0]) * (segs[i][1] - segs[j2][1]) < 0)
+            c++;
+    }
+    return c;
+  };
+  const sortBy = (ls, nb) => {
+    const bary = new Map(ls.map((s) => {
+      const ns = nb.get(s.id) ?? [];
+      return [s.id, ns.length ? ns.reduce((a, n2) => a + pos.get(n2), 0) / ns.length : pos.get(s.id)];
+    }));
+    ls.sort((a, b2) => bary.get(a.id) - bary.get(b2.id) || pos.get(a.id) - pos.get(b2.id));
+    ls.forEach((s, i) => pos.set(s.id, i));
+  };
+  let best = layers.map((ls) => [...ls]);
+  let bestC = crossings();
+  for (let it = 0; it < (opts.sweeps ?? 12) && bestC > 0; it++) {
+    if (it % 2 === 0)
+      for (let l = 1; l < layers.length; l++)
+        sortBy(layers[l], slotUp);
+    else
+      for (let l = layers.length - 2; l >= 0; l--)
+        sortBy(layers[l], slotDown);
+    const c = crossings();
+    if (c < bestC)
+      bestC = c, best = layers.map((ls) => [...ls]);
+  }
+  best.forEach((ls, l) => layers[l] = ls);
+  index();
+  const y2 = /* @__PURE__ */ new Map();
+  for (const ls of layers) {
+    let at = 0;
+    for (const s of ls)
+      y2.set(s.id, at), at += s.h + gap;
+  }
+  const centre2 = (id, h) => y2.get(id) + h / 2;
+  const hOf = new Map(layers.flat().map((s) => [s.id, s.h]));
+  const median = (xs) => {
+    const s = [...xs].sort((a, b2) => a - b2);
+    return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  };
+  const place = (ls, nb) => {
+    const want = ls.map((s) => {
+      const ns = nb.get(s.id) ?? [];
+      return ns.length ? median(ns.map((n2) => centre2(n2, hOf.get(n2)))) - s.h / 2 : y2.get(s.id);
+    });
+    const ys = [...want];
+    for (let i = 1; i < ls.length; i++)
+      ys[i] = Math.max(ys[i], ys[i - 1] + ls[i - 1].h + gap);
+    for (let i = ls.length - 2; i >= 0; i--)
+      ys[i] = Math.min(ys[i], ys[i + 1] - ls[i].h - gap);
+    ls.forEach((s, i) => y2.set(s.id, ys[i]));
+  };
+  for (let it = 0; it < 6; it++) {
+    for (let l = 1; l < layers.length; l++)
+      place(layers[l], slotUp);
+    for (let l = layers.length - 2; l >= 0; l--)
+      place(layers[l], slotDown);
+  }
+  for (let l = 1; l < layers.length; l++)
+    place(layers[l], slotUp);
+  const top = Math.min(...nodes.map((n2) => y2.get(n2.id)));
+  const out2 = /* @__PURE__ */ new Map();
+  for (const n2 of nodes)
+    out2.set(n2.id, Math.round((y2.get(n2.id) - top) / 10) * 10);
+  return { layer, y: out2, back };
+}
+
 // packages/canvas/dist/templates/workflow.js
 var workflowSchema = external_exports.object({
   name: external_exports.string().optional(),
@@ -32836,7 +32998,6 @@ var KIND_COLOR = {
   outcome: "orange"
 };
 var labelGap = (labels) => Math.min(250, Math.max(GAP * 3, Math.max(0, ...labels.map((l) => l.length)) * 7.5 + 30));
-var ROW2 = STICKY_H + GAP;
 var AGENT_W = 200;
 var AGENT_H = 96;
 var AGENT_GAP = 24;
@@ -32848,49 +33009,21 @@ function renderWorkflow(raw, opts = {}) {
   const scope = opts.scope ?? "wf";
   const nodeId = (n2) => `${scope}.node.${n2}`;
   const items = [];
-  const preds = /* @__PURE__ */ new Map();
-  for (const n2 of c.nodes)
-    preds.set(n2.id, []);
-  for (const e of c.edges)
-    if (preds.has(e.to) && preds.has(e.from))
-      preds.get(e.to).push(e.from);
-  const layer = /* @__PURE__ */ new Map();
-  for (const n2 of c.nodes)
-    layer.set(n2.id, n2.kind === "trigger" ? 0 : 1);
-  for (let pass = 0; pass < c.nodes.length + 1; pass++) {
-    let changed = false;
-    for (const n2 of c.nodes) {
-      if (n2.kind === "trigger")
-        continue;
-      const ps = preds.get(n2.id);
-      const want = ps.length ? Math.max(...ps.map((p) => layer.get(p))) + 1 : 1;
-      if (want > layer.get(n2.id) && want < c.nodes.length + 2) {
-        layer.set(n2.id, want);
-        changed = true;
-      }
-    }
-    if (!changed)
-      break;
-  }
-  const byLayer = /* @__PURE__ */ new Map();
-  for (const n2 of c.nodes) {
-    const l = layer.get(n2.id);
-    if (!byLayer.has(l))
-      byLayer.set(l, []);
-    byLayer.get(l).push(n2.id);
-  }
+  const known = new Set(c.nodes.map((n2) => n2.id));
+  const lay = layered(c.nodes.map((n2) => ({ id: n2.id, source: n2.kind === "trigger", h: STICKY_H })), c.edges.map((e) => ({ from: e.from, to: e.to })), { gap: GAP + 10 });
+  const layer = lay.layer;
   const agentId = (a) => `${scope}.agent.${a}`;
   const frameH = c.agents.length ? LANE_HEADER + AGENT_H + PAD : 0;
   const graphTop = PAD + (frameH ? frameH + GAP * 2 : 0);
   const labelOf = (n2) => n2.label ?? n2.id;
   for (const n2 of c.nodes) {
     const l = layer.get(n2.id);
-    const row = byLayer.get(l).indexOf(n2.id);
+    const row = [...layer].filter(([id, k2]) => k2 === l && lay.y.get(id) < lay.y.get(n2.id)).length;
     items.push(make({
       id: nodeId(n2.id),
       type: "card",
       x: PAD + l * COL4,
-      y: graphTop + row * ROW2,
+      y: graphTop + lay.y.get(n2.id),
       w: STICKY_W,
       h: STICKY_H,
       text: labelOf(n2),
@@ -32901,7 +33034,7 @@ function renderWorkflow(raw, opts = {}) {
     }, now));
   }
   for (const e of c.edges) {
-    if (!preds.has(e.from) || !preds.has(e.to))
+    if (!known.has(e.from) || !known.has(e.to))
       continue;
     const name = e.event ? e.resume ? `resume: ${e.event}` : e.event : e.label;
     const label = [name, e.condition ? `if ${e.condition}` : void 0].filter(Boolean).join(" ");
@@ -32929,7 +33062,7 @@ ${a.model ?? "model?"} \xB7 ${a.runner ?? "claude-code"}`,
     items.unshift(frame, ...cards);
     for (const a of c.agents) {
       for (const step of a.steps)
-        if (preds.has(step))
+        if (known.has(step))
           items.push(arrow(scope, agentId(a.id), nodeId(step), now, void 0, "owns"));
       for (const d of a.delegates ?? [])
         if (c.agents.some((x2) => x2.id === d))
@@ -46337,7 +46470,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.3" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.6.4" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",

@@ -135,3 +135,40 @@ test('dev/workflow.yaml: detail.yaml is the block range; workflowFiles has every
   assert.equal(files['dev/workflow.yaml'], yaml.join('\n'))
   assert.deepEqual(truncated, [])
 })
+
+test('a script beside the workflow folder (../scripts/x.py) is found anywhere in the repo, never outside it', () => {
+  const files: Record<string, string> = {
+    '/repo/flow/workflow.yaml': [
+      'name: fx',
+      'triggers:',
+      '  hook: { on: webhook, path: /in }',
+      'steps:',
+      '  release:',
+      '    on: hook',
+      '    run: python3 ../scripts/coordinator_state.py release {{ key }} --kind build',
+      '  quoted:',
+      '    on: release.done',
+      '    run: bash "../scripts/run me.sh"',
+      '  opt:',
+      '    on: quoted.done',
+      '    run: node --import=x ../tools/check.mjs --config=../tools/check.json',
+      '  outside:',
+      '    on: opt.done',
+      '    run: python3 ../../etc/secret.py',
+    ].join('\n'),
+    '/repo/scripts/coordinator_state.py': 'print(1)\n',
+    '/repo/tools/check.mjs': 'console.log(1)\n',
+    '/repo/tools/check.json': '{}',
+    '/etc/secret.py': 'nope',
+  }
+  const def = parseWorkflow(files['/repo/flow/workflow.yaml'])
+  const wf = { def, file: '/repo/flow/workflow.yaml', dir: '/repo/flow', roles: {}, agents: resolveAgents(def, '/nonexistent') }
+  const d = blockDetails(wf, { root: '/repo', readFile: (p) => files[p] })
+  assert.equal(d.nodes.release.file, 'scripts/coordinator_state.py')
+  assert.equal(d.nodes.release.code, 'print(1)\n')
+  assert.equal(d.nodes.quoted.file, undefined, 'a path with a space cannot be split from the command line; no wrong guess')
+  assert.equal(d.nodes.opt.file, 'tools/check.mjs', 'the first file wins; flags are skipped')
+  assert.equal(d.nodes.outside.file, undefined, 'never a file outside the repo')
+  const { files: shipped } = workflowFiles(wf, d, { root: '/repo', readFile: (p) => files[p] })
+  assert.ok(Object.keys(shipped).includes('scripts/coordinator_state.py'), 'its text goes into the board snapshot, so it can be viewed and edited')
+})

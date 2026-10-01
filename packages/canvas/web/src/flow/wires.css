@@ -1,0 +1,19 @@
+/* Focus + context for wires (wireFocus.ts): the hovered or selected box's wires stand out, the rest step back. */
+.react-flow__edge-path.wire-focus-off {
+  opacity: 0.1;
+  transition: opacity 140ms ease-out;
+}
+.react-flow__edge-path.wire-focus-on {
+  stroke-width: 2.25;
+  transition: opacity 140ms ease-out;
+}
+.react-flow__edge-path:not(.wire-focus-off) {
+  transition: opacity 140ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge-path.wire-focus-off,
+  .react-flow__edge-path.wire-focus-on,
+  .react-flow__edge-path:not(.wire-focus-off) {
+    transition: none;
+  }
+}

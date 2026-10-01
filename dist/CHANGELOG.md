@@ -6,6 +6,22 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.4] — 2026-10-01
+
+### Changed
+- **Wires are easier to follow.** Workflow boards are laid out in proper layers: loops no longer push half the graph
+  to the far right, and blocks in a column are ordered to cut crossings. Every wire leaves its block on the side
+  facing its target (unless a side was set), wires sharing a side are spread apart instead of overlapping, turns run
+  in the gaps between blocks, loops go round over or under, and labels sit on their own wire, not on a block. This
+  changes how wires look on every board. Your layout is kept: routing is worked out when drawn, nothing is stored.
+- Hovering a block fades the wires that do not touch it.
+
+### Fixed
+- A script block whose command reaches outside the workflow's folder (`python3 ../scripts/coordinator_state.py
+  release {{ key }}`) now shows that script: View, Edit and Ask AI work on it like on any other file. Any file inside
+  the repo counts (never one outside it); quotes, flags and `--opt=<path>` are looked through. Redraw the workflow
+  board (`awd graph <workflow.yaml> --canvas`) to pick it up.
+
 ## [0.6.3] — 2026-10-01
 
 ### Fixed
@@ -243,7 +259,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/river0825/unprose/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/river0825/unprose/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/river0825/unprose/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/river0825/unprose/compare/v0.6.0...v0.6.1
