@@ -25,7 +25,7 @@ node scripts/canvas.mjs       # the board opens at http://localhost:4400 (a proj
 Keep that running. In a second terminal, connect Claude Code to the board:
 
 ```bash
-claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"
+claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"
 ```
 
 That's it. Open Claude Code in any project and follow **Your first session** below.
@@ -45,7 +45,7 @@ That's it. Open Claude Code in any project and follow **Your first session** bel
   you get a one-line note if its version differs. Turn the automatic start off with the plugin option `canvas_autostart` (in `/config`) or `AWD_CANVAS_AUTOSTART=0`; point it at another canvas with the `canvas_url` option.
 - **Codex:** add to `~/.codex/config.toml`, and copy [AGENTS.md](AGENTS.md) into your project:
   ```toml
-  [mcp_servers.awd-canvas]
+  [mcp_servers.unprose]
   command = "node"
   args = ["/path/to/unprose/scripts/mcp.mjs"]
   env = { AWD_CANVAS_URL = "http://localhost:4400" }
@@ -64,6 +64,20 @@ Working on Unprose itself: `npm install && npm run build`; the launchers in `scr
 > Draw an EventStorming of our signup flow in Unprose.
 
 The agent writes `design/signup.es.yaml` in your repo and draws it on the board.
+
+Not sure what to ask? In Claude Code, type `/unprose:` to see the ways to start:
+
+| Command | What it does |
+|---|---|
+| `/unprose:help` | what Unprose can do, and the command that fits your project |
+| `/unprose:eventstorm <topic>` | an EventStorming of a process |
+| `/unprose:storymap` | a story map from the EventStorming, with a first release |
+| `/unprose:kanban` | a kanban of a release's stories |
+| `/unprose:wireframe <page>` | a wireframe of a page |
+| `/unprose:domain-story <topic>` | a process told as a domain story |
+| `/unprose:review` | the agent answers every open comment on a board |
+
+Codex and other MCP agents get the same as MCP prompts, or ask "what can Unprose do?".
 
 **2. Open the board.** Go to <http://localhost:4400> and pick the board the agent created.
 Events, commands, systems and policies read left to right in time.

@@ -2,12 +2,25 @@
   "name": "@awd/cli",
   "version": "0.1.0",
   "type": "module",
-  "bin": { "awd": "./bin/awd.js" },
+  "bin": {
+    "awd": "./bin/awd.js"
+  },
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --import tsx --test test/*.test.ts"
   },
-  "dependencies": { "@awd/canvas": "0.1.0", "@awd/core": "0.1.0", "@awd/runtime": "0.1.0", "yaml": "^2.6.0" },
-  "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+  "dependencies": {
+    "@awd/canvas": "0.1.0",
+    "@awd/core": "0.1.0",
+    "@awd/runtime": "0.1.0",
+    "yaml": "^2.6.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
 }

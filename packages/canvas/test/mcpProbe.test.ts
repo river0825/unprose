@@ -32,6 +32,6 @@ test('`awd-canvas mcp` with an unreachable canvas exits non-zero and says what t
   const cli = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist/cli.js')
   const r = spawnSync(process.execPath, [cli, 'mcp'], { env: { ...process.env, AWD_CANVAS_URL: 'http://127.0.0.1:9/b/b_x' }, input: '', encoding: 'utf8', timeout: 15000 })
   assert.equal(r.status, 1, r.stderr)
-  assert.match(r.stderr, /awd-canvas MCP: cannot reach http:\/\/127\.0\.0\.1:9 \(/)
+  assert.match(r.stderr, /unprose MCP: cannot reach http:\/\/127\.0\.0\.1:9 \(/)
   assert.match(r.stderr, /set AWD_CANVAS_URL/)
 })

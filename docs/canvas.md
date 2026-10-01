@@ -49,8 +49,12 @@ Always keep the last `seq` you saw and pass it as `since`. `canvas_diff` returns
 
 ## MCP tools
 
+The MCP server is called `unprose` (`node scripts/mcp.mjs`, which runs `awd mcp`; `awd-canvas mcp` serves the
+canvas tools alone). Its instructions open with what Unprose is for, so an agent can explain it.
+
 | Tool | Input | What it does |
 |---|---|---|
+| `unprose_help` | – | what Unprose can do — the diagrams, the tools, the comment loop, the ways to start — for the agent to pass on in the person's language; also the canvas URL and version |
 | `canvas_list_boards` | – | id, kind, seq, item count, title, url per board |
 | `canvas_create_board` | `title, kind, content, meta?` | render the template and create the board → id, url, seq |
 | `canvas_read_board` | `id, format: outline\|json` | `outline` (default): compact text grouped by lane/frame with arrows and comments; `json`: raw items with ids and geometry |
@@ -60,6 +64,21 @@ Always keep the last `seq` you saw and pass it as `since`. `canvas_diff` returns
 | `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
+| `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
+| `design_draw` | `file, board, at?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link |
+| `design_propose_stories` | `from, into, board` | `awd design propose-stories`: story candidates from EventStorming / a domain story as dashed proposals; the story-map file is not written |
+| `design_egon` | `action: import\|export, file, out` | `awd design import-egon` / `export-egon` (Egon.io) |
+
+Paths are relative to the session's project. The `design_*` tools are served by `awd mcp` (not by
+`awd-canvas mcp`).
+
+### Start prompts and slash commands
+
+Seven ways to start a conversation, written once in `packages/cli/src/prompts.ts`: `help`, `eventstorm <topic>`,
+`storymap`, `kanban`, `wireframe <page>`, `domain-story <topic>`, `review`. MCP clients (Codex and others) get
+them as MCP prompts. The Claude Code plugin gets them as slash commands `/unprose:<name>` (`commands/*.md`,
+written by `npm run gen:commands`; a test fails when they drift) and turns the MCP prompts off
+(`UNPROSE_MCP_PROMPTS=0`) so the menu does not list them twice.
 
 ## Projects
 

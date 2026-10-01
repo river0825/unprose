@@ -1,6 +1,6 @@
 # Using Unprose from your AI agent
 
-Unprose exposes the canvas to agents as an MCP server (`awd-canvas`, stdio) plus a CLI (`awd`). The MCP
+Unprose exposes the canvas to agents as an MCP server (`unprose`, stdio) plus a CLI (`awd`). The MCP
 server needs a running canvas server; start one first:
 
 ```bash
@@ -59,7 +59,7 @@ when it starts):
 the user's project, so the MCP server never started):
 
 ```bash
-claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node <unprose>/scripts/mcp.mjs
+claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node <unprose>/scripts/mcp.mjs
 ```
 
 ### A canvas that is not on localhost
@@ -67,7 +67,7 @@ claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node <unpro
 Run the canvas anywhere (a tunnel, a server, another machine) and point the agent at it with
 `AWD_CANVAS_URL`, e.g. `https://canvas.example.com`. A board link (`https://canvas.example.com/b/<id>`)
 also works: the MCP server takes the origin from it. On startup the MCP server checks
-`GET <url>/api/boards`; if that fails it exits with `awd-canvas MCP: cannot reach <url> (<reason>). Start
+`GET <url>/api/boards`; if that fails it exits with `unprose MCP: cannot reach <url> (<reason>). Start
 the canvas (npm start) or set AWD_CANVAS_URL` — in Claude Code that shows up in `/mcp` as a failed
 server with this message. Keep a remote canvas behind an access proxy: it has no authentication yet.
 
@@ -76,7 +76,7 @@ server with this message. Keep a remote canvas behind an access proxy: it has no
 Add to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.awd-canvas]
+[mcp_servers.unprose]
 command = "node"
 args = ["<unprose>/scripts/mcp.mjs"]
 env = { AWD_CANVAS_URL = "http://localhost:4400" }
@@ -91,7 +91,7 @@ Stdio server: command `node`, args `["<unprose>/scripts/mcp.mjs"]`, environment
 `AWD_CANVAS_URL=http://localhost:4400`. The generic JSON form most clients accept:
 
 ```json
-{ "mcpServers": { "awd-canvas": { "command": "node", "args": ["<unprose>/scripts/mcp.mjs"], "env": { "AWD_CANVAS_URL": "http://localhost:4400" } } } }
+{ "mcpServers": { "unprose": { "command": "node", "args": ["<unprose>/scripts/mcp.mjs"], "env": { "AWD_CANVAS_URL": "http://localhost:4400" } } } }
 ```
 
 Agents without MCP can still use the CLI (`node <unprose>/scripts/awd.mjs design …`) and the

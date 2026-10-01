@@ -1,0 +1,116 @@
+/* "Ask your agent" (AskHints.tsx): the board list's panel and the empty-board card. Tokens from styles.css. */
+
+.ask-panel {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  margin: 0 0 28px;
+  max-width: 100%;
+}
+.ask-panel > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  border-radius: var(--radius);
+}
+.ask-panel > summary::-webkit-details-marker { display: none; }
+.ask-panel > summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-3);
+  transform: translateY(-2px) rotate(-45deg);
+  transition: transform 160ms var(--ease);
+  flex: none;
+  align-self: center;
+}
+.ask-panel[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
+.ask-panel > summary:hover { background: var(--chrome-2); }
+.ask-panel[open] > summary { border-bottom: 1px solid var(--rule); border-radius: var(--radius) var(--radius) 0 0; }
+
+.ask-heading { font-size: 15px; font-weight: 600; line-height: 1.3; margin: 0; color: var(--ink); }
+.ask-sub { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+
+.ask-list { list-style: none; margin: 0; padding: 4px 16px; }
+.ask-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) 11.5rem;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+}
+.ask-row:first-child { border-top: 0; }
+.ask-what { display: flex; flex-direction: column; min-width: 0; }
+.ask-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+.ask-desc { font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+.ask-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ask-prompt {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 5px 9px;
+  overflow-wrap: anywhere;
+  quotes: '\201C' '\201D';
+}
+.ask-slot { color: var(--marker); font-style: italic; }
+.ask-cmd { justify-self: start; }
+.ask-copy { flex: none; min-width: 68px; padding: 5px 10px; font-size: 12.5px; }
+.ask-copy.copied { border-color: var(--user); color: var(--user); }
+.ask-copy.failed { border-color: var(--danger); color: var(--danger); }
+.ask-cmd, .ask-foot code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--chrome-2);
+  border: 1px solid var(--rule);
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.ask-foot { margin: 0; padding: 10px 16px 14px; font-size: 12.5px; color: var(--ink-3); line-height: 1.9; border-top: 1px solid var(--rule); }
+
+@media (max-width: 720px) {
+  .ask-row { grid-template-columns: minmax(0, 1fr); padding: 10px 0; }
+  .ask-foot code { white-space: normal; overflow-wrap: anywhere; }
+}
+
+/* ── Empty board: centred over the pane, outside the React Flow viewport ── */
+.ask-empty-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none;
+  z-index: 4;
+}
+.ask-empty {
+  pointer-events: auto;
+  width: min(480px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--chrome);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+}
+.ask-empty .ask-heading { padding: 14px 16px 0; }
+.ask-empty .ask-sub { padding: 2px 16px 6px; }
+.ask-empty .ask-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.ask-empty .ask-foot { line-height: 1.6; }
+@media (max-width: 720px) {
+  .ask-empty .ask-row { padding: 6px 0; }
+  .ask-empty .ask-prompt { font-size: 13px; padding: 4px 8px; }
+}

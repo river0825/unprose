@@ -22,6 +22,7 @@ const HELP = `awd — small event-driven agent workflows
   awd design  propose-stories <es | domain-story file> --into <story-map file> --board <…>   # story candidates as pending cards
   awd design  import-egon <story.egn | .egn.svg> --out design/<name>.domain-story.yaml   # from Egon.io
   awd design  export-egon <domain-story file> --out <story.egn>                         # to Egon.io
+  awd mcp                                # the Unprose MCP server (canvas + design tools + prompts) over AWD_CANVAS_URL
   awd boards  move <board id | title:...> --to <project dir> [--canvas URL]            # store a board in <project>/.unprose/boards
   awd run     <workflow.yaml> [--port 4311] [--worker fake|claude-code|anthropic|cli|herdr] [--store file|memory] [--store-dir DIR] [--quiet]
               --worker is the default runner; each agent may pick its own runner:. --worker fake overrides all of them.
@@ -390,6 +391,7 @@ try {
     case 'graph': await cmdGraph(need(args, 0, 'workflow file'), flags); break
     case 'design': process.exit((await (await import('./design.js')).cmdDesign(args, flags)) ? 0 : 1)
     case 'studio': await (await import('./studio.js')).cmdStudio(args[0], flags); break
+    case 'mcp': await (await import('./mcp.js')).cmdMcp(); break
     case 'boards': process.exit((await (await import('./projects.js')).cmdBoards(args, flags)) ? 0 : 1)
     case 'run': await cmdRun(need(args, 0, 'workflow file'), flags); break
     case 'emit': cmdEmit(need(args, 0, 'workflow file'), need(args, 1, 'event type'), flags); break

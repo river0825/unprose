@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, asArray, type BoardSummary, type ProjectSummary } from './api'
 import { navigate } from './BoardPage'
 import { timeAgo } from './time'
+import { AskPanel } from './components/AskHints'
 
 const KIND_NAMES: Record<string, string> = {
   'event-storming': 'Event storming',
@@ -74,6 +75,7 @@ export function BoardList() {
         </a>
       </div>
       <p className="sub">The wall where the agent draws its thinking. Move stickies, add comments, and it sees the change.</p>
+      {boards !== null && !error && <AskPanel forceOpen={boards.length === 0} />}
       {error ? (
         <div className="empty">Could not reach the canvas server: {error}</div>
       ) : boards === null ? (
@@ -82,8 +84,8 @@ export function BoardList() {
         <div className="empty">
           <p style={{ margin: '0 0 8px' }}>No boards yet.</p>
           <p style={{ margin: 0 }}>
-            Ask the agent to draw one (it uses the <code>canvas_create_board</code> tool), or create one yourself with{' '}
-            <code>POST /api/boards</code>.
+            Ask your agent for one with a sentence above (it uses the <code>canvas_create_board</code> tool), or create one
+            yourself with <code>POST /api/boards</code>.
           </p>
         </div>
       ) : !grouped ? (

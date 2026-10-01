@@ -1,6 +1,6 @@
 {
   "name": "unprose",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "A shared visual canvas where people and AI agents talk designs through — EventStorming, story maps, kanban, wireframes and workflows, each backed by a file the agent edits.",
   "author": {
     "name": "Unprose contributors"
@@ -18,14 +18,15 @@
     "human-in-the-loop"
   ],
   "mcpServers": {
-    "awd-canvas": {
+    "unprose": {
       "command": "node",
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/scripts/mcp.mjs"
       ],
       "env": {
         "AWD_CANVAS_URL": "${user_config.canvas_url}",
-        "AWD_CANVAS_AUTOSTART": "${user_config.canvas_autostart}"
+        "AWD_CANVAS_AUTOSTART": "${user_config.canvas_autostart}",
+        "UNPROSE_MCP_PROMPTS": "0"
       }
     }
   },

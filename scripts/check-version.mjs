@@ -26,7 +26,7 @@ if (process.argv.includes('--since-tag')) {
     // no release tag yet: nothing to compare with
   }
   if (tag) {
-    const shipped = git('diff', '--name-only', `${tag}..HEAD`, '--', 'packages', 'skills', 'hooks', '.claude-plugin', '.mcp.json', 'scripts/mcp.mjs', 'scripts/runtime.mjs', 'scripts/ensure.mjs', 'scripts/entry.mjs', 'scripts/canvas.mjs', 'scripts/awd.mjs').split('\n').filter(Boolean)
+    const shipped = git('diff', '--name-only', `${tag}..HEAD`, '--', 'packages', 'skills', 'hooks', '.claude-plugin', '.mcp.json', 'commands', 'scripts/mcp.mjs', 'scripts/runtime.mjs', 'scripts/ensure.mjs', 'scripts/entry.mjs', 'scripts/canvas.mjs', 'scripts/awd.mjs').split('\n').filter(Boolean)
     if (shipped.length && tag === `v${version}`)
       problems.push(`${shipped.length} shipped file(s) changed since ${tag} but the version is still ${version} — bump it with scripts/version.mjs (e.g. ${shipped.slice(0, 3).join(', ')})`)
   }

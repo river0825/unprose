@@ -1,7 +1,7 @@
 {
   "name": "unprose",
   "private": true,
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Unprose — a shared visual canvas where people and AI agents talk designs through (EventStorming, story maps, kanban, wireframes, workflows), plus a small event-driven workflow runtime. A plugin for Claude Code, Codex and other MCP agents.",
   "license": "Apache-2.0",
   "workspaces": [
@@ -14,7 +14,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "start": "node scripts/start.mjs",
     "demo": "node packages/canvas/dist/cli.js demo && node packages/cli/bin/awd.js graph examples/card-pipeline/workflow.yaml --canvas",
-    "version:bump": "node scripts/version.mjs"
+    "version:bump": "node scripts/version.mjs",
+    "gen:commands": "node --import tsx packages/cli/src/genCommands.ts"
   },
   "engines": {
     "node": ">=20"

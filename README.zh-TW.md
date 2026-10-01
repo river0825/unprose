@@ -24,7 +24,7 @@ node scripts/canvas.mjs       # board 會開在 http://localhost:4400（專案�
 讓它繼續跑著。在另一個終端機把 Claude Code 連到 board：
 
 ```bash
-claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"
+claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"
 ```
 
 這樣就好了。在任何專案打開 Claude Code，照著下面的「第一次使用」做。
@@ -43,7 +43,7 @@ claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/
   不想自動啟動，在 `/config` 關掉 plugin 選項 `canvas_autostart`（或設 `AWD_CANVAS_AUTOSTART=0`）；要連到別的 canvas，設 `canvas_url` 選項。
 - **Codex**：加到 `~/.codex/config.toml`，並把 [AGENTS.md](AGENTS.md) 複製到你的專案：
   ```toml
-  [mcp_servers.awd-canvas]
+  [mcp_servers.unprose]
   command = "node"
   args = ["/path/to/unprose/scripts/mcp.mjs"]
   env = { AWD_CANVAS_URL = "http://localhost:4400" }
@@ -61,6 +61,20 @@ claude mcp add awd-canvas -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/
 > 在 Unprose 上畫一張我們註冊流程的 EventStorming。
 
 Agent 會在你的 repo 寫出 `design/signup.es.yaml`，並畫到 board 上。
+
+不知道從哪裡開始？在 Claude Code 輸入 `/unprose:` 就會列出可用的指令：
+
+| 指令 | 做什麼 |
+|---|---|
+| `/unprose:help` | Unprose 能做什麼，以及適合你專案的第一個指令 |
+| `/unprose:eventstorm <主題>` | 為一個流程做 EventStorming |
+| `/unprose:storymap` | 從 EventStorming 產生 story map，並切出第一個 release |
+| `/unprose:kanban` | 把一個 release 的 stories 做成 kanban |
+| `/unprose:wireframe <頁面>` | 畫一個頁面的 wireframe |
+| `/unprose:domain-story <主題>` | 把一個流程講成 domain story |
+| `/unprose:review` | agent 回覆 board 上所有未回覆的留言 |
+
+Codex 和其他 MCP agent 會以 MCP prompts 取得同樣的功能，或直接問「Unprose 能做什麼？」。
 
 **2. 打開 board。** 到 <http://localhost:4400>，選 agent 建立的那張 board。
 Event、command、system、policy 依時間由左到右排列。

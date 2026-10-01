@@ -10,7 +10,7 @@ const file = (p) => path.join(root, p)
 const readJson = (p) => JSON.parse(fs.readFileSync(file(p), 'utf8'))
 const writeJson = (p, v) => fs.writeFileSync(file(p), JSON.stringify(v, null, 2) + '\n')
 const MCP = 'packages/canvas/src/mcp.ts'
-const MCP_RE = /(new McpServer\(\{ name: 'awd-canvas', version: ')([^']+)(')/
+const MCP_RE = /(\{ name: 'unprose', version: ')([^']+)(')/
 
 /** Every version the release carries, by where it lives. */
 export function versions() {

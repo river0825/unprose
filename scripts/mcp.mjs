@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The awd-canvas MCP server, for Claude Code (plugin or project), Codex, or any MCP client.
+// The Unprose MCP server, for Claude Code (plugin or project), Codex, or any MCP client.
 // It talks to a running canvas server (AWD_CANVAS_URL, default http://localhost:4400; a board link works
 // too). Before starting it makes sure the runtime exists (downloading this version's if the install has
 // none) and, for a local canvas, starts one if none answers — so the first session after an update works.
@@ -20,5 +20,6 @@ try {
 } catch (e) {
   say(`canvas check failed: ${e?.message ?? e}`)
 }
-process.argv = [process.argv[0], runtime.canvas, 'mcp']
-await import(pathToFileURL(runtime.canvas).href)
+// `awd mcp`: the canvas tools plus the design_* tools and the start prompts
+process.argv = [process.argv[0], runtime.awd, 'mcp']
+await import(pathToFileURL(runtime.awd).href)

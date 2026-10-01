@@ -6,6 +6,28 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-01
+
+### Added
+- **Slash commands** in Claude Code: `/unprose:help`, `/unprose:eventstorm <topic>`, `/unprose:storymap`,
+  `/unprose:kanban`, `/unprose:wireframe <page>`, `/unprose:domain-story <topic>`, `/unprose:review`. Type
+  `/unprose:` to see what Unprose can do; each one starts the conversation the right way. Codex and other MCP
+  clients get the same as MCP prompts.
+- **`unprose_help`** MCP tool: what Unprose can do — the diagrams, the tools, the comment loop, the ways to
+  start — so an agent can answer "what can Unprose do?" in your language.
+- **Diagram-file tools over MCP:** `design_lint`, `design_draw`, `design_propose_stories` and `design_egon`
+  (Egon.io import / export), the same as `awd design …`, so agents without the CLI (Codex, other MCP clients)
+  can check, draw and propose too. The MCP server is now `awd mcp` (`awd-canvas mcp` still serves the canvas
+  tools alone).
+- "Ask your agent" hints in the canvas: the board list shows what Unprose can do as sentences to copy into the agent
+  (with the matching `/unprose:…` slash commands), and an empty board shows a short version until it has items.
+
+### Changed
+- The MCP server is called **`unprose`** (was `awd-canvas`), matching the plugin, and its instructions now say
+  what Unprose is for. Tool names change with it (in Claude Code `mcp__plugin_unprose_unprose__…`), so a
+  permission rule written for `awd-canvas` must be renamed; outside the plugin, register it again as
+  `unprose` (`claude mcp add unprose …`, `[mcp_servers.unprose]` for Codex).
+
 ## [0.5.2] — 2026-10-01
 
 ### Fixed
@@ -195,7 +217,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/river0825/unprose/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/river0825/unprose/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/river0825/unprose/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/river0825/unprose/compare/v0.4.1...v0.5.0

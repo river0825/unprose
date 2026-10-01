@@ -16,7 +16,7 @@ every change shows up in `git diff`.
  "Ask AI" → comment on 1st item ─▶ sees data.discuss in the diff ──▶ claude --model <m>, briefed on the block
    data.discuss = {model, about}   opens / reuses a session           edits files, awd lint, tests
                                    acks on the board                  awd graph --canvas (board redraws)
- reads replies in the thread ◀──────────────────────────────────── replies in the same thread (awd-canvas MCP)
+ reads replies in the thread ◀──────────────────────────────────── replies in the same thread (unprose MCP)
 ```
 
 ## 1. Block detail (the projection)
@@ -164,7 +164,7 @@ the selection; the files behind the blocks; **Look here** — for a request writ
 `file:line–endLine` and the quoted lines, right after the request; the chat so far and earlier comments on
 these items; **Open notes on these files** (§5); the board id; and the rules — you are the editor, the person directs; edit the source files, never the board items
 (non-block items are context); run `awd lint <wf>` and the relevant tests; redraw with
-`awd graph <wf> --canvas`; reply in the chat (awd-canvas MCP `canvas_add_items`, a comment targeting the
+`awd graph <wf> --canvas`; reply in the chat (unprose MCP `canvas_add_items`, a comment targeting the
 root) — the person's next messages come from studio as new prompts, so no `canvas_wait`; ask before
 changes that reach items outside the selection.
 

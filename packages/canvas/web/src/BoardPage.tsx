@@ -42,6 +42,7 @@ import { FrozenHeaders } from './flow/FrozenHeaders'
 import { captureIds, copySelectionAsImage, imageFileName } from './flow/copyImage'
 import { GoToPalette } from './components/GoToPalette'
 import { FocusBanner, readFollow, writeFollow } from './components/FocusBanner'
+import { EmptyBoardHint } from './components/AskHints'
 import type { FocusRequest } from './store'
 
 const GRID: [number, number] = [10, 10]
@@ -818,6 +819,7 @@ function BoardInner({ id }: { id: string }) {
             <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
           </ReactFlow>
         </EditContext.Provider>
+        {Object.keys(board.items).length === 0 && !draftComment && <EmptyBoardHint />}
         <RunOverlay board={board} />
         <FocusBanner
           board={board}

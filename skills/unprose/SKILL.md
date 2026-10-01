@@ -16,8 +16,13 @@ and annotate, and a rule set that keeps it honest:
 
 ## Tools
 
-- MCP server `awd-canvas` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
-  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_focus`, `canvas_list_boards`, `canvas_open`, `canvas_apply`.
+- MCP server `unprose` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
+  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_focus`, `canvas_list_boards`, `canvas_open`, `canvas_apply`;
+  the diagram files: `design_lint`, `design_draw`, `design_propose_stories`, `design_egon` (the same as `awd design …`);
+  and `unprose_help` — call it when the person asks what Unprose can do, and pass it on in their language.
+- Slash commands the person can type: `/unprose:help`, `/unprose:eventstorm <topic>`, `/unprose:storymap`,
+  `/unprose:kanban`, `/unprose:wireframe <page>`, `/unprose:domain-story <topic>`, `/unprose:review`. Suggest the
+  one that fits when someone is unsure how to start.
   It needs a running canvas server. As a plugin, it is started for you at the start of each session (and
   restarted on the new version after a plugin update); a note in the session says so if it had to act. If
   none is running (e.g. the `canvas_autostart` option is off), start it in the background from the plugin (or repo) root —
@@ -37,7 +42,7 @@ with `awd boards move <board id | title:…> --to <project dir>`.
 **Canvas somewhere else** (a tunnel, another machine, `https://canvas.example.com`): set
 `AWD_CANVAS_URL` to its address before the agent starts — a pasted board link (`…/b/<id>`) works too, the
 origin is taken from it. If the MCP server cannot reach the canvas it exits with
-`awd-canvas MCP: cannot reach <url> (<reason>)`; fix the URL or start the canvas, then restart the agent.
+`unprose MCP: cannot reach <url> (<reason>)`; fix the URL or start the canvas, then restart the agent.
 For the CLI, pass `--canvas <url>`.
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame

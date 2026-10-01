@@ -27,6 +27,50 @@ const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_ite
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
+/** What Unprose is for, in the words an agent can pass on to the person (the server instructions open with it). */
+const ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`
+
+const DIAGRAMS = `Diagrams (one file each, drawn as a frame on a board):
+- EventStorming — design/<name>.es.yaml — a flow in time: events, commands, people, systems, policies, hotspots (Introducing EventStorming)
+- Story map — design/<name>.story-map.yaml — scope and releases; stories can be proposed from EventStorming or a domain story
+- Kanban — design/<name>.kanban.yaml — the work; cards trace to stories
+- Wireframe — design/<name>.wireframe.yaml — one page or screen on a 12-column grid
+- Domain Storytelling — design/<name>.domain-story.yaml — who does what with what, numbered sentences; Egon.io import/export
+- Journey — design/<name>.journey.yaml — a persona's stages, emotions, pains
+- Workflow — an agent pipeline (workflow yaml)
+Link elements across diagrams with \`traces\` (derived-from, groups, shows, relates).`
+
+/** The \`unprose_help\` answer: what Unprose can do and how to start. */
+export function helpText(o: { designTools: boolean; prompts: string[]; canvas: string; version?: string }): string {
+  const tools = [
+    'Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open',
+    'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
+    'Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person\'s page to an item or frame)',
+    ...(o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
+  ]
+  return [
+    ABOUT,
+    '',
+    DIAGRAMS,
+    '',
+    'Tools:',
+    ...tools.map((t) => `- ${t}`),
+    '',
+    `The loop: ${LOOP_HELP}`,
+    '',
+    'Ways to start (Claude Code slash commands; other agents get the same as MCP prompts):',
+    '- /unprose:eventstorm <topic> — run an EventStorming on the canvas',
+    '- /unprose:storymap — turn the EventStorming into a story map with a first release',
+    '- /unprose:kanban — a kanban of a release\'s stories',
+    '- /unprose:wireframe <page> — sketch a page',
+    '- /unprose:domain-story <topic> — tell a process as a domain story',
+    '- /unprose:review — answer every open comment on a board',
+    ...(o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(', ')}`] : []),
+    '',
+    `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
+  ].join('\n')
+}
+
 /**
  * The project an agent session works in: \`CLAUDE_PROJECT_DIR\` (set by Claude Code), else the working
  * directory — lifted to its git top level. None for the home directory or the filesystem root (a
@@ -45,10 +89,32 @@ export function sessionProjectRoot(env: NodeJS.ProcessEnv = process.env, cwd = p
 export interface McpOptions {
   /** The session's project id on this canvas: new boards go there, and board lists show its boards first. */
   project?: string
+  /** More tools and prompts (the \`awd\` CLI adds the design_* tools and the prompts); runs after the canvas tools. */
+  extend?: (server: McpServer, ctx: { client: CanvasClient; project?: string }) => { designTools?: boolean; prompts?: string[] } | void
 }
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
-  const server = new McpServer({ name: 'awd-canvas', version: '0.5.2' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
+  const server = new McpServer(
+    { name: 'unprose', version: '0.6.0' },
+    { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
+  )
+  let extra: { designTools?: boolean; prompts?: string[] } = {}
+
+  server.registerTool(
+    'unprose_help',
+    {
+      title: 'What Unprose can do',
+      description: 'What Unprose can do — the diagrams, the tools, the comment loop and the ways to start (slash commands / prompts). Call it when the person asks what Unprose is, what it can do, or how to begin; pass the answer on in their language.',
+      inputSchema: {},
+    },
+    async () => {
+      const version = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2000) })
+        .then((r) => (r.ok ? (r.json() as Promise<{ version?: string }>) : {}))
+        .then((j) => (j as { version?: string }).version)
+        .catch(() => undefined)
+      return text(helpText({ designTools: !!extra.designTools, prompts: extra.prompts ?? [], canvas: client.baseUrl, version }))
+    },
+  )
 
   server.registerTool(
     'canvas_list_boards',
@@ -208,22 +274,23 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     },
   )
 
+  extra = opts.extend?.(server, { client, project: opts.project }) ?? {}
   return server
 }
 
-export async function runMcp(): Promise<void> {
+export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
   // Fail with the reason, not as a bare "Connection closed" in the agent (river0825/unprose#5).
   const raw = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400'
   let base: string
   try {
     base = canvasOrigin(raw)
   } catch {
-    process.stderr.write(`awd-canvas MCP: AWD_CANVAS_URL "${raw}" is not a URL. Set it to the canvas address, e.g. http://localhost:4400 or https://canvas.example.com\n`)
+    process.stderr.write(`unprose MCP: AWD_CANVAS_URL "${raw}" is not a URL. Set it to the canvas address, e.g. http://localhost:4400 or https://canvas.example.com\n`)
     process.exit(2)
   }
   const probe = await probeCanvas(base)
   if (!probe.ok) {
-    process.stderr.write(`awd-canvas MCP: cannot reach ${base} (${probe.reason}). Start the canvas (\`npm start\`) or set AWD_CANVAS_URL to where it runs.\n`)
+    process.stderr.write(`unprose MCP: cannot reach ${base} (${probe.reason}). Start the canvas (\`npm start\`) or set AWD_CANVAS_URL to where it runs.\n`)
     process.exit(1)
   }
   process.env.AWD_CANVAS_URL = base
@@ -235,9 +302,9 @@ export async function runMcp(): Promise<void> {
     try {
       project = (await new CanvasClient(base).registerProject(root)).id
     } catch (e) {
-      process.stderr.write(`awd-canvas MCP: boards stay in the canvas's personal space (${root} not registered: ${(e as Error).message})\n`)
+      process.stderr.write(`unprose MCP: boards stay in the canvas's personal space (${root} not registered: ${(e as Error).message})\n`)
     }
   }
-  const server = createMcpServer(new CanvasClient(base), { project })
+  const server = createMcpServer(new CanvasClient(base), { project, extend })
   await server.connect(new StdioServerTransport())
 }

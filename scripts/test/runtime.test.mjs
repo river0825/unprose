@@ -114,8 +114,8 @@ test('a canvas running the plugin’s code (any installed version or its runtime
 
 test("the plugin's MCP server resolves to the plugin's scripts/mcp.mjs, never the user's project", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(repo, '.claude-plugin/plugin.json'), 'utf8'))
-  const server = manifest.mcpServers?.['awd-canvas']
-  assert.ok(server, 'plugin.json declares the awd-canvas server itself (not only a root .mcp.json)')
+  const server = manifest.mcpServers?.unprose
+  assert.ok(server, 'plugin.json declares the unprose server itself (not only a root .mcp.json)')
   // Claude Code substitutes plain ${NAME} (docs: plugins-reference → Environment variables); no shell defaults
   const all = JSON.stringify(manifest) + fs.readFileSync(path.join(repo, 'hooks/hooks.json'), 'utf8')
   assert.doesNotMatch(all, /\$\{[A-Za-z_][A-Za-z0-9_]*:-/, 'no ${VAR:-default}: it once resolved to "." = the project dir')

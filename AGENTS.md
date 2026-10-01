@@ -24,11 +24,11 @@ node scripts/canvas.mjs       # canvas on http://localhost:4400 — runs as ship
 Boards live in the project: `<project>/.unprose/boards/` (commit the `*.json` snapshots; the change logs
 are ignored). One canvas serves several projects; `awd boards move <board> --to <dir>` moves an older board in.
 
-Register the MCP server `awd-canvas` in your agent (see `docs/agents-setup.md`): it runs
+Register the MCP server `unprose` in your agent (see `docs/agents-setup.md`): it runs
 `node scripts/mcp.mjs` and talks to the canvas at `AWD_CANVAS_URL` (default `http://localhost:4400`).
 For a canvas elsewhere (tunnel, another host) set `AWD_CANVAS_URL=https://canvas.example.com` — a pasted
 board link works too. If it cannot be reached, the MCP server exits with
-`awd-canvas MCP: cannot reach <url> (<reason>)` instead of a bare "Connection closed". The CLI takes
+`unprose MCP: cannot reach <url> (<reason>)` instead of a bare "Connection closed". The CLI takes
 `--canvas <url>`.
 
 ## Commands
@@ -40,6 +40,11 @@ board link works too. If it cannot be reached, the MCP server exits with
 | Story candidates from EventStorming | `node scripts/awd.mjs design propose-stories design/x.es.yaml --into design/x.story-map.yaml --board …` |
 | A workflow as a board | `node scripts/awd.mjs graph <workflow.yaml> --canvas` |
 | Lint / golden-test a workflow | `node scripts/awd.mjs lint <wf>` · `… test <wf>` |
+
+The MCP server also carries the diagram-file tools (`design_lint`, `design_draw`, `design_propose_stories`,
+`design_egon`), `unprose_help` (what Unprose can do, to pass on to the person) and start prompts (`eventstorm`,
+`storymap`, `kanban`, `wireframe`, `domain-story`, `review`, `help`); in Claude Code the plugin offers the same as
+`/unprose:<name>` slash commands.
 
 ## The loop
 
