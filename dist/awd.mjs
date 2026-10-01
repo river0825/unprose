@@ -35556,7 +35556,8 @@ var init_studio = __esm({
       kanban: "Kanban: a card groups related stories; columns are matched by their text; moving a card may trigger a workflow.",
       workflow: "Workflow: the board is a projection of the workflow yaml; wires are events (docs/studio.md \xA77).",
       wireframe: "Wireframe: screens on a 12-column grid; elements inside their screen.",
-      "domain-story": "Domain Storytelling: actors, work objects and numbered activities that read as sentences."
+      "domain-story": "Domain Storytelling: actors, work objects and numbered activities that read as sentences.",
+      "ui-mock": "UI mock: screens as a component tree in design/<name>.ui.yaml (docs/diagrams.md \xA76c); the selected element is data.element = <screen>/<element>, its place in the file is data.ui.path; words edited on the board are proposals until you apply them; positions on the board are the person's layout, not the file's."
     };
     briefKey = (req) => req.key ?? req.session.replace(/^awd-studio-/, "");
     slug2 = (s) => s.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
@@ -36533,7 +36534,11 @@ function withPresentation(drawn, was) {
   const kept = Object.fromEntries(PRESENTATION.filter((k2) => was.data && k2 in was.data).map((k2) => [k2, was.data[k2]]));
   return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn;
 }
-function isResolved(p, drawn) {
+function isResolved(p, drawn, itemId) {
+  if (p.kind === "text") {
+    const now = itemId ? drawn.find((d) => d.id === itemId) : void 0;
+    return !now || (now.text ?? "") === (p.after?.text ?? "");
+  }
   if (p.trace)
     return drawn.some((d) => (d.data?.traces ?? []).some((t) => t.from === p.trace.from && t.rel === p.trace.rel));
   const wires = drawn.filter((d) => d.type === "arrow" && wireOf(d));
@@ -36550,7 +36555,7 @@ function planRedraw(board, drawn, placed, scope = { prefix: SCOPE }) {
     const p = pendingOf(it);
     if (!p || !owned(it))
       continue;
-    if (!isResolved(p, drawn))
+    if (!isResolved(p, drawn, it.id))
       held.add(it.id);
     else if (!drawnIds.has(it.id))
       ops.push({ kind: "remove", id: it.id });
@@ -38306,8 +38311,8 @@ var init_checks = __esm({
       (_a4 = inst._zod.def).when ?? (_a4.when = _whenHasSize);
       inst._zod.check = (payload) => {
         const input2 = payload.value;
-        const size = input2.size;
-        if (size <= def2.maximum)
+        const size2 = input2.size;
+        if (size2 <= def2.maximum)
           return;
         payload.issues.push({
           origin: getSizableOrigin(input2),
@@ -38326,8 +38331,8 @@ var init_checks = __esm({
       (_a4 = inst._zod.def).when ?? (_a4.when = _whenHasSize);
       inst._zod.check = (payload) => {
         const input2 = payload.value;
-        const size = input2.size;
-        if (size >= def2.minimum)
+        const size2 = input2.size;
+        if (size2 >= def2.minimum)
           return;
         payload.issues.push({
           origin: getSizableOrigin(input2),
@@ -38346,10 +38351,10 @@ var init_checks = __esm({
       (_a4 = inst._zod.def).when ?? (_a4.when = _whenHasSize);
       inst._zod.check = (payload) => {
         const input2 = payload.value;
-        const size = input2.size;
-        if (size === def2.size)
+        const size2 = input2.size;
+        if (size2 === def2.size)
           return;
-        const tooBig = size > def2.size;
+        const tooBig = size2 > def2.size;
         payload.issues.push({
           origin: getSizableOrigin(input2),
           ...tooBig ? { code: "too_big", maximum: def2.size } : { code: "too_small", minimum: def2.size },
@@ -51601,11 +51606,11 @@ function _minSize(minimum, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _size(size, params) {
+function _size(size2, params) {
   return new $ZodCheckSizeEquals({
     check: "size_equals",
     ...normalizeParams(params),
-    size
+    size: size2
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -55449,8 +55454,8 @@ var init_schemas2 = __esm({
       $ZodFile.init(inst, def2);
       ZodType.init(inst, def2);
       inst._zod.processJSONSchema = (ctx, json2, params) => fileProcessor(inst, ctx, json2, params);
-      inst.min = (size, params) => inst.check(_minSize(size, params));
-      inst.max = (size, params) => inst.check(_maxSize(size, params));
+      inst.min = (size2, params) => inst.check(_minSize(size2, params));
+      inst.max = (size2, params) => inst.check(_maxSize(size2, params));
       inst.mime = (types, params) => inst.check(_mime(Array.isArray(types) ? types : [types], params));
     });
     ZodTransform = /* @__PURE__ */ $constructor("ZodTransform", (inst, def2) => {
@@ -57426,6 +57431,275 @@ var init_domainStory = __esm({
   }
 });
 
+// packages/canvas/dist/diagrams/uiMock.js
+function itemsOf(items, active) {
+  if (!items)
+    return void 0;
+  return items.map((it, i) => {
+    const o = typeof it === "string" ? { text: it } : it;
+    const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
+    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {} };
+  });
+}
+function normalizeUiMock(raw) {
+  const c2 = uiMockSchema.parse(raw);
+  const usedScreens = /* @__PURE__ */ new Set();
+  const screens = c2.screens.map((s, si) => {
+    let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
+    for (let n = 2; usedScreens.has(sid); n++)
+      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n}`;
+    usedScreens.add(sid);
+    const device = s.device ?? c2.device ?? "desktop";
+    const theme = { theme: s.theme ?? c2.theme ?? "light", accent: c2.tokens?.accent ?? DEFAULT_ACCENT, radius: c2.tokens?.radius ?? 8, font: c2.tokens?.font ?? "sans" };
+    const used = /* @__PURE__ */ new Set();
+    const alloc = (explicit, text3, type) => {
+      const base = explicit && explicit.trim() || slugify2(text3 ?? "") || type;
+      let id = base;
+      for (let n = 2; used.has(id); n++)
+        id = `${base}-${n}`;
+      used.add(id);
+      return id;
+    };
+    const el = (n, path22) => {
+      const { type, id: _id, text: text3, label, children, note, goto, traces: traces2, items, ...props } = n;
+      const words = text3 ?? label;
+      const id = alloc(n.id, words, type);
+      return {
+        id,
+        ref: `${sid}/${id}`,
+        type,
+        ...words !== void 0 ? { text: words } : {},
+        textKey: text3 === void 0 && label !== void 0 ? "label" : "text",
+        path: path22,
+        children: (children ?? []).map((ch, i) => el(ch, [...path22, "children", i])),
+        props: { ...props, ...items ? { items: itemsOf(items, n.active) } : {} },
+        ...note ? { note } : {},
+        ...goto ? { goto } : {},
+        traces: traces2 ?? []
+      };
+    };
+    return {
+      id: sid,
+      name: s.name,
+      device,
+      w: s.w ?? UI_DEVICES[device].w,
+      minH: s.h ?? UI_DEVICES[device].h,
+      pad: s.pad ?? 0,
+      gap: s.gap ?? 0,
+      theme,
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? [],
+      path: ["screens", si],
+      body: s.body.map((n, i) => el(n, ["screens", si, "body", i]))
+    };
+  });
+  return { screens, flows: c2.flows };
+}
+function walkUi(els) {
+  return els.flatMap((e) => [e, ...walkUi(e.children)]);
+}
+function checkUiMock(raw) {
+  const m2 = normalizeUiMock(raw);
+  const out = [];
+  const screens = new Set(m2.screens.map((s) => s.id));
+  const refs2 = new Set(m2.screens.flatMap((s) => walkUi(s.body).map((e) => e.ref)));
+  const icons = new Set(UI_ICONS);
+  for (const s of m2.screens) {
+    const explicit = /* @__PURE__ */ new Map();
+    for (const e of walkUi(s.body)) {
+      const given = e.path.reduce((node3, k2) => node3?.[k2], raw);
+      if (given?.id)
+        explicit.set(given.id, (explicit.get(given.id) ?? 0) + 1);
+      if (e.goto && !screens.has(e.goto))
+        out.push({ severity: "warning", element: e.ref, message: `goto: no screen "${e.goto}" (screens: ${[...screens].join(", ")})` });
+      const cols = e.props.columns?.length;
+      if (e.type === "table" && cols)
+        e.props.rows?.forEach((r, i) => r.length !== cols && out.push({ severity: "warning", element: e.ref, message: `table row ${i + 1} has ${r.length} cells for ${cols} columns` }));
+      for (const ic of [e.props.icon, ...(e.props.items ?? []).map((i) => i.icon)])
+        if (ic && !icons.has(ic))
+          out.push({ severity: "info", element: e.ref, message: `icon "${ic}" is not one the canvas draws (${UI_ICONS.join(", ")})` });
+      if (e.type === "button" && !e.text && !e.props.icon)
+        out.push({ severity: "warning", element: e.ref, message: "a button with neither text nor icon" });
+      if (e.children.length && !isLayout(e.type) && !isDrawnContainer(e.type))
+        out.push({ severity: "warning", element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) \u2014 they are not drawn` });
+      if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
+        out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
+    }
+    for (const [id, n] of explicit)
+      if (n > 1)
+        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n} times in screen ${s.id}; the others become ${id}-2 \u2026` });
+  }
+  for (const f of m2.flows) {
+    if (!screens.has(f.to))
+      out.push({ severity: "warning", message: `flow to "${f.to}": no such screen` });
+    if (!screens.has(f.from) && !refs2.has(f.from))
+      out.push({ severity: "warning", message: `flow from "${f.from}": no such screen or <screen>/<element>` });
+  }
+  return out;
+}
+var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, listItem, uiNodeSchema, uiMockSchema, DEFAULT_ACCENT, isDrawnContainer, isLayout;
+var init_uiMock = __esm({
+  "packages/canvas/dist/diagrams/uiMock.js"() {
+    init_zod();
+    init_ids2();
+    UI_LAYOUT = ["stack", "row", "grid"];
+    UI_BOXES = ["card", "section", "navbar"];
+    UI_LEAVES = [
+      "heading",
+      "text",
+      "link",
+      "button",
+      "input",
+      "textarea",
+      "select",
+      "search",
+      "checkbox",
+      "radio",
+      "toggle",
+      "badge",
+      "avatar",
+      "icon",
+      "divider",
+      "image",
+      "table",
+      "list",
+      "stat",
+      "alert",
+      "progress",
+      "tabs",
+      "breadcrumb",
+      "pagination",
+      "spacer",
+      "empty",
+      "chart",
+      "sidebar"
+    ];
+    UI_TYPES = [...UI_LAYOUT, ...UI_BOXES, ...UI_LEAVES];
+    UI_ICONS = [
+      "plus",
+      "search",
+      "settings",
+      "user",
+      "users",
+      "bell",
+      "home",
+      "chevron-right",
+      "chevron-down",
+      "check",
+      "x",
+      "more",
+      "folder",
+      "file",
+      "star",
+      "trash",
+      "edit",
+      "arrow-left",
+      "arrow-right",
+      "menu",
+      "filter",
+      "calendar",
+      "mail",
+      "lock",
+      "board",
+      "chart",
+      "link",
+      "download",
+      "upload",
+      "eye",
+      "heart",
+      "comment"
+    ];
+    UI_DEVICES = { desktop: { w: 1280, h: 800 }, laptop: { w: 1024, h: 680 }, tablet: { w: 768, h: 1024 }, phone: { w: 390, h: 844 } };
+    tone = external_exports.enum(["neutral", "info", "success", "warning", "danger"]);
+    size = external_exports.enum(["sm", "md", "lg"]);
+    listItem = external_exports.union([
+      external_exports.string(),
+      external_exports.object({ id: external_exports.string().optional(), text: external_exports.string(), meta: external_exports.string().optional(), icon: external_exports.string().optional(), badge: external_exports.string().optional(), active: external_exports.boolean().optional() })
+    ]);
+    uiNodeSchema = external_exports.lazy(() => external_exports.object({
+      type: external_exports.enum(UI_TYPES),
+      /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
+      id: external_exports.string().optional(),
+      /** The element's words: a button's label, a heading, a card's title, a form field's label. */
+      text: external_exports.string().optional(),
+      /** Form fields: the label (same as `text`). */
+      label: external_exports.string().optional(),
+      children: external_exports.array(uiNodeSchema).optional(),
+      gap: external_exports.number().min(0).optional(),
+      pad: external_exports.number().min(0).optional(),
+      align: external_exports.enum(["start", "center", "end", "stretch"]).optional(),
+      justify: external_exports.enum(["start", "center", "end", "between"]).optional(),
+      /** grid: columns (default 3). */
+      cols: external_exports.number().int().min(1).max(12).optional(),
+      /** In a row: columns of 12 this element takes. */
+      span: external_exports.number().int().min(1).max(12).optional(),
+      /** Fixed width / height in px. */
+      w: external_exports.number().min(1).optional(),
+      h: external_exports.number().min(1).optional(),
+      bg: external_exports.enum(["surface", "muted", "accent", "none"]).optional(),
+      /** button: primary | secondary | ghost | danger; text: body | muted | small | code; card: flat | elevated; list: plain; chart: bar | line. */
+      variant: external_exports.string().optional(),
+      /** heading: 1..4 */
+      level: external_exports.number().int().min(1).max(4).optional(),
+      tone: tone.optional(),
+      size: size.optional(),
+      icon: external_exports.string().optional(),
+      /** navbar links, sidebar, tabs, list rows, breadcrumb, select options. */
+      items: external_exports.array(listItem).optional(),
+      /** The selected entry of items: its text or index. */
+      active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+      columns: external_exports.array(external_exports.string()).optional(),
+      rows: external_exports.array(external_exports.array(external_exports.union([external_exports.string(), external_exports.number()]))).optional(),
+      value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+      placeholder: external_exports.string().optional(),
+      hint: external_exports.string().optional(),
+      checked: external_exports.boolean().optional(),
+      /** image: '16:9' (default), '4:3', '1:1' … */
+      ratio: external_exports.string().optional(),
+      /** stat: '+12%' / '-3' — the change, coloured by its sign. */
+      delta: external_exports.string().optional(),
+      /** An open question about this element (a comment bubble on the board). */
+      note: external_exports.string().optional(),
+      /** Tapping this element goes to that screen: a flow arrow. */
+      goto: external_exports.string().optional(),
+      traces: external_exports.array(traceSchema).optional()
+    }));
+    uiMockSchema = external_exports.object({
+      /** Default device for every screen. */
+      device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+      /** The mock's own theme (independent of the canvas theme). */
+      theme: external_exports.enum(["light", "dark"]).optional(),
+      tokens: external_exports.object({
+        /** Accent colour (#rgb / #rrggbb). */
+        accent: external_exports.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i).optional(),
+        /** Corner radius in px (default 8). */
+        radius: external_exports.number().min(0).max(32).optional(),
+        font: external_exports.enum(["sans", "serif", "mono", "rounded"]).optional()
+      }).optional(),
+      screens: external_exports.array(external_exports.object({
+        id: external_exports.string().optional(),
+        name: external_exports.string(),
+        device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+        /** Width / minimum height in px (default: the device's). */
+        w: external_exports.number().min(200).max(4e3).optional(),
+        h: external_exports.number().min(200).max(8e3).optional(),
+        theme: external_exports.enum(["light", "dark"]).optional(),
+        /** Padding and gap of the screen's body (default 0: put content in a section). */
+        pad: external_exports.number().min(0).optional(),
+        gap: external_exports.number().min(0).optional(),
+        note: external_exports.string().optional(),
+        traces: external_exports.array(traceSchema).optional(),
+        body: external_exports.array(uiNodeSchema).default([])
+      })).min(1),
+      /** Arrows between screens: from a screen or '<screen>/<element>' to a screen. */
+      flows: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), label: external_exports.string().optional() })).default([])
+    });
+    DEFAULT_ACCENT = "#4f46e5";
+    isDrawnContainer = (t) => UI_BOXES.includes(t);
+    isLayout = (t) => UI_LAYOUT.includes(t);
+  }
+});
+
 // packages/canvas/dist/diagrams/grammar.js
 function checkEventStorming(content) {
   const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
@@ -57996,6 +58270,15 @@ var init_domain_story = __esm({
   }
 });
 
+// packages/canvas/dist/templates/ui-mock.js
+var init_ui_mock = __esm({
+  "packages/canvas/dist/templates/ui-mock.js"() {
+    init_uiMock();
+    init_util2();
+    init_uiMock();
+  }
+});
+
 // packages/canvas/dist/templates/frame.js
 var init_frame = __esm({
   "packages/canvas/dist/templates/frame.js"() {
@@ -58017,6 +58300,7 @@ var init_templates = __esm({
     init_workflow();
     init_kanban();
     init_domain_story();
+    init_ui_mock();
     init_util2();
     init_util2();
     init_event_storming();
@@ -58026,6 +58310,7 @@ var init_templates = __esm({
     init_workflow();
     init_frame();
     init_domain_story();
+    init_ui_mock();
     init_kanban();
     itemTypes = ["sticky", "text", "frame", "lane", "arrow", "comment", "wireframe", "card"];
     colorTokens = ["orange", "blue", "yellow", "pale-yellow", "lilac", "green", "pink", "red", "purple", "grey", "white"];
@@ -58056,6 +58341,7 @@ var init_templates = __esm({
       workflow: workflowSchema,
       kanban: kanbanSchema,
       "domain-story": domainStorySchema,
+      "ui-mock": uiMockSchema,
       freeform: freeformSchema
     };
     diagramKinds = Object.keys(contentSchemas);
@@ -58135,6 +58421,7 @@ var init_diagrams = __esm({
     init_eventStorming();
     init_userStoryMap();
     init_domainStory();
+    init_uiMock();
     init_grammar();
     init_proposeStories();
     init_egon();
@@ -58225,6 +58512,8 @@ function lintDesign(d, file2) {
     return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
   if (d.kind === "domain-story")
     return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+  if (d.kind === "ui-mock")
+    return [...unknown2, ...checkUiMock(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element }))];
   if (d.kind !== "event-storming")
     return unknown2;
   return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
@@ -58472,6 +58761,9 @@ var init_design = __esm({
       dst: "domain-story",
       journey: "user-journey",
       "user-journey": "user-journey",
+      ui: "ui-mock",
+      mockup: "ui-mock",
+      "ui-mock": "ui-mock",
       workflow: "workflow"
     };
     CARD_W3 = 180;
@@ -66947,8 +67239,8 @@ var init_types3 = __esm({
           maxSize: { value: maxSize, message: errorUtil.toString(message) }
         });
       }
-      size(size, message) {
-        return this.min(size, message).max(size, message);
+      size(size2, message) {
+        return this.min(size2, message).max(size2, message);
       }
       nonempty(message) {
         return this.min(1, message);
@@ -74223,6 +74515,7 @@ function helpText(o) {
     "- /unprose:storymap \u2014 turn the EventStorming into a story map with a first release",
     "- /unprose:kanban \u2014 a kanban of a release's stories",
     "- /unprose:wireframe <page> \u2014 sketch a page",
+    "- /unprose:mockup <screen> \u2014 mock a screen as real-looking UI",
     "- /unprose:domain-story <topic> \u2014 tell a process as a domain story",
     "- /unprose:review \u2014 answer every open comment on a board",
     ...o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(", ")}`] : [],
@@ -74243,7 +74536,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os2.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.7" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.7.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",
@@ -74428,6 +74721,7 @@ var init_mcp2 = __esm({
 - user-story-map: { activities: [{id?, text, steps: [{id?, text, stories: [{id?, text, release?, acceptance?: string[], traces?: [{from: '<diagram key>/<element id>', rel: 'derived-from'|'groups'|'shows'}]}]}]}], releases?: string[] }  (releases are cut lines, top to bottom)
 - user-journey: { persona, stages: [{text, actions?, touchpoints?, emotion: -2..2, pains?, opportunities?}] }
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
+- ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; text edited on the board comes back as a proposal (data.pending.kind 'text') with a diff to apply.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
 - domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
@@ -74440,6 +74734,7 @@ var init_mcp2 = __esm({
 - Story map \u2014 design/<name>.story-map.yaml \u2014 scope and releases; stories can be proposed from EventStorming or a domain story
 - Kanban \u2014 design/<name>.kanban.yaml \u2014 the work; cards trace to stories
 - Wireframe \u2014 design/<name>.wireframe.yaml \u2014 one page or screen on a 12-column grid
+- UI mock \u2014 design/<name>.ui.yaml \u2014 real-looking screens (desktop / tablet / phone) from a component tree; the person comments on single elements, words edited on the board are proposals with a diff
 - Domain Storytelling \u2014 design/<name>.domain-story.yaml \u2014 who does what with what, numbered sentences; Egon.io import/export
 - Journey \u2014 design/<name>.journey.yaml \u2014 a persona's stages, emotions, pains
 - Workflow \u2014 an agent pipeline (workflow yaml)
@@ -74527,6 +74822,17 @@ ${CLOSE}`
         fallback: "the page we are discussing \u2014 ask me which one",
         body: `Sketch a wireframe of {arg} on the Unprose canvas.
 Write design/<name>.wireframe.yaml on the 12-column grid (headings, inputs, buttons, lists, tables) with a note on every element that is still an open question. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+${CLOSE}`
+      },
+      {
+        name: "mockup",
+        title: "UI mock",
+        description: "Mock a screen as real-looking UI and discuss it on the canvas",
+        arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
+        fallback: "the screen we are discussing \u2014 ask me which one",
+        body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
       },
       {

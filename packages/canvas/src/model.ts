@@ -9,6 +9,7 @@ export type DiagramKind =
   | 'workflow'
   | 'kanban'
   | 'domain-story'
+  | 'ui-mock'
   | 'freeform'
 
 export type ItemType =
@@ -20,6 +21,8 @@ export type ItemType =
   | 'comment'
   | 'wireframe'
   | 'card'
+  /** A UI mock element (docs/diagrams.md §6c): drawn from `data.ui` by the web's design system. */
+  | 'ui'
 
 export type Author = 'agent' | 'user'
 

@@ -347,6 +347,7 @@ const GRAMMAR: Record<string, string> = {
   workflow: 'Workflow: the board is a projection of the workflow yaml; wires are events (docs/studio.md §7).',
   wireframe: 'Wireframe: screens on a 12-column grid; elements inside their screen.',
   'domain-story': 'Domain Storytelling: actors, work objects and numbered activities that read as sentences.',
+  'ui-mock': 'UI mock: screens as a component tree in design/<name>.ui.yaml (docs/diagrams.md §6c); the selected element is data.element = <screen>/<element>, its place in the file is data.ui.path; words edited on the board are proposals until you apply them; positions on the board are the person\'s layout, not the file\'s.',
 }
 
 /** The diagrams the selection is in, and the trace wires (role `trace`) between the selection and anything else. */

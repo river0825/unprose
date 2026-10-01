@@ -21,6 +21,7 @@ const KIND_NAMES: Record<string, string> = {
   'user-journey': 'Journey',
   kanban: 'Kanban',
   wireframe: 'Wireframe',
+  'ui-mock': 'UI mock',
   workflow: 'Workflow',
 }
 

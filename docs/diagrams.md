@@ -13,7 +13,7 @@ A board is a space. A **diagram frame** is a `frame` item whose `data.diagram` s
 
 ```ts
 data.diagram = {
-  kind: 'event-storming' | 'user-story-map' | 'kanban' | 'wireframe' | 'workflow' | 'domain-story' | 'user-journey',
+  kind: 'event-storming' | 'user-story-map' | 'kanban' | 'wireframe' | 'workflow' | 'domain-story' | 'user-journey' | 'ui-mock',
   key: string,        // stable, human-readable, unique on the board: 'studio-es'. Made once, survives renames.
   source?: string,    // repo-relative file behind it: 'design/studio.es.yaml' (workflow: the workflow yaml)
   level?: string,     // event-storming: 'big-picture' | 'process' | 'software'
@@ -38,7 +38,7 @@ Each non-workflow diagram frame is backed by one YAML file under `design/` in th
 content is the template's schema (zod-validated), extended with **stable element ids** and **trace links**.
 
 - The filename names the diagram: `<kind>` is `es`, `story-map` (or `usm`), `kanban`, `wireframe`,
-  `domain-story`, `journey`; the **key is `<name>-<kind>`** — `design/studio.es.yaml` → `studio-es`,
+  `domain-story`, `journey`, `ui` (or `mockup`, §6c); the **key is `<name>-<kind>`** — `design/studio.es.yaml` → `studio-es`,
   `design/studio.story-map.yaml` → `studio-story-map` — so the diagrams of one topic never clash on a board.
   Top-level `key:`, `kind:` and `title:` in the file win over the filename and are not template content.
 - A **workflow** file (`<name>.workflow.yaml`, or any file with top-level `steps:`) is drawn with the
@@ -195,6 +195,86 @@ annotations: [{ on: clerk, text: Cash only }]
 - *Inferred, not stated by the site:* the default work-object kind (document), the icons, the grid-based placement, the
   `toLabel` field (Egon labels both arrows), treating a sentence without a work object as an actor → actor
   activity.
+
+## 6c. UI mock — real-looking screens to discuss, like a Figma frame
+
+A wireframe (low-fi boxes on a 12-column grid) settles *what is on a page*. A **UI mock** shows *what it will look
+like*: real components, real copy, a device size, light or dark — so the person can point at one button and say
+"this should be secondary", the way a team comments on a Figma frame.
+
+**Options we weighed.**
+- **(a) A native frame kind backed by a file** (chosen). The agent writes `design/<name>.ui.yaml`; the canvas draws
+  it. Files stay the truth, the agent can edit every pixel of it, each element is a board item, so selection,
+  comments, chats, traces, Copy as image and "keep the person's layout" all work unchanged.
+  - *Format:* HTML + CSS is what models write best, but rendering it would need a sandboxed iframe per screen
+    (the canvas has no auth and can sit behind a tunnel), its elements would not be board items (no per-element
+    comments, no proposals), and a diff to arbitrary HTML is hard to map back from a canvas edit. So the file is a
+    **constrained component tree in YAML** with a small design system, drawn by React — no HTML from the file is
+    ever rendered, nothing runs, nothing loads.
+- **(b) Embedding real Figma** (`https://www.figma.com/embed?embed_host=…&url=…`). Cheap to show, but read-only:
+  the agent cannot edit Figma, the person's comments land on the whole frame, a private file needs the viewer's
+  Figma login (or a REST token for import), and the iframe would load a third-party site into the canvas. Not
+  done now; a link frame (an embed shown as one item, commentable as a whole) is a small follow-up if wanted.
+
+**File** `design/<name>.ui.yaml` (key `<name>-ui`; `.mockup.yaml` works too):
+
+```yaml
+device: desktop              # desktop 1280×800 · laptop 1024×680 · tablet 768×1024 · phone 390×844
+theme: light                 # the mock's theme, independent of the canvas theme; per screen too
+tokens: { accent: '#1f56d6', radius: 8, font: sans }   # sans | serif | mono | rounded
+screens:
+  - id: boards
+    name: Boards
+    body:                    # a vertical stack, padding 0 — put content in a section
+      - { type: navbar, text: Unprose, items: [Boards, Docs], active: Boards }
+      - type: section        # padding 24, gap 12
+        children:
+          - type: row
+            justify: between
+            children:
+              - { type: heading, id: title, text: Boards, level: 1 }
+              - { type: button, id: new-board, text: New board, icon: plus, goto: new-board, note: Or a + in the navbar? }
+          - type: grid
+            cols: 3
+            children: [{ type: card, id: studio, text: Studio design, children: [{ type: badge, text: Freeform }] }]
+  - { id: new-board, name: New board, device: phone, theme: dark, body: [ … ] }
+flows: [{ from: boards/studio, to: new-board, label: open }]
+```
+
+- **Components.** Layout (not drawn): `stack` (vertical, `gap`, `pad`, `align`), `row` (children take `span` of 12,
+  a fixed `w`, hug their content — button, link, badge, avatar, icon, checkbox, toggle — or share what is left;
+  `justify: start|center|end|between`; cards and sidebars stretch to the row's height), `grid` (`cols`). Drawn
+  containers: `card` (`text` = title, `variant: flat|elevated`), `section` (`bg: surface|muted|accent`), `navbar`
+  (`text` = brand, `items` = links, `active`; its children sit at the right end). Elements: `heading` (`level` 1–4),
+  `text` (`variant: muted|small|code`), `link`, `button` (`variant: primary|secondary|ghost|danger|link`, `icon`,
+  `size`), `input` / `textarea` / `select` / `search` (`label`, `placeholder`, `value`, `hint`), `checkbox`, `radio`,
+  `toggle` (`checked`), `badge` (`tone: neutral|info|success|warning|danger`; a status word picks its tone), `avatar`
+  (initials), `icon`, `divider`, `image` (a placeholder; `ratio`, `h`), `table` (`columns`, `rows`; a cell `[Done]`
+  is a status badge), `list` (`items: [text | { text, meta, icon, badge }]`), `stat` (`value`, `delta`), `alert`
+  (`tone`), `progress` (`value` 0–100), `tabs`, `breadcrumb`, `pagination`, `spacer`, `empty`, `chart` (`variant:
+  bar|line`, `rows: [[numbers]]`), `sidebar` (`items` with `icon` / `badge`, `active`). Icons are a small set of
+  our own line glyphs (`plus search settings user users bell home menu filter …`; lint lists them).
+- **Ids.** Every element has an id unique in its screen — `id`, else the slug of its text, else its type — and is
+  referenced as `<screen>/<element>` (traces from other diagrams: `<key>/<screen>/<element>`). Give an explicit `id`
+  to anything you will talk about: a default id follows the words, so rewording it in the file makes a new item.
+- **Drawn** as screens side by side, each a device frame with its name above it, and one `ui` board item per
+  drawn element (`role` = its type) inside its screen / card / section / navbar, at the position the template's
+  layout gives it (text is measured approximately). Ids: `<key>.screen.<screen>`, `<key>.ui.<screen>.<element>`;
+  `data.element` carries the reference, `data.ui` the props, the screen's look and the element's `path` in the
+  file. `goto: <screen>` on an element and `flows` draw `navigate` arrows to the target screen. `note` is a comment
+  bubble; `traces` work as everywhere (a screen `shows` a story).
+- **Talking about it.** Select an element to comment on it or chat about it (the brief names the diagram and file).
+  Moving or resizing elements is the person's layout on this board: kept on redraw, never written to the file.
+  **Editing an element's words on the board is a proposal**: the item keeps the new words and `data.pending =
+  { kind: 'text', before, after, path, key }`, tagged "proposed"; the panel shows before → after and the
+  unified diff to the file, with **Ask AI to apply** (a chat request carrying `discuss.edit = { file, base, diff }`,
+  the source dialog's protocol, docs/studio.md §9) and **Undo**. A redraw whose file says the new words — or no
+  longer has the element — settles it.
+- **Lint** (`awd design lint`, offline): the schema with unknown fields, plus `goto` / `flows` to screens that do
+  not exist, table rows whose cell count differs from the columns, unknown icons, children under an element that
+  cannot hold them, ids used twice in a screen.
+- *Not (yet):* real images, overlays (a modal is a card in the flow), responsive reflow when the person resizes a
+  screen, editing table cells or list items in place (ask in a chat), Figma import.
 
 ## 7. Board triggers point at a frame key
 

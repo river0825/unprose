@@ -7,6 +7,7 @@ import { wireframeSchema, renderWireframe } from './wireframe.js'
 import { workflowSchema, renderWorkflow } from './workflow.js'
 import { kanbanSchema, renderKanban } from './kanban.js'
 import { domainStorySchema, renderDomainStory } from './domain-story.js'
+import { uiMockSchema, renderUiMock } from './ui-mock.js'
 import { make, offsetAll, stableId, type RenderOpts } from './util.js'
 
 export * from './util.js'
@@ -17,6 +18,7 @@ export { wireframeSchema, renderWireframe } from './wireframe.js'
 export { workflowSchema, renderWorkflow } from './workflow.js'
 export { frameOrigin, placeInFrame, traceWires, resolveTraces, traceTarget, type FrameRequest, type UnresolvedTrace } from './frame.js'
 export { domainStorySchema, renderDomainStory, sentenceOf, countCrossings, ICON_W, ICON_H } from './domain-story.js'
+export { uiMockSchema, renderUiMock, SCREEN_LABEL } from './ui-mock.js'
 export { kanbanSchema, renderKanban, cardHeight, columnsOf, cardsIn, bottomOf, columnId, cardId, CARD_SIZES, CARD_W, COLUMN_W } from './kanban.js'
 
 const itemTypes = ['sticky', 'text', 'frame', 'lane', 'arrow', 'comment', 'wireframe', 'card'] as const
@@ -85,6 +87,7 @@ export const contentSchemas = {
   workflow: workflowSchema,
   kanban: kanbanSchema,
   'domain-story': domainStorySchema,
+  'ui-mock': uiMockSchema,
   freeform: freeformSchema,
 } as const satisfies Record<DiagramKind, z.ZodTypeAny>
 
@@ -107,6 +110,8 @@ export function render(kind: DiagramKind, content: unknown, opts: RenderOpts = {
       return renderKanban(content as never, opts)
     case 'domain-story':
       return renderDomainStory(content as never, opts)
+    case 'ui-mock':
+      return renderUiMock(content as never, opts)
     case 'freeform':
       return renderFreeform(content as never, opts)
     default: {

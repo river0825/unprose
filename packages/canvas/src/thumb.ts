@@ -43,7 +43,7 @@ const CONTAINERS = new Set(['lane', 'frame'])
 function tokenOf(item: Item): ColorToken {
   if (item.color && item.color in LIGHT) return item.color
   if (item.type === 'comment') return 'yellow'
-  if (item.type === 'wireframe') return 'grey'
+  if (item.type === 'wireframe' || item.type === 'ui') return 'grey'
   return 'white'
 }
 

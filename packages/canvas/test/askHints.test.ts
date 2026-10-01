@@ -9,6 +9,7 @@ test('the ask hints name every Unprose slash command once', () => {
     '/unprose:eventstorm',
     '/unprose:help',
     '/unprose:kanban',
+    '/unprose:mockup',
     '/unprose:review',
     '/unprose:storymap',
     '/unprose:wireframe',

@@ -17,6 +17,8 @@ const CONTAINERS = new Set<Item['type']>(['frame', 'lane', 'wireframe'])
 /** A wireframe item only contains children when it is a screen. */
 export function isContainer(it: Item): boolean {
   if (it.type === 'wireframe') return it.role === 'screen'
+  // a UI mock screen, card, section or navbar holds its elements (docs/diagrams.md §6c)
+  if (it.type === 'ui') return Boolean((it.data?.ui as { container?: boolean } | undefined)?.container)
   return CONTAINERS.has(it.type)
 }
 

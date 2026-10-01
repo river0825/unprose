@@ -37,6 +37,26 @@ export {
   type DsFinding,
   type DsRule,
 } from './domainStory.js'
+export {
+  uiMockSchema,
+  uiNodeSchema,
+  normalizeUiMock,
+  layoutScreen,
+  checkUiMock,
+  walkUi,
+  textWidth,
+  UI_TYPES,
+  UI_ICONS,
+  UI_DEVICES,
+  type UiMockContent,
+  type UiModel,
+  type UiScreen,
+  type UiEl,
+  type UiBox,
+  type UiFinding,
+  type UiPath,
+  type UiType,
+} from './uiMock.js'
 export { checkEventStorming, openHotspotCount, type GrammarFinding, type GrammarRule } from './grammar.js'
 export { proposeStories, type StoryCandidate, type StoryProposal, type ProposeOptions } from './proposeStories.js'
 export { fromEgon, toEgon, type EgonImport } from './egon.js'

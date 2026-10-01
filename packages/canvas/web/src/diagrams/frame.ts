@@ -2,7 +2,7 @@
 // frame item itself, a frame's members, and kind names.
 import { diagramOf as modelDiagramOf, diagramSpecOf, type Board, type Item } from '../../../src/model'
 
-export type DiagramKind = 'event-storming' | 'user-story-map' | 'kanban' | 'wireframe' | 'workflow' | 'domain-story' | 'user-journey'
+export type DiagramKind = 'event-storming' | 'user-story-map' | 'kanban' | 'wireframe' | 'workflow' | 'domain-story' | 'user-journey' | 'ui-mock'
 
 export interface DiagramInfo {
   kind: DiagramKind | string
@@ -49,4 +49,5 @@ export const KIND_NAMES: Record<string, string> = {
   workflow: 'Workflow',
   'domain-story': 'Domain story',
   'user-journey': 'User journey',
+  'ui-mock': 'UI mock',
 }

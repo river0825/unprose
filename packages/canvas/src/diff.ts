@@ -57,6 +57,9 @@ function containerName(id: string | undefined, board: Board, changes: Change[]):
   return id
 }
 
+/** A UI mock screen, card, section or navbar: holds other elements (docs/diagrams.md §6c). */
+const isUiBox = (i: Item) => i.type === 'ui' && Boolean((i.data?.ui as { container?: boolean } | undefined)?.container)
+
 /** Which lane/frame geometrically contains the centre of `item` (fallback when `parent` is unset). */
 export function containerOf(board: Board, item: Item): Item | undefined {
   if (item.parent && board.items[item.parent]) return board.items[item.parent]
@@ -64,7 +67,7 @@ export function containerOf(board: Board, item: Item): Item | undefined {
   const cy = item.y + item.h / 2
   let best: Item | undefined
   for (const c of Object.values(board.items)) {
-    if (c.id === item.id || (c.type !== 'lane' && c.type !== 'frame' && c.type !== 'wireframe')) continue
+    if (c.id === item.id || (c.type !== 'lane' && c.type !== 'frame' && c.type !== 'wireframe' && !isUiBox(c))) continue
     if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
       if (!best || c.w * c.h < best.w * best.h) best = c
     }
@@ -266,7 +269,7 @@ function neighbourBefore(board: Board, item: Item | undefined): Item | undefined
  */
 export function outline(board: Board): string {
   const items = Object.values(board.items)
-  const containers = items.filter((i) => i.type === 'lane' || i.type === 'frame' || i.type === 'wireframe').sort(byPos)
+  const containers = items.filter((i) => i.type === 'lane' || i.type === 'frame' || i.type === 'wireframe' || isUiBox(i)).sort(byPos)
   const arrows = items.filter((i) => i.type === 'arrow')
   const find: Lookup = (id) => (id ? board.items[id] : undefined)
   const replies = new Map<string, Item[]>()
@@ -277,7 +280,7 @@ export function outline(board: Board): string {
     replies.set(root.id, [...(replies.get(root.id) ?? []), i])
     return false
   })
-  const stickies = items.filter((i) => !['arrow', 'comment', 'lane', 'frame', 'wireframe'].includes(i.type))
+  const stickies = items.filter((i) => !['arrow', 'comment', 'lane', 'frame', 'wireframe'].includes(i.type) && !isUiBox(i))
   const commentsFor = new Map<string, Item[]>()
   for (const c of comments) {
     const k = c.target ?? ''

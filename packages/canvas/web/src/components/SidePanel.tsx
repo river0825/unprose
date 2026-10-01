@@ -14,6 +14,9 @@ import { useFreshMeta } from '../inspector/useFreshMeta'
 import { timeAgo } from '../time'
 import type { DiscussArg } from '../inspector/diff'
 import { DiagramElementPanel, DiagramFramePanel } from './DiagramInspector'
+import { UiMockPanel } from './UiMockPanel'
+import { isUiElement } from '../diagrams/uiProposal'
+import type { EditRequest } from '../inspector/diff'
 import { diagramData, diagramOf } from '../diagrams/frame'
 import { Linkified } from '../flow/Linkified'
 import { PanelNavContext, type PanelNav } from '../inspector/panelNav'
@@ -43,6 +46,9 @@ interface Props {
   /** a flow wire's proposal → a chat request carrying it (docs/studio.md §7) */
   onWireChat: (ids: string[], text: string, model: DiscussModel, proposal: Pending) => void
   onUndoWire: (id: string) => void
+  /** a UI mock text proposal → a chat request carrying the diff to the file (docs/diagrams.md §6c) */
+  onEditChat: (ids: string[], text: string, model: DiscussModel, edit: EditRequest) => void
+  onUndoUiText: (id: string) => void
   onPickWireEvent: (id: string, event: string) => void
   /** drop a proposed (pending) item, e.g. a story the agent proposed (docs/diagrams.md §4) */
   onDismiss: (id: string) => void
@@ -61,7 +67,7 @@ function linkIds(target: EventTarget | null): string[] {
 /** Shown by the Event section already, or drawing detail: not repeated as raw data rows. */
 const WIRE_KEYS = new Set(['event', 'pending', 'fromSide', 'toSide', 'bend'])
 /** Shown by the diagram panels (frame spec, proposal, traces): not repeated as raw data rows. */
-const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces'])
+const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces', 'ui', 'element'])
 
 const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 
@@ -86,7 +92,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
@@ -107,7 +113,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
   const selectedDiagram = diagramFrameOf(selected)
   const inFrame = selected && selected.type !== 'comment' ? diagramOf(board, selected) : undefined
   // only inside a diagram frame: legacy diagram boards keep their old tab behaviour
-  const inDiagram = Boolean(inFrame?.frame && ['event-storming', 'user-story-map', 'domain-story'].includes(inFrame.kind))
+  const inDiagram = Boolean(inFrame?.frame && ['event-storming', 'user-story-map', 'domain-story', 'ui-mock'].includes(inFrame.kind))
   useEffect(() => {
     if (isBlock || isWire || selectedDiagram || inDiagram) setTab('item')
   }, [selectedId, isBlock, isWire, Boolean(selectedDiagram), inDiagram])
@@ -272,6 +278,21 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                     setTab('files')
                   }}
                 />
+              ) : isUiElement(selected) ? (
+                <>
+                  <UiMockPanel
+                    board={board}
+                    item={selected}
+                    onEditChat={onEditChat}
+                    onUndo={onUndoUiText}
+                    onOpenFile={(path) => {
+                      setNav({ path })
+                      setTab('files')
+                    }}
+                  />
+                  {/* its trace links; the text proposal is shown above */}
+                  <DiagramElementPanel board={board} item={{ ...selected, data: { ...selected.data, pending: undefined } }} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} />
+                </>
               ) : (
                 <DiagramElementPanel board={board} item={selected} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} />
               )
@@ -337,7 +358,7 @@ function ItemDetail({
 }) {
   const data = item.data ?? {}
   const containers = Object.values(board.items).filter((i) => isContainer(i) && i.id !== item.id)
-  const canMove = !isContainer(item) && item.type !== 'arrow' && containers.length > 0
+  const canMove = !isContainer(item) && item.type !== 'arrow' && item.type !== 'ui' && containers.length > 0
   const copyLink = () => {
     // a diagram frame opens by its stable key (?frame=), anything else by its item id (?focus=)
     const key = (item.type === 'frame' ? (item.data?.diagram as { key?: string } | undefined)?.key : undefined)

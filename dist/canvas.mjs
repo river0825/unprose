@@ -11688,6 +11688,7 @@ function containerName(id, board, changes) {
   }
   return id;
 }
+var isUiBox = (i) => i.type === "ui" && Boolean(i.data?.ui?.container);
 function containerOf(board, item) {
   if (item.parent && board.items[item.parent])
     return board.items[item.parent];
@@ -11695,7 +11696,7 @@ function containerOf(board, item) {
   const cy = item.y + item.h / 2;
   let best;
   for (const c of Object.values(board.items)) {
-    if (c.id === item.id || c.type !== "lane" && c.type !== "frame" && c.type !== "wireframe")
+    if (c.id === item.id || c.type !== "lane" && c.type !== "frame" && c.type !== "wireframe" && !isUiBox(c))
       continue;
     if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
       if (!best || c.w * c.h < best.w * best.h)
@@ -11897,7 +11898,7 @@ function neighbourBefore(board, item) {
 }
 function outline(board) {
   const items = Object.values(board.items);
-  const containers = items.filter((i) => i.type === "lane" || i.type === "frame" || i.type === "wireframe").sort(byPos);
+  const containers = items.filter((i) => i.type === "lane" || i.type === "frame" || i.type === "wireframe" || isUiBox(i)).sort(byPos);
   const arrows = items.filter((i) => i.type === "arrow");
   const find = (id) => id ? board.items[id] : void 0;
   const replies = /* @__PURE__ */ new Map();
@@ -11910,7 +11911,7 @@ function outline(board) {
     replies.set(root.id, [...replies.get(root.id) ?? [], i]);
     return false;
   });
-  const stickies = items.filter((i) => !["arrow", "comment", "lane", "frame", "wireframe"].includes(i.type));
+  const stickies = items.filter((i) => !["arrow", "comment", "lane", "frame", "wireframe"].includes(i.type) && !isUiBox(i));
   const commentsFor = /* @__PURE__ */ new Map();
   for (const c of comments) {
     const k2 = c.target ?? "";
@@ -14236,8 +14237,8 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
   inst._zod.check = (payload) => {
     const input2 = payload.value;
-    const size = input2.size;
-    if (size <= def.maximum)
+    const size2 = input2.size;
+    if (size2 <= def.maximum)
       return;
     payload.issues.push({
       origin: getSizableOrigin(input2),
@@ -14256,8 +14257,8 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
   inst._zod.check = (payload) => {
     const input2 = payload.value;
-    const size = input2.size;
-    if (size >= def.minimum)
+    const size2 = input2.size;
+    if (size2 >= def.minimum)
       return;
     payload.issues.push({
       origin: getSizableOrigin(input2),
@@ -14276,10 +14277,10 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
   inst._zod.check = (payload) => {
     const input2 = payload.value;
-    const size = input2.size;
-    if (size === def.size)
+    const size2 = input2.size;
+    if (size2 === def.size)
       return;
-    const tooBig = size > def.size;
+    const tooBig = size2 > def.size;
     payload.issues.push({
       origin: getSizableOrigin(input2),
       ...tooBig ? { code: "too_big", maximum: def.size } : { code: "too_small", minimum: def.size },
@@ -19840,8 +19841,8 @@ var error20 = () => {
       case "invalid_union":
         return "\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF";
       case "invalid_element": {
-        const place = withDefinite(issue2.origin ?? "array");
-        return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1${place}`;
+        const place2 = withDefinite(issue2.origin ?? "array");
+        return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1${place2}`;
       }
       default:
         return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF`;
@@ -27055,11 +27056,11 @@ function _minSize(minimum, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _size(size, params) {
+function _size(size2, params) {
   return new $ZodCheckSizeEquals({
     check: "size_equals",
     ...normalizeParams(params),
-    size
+    size: size2
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -30308,8 +30309,8 @@ var ZodFile = /* @__PURE__ */ $constructor("ZodFile", (inst, def) => {
   $ZodFile.init(inst, def);
   ZodType.init(inst, def);
   inst._zod.processJSONSchema = (ctx, json2, params) => fileProcessor(inst, ctx, json2, params);
-  inst.min = (size, params) => inst.check(_minSize(size, params));
-  inst.max = (size, params) => inst.check(_maxSize(size, params));
+  inst.min = (size2, params) => inst.check(_minSize(size2, params));
+  inst.max = (size2, params) => inst.check(_maxSize(size2, params));
   inst.mime = (types, params) => inst.check(_mime(Array.isArray(types) ? types : [types], params));
 });
 function file(params) {
@@ -32035,7 +32036,7 @@ function placeFlow(nodes, edges, timeline, siblings) {
   const bandOf = new Map(nodes.map((n2) => [n2.id, n2.band]));
   const taken = /* @__PURE__ */ new Set();
   const row = /* @__PURE__ */ new Map();
-  const place = (id, want) => {
+  const place2 = (id, want) => {
     if (row.has(id))
       return;
     let r = want;
@@ -32045,13 +32046,13 @@ function placeFlow(nodes, edges, timeline, siblings) {
     taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r}`);
     for (const s of succ.get(id))
       if (forward(id, s))
-        place(s, r);
+        place2(s, r);
   };
   for (const id of order)
     if (pred.get(id).every((p) => !forward(p, id)))
-      place(id, 0);
+      place2(id, 0);
   for (const id of ids)
-    place(id, 0);
+    place2(id, 0);
   return { rank, row };
 }
 function topo(ids, succ, forward) {
@@ -32927,7 +32928,7 @@ function layered(nodes, edges, opts = {}) {
     const s = [...xs].sort((a, b2) => a - b2);
     return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
   };
-  const place = (ls, nb) => {
+  const place2 = (ls, nb) => {
     const want = ls.map((s) => {
       const ns = nb.get(s.id) ?? [];
       return ns.length ? median(ns.map((n2) => centre2(n2, hOf.get(n2)))) - s.h / 2 : y2.get(s.id);
@@ -32941,12 +32942,12 @@ function layered(nodes, edges, opts = {}) {
   };
   for (let it = 0; it < 6; it++) {
     for (let l = 1; l < layers.length; l++)
-      place(layers[l], slotUp);
+      place2(layers[l], slotUp);
     for (let l = layers.length - 2; l >= 0; l--)
-      place(layers[l], slotDown);
+      place2(layers[l], slotDown);
   }
   for (let l = 1; l < layers.length; l++)
-    place(layers[l], slotUp);
+    place2(layers[l], slotUp);
   const top = Math.min(...nodes.map((n2) => y2.get(n2.id)));
   const out2 = /* @__PURE__ */ new Map();
   for (const n2 of nodes)
@@ -33509,6 +33510,524 @@ function renderDomainStory(raw, opts = {}) {
   return offsetAll([...shifted, ...legend2], opts.at);
 }
 
+// packages/canvas/dist/diagrams/uiMock.js
+var UI_LAYOUT = ["stack", "row", "grid"];
+var UI_BOXES = ["card", "section", "navbar"];
+var UI_LEAVES = [
+  "heading",
+  "text",
+  "link",
+  "button",
+  "input",
+  "textarea",
+  "select",
+  "search",
+  "checkbox",
+  "radio",
+  "toggle",
+  "badge",
+  "avatar",
+  "icon",
+  "divider",
+  "image",
+  "table",
+  "list",
+  "stat",
+  "alert",
+  "progress",
+  "tabs",
+  "breadcrumb",
+  "pagination",
+  "spacer",
+  "empty",
+  "chart",
+  "sidebar"
+];
+var UI_TYPES = [...UI_LAYOUT, ...UI_BOXES, ...UI_LEAVES];
+var UI_DEVICES = { desktop: { w: 1280, h: 800 }, laptop: { w: 1024, h: 680 }, tablet: { w: 768, h: 1024 }, phone: { w: 390, h: 844 } };
+var tone = external_exports.enum(["neutral", "info", "success", "warning", "danger"]);
+var size = external_exports.enum(["sm", "md", "lg"]);
+var listItem = external_exports.union([
+  external_exports.string(),
+  external_exports.object({ id: external_exports.string().optional(), text: external_exports.string(), meta: external_exports.string().optional(), icon: external_exports.string().optional(), badge: external_exports.string().optional(), active: external_exports.boolean().optional() })
+]);
+var uiNodeSchema = external_exports.lazy(() => external_exports.object({
+  type: external_exports.enum(UI_TYPES),
+  /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
+  id: external_exports.string().optional(),
+  /** The element's words: a button's label, a heading, a card's title, a form field's label. */
+  text: external_exports.string().optional(),
+  /** Form fields: the label (same as `text`). */
+  label: external_exports.string().optional(),
+  children: external_exports.array(uiNodeSchema).optional(),
+  gap: external_exports.number().min(0).optional(),
+  pad: external_exports.number().min(0).optional(),
+  align: external_exports.enum(["start", "center", "end", "stretch"]).optional(),
+  justify: external_exports.enum(["start", "center", "end", "between"]).optional(),
+  /** grid: columns (default 3). */
+  cols: external_exports.number().int().min(1).max(12).optional(),
+  /** In a row: columns of 12 this element takes. */
+  span: external_exports.number().int().min(1).max(12).optional(),
+  /** Fixed width / height in px. */
+  w: external_exports.number().min(1).optional(),
+  h: external_exports.number().min(1).optional(),
+  bg: external_exports.enum(["surface", "muted", "accent", "none"]).optional(),
+  /** button: primary | secondary | ghost | danger; text: body | muted | small | code; card: flat | elevated; list: plain; chart: bar | line. */
+  variant: external_exports.string().optional(),
+  /** heading: 1..4 */
+  level: external_exports.number().int().min(1).max(4).optional(),
+  tone: tone.optional(),
+  size: size.optional(),
+  icon: external_exports.string().optional(),
+  /** navbar links, sidebar, tabs, list rows, breadcrumb, select options. */
+  items: external_exports.array(listItem).optional(),
+  /** The selected entry of items: its text or index. */
+  active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+  columns: external_exports.array(external_exports.string()).optional(),
+  rows: external_exports.array(external_exports.array(external_exports.union([external_exports.string(), external_exports.number()]))).optional(),
+  value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+  placeholder: external_exports.string().optional(),
+  hint: external_exports.string().optional(),
+  checked: external_exports.boolean().optional(),
+  /** image: '16:9' (default), '4:3', '1:1' … */
+  ratio: external_exports.string().optional(),
+  /** stat: '+12%' / '-3' — the change, coloured by its sign. */
+  delta: external_exports.string().optional(),
+  /** An open question about this element (a comment bubble on the board). */
+  note: external_exports.string().optional(),
+  /** Tapping this element goes to that screen: a flow arrow. */
+  goto: external_exports.string().optional(),
+  traces: external_exports.array(traceSchema).optional()
+}));
+var uiMockSchema = external_exports.object({
+  /** Default device for every screen. */
+  device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+  /** The mock's own theme (independent of the canvas theme). */
+  theme: external_exports.enum(["light", "dark"]).optional(),
+  tokens: external_exports.object({
+    /** Accent colour (#rgb / #rrggbb). */
+    accent: external_exports.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i).optional(),
+    /** Corner radius in px (default 8). */
+    radius: external_exports.number().min(0).max(32).optional(),
+    font: external_exports.enum(["sans", "serif", "mono", "rounded"]).optional()
+  }).optional(),
+  screens: external_exports.array(external_exports.object({
+    id: external_exports.string().optional(),
+    name: external_exports.string(),
+    device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+    /** Width / minimum height in px (default: the device's). */
+    w: external_exports.number().min(200).max(4e3).optional(),
+    h: external_exports.number().min(200).max(8e3).optional(),
+    theme: external_exports.enum(["light", "dark"]).optional(),
+    /** Padding and gap of the screen's body (default 0: put content in a section). */
+    pad: external_exports.number().min(0).optional(),
+    gap: external_exports.number().min(0).optional(),
+    note: external_exports.string().optional(),
+    traces: external_exports.array(traceSchema).optional(),
+    body: external_exports.array(uiNodeSchema).default([])
+  })).min(1),
+  /** Arrows between screens: from a screen or '<screen>/<element>' to a screen. */
+  flows: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), label: external_exports.string().optional() })).default([])
+});
+var DEFAULT_ACCENT = "#4f46e5";
+function itemsOf(items, active) {
+  if (!items)
+    return void 0;
+  return items.map((it, i) => {
+    const o = typeof it === "string" ? { text: it } : it;
+    const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
+    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {} };
+  });
+}
+function normalizeUiMock(raw) {
+  const c = uiMockSchema.parse(raw);
+  const usedScreens = /* @__PURE__ */ new Set();
+  const screens = c.screens.map((s, si) => {
+    let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
+    for (let n2 = 2; usedScreens.has(sid); n2++)
+      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n2}`;
+    usedScreens.add(sid);
+    const device = s.device ?? c.device ?? "desktop";
+    const theme = { theme: s.theme ?? c.theme ?? "light", accent: c.tokens?.accent ?? DEFAULT_ACCENT, radius: c.tokens?.radius ?? 8, font: c.tokens?.font ?? "sans" };
+    const used = /* @__PURE__ */ new Set();
+    const alloc = (explicit, text2, type) => {
+      const base = explicit && explicit.trim() || slugify2(text2 ?? "") || type;
+      let id = base;
+      for (let n2 = 2; used.has(id); n2++)
+        id = `${base}-${n2}`;
+      used.add(id);
+      return id;
+    };
+    const el = (n2, path11) => {
+      const { type, id: _id, text: text2, label, children, note, goto, traces: traces2, items, ...props } = n2;
+      const words = text2 ?? label;
+      const id = alloc(n2.id, words, type);
+      return {
+        id,
+        ref: `${sid}/${id}`,
+        type,
+        ...words !== void 0 ? { text: words } : {},
+        textKey: text2 === void 0 && label !== void 0 ? "label" : "text",
+        path: path11,
+        children: (children ?? []).map((ch, i) => el(ch, [...path11, "children", i])),
+        props: { ...props, ...items ? { items: itemsOf(items, n2.active) } : {} },
+        ...note ? { note } : {},
+        ...goto ? { goto } : {},
+        traces: traces2 ?? []
+      };
+    };
+    return {
+      id: sid,
+      name: s.name,
+      device,
+      w: s.w ?? UI_DEVICES[device].w,
+      minH: s.h ?? UI_DEVICES[device].h,
+      pad: s.pad ?? 0,
+      gap: s.gap ?? 0,
+      theme,
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? [],
+      path: ["screens", si],
+      body: s.body.map((n2, i) => el(n2, ["screens", si, "body", i]))
+    };
+  });
+  return { screens, flows: c.flows };
+}
+function walkUi(els) {
+  return els.flatMap((e) => [e, ...walkUi(e.children)]);
+}
+var WIDE = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
+function textWidth(s, px = 14, bold = false) {
+  let w2 = 0;
+  for (const ch of s)
+    w2 += WIDE.test(ch) ? px : ch === " " ? px * 0.3 : /[A-Z0-9]/.test(ch) ? px * 0.64 : /[il.,:;'|!]/.test(ch) ? px * 0.3 : px * 0.54;
+  return Math.ceil(w2 * (bold ? 1.07 : 1));
+}
+function lineCount(s, px, maxW, bold = false) {
+  if (!s)
+    return 1;
+  return s.split("\n").reduce((n2, seg) => n2 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
+}
+var HEADING = { 1: { px: 28, lh: 36 }, 2: { px: 22, lh: 30 }, 3: { px: 18, lh: 26 }, 4: { px: 15, lh: 22 } };
+var BUTTON = { sm: { h: 32, pad: 12 }, md: { h: 36, pad: 16 }, lg: { h: 44, pad: 20 } };
+var FIELD = { sm: 32, md: 38, lg: 44 };
+var HUG = /* @__PURE__ */ new Set(["button", "link", "badge", "avatar", "icon", "checkbox", "radio", "toggle", "pagination"]);
+var STRETCH = /* @__PURE__ */ new Set(["stack", "grid", "card", "section", "sidebar"]);
+var isDrawnContainer = (t) => UI_BOXES.includes(t);
+var isLayout = (t) => UI_LAYOUT.includes(t);
+function padOf(el) {
+  if (el.props.pad !== void 0)
+    return el.props.pad;
+  return el.type === "card" ? 16 : el.type === "section" ? 24 : el.type === "navbar" ? 16 : 0;
+}
+function gapOf(el) {
+  if (el.props.gap !== void 0)
+    return el.props.gap;
+  return el.type === "grid" ? 16 : el.type === "navbar" ? 8 : 12;
+}
+var titleH = (el) => el.type === "card" && el.text ? 26 : 0;
+function measure(el, avail) {
+  const p = el.props;
+  const fixedW = p.w !== void 0 ? Math.min(p.w, avail) : void 0;
+  const sz = p.size ?? "md";
+  const t = el.text ?? "";
+  const leaf = (w2, h) => ({ w: fixedW ?? w2, h: p.h ?? h });
+  switch (el.type) {
+    case "stack":
+    case "card":
+    case "section": {
+      const pad = padOf(el);
+      const gap = gapOf(el);
+      const w2 = fixedW ?? avail;
+      const inner = w2 - pad * 2;
+      const hs = el.children.map((c) => measure(c, inner).h);
+      const head = titleH(el);
+      const h = pad * 2 + head + (head && hs.length ? gap : 0) + hs.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, hs.length - 1);
+      return { w: w2, h: Math.max(p.h ?? 0, h) };
+    }
+    case "row": {
+      const w2 = fixedW ?? avail;
+      const pad = padOf(el);
+      const widths = rowWidths(el, w2 - pad * 2);
+      const h = pad * 2 + Math.max(0, ...el.children.map((c, i) => measure(c, widths[i]).h));
+      return { w: w2, h: Math.max(p.h ?? 0, h) };
+    }
+    case "grid": {
+      const w2 = fixedW ?? avail;
+      const { rows } = gridCells(el, w2);
+      return { w: w2, h: Math.max(p.h ?? 0, rows.reduce((a, r) => a + r.h, 0) + gapOf(el) * Math.max(0, rows.length - 1) + padOf(el) * 2) };
+    }
+    case "navbar":
+      return { w: fixedW ?? avail, h: p.h ?? 56 };
+    case "sidebar":
+      return leaf(240, 16 + (t ? 48 : 0) + (p.items?.length ?? 0) * 36 + 16);
+    case "heading": {
+      const hd = HEADING[p.level ?? 2];
+      return leaf(avail, lineCount(t, hd.px, fixedW ?? avail, true) * hd.lh);
+    }
+    case "text": {
+      const small = p.variant === "small" || p.variant === "caption";
+      const px = small ? 12 : p.variant === "code" ? 13 : 14;
+      const lh = small ? 18 : 21;
+      return leaf(avail, lineCount(t, px, fixedW ?? avail) * lh + (p.variant === "code" ? 16 : 0));
+    }
+    case "link":
+      return leaf(textWidth(t, 14) + (p.icon ? 22 : 0) + 2, 21);
+    case "button": {
+      const b2 = BUTTON[sz];
+      const w2 = t ? textWidth(t, sz === "sm" ? 13 : 14, true) + b2.pad * 2 + (p.icon ? 22 : 0) : b2.h;
+      return leaf(w2, b2.h);
+    }
+    case "input":
+    case "select":
+    case "search":
+    case "textarea": {
+      const field = el.type === "textarea" ? p.h ?? 96 : FIELD[sz];
+      return { w: fixedW ?? avail, h: (t && el.type !== "search" ? 26 : 0) + field + (p.hint ? 22 : 0) };
+    }
+    case "checkbox":
+    case "radio":
+      return leaf(26 + textWidth(t, 14), 22);
+    case "toggle":
+      return leaf(48 + textWidth(t, 14), 24);
+    case "badge":
+      return leaf(textWidth(t, 12, true) + 20, 22);
+    case "avatar": {
+      const d = sz === "sm" ? 24 : sz === "lg" ? 48 : 32;
+      return leaf(d, d);
+    }
+    case "icon": {
+      const d = sz === "sm" ? 16 : sz === "lg" ? 28 : 20;
+      return leaf(d, d);
+    }
+    case "divider":
+      return leaf(avail, 1);
+    case "image": {
+      const [a, b2] = (p.ratio ?? "16:9").split(":").map(Number);
+      const w2 = fixedW ?? avail;
+      return { w: w2, h: p.h ?? Math.round(w2 * (b2 > 0 ? b2 : 9) / (a > 0 ? a : 16)) };
+    }
+    case "table":
+      return leaf(avail, (t ? 34 : 0) + 42 + (p.rows?.length ?? 0) * 46);
+    case "list": {
+      const rowH = (p.items ?? []).some((i) => i.meta) ? 60 : 44;
+      return leaf(avail, (t ? 30 : 0) + (p.items?.length ?? 0) * rowH);
+    }
+    case "stat":
+      return leaf(avail, 100);
+    case "alert":
+      return leaf(avail, Math.max(46, 24 + lineCount(t, 14, (fixedW ?? avail) - 56) * 21));
+    case "progress":
+      return leaf(avail, t ? 34 : 8);
+    case "tabs":
+      return leaf(avail, 42);
+    case "breadcrumb":
+      return leaf(avail, 21);
+    case "pagination":
+      return leaf(7 * 36, 32);
+    case "spacer":
+      return leaf(0, 16);
+    case "empty":
+      return leaf(avail, 220);
+    case "chart":
+      return leaf(avail, 220);
+  }
+}
+function rowWidths(el, inner) {
+  const gap = gapOf(el);
+  const n2 = el.children.length;
+  const colW = (inner - gap * 11) / 12;
+  const widths = el.children.map((c) => {
+    if (c.props.w !== void 0)
+      return Math.min(c.props.w, inner);
+    if (c.props.span !== void 0)
+      return colW * c.props.span + gap * (c.props.span - 1);
+    if (HUG.has(c.type) || c.type === "sidebar")
+      return Math.min(measure(c, inner).w, inner);
+    return void 0;
+  });
+  const growers = widths.filter((w2) => w2 === void 0).length;
+  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n2 - 1);
+  const share = growers ? Math.max(24, (inner - used) / growers) : 0;
+  return widths.map((w2) => Math.round(w2 ?? share));
+}
+function gridCells(el, w2) {
+  const cols = el.props.cols ?? 3;
+  const gap = gapOf(el);
+  const inner = w2 - padOf(el) * 2;
+  const cellW = (inner - gap * (cols - 1)) / cols;
+  const rows = [];
+  for (let i = 0; i < el.children.length; i += cols) {
+    const items = el.children.slice(i, i + cols);
+    rows.push({ items, h: Math.max(0, ...items.map((c) => measure(c, cellW).h)) });
+  }
+  return { cellW, rows };
+}
+function place(el, x2, y2, w2, h, parent, out) {
+  const drawn = !isLayout(el.type);
+  if (drawn)
+    out.push({ el, x: x2, y: y2, w: w2, h, ...parent ? { parent } : {} });
+  const holder = drawn ? el.ref : parent;
+  const pad = padOf(el);
+  const gap = gapOf(el);
+  const align2 = el.props.align;
+  switch (el.type) {
+    case "stack":
+    case "card":
+    case "section": {
+      const inner = w2 - pad * 2;
+      let cy = y2 + pad + titleH(el) + (titleH(el) && el.children.length ? gap : 0);
+      for (const c of el.children) {
+        const m2 = measure(c, inner);
+        const cw = HUG.has(c.type) || c.props.w !== void 0 ? m2.w : inner;
+        const cx = align2 === "center" ? x2 + pad + (inner - cw) / 2 : align2 === "end" ? x2 + pad + inner - cw : x2 + pad;
+        place(c, cx, cy, cw, m2.h, holder, out);
+        cy += m2.h + gap;
+      }
+      return;
+    }
+    case "row": {
+      const inner = w2 - pad * 2;
+      const widths = rowWidths(el, inner);
+      const total = widths.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, widths.length - 1);
+      const free = Math.max(0, inner - total);
+      const j2 = el.props.justify ?? "start";
+      const extraGap = j2 === "between" && widths.length > 1 ? free / (widths.length - 1) : 0;
+      let cx = x2 + pad + (j2 === "center" ? free / 2 : j2 === "end" ? free : 0);
+      const rowH = h - pad * 2;
+      el.children.forEach((c, i) => {
+        const m2 = measure(c, widths[i]);
+        const stretch = align2 === "stretch" || align2 === void 0 && STRETCH.has(c.type);
+        const ch = stretch ? Math.max(m2.h, rowH) : m2.h;
+        const cy = stretch || align2 === "start" ? y2 + pad : align2 === "end" ? y2 + pad + rowH - ch : y2 + pad + (rowH - ch) / 2;
+        place(c, cx, cy, widths[i], ch, holder, out);
+        cx += widths[i] + gap + extraGap;
+      });
+      return;
+    }
+    case "grid": {
+      const { cellW, rows } = gridCells(el, w2);
+      let cy = y2 + pad;
+      for (const r of rows) {
+        r.items.forEach((c, i) => place(c, x2 + pad + i * (cellW + gap), cy, cellW, align2 === "start" ? measure(c, cellW).h : r.h, holder, out));
+        cy += r.h + gap;
+      }
+      return;
+    }
+    case "navbar": {
+      let cx = x2 + w2 - pad;
+      for (const c of [...el.children].reverse()) {
+        const m2 = measure(c, w2 / 2);
+        cx -= m2.w;
+        place(c, cx, y2 + (h - m2.h) / 2, m2.w, m2.h, holder, out);
+        cx -= gap;
+      }
+      return;
+    }
+    default:
+      return;
+  }
+}
+function layoutScreen(s) {
+  const out = [];
+  const inner = s.w - s.pad * 2;
+  let y2 = s.pad;
+  for (const el of s.body) {
+    const m2 = measure(el, inner);
+    const w2 = HUG.has(el.type) || el.props.w !== void 0 ? m2.w : inner;
+    place(el, s.pad, y2, w2, m2.h, void 0, out);
+    y2 += m2.h + s.gap;
+  }
+  const content = y2 - (s.body.length ? s.gap : 0) + s.pad;
+  return { w: s.w, h: Math.max(s.minH, Math.ceil(content)), boxes: out.map((b2) => ({ ...b2, x: Math.round(b2.x), y: Math.round(b2.y), w: Math.round(b2.w), h: Math.round(b2.h) })) };
+}
+
+// packages/canvas/dist/templates/ui-mock.js
+var SCREEN_LABEL = 28;
+var SCREEN_GAP2 = 140;
+function renderUiMock(raw, opts = {}) {
+  const m2 = normalizeUiMock(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "ui";
+  const screenId = (s) => `${scope}.screen.${s}`;
+  const elId = (ref2) => `${scope}.ui.${ref2.replace("/", ".")}`;
+  const items = [];
+  const byRef = /* @__PURE__ */ new Map();
+  let sx = PAD;
+  m2.screens.forEach((s, si) => {
+    const lay = layoutScreen(s);
+    const sy = PAD + SCREEN_LABEL;
+    const sid = screenId(s.id);
+    byRef.set(s.id, sid);
+    const look = { theme: s.theme.theme, accent: s.theme.accent, radius: s.theme.radius, font: s.theme.font };
+    items.push(make({
+      id: sid,
+      type: "ui",
+      role: "screen",
+      x: sx,
+      y: sy,
+      w: lay.w,
+      h: lay.h,
+      text: s.name,
+      order: si,
+      data: { element: s.id, ui: { type: "screen", device: s.device, path: s.path, textKey: "name", container: true, ...look }, ...s.traces.length ? { traces: s.traces } : {} }
+    }, now));
+    if (s.note)
+      items.push(make({ id: `${scope}.note.${s.id}`, type: "comment", x: sx + lay.w - 40, y: sy - 50, w: 220, h: 64, text: s.note, role: "note", color: "yellow", target: sid }, now));
+    lay.boxes.forEach((b2, bi) => items.push(...elementItems(b2, bi, sx, sy, sid, look)));
+    sx += lay.w + SCREEN_GAP2;
+  });
+  function elementItems(b2, order, sx2, sy, sid, look) {
+    const e = b2.el;
+    const id = elId(e.ref);
+    byRef.set(e.ref, id);
+    const out = [
+      make({
+        id,
+        type: "ui",
+        role: e.type,
+        x: sx2 + b2.x,
+        y: sy + b2.y,
+        w: b2.w,
+        h: b2.h,
+        text: e.text,
+        order,
+        parent: b2.parent ? elId(b2.parent) : sid,
+        data: { element: e.ref, ui: uiData(e, look), ...e.traces.length ? { traces: e.traces } : {} }
+      }, now)
+    ];
+    if (e.note)
+      out.push(make({ id: `${scope}.note.${e.ref.replace("/", ".")}`, type: "comment", x: sx2 + b2.x + b2.w + 12, y: sy + b2.y - 12, w: 220, h: 64, text: e.note, role: "note", color: "yellow", target: id }, now));
+    return out;
+  }
+  const flows = [
+    ...m2.screens.flatMap((s) => walkUi(s.body).filter((e) => e.goto).map((e) => ({ from: e.ref, to: e.goto, label: void 0 }))),
+    ...m2.flows
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  for (const f of flows) {
+    const from = byRef.get(f.from);
+    const to = byRef.get(f.to);
+    if (!from || !to || seen.has(`${from}>${to}`))
+      continue;
+    seen.add(`${from}>${to}`);
+    items.push(arrow(scope, from, to, now, f.label, "navigate", { data: { flow: { from: f.from, to: f.to } } }));
+  }
+  return offsetAll(items, opts.at);
+}
+function uiData(e, look) {
+  const { span: _s, gap: _g, cols: _c, justify: _j, align: _a3, ...props } = e.props;
+  return {
+    type: e.type,
+    ...props,
+    path: e.path,
+    textKey: e.textKey,
+    ...isDrawnContainer(e.type) ? { container: true } : {},
+    ...e.goto ? { goto: e.goto } : {},
+    ...look
+  };
+}
+
 // packages/canvas/dist/templates/frame.js
 function frameOrigin(boardItems, req) {
   const existing = boardItems[diagramFrameId(req.key)];
@@ -33643,6 +34162,7 @@ var contentSchemas = {
   workflow: workflowSchema,
   kanban: kanbanSchema,
   "domain-story": domainStorySchema,
+  "ui-mock": uiMockSchema,
   freeform: freeformSchema
 };
 function render(kind, content, opts = {}) {
@@ -33661,6 +34181,8 @@ function render(kind, content, opts = {}) {
       return renderKanban(content, opts);
     case "domain-story":
       return renderDomainStory(content, opts);
+    case "ui-mock":
+      return renderUiMock(content, opts);
     case "freeform":
       return renderFreeform(content, opts);
     default: {
@@ -35434,7 +35956,7 @@ function tokenOf(item) {
     return item.color;
   if (item.type === "comment")
     return "yellow";
-  if (item.type === "wireframe")
+  if (item.type === "wireframe" || item.type === "ui")
     return "grey";
   return "white";
 }
@@ -39824,8 +40346,8 @@ var ZodSet2 = class _ZodSet extends ZodType2 {
       maxSize: { value: maxSize, message: errorUtil.toString(message) }
     });
   }
-  size(size, message) {
-    return this.min(size, message).max(size, message);
+  size(size2, message) {
+    return this.min(size2, message).max(size2, message);
   }
   nonempty(message) {
     return this.min(1, message);
@@ -46412,6 +46934,7 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - user-story-map: { activities: [{id?, text, steps: [{id?, text, stories: [{id?, text, release?, acceptance?: string[], traces?: [{from: '<diagram key>/<element id>', rel: 'derived-from'|'groups'|'shows'}]}]}]}], releases?: string[] }  (releases are cut lines, top to bottom)
 - user-journey: { persona, stages: [{text, actions?, touchpoints?, emotion: -2..2, pains?, opportunities?}] }
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
+- ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; text edited on the board comes back as a proposal (data.pending.kind 'text') with a diff to apply.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
 - domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
@@ -46424,6 +46947,7 @@ var DIAGRAMS = `Diagrams (one file each, drawn as a frame on a board):
 - Story map \u2014 design/<name>.story-map.yaml \u2014 scope and releases; stories can be proposed from EventStorming or a domain story
 - Kanban \u2014 design/<name>.kanban.yaml \u2014 the work; cards trace to stories
 - Wireframe \u2014 design/<name>.wireframe.yaml \u2014 one page or screen on a 12-column grid
+- UI mock \u2014 design/<name>.ui.yaml \u2014 real-looking screens (desktop / tablet / phone) from a component tree; the person comments on single elements, words edited on the board are proposals with a diff
 - Domain Storytelling \u2014 design/<name>.domain-story.yaml \u2014 who does what with what, numbered sentences; Egon.io import/export
 - Journey \u2014 design/<name>.journey.yaml \u2014 a persona's stages, emotions, pains
 - Workflow \u2014 an agent pipeline (workflow yaml)
@@ -46450,6 +46974,7 @@ function helpText(o) {
     "- /unprose:storymap \u2014 turn the EventStorming into a story map with a first release",
     "- /unprose:kanban \u2014 a kanban of a release's stories",
     "- /unprose:wireframe <page> \u2014 sketch a page",
+    "- /unprose:mockup <screen> \u2014 mock a screen as real-looking UI",
     "- /unprose:domain-story <topic> \u2014 tell a process as a domain story",
     "- /unprose:review \u2014 answer every open comment on a board",
     ...o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(", ")}`] : [],
@@ -46470,7 +46995,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.7" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.7.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",

@@ -43,6 +43,13 @@ export const ASK_HINTS: AskHint[] = [
     command: '/unprose:wireframe',
   },
   {
+    id: 'mockup',
+    title: 'UI mock',
+    what: 'A screen that looks real, element by element.',
+    prompt: 'Mock the <settings page> as real-looking UI',
+    command: '/unprose:mockup',
+  },
+  {
     id: 'domain-story',
     title: 'Domain Storytelling',
     what: 'Who does what with what.',

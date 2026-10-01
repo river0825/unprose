@@ -206,3 +206,25 @@ test('Egon.io: import an .egn story, export it back, and read a story embedded i
   fs.writeFileSync(svg, `<svg xmlns="http://www.w3.org/2000/svg"><g/>\n<text class='hiddenDomainStory' style='font-size: 0'>\n&lt;DST&gt;${json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}&lt;/DST&gt;\n</text>\n</svg>`)
   assert.equal(importEgonFile(svg, path.join(tmp, 'from-svg.domain-story.yaml')).sentences, 2)
 })
+
+test('a UI mock file (docs/diagrams.md §6c): <name>.ui.yaml → key <name>-ui; lint adds its checks', () => {
+  const d = parseDesignFile('design/shop.ui.yaml', 'title: Shop\nscreens:\n  - name: Cart\n    body:\n      - { type: button, text: Pay, goto: nowhere }\n')
+  assert.deepEqual([d.key, d.kind, d.title], ['shop-ui', 'ui-mock', 'Shop'])
+  assert.equal(parseDesignFile('design/shop.mockup.yaml', 'screens: []').kind, 'ui-mock')
+  const notes = lintDesign(d)
+  assert.ok(!notes.some((f) => f.severity === 'error'))
+  assert.ok(notes.some((f) => f.severity === 'warning' && /goto: no screen "nowhere"/.test(f.message) && f.element === 'cart/pay'))
+  assert.ok(lintDesign({ ...d, content: { screens: [] } }).some((f) => f.severity === 'error'))
+})
+
+test('redraw: a UI mock text proposal is held until the file says the new words (or drops the element)', () => {
+  const pending = { kind: 'text', before: { text: 'Pay' }, after: { text: 'Pay now' }, path: ['screens', 0, 'body', 0], key: 'text', by: 'user', at: 'x' }
+  const board = { 'k.ui.cart.pay': { id: 'k.ui.cart.pay', type: 'ui', text: 'Pay now', data: { pending } } }
+  const old = [{ id: 'k.ui.cart.pay', type: 'ui', text: 'Pay', data: {} }]
+  assert.deepEqual(planRedraw(board, old, new Set(), { prefix: 'k.' }), [], 'the file still says Pay: the board keeps the proposal')
+  const done = planRedraw(board, [{ ...old[0], text: 'Pay now' }], new Set(), { prefix: 'k.' })
+  assert.equal(done.length, 1)
+  assert.equal((done[0].patch as { data: Record<string, unknown> }).data.pending, undefined)
+  const gone = planRedraw(board, [], new Set(), { prefix: 'k.' })
+  assert.deepEqual(gone, [{ kind: 'remove', id: 'k.ui.cart.pay' }], 'renamed in the file: nothing left to hold')
+})

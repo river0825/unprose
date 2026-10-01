@@ -9,6 +9,7 @@ const KIND_NAMES: Record<string, string> = {
   'user-story-map': 'User story map',
   'user-journey': 'User journey',
   wireframe: 'Wireframe',
+  'ui-mock': 'UI mock',
   workflow: 'Workflow',
   freeform: 'Freeform',
 }

@@ -35,6 +35,7 @@ import { useStoredSet } from './flow/storedSet'
 import { useBoard } from './store'
 import { RunOverlay } from './run/RunOverlay'
 import { PanelResizer, usePanelWidth } from './components/PanelResizer'
+import { isUiElement, uiTextOp, uiUndoOps } from './diagrams/uiProposal'
 import { addWire, isFlowWire, pendingOf, pickEventOp, relabelOp, removeOps, rewireOp, undoOps } from './inspector/pending'
 import { StudioControl } from './components/StudioControl'
 import { isWorkflowScope } from './diagrams/frame'
@@ -52,6 +53,7 @@ const KIND_NAMES: Record<string, string> = {
   'event-storming': 'Event storming',
   'user-story-map': 'User story map',
   'user-journey': 'User journey',
+  'ui-mock': 'UI mock',
   wireframe: 'Wireframe',
   workflow: 'Workflow',
   freeform: 'Freeform',
@@ -618,7 +620,10 @@ function BoardInner({ id }: { id: string }) {
           ? Promise.resolve(undefined)
           : draft
             ? commit([{ kind: 'add', item: { ...draft, text } }], `commented '${text.slice(0, 40)}'`)
-            : commit([{ kind: 'update', id: iid, patch }], `edited '${text.slice(0, 40)}'`)
+            : isUiElement(it)
+              ? // a UI mock element's words: a proposal until the AI applies it to the file (docs/diagrams.md §6c)
+                commit([uiTextOp(it, text, new Date().toISOString())], `proposed '${text.slice(0, 40)}'`)
+              : commit([{ kind: 'update', id: iid, patch }], `edited '${text.slice(0, 40)}'`)
         if (pendingAsk.current === iid) {
           pendingAsk.current = null
           if (text.trim()) void saved.then(() => handoff())
@@ -894,6 +899,11 @@ function BoardInner({ id }: { id: string }) {
           onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
           onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}
           onUndoWire={undoWire}
+          onEditChat={(ids, text, model, edit) => void addComment(ids[0], text, { discuss: { model, about: ids, edit } })}
+          onUndoUiText={(iid) => {
+            const it = board.items[iid]
+            if (it) void commit(uiUndoOps(it), 'undid a text proposal')
+          }}
           onDismiss={(id) => void commit([{ kind: 'remove', id }], 'dismissed a proposed story')}
           onPickWireEvent={pickWireEvent}
           onReply={(rootId, text) => void addComment(rootId, text)}

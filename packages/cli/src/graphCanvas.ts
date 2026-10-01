@@ -108,7 +108,7 @@ export interface RedrawScope {
 }
 
 interface WireEnd { from: string; to: string; event?: string; condition?: string }
-interface Pending { kind: 'rewire' | 'add' | 'remove' | 'relabel'; before?: WireEnd; after?: WireEnd; /** a proposed element: the trace that explains it */ trace?: { from: string; rel: string } }
+interface Pending { kind: 'rewire' | 'add' | 'remove' | 'relabel' | 'text'; before?: WireEnd & { text?: string }; after?: WireEnd & { text?: string }; /** a proposed element: the trace that explains it */ trace?: { from: string; rel: string } }
 
 const pendingOf = (it: BoardItem | undefined): Pending | undefined => {
   const p = it?.data?.pending as Pending | undefined
@@ -130,7 +130,13 @@ function withPresentation(drawn: BoardItem, was: BoardItem): BoardItem {
 }
 
 /** Has the drawing (the files) caught up with what the person proposed? */
-export function isResolved(p: Pending, drawn: BoardItem[]): boolean {
+export function isResolved(p: Pending, drawn: BoardItem[], itemId?: string): boolean {
+  // A text edit on a UI mock element (docs/diagrams.md §6c) is explained once the file says the new text —
+  // or once the element is gone from the drawing (renamed or removed in the file: nothing left to hold).
+  if (p.kind === 'text') {
+    const now = itemId ? drawn.find((d) => d.id === itemId) : undefined
+    return !now || (now.text ?? '') === (p.after?.text ?? '')
+  }
   // A proposed element (a story from EventStorming, §4) is explained once an element with the same trace is drawn.
   if (p.trace) return drawn.some((d) => ((d.data?.traces as Array<{ from: string; rel: string }> | undefined) ?? []).some((t) => t.from === p.trace!.from && t.rel === p.trace!.rel))
   const wires = drawn.filter((d) => d.type === 'arrow' && wireOf(d))
@@ -154,7 +160,7 @@ export function planRedraw(board: Record<string, BoardItem>, drawn: BoardItem[],
   for (const it of Object.values(board)) {
     const p = pendingOf(it)
     if (!p || !owned(it)) continue
-    if (!isResolved(p, drawn)) held.add(it.id)
+    if (!isResolved(p, drawn, it.id)) held.add(it.id)
     else if (!drawnIds.has(it.id)) ops.push({ kind: 'remove', id: it.id }) // resolved: the drawn wire replaces it
   }
   const updates: TemplateOp[] = []

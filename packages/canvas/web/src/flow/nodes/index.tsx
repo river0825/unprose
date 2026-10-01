@@ -7,13 +7,14 @@ import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { SCALES_FONT, fontOf } from '../font'
 import { DsIconNode } from './DsIconNode'
+import { UiNode } from './UiNode'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
 const colorVar = (c?: ColorToken) => `var(--c-${c ?? 'yellow'})`
 
 /** Shared chrome: agent-change wash, comment-attach click, double-click to edit, connection handles, resize handles. */
-function Shell({
+export function Shell({
   item,
   pulse,
   className,
@@ -299,6 +300,7 @@ export const nodeTypes = {
   lane: LaneNode,
   card: CardNode,
   wireframe: WireframeNode,
+  ui: UiNode,
   comment: CommentNode,
   // arrows are edges; a stray arrow item with missing endpoints renders as a sticky so it is visible
   arrow: StickyNode,

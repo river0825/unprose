@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { checkDomainStory, checkEventStorming, contentSchemaFor, fromEgon, proposeFromDomainStory, proposeStories, toEgon, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
+import { checkDomainStory, checkEventStorming, checkUiMock, contentSchemaFor, fromEgon, proposeFromDomainStory, proposeStories, toEgon, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
@@ -30,6 +30,9 @@ export const KIND_ALIASES: Record<string, string> = {
   dst: 'domain-story',
   journey: 'user-journey',
   'user-journey': 'user-journey',
+  ui: 'ui-mock',
+  mockup: 'ui-mock',
+  'ui-mock': 'ui-mock',
   workflow: 'workflow',
 }
 
@@ -123,6 +126,7 @@ export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
   const parsed = schema.safeParse(d.content)
   if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
   if (d.kind === 'domain-story') return [...unknown, ...checkDomainStory(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
+  if (d.kind === 'ui-mock') return [...unknown, ...checkUiMock(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element }))]
   if (d.kind !== 'event-storming') return unknown
   return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
 }

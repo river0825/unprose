@@ -6,6 +6,16 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-01
+
+### Added
+- **UI mock frames — mock a screen and discuss it like a Figma frame.** `design/<name>.ui.yaml` holds real-looking
+  screens (desktop, tablet or phone, light or dark) as a tree of components — navbar, sidebar, cards, tables, lists,
+  forms, stats, tabs, badges, charts — that the agent writes and the canvas draws with its own small design system
+  (no HTML, nothing runs). Every element can be selected, commented on and chatted about; words you edit on the
+  board become a proposal with the diff to the file (Ask AI to apply, or Undo); `goto` draws the flow between
+  screens. `awd design lint/draw`, the `design_*` tools and the new `/unprose:mockup <screen>` command know it.
+
 ## [0.6.7] — 2026-10-01
 
 ### Changed
@@ -276,7 +286,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.7...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/river0825/unprose/compare/v0.6.7...v0.7.0
 [0.6.7]: https://github.com/river0825/unprose/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/river0825/unprose/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/river0825/unprose/compare/v0.6.4...v0.6.5

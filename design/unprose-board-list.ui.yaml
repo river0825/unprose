@@ -1,0 +1,144 @@
+# A UI mock of the canvas home page (packages/canvas/web/src/BoardList.tsx), as a proposal for its next look:
+# boards grouped by project with a filter, the "ask your agent" hints folded into one line, and an empty state.
+# Draw it: node scripts/awd.mjs design draw design/unprose-board-list.ui.yaml --board "title:Unprose UI"
+title: Board list (mock)
+device: desktop
+tokens: { accent: '#1f56d6', radius: 8 }
+screens:
+  - id: boards
+    name: Boards
+    body:
+      - type: navbar
+        text: Unprose
+        items: [Boards, Docs]
+        active: Boards
+        children:
+          - { type: search, id: search, placeholder: 'Go to a board…  ⌘K', w: 260, size: sm }
+          - { type: avatar, id: me, text: River Lin, size: sm }
+      - type: section
+        children:
+          - type: row
+            justify: between
+            children:
+              - { type: heading, id: title, text: Boards, level: 1 }
+              - { type: button, id: new-board, text: New board, icon: plus, variant: primary, goto: new-board }
+          - { type: text, id: subtitle, text: 'The wall where the agent draws its thinking. Move stickies, add comments, and it sees the change.', variant: muted }
+          - type: alert
+            id: ask-hint
+            tone: info
+            icon: comment
+            text: 'Ask your agent: “Run an EventStorming of our refund process on the canvas” — or type /unprose:help in Claude Code.'
+            note: Should this hint go away once the first board exists?
+          - { type: tabs, id: projects, items: [{ text: All projects, badge: '9' }, { text: agent-workflow-diagram, badge: '6' }, { text: Personal, badge: '3' }], active: 0 }
+          - type: grid
+            cols: 3
+            children:
+              - type: card
+                id: board-studio
+                pad: 0
+                gap: 0
+                children:
+                  - { type: image, id: thumb-studio, text: Studio — EventStorming + story map, h: 150 }
+                  - type: stack
+                    pad: 14
+                    gap: 4
+                    children:
+                      - { type: heading, id: name-studio, text: Studio design, level: 4 }
+                      - type: row
+                        justify: between
+                        children:
+                          - { type: badge, id: kind-studio, text: Freeform }
+                          - { type: text, id: when-studio, text: updated 3 min ago, variant: small, w: 120 }
+              - type: card
+                id: board-runner
+                pad: 0
+                gap: 0
+                children:
+                  - { type: image, id: thumb-runner, text: Runner — workflow, h: 150 }
+                  - type: stack
+                    pad: 14
+                    gap: 4
+                    children:
+                      - { type: heading, id: name-runner, text: card-pipeline — workflow.yaml, level: 4 }
+                      - type: row
+                        justify: between
+                        children:
+                          - { type: badge, id: kind-runner, text: Workflow, tone: info }
+                          - { type: text, id: when-runner, text: updated 2 h ago, variant: small, w: 120 }
+              - type: card
+                id: board-ui
+                pad: 0
+                gap: 0
+                children:
+                  - { type: image, id: thumb-ui, text: This mock, h: 150 }
+                  - type: stack
+                    pad: 14
+                    gap: 4
+                    children:
+                      - { type: heading, id: name-ui, text: Unprose UI, level: 4 }
+                      - type: row
+                        justify: between
+                        children:
+                          - { type: badge, id: kind-ui, text: UI mock, tone: success }
+                          - { type: text, id: when-ui, text: updated just now, variant: small, w: 120 }
+          - type: table
+            id: recent
+            text: Recent activity
+            columns: [Board, Change, Who, When]
+            rows:
+              - [Studio design, Commented on “publish proposal”, '[You]', 2 min ago]
+              - [Unprose UI, Drew 3 screens, '[Agent]', 5 min ago]
+              - [card-pipeline, Proposed a rewire, '[Review]', 1 h ago]
+
+  - id: new-board
+    name: New board
+    body:
+      - { type: navbar, id: nav, text: Unprose, items: [Boards, Docs], active: Boards }
+      - type: section
+        bg: muted
+        pad: 48
+        children:
+          - type: row
+            justify: center
+            children:
+              - type: card
+                id: dialog
+                text: New board
+                w: 480
+                variant: elevated
+                pad: 24
+                gap: 16
+                children:
+                  - { type: input, id: board-title, label: Title, placeholder: e.g. Refund process, hint: The agent finds the board by its title }
+                  - { type: select, id: project, label: Project, value: agent-workflow-diagram }
+                  - { type: checkbox, id: start-hints, text: Show the agent prompts on the empty board, checked: true }
+                  - type: row
+                    justify: end
+                    gap: 8
+                    children:
+                      - { type: button, id: cancel, text: Cancel, variant: ghost, goto: boards }
+                      - { type: button, id: create, text: Create board, variant: primary }
+
+  - id: phone
+    name: Boards on a phone
+    device: phone
+    theme: dark
+    body:
+      - { type: navbar, id: nav, text: Unprose, children: [{ type: icon, id: menu, icon: menu }] }
+      - type: section
+        pad: 16
+        gap: 12
+        children:
+          - { type: heading, id: title, text: Boards, level: 2 }
+          - { type: search, id: search, placeholder: Search boards }
+          - type: list
+            id: boards
+            items:
+              - { text: Studio design, meta: Freeform · 3 min ago, icon: board, badge: '[2 new]' }
+              - { text: card-pipeline — workflow.yaml, meta: Workflow · 2 h ago, icon: chart }
+              - { text: Unprose UI, meta: UI mock · just now, icon: edit }
+              - { text: Refund process, meta: EventStorming · yesterday, icon: board }
+          - { type: button, id: new-board, text: New board, icon: plus, variant: primary, goto: new-board }
+
+flows:
+  - { from: boards/board-studio, to: phone, label: "same list, phone width" }

@@ -74,8 +74,8 @@ Paths are relative to the session's project. The `design_*` tools are served by 
 
 ### Start prompts and slash commands
 
-Seven ways to start a conversation, written once in `packages/cli/src/prompts.ts`: `help`, `eventstorm <topic>`,
-`storymap`, `kanban`, `wireframe <page>`, `domain-story <topic>`, `review`. MCP clients (Codex and others) get
+Eight ways to start a conversation, written once in `packages/cli/src/prompts.ts`: `help`, `eventstorm <topic>`,
+`storymap`, `kanban`, `wireframe <page>`, `mockup <screen>`, `domain-story <topic>`, `review`. MCP clients (Codex and others) get
 them as MCP prompts. The Claude Code plugin gets them as slash commands `/unprose:<name>` (`commands/*.md`,
 written by `npm run gen:commands`; a test fails when they drift) and turns the MCP prompts off
 (`UNPROSE_MCP_PROMPTS=0`) so the menu does not list them twice.
@@ -149,7 +149,7 @@ Every `Change` carries `before` — a snapshot of each touched item before the c
 ### Model (from `src/model.ts`)
 
 ```ts
-Item   { id, type: sticky|text|frame|lane|arrow|comment|wireframe|card, x, y, w, h,
+Item   { id, type: sticky|text|frame|lane|arrow|comment|wireframe|card|ui, x, y, w, h,
          text?, color?: orange|blue|yellow|pale-yellow|lilac|green|pink|red|purple|grey|white,
          role?, parent?, from?, to?, label?, target?, order?, data?,
          createdBy, updatedBy: 'agent'|'user', updatedAt }
@@ -234,6 +234,39 @@ Stages as columns; rows Actions, Touchpoints, an Emotion lane (−2…2 drawn as
 ```
 
 12-column grid, 40 px rows; `x` 0–11, `w` 1–12, `y`/`h` in rows. Roles: `box button input heading paragraph image nav list table label`. A `note` becomes a comment bubble on that element. Screens are laid out side by side.
+
+### `ui-mock` (docs/diagrams.md §6c — real-looking screens)
+
+```yaml
+device: desktop            # desktop 1280×800 | laptop 1024×680 | tablet 768×1024 | phone 390×844
+theme: light               # the mock's own theme; a screen may override it
+tokens: { accent: '#1f56d6', radius: 8, font: sans }
+screens:
+  - id: boards
+    name: Boards
+    body:
+      - { type: navbar, text: Unprose, items: [Boards, Docs], active: Boards, children: [{ type: avatar, id: me, text: River Lin }] }
+      - type: section                      # padding 24
+        children:
+          - type: row
+            justify: between
+            children:
+              - { type: heading, id: title, text: Boards, level: 1 }
+              - { type: button, id: new-board, text: New board, icon: plus, goto: new-board }
+          - { type: table, id: recent, columns: [Board, Status], rows: [[Studio, '[Done]']] }
+  - { id: new-board, name: New board, device: phone, theme: dark, body: [ … ] }
+flows: [{ from: boards/recent, to: new-board, label: open }]
+```
+
+A component tree, laid out by the template (no HTML is stored or rendered). Layout nodes `stack`, `row` (children
+take `span` of 12, a fixed `w`, hug their content — buttons, badges, links — or share the rest; `justify`, `align`)
+and `grid` (`cols`) are not drawn; `card`, `section` and `navbar` are drawn and hold children; every other type is
+one element. Each screen and element becomes a `ui` item (`role` = its type) with
+`data.ui = { type, …props, path, textKey, theme, accent, radius, font }` and `data.element = '<screen>/<element>'`;
+ids are `<key>.screen.<screen>` and `<key>.ui.<screen>.<element>`. `goto` and `flows` draw `navigate` arrows to the
+target screen; `note` becomes a comment bubble. The full list of types and props is in the MCP `CONTENT_HELP`
+and docs/diagrams.md §6c. A text edit on the board sets `data.pending = { kind: 'text', before: { text }, after:
+{ text }, path, key, by: 'user', at }`; a redraw whose file says the new text clears it.
 
 ### `workflow`
 

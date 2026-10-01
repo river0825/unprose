@@ -18,6 +18,7 @@ const CONTENT_HELP = `content shape per kind (see docs/canvas.md for full exampl
 - user-story-map: { activities: [{id?, text, steps: [{id?, text, stories: [{id?, text, release?, acceptance?: string[], traces?: [{from: '<diagram key>/<element id>', rel: 'derived-from'|'groups'|'shows'}]}]}]}], releases?: string[] }  (releases are cut lines, top to bottom)
 - user-journey: { persona, stages: [{text, actions?, touchpoints?, emotion: -2..2, pains?, opportunities?}] }
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
+- ui-mock (docs/diagrams.md §6c — real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, …props } — layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; text edited on the board comes back as a proposal (data.pending.kind 'text') with a diff to apply.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
 - domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md §6b — pictographic sentences read left → right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  — every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  — columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> → <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
@@ -35,6 +36,7 @@ const DIAGRAMS = `Diagrams (one file each, drawn as a frame on a board):
 - Story map — design/<name>.story-map.yaml — scope and releases; stories can be proposed from EventStorming or a domain story
 - Kanban — design/<name>.kanban.yaml — the work; cards trace to stories
 - Wireframe — design/<name>.wireframe.yaml — one page or screen on a 12-column grid
+- UI mock — design/<name>.ui.yaml — real-looking screens (desktop / tablet / phone) from a component tree; the person comments on single elements, words edited on the board are proposals with a diff
 - Domain Storytelling — design/<name>.domain-story.yaml — who does what with what, numbered sentences; Egon.io import/export
 - Journey — design/<name>.journey.yaml — a persona's stages, emotions, pains
 - Workflow — an agent pipeline (workflow yaml)
@@ -63,6 +65,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     '- /unprose:storymap — turn the EventStorming into a story map with a first release',
     '- /unprose:kanban — a kanban of a release\'s stories',
     '- /unprose:wireframe <page> — sketch a page',
+    '- /unprose:mockup <screen> — mock a screen as real-looking UI',
     '- /unprose:domain-story <topic> — tell a process as a domain story',
     '- /unprose:review — answer every open comment on a board',
     ...(o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(', ')}`] : []),
@@ -95,7 +98,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.6.7' },
+    { name: 'unprose', version: '0.7.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
