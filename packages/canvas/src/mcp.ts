@@ -48,7 +48,7 @@ export interface McpOptions {
 }
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
-  const server = new McpServer({ name: 'awd-canvas', version: '0.5.1' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
+  const server = new McpServer({ name: 'awd-canvas', version: '0.5.2' }, { instructions: `Shared visual canvas between you and the user. ${LOOP_HELP}` })
 
   server.registerTool(
     'canvas_list_boards',

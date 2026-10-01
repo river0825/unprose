@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.5.2] — 2026-10-01
+
+### Fixed
+- A canvas started with a relative path from the plugin folder (`cd <plugin> && node scripts/canvas.mjs`) is
+  now recognised and restarted after an update too; 0.5.1 resolved that path against the wrong folder. Its
+  relative options (`--dir boards`) are kept, made absolute.
+- The skill tells agents not to restart the canvas by hand after an update: `/reload-plugins` does it, and
+  `node <plugin>/scripts/ensure.mjs` does the same on demand.
+
 ## [0.5.1] — 2026-09-30
 
 ### Fixed
@@ -186,7 +195,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/river0825/unprose/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/river0825/unprose/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/river0825/unprose/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/river0825/unprose/compare/v0.4.0...v0.4.1

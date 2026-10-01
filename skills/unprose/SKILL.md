@@ -23,6 +23,10 @@ and annotate, and a rule set that keeps it honest:
   none is running (e.g. the `canvas_autostart` option is off), start it in the background from the plugin (or repo) root —
   two directories above this skill's directory: `node <root>/scripts/canvas.mjs` (http://localhost:4400). No install or build is needed; if the runtime is missing, `node
   <root>/scripts/ensure.mjs` fetches it for this version.
+- **After a plugin update, do not restart the canvas by hand.** `/reload-plugins` (or a new session) restarts
+  it on the new version, keeping its options, even if someone started it by hand from the plugin folder. If the
+  board page still shows the old version, run `node <new version root>/scripts/ensure.mjs`; it does the same
+  restart and prints what it did. Check with `curl -s localhost:4400/api/version`.
 
 **Boards live in the project.** Boards you create are stored in the session's project at
 `<project>/.unprose/boards/` (the plugin registers the project with a local canvas); commit

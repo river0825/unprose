@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   assetName, autostartOff, boardsDirFor, canvasTarget, decideCanvas, ensureCanvas, ensureRuntime, findRuntime,
-  isLocal, parseSha256, pidAlive, pluginCanvasArgs, probeCanvas, processArgs, readState, runtimeCandidates, setting,
+  isLocal, parseSha256, pidAlive, pluginCanvasArgs, probeCanvas, processArgs, processCwd, readState, runtimeCandidates, setting,
 } from '../runtime.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -104,6 +104,11 @@ test('a canvas running the plugin’s code (any installed version or its runtime
   assert.equal(pluginCanvasArgs(['node', `${cache}/0.4.0/scripts/mcp.mjs`], o), undefined)
   // a plugin loaded from a checkout (not the cache): its sibling folders are not plugin versions
   assert.equal(pluginCanvasArgs(['node', '/h/code/other/dist/canvas.mjs'], { root: '/h/code/unprose', data: o.data }), undefined)
+  // started with a relative path from the plugin folder (cd <plugin> && node scripts/canvas.mjs --dir boards)
+  assert.deepEqual(pluginCanvasArgs(['node', 'scripts/canvas.mjs', '--dir', 'b'], { ...o, cwd: `${cache}/0.4.0` }), ['--dir', `${cache}/0.4.0/b`])
+  assert.equal(pluginCanvasArgs(['node', 'scripts/canvas.mjs'], { ...o, cwd: '/h/code/unprose' }), undefined)
+  assert.equal(pluginCanvasArgs(['node', 'scripts/canvas.mjs'], o), undefined, 'cwd unknown: not recognised')
+  assert.equal(processCwd(process.pid), fs.realpathSync(process.cwd()))
   assert.ok(processArgs(process.pid).some((a) => a.endsWith('node') || a.includes('node')), 'reads this process’s own command line')
 })
 
@@ -225,7 +230,10 @@ test('after an update, a canvas started by hand from the plugin is restarted on 
   const v2 = plugin('plugins/cache/unprose/unprose/0.9.1', '0.9.1')
   const dir = path.join(tmp, 'boards-by-hand')
   // an agent restarted the canvas itself: no plugin state records it
-  const byHand = spawn(process.execPath, [path.join(v1, 'dist/canvas.mjs'), 'serve', '--port', String(port), '--dir', dir], { stdio: 'ignore' })
+  fs.mkdirSync(path.join(v1, 'scripts'))
+  for (const f of ['canvas.mjs', 'runtime.mjs']) fs.copyFileSync(path.join(repo, 'scripts', f), path.join(v1, 'scripts', f))
+  // as the other project's agent did: cd into the plugin folder, then a relative script path
+  const byHand = spawn(process.execPath, ['scripts/canvas.mjs', '--port', String(port), '--dir', dir], { cwd: v1, stdio: 'ignore' })
   started.push(byHand.pid)
   for (let i = 0; i < 100 && !(await probeCanvas(env.AWD_CANVAS_URL)).reachable; i++) await new Promise((r) => setTimeout(r, 100))
   const r = await ensureCanvas({ runtime: findRuntime({ root: v2, data }), root: v2, data, env, log: () => {} })

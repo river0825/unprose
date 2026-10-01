@@ -217,14 +217,27 @@ export function processArgs(pid) {
   return r.status === 0 ? r.stdout.trim().split(/\s+/).filter(Boolean) : []
 }
 
+/** A local process's working directory (relative paths in its command line are relative to it), or undefined. */
+export function processCwd(pid) {
+  try {
+    return fs.readlinkSync(`/proc/${pid}/cwd`)
+  } catch {}
+  const r = spawnSync('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { encoding: 'utf8' })
+  const line = r.status === 0 ? r.stdout.split('\n').find((l) => l.startsWith('n/')) : undefined
+  return line ? line.slice(1) : undefined
+}
+
 /**
  * A canvas process running this plugin's code — any installed version (a sibling folder in the plugin
  * cache) or a runtime copy in the data dir — may be restarted on the plugin's version, whoever started it.
- * Returns its serve options (without `serve` and `--port`), or undefined for any other process. Pure.
+ * Relative paths (`cd <plugin> && node scripts/canvas.mjs --dir boards`) are resolved against the process's
+ * `cwd`; without it a relative script is not recognised. Returns its serve options (without `serve` and
+ * `--port`, folders made absolute), or undefined for any other process. Pure.
  */
-export function pluginCanvasArgs(argv, { root = pluginRoot, data = dataDir() } = {}) {
+export function pluginCanvasArgs(argv, { root = pluginRoot, data = dataDir(), cwd } = {}) {
   const inCache = /[\\/]plugins[\\/]cache[\\/]/.test(root + path.sep)
-  const under = (p, dir) => path.resolve(p).startsWith(path.resolve(dir) + path.sep)
+  const abs = (p) => (path.isAbsolute(p) ? path.resolve(p) : cwd ? path.resolve(cwd, p) : undefined)
+  const under = (p, dir) => abs(p)?.startsWith(path.resolve(dir) + path.sep) ?? false
   const i = argv.findIndex((a) => /canvas\.m?js$/.test(a) && ((inCache && under(a, path.dirname(root))) || under(a, path.join(data, 'runtime'))))
   if (i < 0) return undefined
   const rest = argv.slice(i + 1)
@@ -232,10 +245,13 @@ export function pluginCanvasArgs(argv, { root = pluginRoot, data = dataDir() } =
   const out = []
   for (let j = 0; j < rest.length; j++) {
     if (rest[j] === '--port') j++
-    else if (!rest[j].startsWith('--port=')) out.push(rest[j])
+    else if (rest[j].startsWith('--port=')) continue
+    else if (PATH_OPTIONS.has(rest[j]) && rest[j + 1] !== undefined) out.push(rest[j], abs(rest[++j]) ?? rest[j])
+    else out.push(rest[j])
   }
   return out
 }
+const PATH_OPTIONS = new Set(['--dir', '--project', '--studio-project', '--studio'])
 
 export async function probeCanvas(target, timeoutMs = 1500) {
   try {
@@ -341,7 +357,7 @@ export async function ensureCanvas({ runtime, root = pluginRoot, data = dataDir(
   return withLock(data, async () => {
     const probe = await probeCanvas(target)
     const state = readState(data)
-    const adopt = isLocal(target) && probe.pid && probe.version !== version ? pluginCanvasArgs(processArgs(probe.pid), { root, data }) : undefined
+    const adopt = isLocal(target) && probe.pid && probe.version !== version ? pluginCanvasArgs(processArgs(probe.pid), { root, data, cwd: processCwd(probe.pid) }) : undefined
     const d = decideCanvas({ target, probe, state, alive: pidAlive, version, autostart: !autostartOff(env), startIfDown, adopt })
     if (d.action === 'none') return { action: 'none', target, version: probe.version }
     if (d.action === 'note') {
