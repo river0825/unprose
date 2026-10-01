@@ -45,6 +45,14 @@ interface Props {
   onPickWireEvent: (id: string, event: string) => void
   /** drop a proposed (pending) item, e.g. a story the agent proposed (docs/diagrams.md §4) */
   onDismiss: (id: string) => void
+  /** the board items a link under the pointer (or keyboard focus) points at; [] when none */
+  onHoverItems?: (ids: string[]) => void
+}
+
+/** The ids a panel link points at: any element marked \`data-item-link="<id> <id>…"\` (one handler for every list). */
+function linkIds(target: EventTarget | null): string[] {
+  const el = target instanceof Element ? target.closest<HTMLElement>('[data-item-link]') : null
+  return el?.dataset.itemLink?.split(' ').filter(Boolean) ?? []
 }
 
 /** Shown by the Event section already, or drawing detail: not repeated as raw data rows. */
@@ -75,7 +83,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onPickWireEvent, onDismiss, onHoverItems }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
@@ -114,7 +122,15 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
   const needYou = useMemo(() => chatsNeedingYou(board), [board])
 
   return (
-    <aside id="board-panel" className="panel" aria-label="Board panel">
+    <aside
+      id="board-panel"
+      className="panel"
+      aria-label="Board panel"
+      onPointerOver={(e) => onHoverItems?.(linkIds(e.target))}
+      onPointerLeave={() => onHoverItems?.([])}
+      onFocus={(e) => onHoverItems?.(linkIds(e.target))}
+      onBlur={() => onHoverItems?.([])}
+    >
       <div className="panel-tabs" role="tablist">
         <button role="tab" aria-selected={activeTab === 'feed'} onClick={() => setTab('feed')}>
           Changes
@@ -165,7 +181,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                         <div className="note">
                           Agent changed {ids.length} item{ids.length === 1 ? '' : 's'}
                           {c.note ? `: ${c.note}` : ''}{' '}
-                          <button type="button" className="link" onClick={() => onLocate(ids)}>
+                          <button type="button" className="link" data-item-link={ids.join(' ')} onClick={() => onLocate(ids)}>
                             locate
                           </button>
                         </div>
@@ -186,6 +202,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                                   <button
                                     type="button"
                                     disabled={!exists}
+                                    data-item-link={exists ? id : undefined}
                                     onClick={() => {
                                       onSelect(id)
                                       setTab('item')

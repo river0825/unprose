@@ -179,7 +179,7 @@ function KindBody({ board, item, detail: d, config, onSelect, ctx, sourceRequest
   )
   const link = (label: string, target: Item | undefined) =>
     target ? (
-      <button type="button" className="link" onClick={() => onSelect(target.id)}>
+      <button type="button" className="link" data-item-link={target.id} onClick={() => onSelect(target.id)}>
         {label}
       </button>
     ) : (
@@ -643,7 +643,7 @@ const blockName = (it: Item) => it.text?.split('\n')[0].trim() || it.id
 
 function BlockLink({ it, onSelect, note }: { it: Item; onSelect: (id: string) => void; note?: string }) {
   return (
-    <button type="button" className="wire-block" onClick={() => onSelect(it.id)} title={`Select ${blockName(it)}`}>
+    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${blockName(it)}`}>
       {blockName(it)}
       {note ? <span className="wire-note">{note}</span> : null}
     </button>
@@ -654,7 +654,7 @@ function BlockLink({ it, onSelect, note }: { it: Item; onSelect: (id: string) =>
 function EventChip({ event, wire, onSelect }: { event: string; wire: Item | undefined; onSelect: (id: string) => void }) {
   if (!wire) return <span className="insp-chip mono">{event}</span>
   return (
-    <button type="button" className="insp-chip mono wire-chip" onClick={() => onSelect(wire.id)} title="Select this wire on the board">
+    <button type="button" className="insp-chip mono wire-chip" data-item-link={wire.id} onClick={() => onSelect(wire.id)} title="Select this wire on the board">
       {event}
     </button>
   )

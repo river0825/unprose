@@ -19,7 +19,7 @@ const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split
 function ItemLink({ it, onSelect }: { it: Item | undefined; onSelect: (id: string) => void }) {
   if (!it) return <span className="muted">missing item</span>
   return (
-    <button type="button" className="wire-block" onClick={() => onSelect(it.id)} title={`Select ${nameOf(it)}`}>
+    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${nameOf(it)}`}>
       {nameOf(it)}
       {it.role ? <span className="wire-note">{it.role.replace(/-/g, ' ')}</span> : null}
     </button>
@@ -86,7 +86,7 @@ function Findings({ findings, board, onSelect, kind }: { findings: Finding[]; bo
         <ul className="dg-findings">
           {findings.map((f, i) => (
             <li key={`${f.elementId}-${i}`}>
-              <button type="button" className="link" onClick={() => onSelect(f.elementId)} disabled={!board.items[f.elementId]}>
+              <button type="button" className="link" data-item-link={f.elementId} onClick={() => onSelect(f.elementId)} disabled={!board.items[f.elementId]}>
                 {f.message}
               </button>{' '}
               <span className="muted">{f.page}</span>
@@ -179,7 +179,7 @@ export function DiagramElementPanel({
                     </>
                   )}
                   {where ? <span className="wire-note">{KIND_NAMES[where.kind] ?? where.kind}</span> : null}
-                  <button type="button" className="link conn-wire" onClick={() => onSelect(t.wire.id)} aria-label="Select the trace wire">
+                  <button type="button" className="link conn-wire" data-item-link={t.wire.id} onClick={() => onSelect(t.wire.id)} aria-label="Select the trace wire">
                     wire
                   </button>
                 </li>

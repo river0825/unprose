@@ -72,7 +72,7 @@ export function SelectionChat({ board, selectedIds, onChat, onReply, onSelect, o
     <div className="chat">
       <div className="chat-chips" role="group" aria-label="Chatting about">
         {items.map((it) => (
-          <button key={it.id} type="button" className="chat-chip" title={`Select only ${itemName(board, it, 80)}`} onClick={() => onSelect(it.id)}>
+          <button key={it.id} type="button" className="chat-chip" data-item-link={it.id} title={`Select only ${itemName(board, it, 80)}`} onClick={() => onSelect(it.id)}>
             {itemName(board, it)}
           </button>
         ))}
@@ -127,7 +127,7 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
             {onLocate && aboutIds.length > 0 && (
               <>
                 {' · '}
-                <button type="button" className="link" onClick={() => onLocate(aboutIds)} title="Select these items and show them on the board">
+                <button type="button" className="link" data-item-link={aboutIds.join(' ')} onClick={() => onLocate(aboutIds)} title="Select these items and show them on the board">
                   show on board
                 </button>
               </>

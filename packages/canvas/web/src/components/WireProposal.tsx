@@ -28,7 +28,7 @@ function Block({ board, nodeId, onSelect }: { board: Board; nodeId: string | und
   const { it, name } = nameOf(board, nodeId)
   if (!it) return <span className="mono">{name}</span>
   return (
-    <button type="button" className="wire-block" onClick={() => onSelect(it.id)} title={`Select ${name}`}>
+    <button type="button" className="wire-block" data-item-link={it.id} onClick={() => onSelect(it.id)} title={`Select ${name}`}>
       {name}
     </button>
   )

@@ -6,6 +6,13 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.2] — 2026-10-01
+
+### Added
+- Pointing at a block, wire or element in the side panel (Connected, Wiring, traces, chat chips, the change
+  list) lights it up on the board too — an outline on a block, a thick blue line on a wire — so you can see which
+  one it is without selecting it. Keyboard focus on the link does the same.
+
 ## [0.6.1] — 2026-10-01
 
 ### Added
@@ -226,7 +233,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/river0825/unprose/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/river0825/unprose/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/river0825/unprose/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/river0825/unprose/compare/v0.5.1...v0.5.2

@@ -65,7 +65,7 @@ export function AllChats({ board, onLocate, onReply }: { board: Board; onLocate:
                   <span className="muted">About</span>
                   {about.length ? (
                     about.slice(0, 4).map((a) => (
-                      <button key={a} type="button" className="chat-chip" title="Show on the board" onClick={() => onLocate([a])}>
+                      <button key={a} type="button" className="chat-chip" data-item-link={a} title="Show on the board" onClick={() => onLocate([a])}>
                         {itemName(board, board.items[a], 20)}
                       </button>
                     ))
@@ -74,7 +74,7 @@ export function AllChats({ board, onLocate, onReply }: { board: Board; onLocate:
                   )}
                   {about.length > 4 && <span className="muted">+{about.length - 4}</span>}
                   {about.length > 1 && (
-                    <button type="button" className="link" onClick={() => onLocate(about)}>
+                    <button type="button" className="link" data-item-link={about.join(' ')} onClick={() => onLocate(about)}>
                       show all
                     </button>
                   )}

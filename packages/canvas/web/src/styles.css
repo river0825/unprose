@@ -1863,3 +1863,14 @@ kbd {
   font-weight: 400;
   color: var(--ink-3);
 }
+
+/* the item a side-panel link points at, while the pointer (or focus) is on the link */
+.react-flow__node.panel-hover > .item {
+  outline: 3px solid var(--marker);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px var(--marker-soft);
+}
+.react-flow__edge.panel-hover .react-flow__edge-path {
+  stroke: var(--marker) !important;
+  stroke-width: 3.5px !important;
+}

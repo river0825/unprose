@@ -136,18 +136,29 @@ function BoardInner({ id }: { id: string }) {
     }
   }, [derived])
 
+  // a link under the pointer in the side panel lights up the item(s) it points at on the board
+  const [panelHover, setPanelHover] = useState<string[]>([])
+  const onHoverItems = useCallback((ids: string[]) => setPanelHover((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids)), [])
+  const shownNodes = useMemo(() => {
+    if (!panelHover.length) return nodes
+    const on = new Set(panelHover)
+    return nodes.map((n) => (on.has(n.id) ? { ...n, className: `${n.className ?? ''} panel-hover` } : n))
+  }, [nodes, panelHover])
+
   // owns / delegates wires are agent relations, not events: faint unless one of their ends is selected (docs/studio.md §7)
   const shownEdges = useMemo(() => {
     // only workflow diagrams draw owns / delegates wires, on a workflow board or in a workflow frame
     if (!board) return edges
     const sel = new Set(selectedIds)
+    const hover = new Set(panelHover)
     return edges.map((e) => {
       const role = board.items[e.id]?.role
-      if (role !== 'owns' && role !== 'delegates') return e
+      const lit = hover.has(e.id) ? ' panel-hover' : ''
+      if (role !== 'owns' && role !== 'delegates') return lit ? { ...e, className: `${e.className ?? ''}${lit}` } : e
       const on = e.selected || sel.has(e.source) || sel.has(e.target)
-      return { ...e, className: on ? 'wire-agent on' : 'wire-agent' }
+      return { ...e, className: (on ? 'wire-agent on' : 'wire-agent') + lit }
     })
-  }, [board, edges, selectedIds])
+  }, [board, edges, selectedIds, panelHover])
 
   const onNodesChange = useCallback((changes: NodeChange<ItemNode>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns))
@@ -778,7 +789,7 @@ function BoardInner({ id }: { id: string }) {
       <div className="canvas-wrap" ref={wrapRef} onDoubleClick={onWrapDoubleClick}>
         <EditContext.Provider value={editApi}>
           <ReactFlow
-            nodes={nodes}
+            nodes={shownNodes}
             edges={shownEdges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
@@ -862,6 +873,7 @@ function BoardInner({ id }: { id: string }) {
           selectedId={selectedId}
           selectedIds={selectedIds}
           sourceRequest={sourceRequest}
+          onHoverItems={onHoverItems}
           onComment={(tid, text) => void addComment(tid, text)}
           onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
           onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}
