@@ -46470,7 +46470,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.6.5" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.6.6" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",

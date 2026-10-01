@@ -6,6 +6,8 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.6] — 2026-10-01
+
 ## [0.6.5] — 2026-10-01
 
 ### Changed
@@ -266,7 +268,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/river0825/unprose/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/river0825/unprose/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/river0825/unprose/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/river0825/unprose/compare/v0.6.2...v0.6.3
