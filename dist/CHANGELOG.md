@@ -6,7 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.6.7] — 2026-10-01
+
+### Changed
+- Hovering a block no longer fades or highlights wires; only selecting a block brings its wires forward.
+
 ## [0.6.6] — 2026-10-01
+
+No changes: a mistake in the release script published this version without its change (the hover change,
+now in 0.6.7). It runs the same code as 0.6.5.
 
 ## [0.6.5] — 2026-10-01
 
@@ -268,7 +276,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/river0825/unprose/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/river0825/unprose/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/river0825/unprose/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/river0825/unprose/compare/v0.6.3...v0.6.4
