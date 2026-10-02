@@ -111,13 +111,15 @@ const waitFor = async (f: () => boolean, ms = 3000) => {
 
 test('check: cached for hours, refresh forces, off when no source; unsupported installs say why', async () => {
   const src = new FakeUpdateSource({ version: '0.5.0', notes: 'n', source: 'fake' })
-  const svc = new UpdateService({ current: '0.4.1', install: { kind: 'checkout', root: '/r', build: true }, source: src, installer: new FakeInstaller(), launcher: new FakeLauncher('0.5.0'), entry: '/r/packages/canvas/dist/cli.js', argv: ['serve'], env: {}, logFile: '/tmp/x.log' })
+  let clock = Date.parse('2026-10-02T10:00:00Z')
+  const svc = new UpdateService({ current: '0.4.1', install: { kind: 'checkout', root: '/r', build: true }, source: src, installer: new FakeInstaller(), launcher: new FakeLauncher('0.5.0'), entry: '/r/packages/canvas/dist/cli.js', argv: ['serve'], env: {}, logFile: '/tmp/x.log', now: () => clock })
   const c = await svc.check()
   assert.equal(c.available, true)
   assert.equal(c.latest, '0.5.0')
   assert.equal(c.command, 'cd /r && git pull --ff-only && npm ci && npm run build')
   await svc.check()
   assert.equal(src.calls, 1, 'cached')
+  clock += 31_000
   await svc.check(true)
   assert.equal(src.calls, 2, 'refresh')
   const off = new UpdateService({ current: '0.4.1', install: { kind: 'unknown', unsupported: 'nope' }, installer: new FakeInstaller(), launcher: new FakeLauncher(undefined), entry: '/x', argv: [], env: {}, logFile: '/tmp/x.log' })
@@ -178,6 +180,58 @@ test('upgrade job, plugin: claude plugin update, then start from the new version
   assert.equal(s.pid, 4242)
   assert.equal(s.version, '0.5.0')
   assert.equal(s.root, '/c/u/u/0.5.0')
+})
+
+test('Check for updates is throttled: a refresh within 30 s of the previous check answers with that check', async () => {
+  const src = new FakeUpdateSource({ version: '0.5.0', source: 'fake' })
+  let clock = Date.parse('2026-10-02T10:00:00Z')
+  const svc = new UpdateService({ current: '0.5.0', install: { kind: 'checkout', root: '/r', build: false }, source: src, installer: new FakeInstaller(), launcher: new FakeLauncher(undefined), entry: '/r/e.js', argv: [], env: {}, logFile: '/tmp/x.log', now: () => clock })
+  const first = await svc.check(true)
+  assert.equal(src.calls, 1)
+  assert.equal(first.available, false, 'already on the latest')
+  assert.equal(first.checkedAt, '2026-10-02T10:00:00.000Z')
+  assert.equal(first.throttled, undefined)
+  clock += 29_000
+  const again = await svc.check(true)
+  assert.equal(src.calls, 1, 'within 30 s: no new request to GitHub')
+  assert.equal(again.throttled, true)
+  assert.equal(again.checkedAt, first.checkedAt, 'the previous check, with its time')
+  clock += 2_000
+  const later = await svc.check(true)
+  assert.equal(src.calls, 2, 'after 30 s: checks again')
+  assert.equal(later.throttled, undefined)
+  assert.equal(later.checkedAt, '2026-10-02T10:00:31.000Z')
+
+  // a failed check is throttled the same way (the error is the answer until 30 s have passed)
+  const failing = new FakeUpdateSource(new Error('cannot check (private repository): set GITHUB_TOKEN or log in with gh'))
+  const svc2 = new UpdateService({ current: '0.5.0', install: { kind: 'checkout', root: '/r', build: false }, source: failing, installer: new FakeInstaller(), launcher: new FakeLauncher(undefined), entry: '/r/e.js', argv: [], env: {}, logFile: '/tmp/x.log', now: () => clock })
+  assert.match((await svc2.check(true)).error!, /private repository/)
+  assert.match((await svc2.check(true)).error!, /private repository/)
+  assert.equal(failing.calls, 1)
+})
+
+test('routes: GET /api/update?refresh=1 from a remote page is allowed, throttled and redacted', async () => {
+  const src = new FakeUpdateSource({ version: '0.5.0', source: 'fake' })
+  const access = new AccessService({ store: new MemoryAccessStore() })
+  const { token } = access.createToken({ name: 'remote' }, 'test')
+  const root = ['', 'Users', 'me', 'unprose'].join('/')
+  const svc = new UpdateService({ current: '0.4.1', install: { kind: 'checkout', root, build: false }, source: src, installer: new FakeInstaller(), launcher: new FakeLauncher(undefined), entry: root + '/e.js', argv: [], env: {}, logFile: '/tmp/x.log' })
+  const srv = await startServer({ port: 0, store: createBoardRepository('memory'), update: svc, access })
+  try {
+    const u = `http://127.0.0.1:${srv.port}/api/update?refresh=1`
+    const remote = { headers: { 'x-forwarded-for': '1.2.3.4', authorization: `Bearer ${token}` } }
+    const a = await (await fetch(u, remote)).json()
+    assert.equal(a.available, true)
+    assert.ok(a.checkedAt)
+    assert.ok(!JSON.stringify(a).includes(root), 'no local paths for a remote page')
+    const b = await (await fetch(u, remote)).json()
+    assert.equal(b.throttled, true)
+    const c = await (await fetch(u)).json()
+    assert.equal(c.throttled, true, 'the throttle holds for every caller')
+    assert.equal(src.calls, 1)
+  } finally {
+    await srv.close()
+  }
 })
 
 test('routes: GET /api/update (canUpgrade only locally), POST refused from a tunnel, WS progress, no board changes', async () => {
@@ -294,7 +348,9 @@ test('a plugin canvas follows claude plugin update: restarts on the newly instal
   const launcher = new FakeLauncher('0.6.3')
   const svc = new UpdateService({ current: '0.6.0', install: { kind: 'plugin', root: '/c/u/u/0.6.0' }, installer, launcher, entry: '/c/u/u/0.6.0/dist/canvas.mjs', argv: ['serve', '--port', '4400', '--dir', '/b'], env: {}, logFile: '/tmp/x.log', installedFile, pollMs: 5 })
   const { h, events, calls } = fakeHandoff()
+  assert.equal((await svc.check()).followsPluginUpdate, undefined, 'not following yet')
   const stop = svc.followInstalled(() => h, 10)
+  assert.equal((await svc.check()).followsPluginUpdate, true, 'the dialog says it restarts by itself')
   await new Promise((r) => setTimeout(r, 40))
   assert.deepEqual(launcher.spawned, [], 'nothing newer installed: keeps running')
   write('0.6.3') // claude plugin update unprose@unprose, in a terminal
@@ -307,6 +363,7 @@ test('a plugin canvas follows claude plugin update: restarts on the newly instal
   // a checkout (or no install record) never follows
   const checkout = new UpdateService({ current: '0.6.0', install: { kind: 'checkout', root: '/r' }, installer, launcher: new FakeLauncher('0.6.3'), entry: '/r/e.js', argv: [], env: {}, logFile: '/tmp/x.log', installedFile })
   const off = checkout.followInstalled(() => h, 10)
+  assert.equal((await checkout.check()).followsPluginUpdate, undefined)
   await new Promise((r) => setTimeout(r, 30))
   off()
 })

@@ -479,7 +479,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | GET | `/api/boards/:id/studio` | | `{ capable, running, pid?, since?, exitedAt?, exitCode?, log: string[] (last 50), sessions?: { open, max, queued } }` — `capable: false` unless the board's `meta.workflow.file` is one of the server's `--studio` files |
 | POST | `/api/boards/:id/studio` | `{ action: 'start' \| 'stop' }` | same shape; `403` for a board that is not studio-capable, `400` for another action. Start is idempotent; one child per workflow; no auto-restart |
 | GET | `/api/kinds` | | `{ kinds }` |
-| GET | `/api/update` | `?refresh=1` | `{ current, latest?, available, notes?, url?, checkedAt, source, error?, install: 'plugin'\|'checkout'\|'bundle'\|'unknown', supported, canUpgrade, reason?, command }` — the newest GitHub release (cached 6 h); `canUpgrade` only for a page on this machine |
+| GET | `/api/update` | `?refresh=1` | `{ current, latest?, available, notes?, url?, checkedAt, source, error?, install: 'plugin'\|'checkout'\|'bundle'\|'unknown', supported, canUpgrade, reason?, command, throttled?, followsPluginUpdate? }` — the newest GitHub release (cached 6 h, errors 30 min); `refresh=1` checks again unless the previous check is under 30 s old (then `throttled: true` and that check); `canUpgrade` only for a page on this machine |
 | POST | `/api/update` | | `202 { started, version }` — upgrade and restart on the new version (see "Updating"); `403` unless the caller is on this machine, `409 { error }` when it cannot start (up to date, dirty checkout, unsupported install) |
 | GET | `/api/update/status` | | `{ running, phase?, message?, version?, log: string[] }` — the current or last upgrade job |
 | POST | `/mcp` | MCP JSON-RPC (Streamable HTTP, stateless) | the MCP tools as the caller (see [Remote agents](#remote-agents)); `401` + `WWW-Authenticate` without credentials from elsewhere |
@@ -806,8 +806,18 @@ below (`UNPROSE_FOLLOW_INSTALLED_MS`, `0` = off; see docs/agents-setup.md → Up
 
 The version button at the bottom of the rail checks GitHub for a newer release (on load and every six hours,
 server-side, cached in `~/.awd/update-check.json`). When one exists the button says **update** and the release
-notes dialog shows the new version's notes and **Upgrade to v…**. What Upgrade does depends on how the canvas
-was installed:
+notes dialog shows the new version's notes and **Upgrade to v…**.
+
+**Check for updates** at the top of the dialog checks now (`GET /api/update?refresh=1`, past the cache): it shows
+"Checking…", then "You're on the latest version (vX, checked just now)", the new version as above, or why the
+check failed in plain words — "Couldn't reach GitHub: …", or for a private repository without credentials: set
+`GITHUB_TOKEN` (or `GH_TOKEN`) in the canvas's environment or run `gh auth login`, then restart the canvas. Next to it:
+"last checked … ago" (the check's `checkedAt`). The server throttles it: a refresh within 30 s of the previous
+check answers with that check (`throttled: true`) instead of asking GitHub again, whoever asks — a page reached
+through a tunnel may check too (it sees no local paths, and cannot upgrade). A plugin canvas that follows
+`claude plugin update` (above) says "This canvas restarts by itself after `claude plugin update`".
+
+What Upgrade does depends on how the canvas was installed:
 
 | Install | Upgrade runs | Then starts |
 |---|---|---|

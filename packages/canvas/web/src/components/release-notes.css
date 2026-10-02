@@ -31,4 +31,14 @@
 .update-why code { font-size: 12px; overflow-wrap: anywhere; }
 .update-progress { margin: 8px 0 0; font-size: 12.5px; }
 .update-error { margin: 8px 0 0; font-size: 12.5px; color: var(--c-red, #b42318); }
-.update-check-error { margin: 12px 0 0; font-size: 12.5px; }
+
+/* ── Check for updates ─────────────────────────────────────────────────── */
+.update-check { margin: 14px 0 0; }
+.update-check-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.update-check-btn { flex: none; }
+.update-check-text { margin: 0; min-width: 0; flex: 1 1 240px; font-size: 12.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.update-check-text.tone-latest { color: var(--ink); }
+.update-check-text.tone-error { color: var(--c-red, #b42318); }
+.update-check-when { font-size: 12px; }
+.update-check-follow { margin: 6px 0 0; font-size: 12px; }
+.update-check-follow code { font-size: 11.5px; }

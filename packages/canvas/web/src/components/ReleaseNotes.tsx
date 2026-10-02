@@ -1,29 +1,19 @@
 // The running version in the rail's bottom-left corner, and the release notes (CHANGELOG.md) behind it.
 // A dot on the button means there is a version this viewer has not opened yet (remembered per viewer), or a
 // newer release that can be installed (docs/canvas.md "Updating") — then the dialog offers Upgrade.
+// "Check for updates" in the dialog asks the server to check again now (throttled to one check per 30 s there).
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Markdown } from '../inspector/Markdown'
+import { checkSummary, type UpdateInfo } from './updateCheck'
 import './release-notes.css'
+
+export type { UpdateInfo } from './updateCheck'
 
 interface Release {
   version: string | null
   changelog: string | null
 }
 
-/** GET /api/update (docs/canvas.md "Updating"). */
-export interface UpdateInfo {
-  current: string | null
-  latest?: string
-  available: boolean
-  notes?: string
-  url?: string
-  error?: string
-  install: 'plugin' | 'checkout' | 'bundle' | 'unknown'
-  supported: boolean
-  canUpgrade: boolean
-  reason?: string
-  command: string
-}
 interface UpdateStatus {
   running: boolean
   phase?: 'checking' | 'installing' | 'building' | 'restarting' | 'done' | 'failed'
@@ -50,21 +40,49 @@ const recall = (k: string): string | null => {
   }
 }
 
-/** The update check, on load and every six hours. */
-export function useUpdate(): [UpdateInfo | null, () => void] {
+export interface UpdateState {
+  info: UpdateInfo | null
+  /** A "Check for updates" is in flight. */
+  checking: boolean
+  /** The canvas itself did not answer that check. */
+  failed: string | null
+  /** Check now, past the server's six-hour cache. */
+  refresh: () => void
+}
+
+/** The update check, on load and every six hours; `refresh` checks now. */
+export function useUpdate(): UpdateState {
   const [info, setInfo] = useState<UpdateInfo | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
   const load = useCallback((refresh = false) => {
+    if (refresh) {
+      setChecking(true)
+      setFailed(null)
+    }
+    const started = Date.now()
     fetch(`/api/update${refresh ? '?refresh=1' : ''}`)
-      .then((r) => (r.ok ? (r.json() as Promise<UpdateInfo>) : null))
-      .then((j) => j && setInfo(j))
-      .catch(() => undefined)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `HTTP ${r.status}`)
+        return r.json() as Promise<UpdateInfo>
+      })
+      .then((j) => setInfo(j))
+      .catch((e: Error) => refresh && setFailed(e.message))
+      .finally(async () => {
+        if (!refresh) return
+        // keep "Checking…" up long enough to be read, even when the answer is the cached one
+        const left = 400 - (Date.now() - started)
+        if (left > 0) await new Promise((r) => setTimeout(r, left))
+        setChecking(false)
+      })
   }, [])
   useEffect(() => {
     load()
     const t = window.setInterval(() => load(), SIX_HOURS)
     return () => window.clearInterval(t)
   }, [load])
-  return [info, () => load(true)]
+  const refresh = useCallback(() => load(true), [load])
+  return { info, checking, failed, refresh }
 }
 
 const SEEN_KEY = 'awd.seenVersion'
@@ -106,7 +124,8 @@ export function VersionButton({ onToast }: { onToast?: (text: string) => void } 
   const [release, setRelease] = useState<Release | null>(null)
   const [open, setOpen] = useState(false)
   const [seen, setSeen] = useState(seenVersion)
-  const [update, refresh] = useUpdate()
+  const upd = useUpdate()
+  const update = upd.info
   // the latest callback without re-running the fetch on every render (callers pass an inline function)
   const toastRef = useRef(onToast)
   toastRef.current = onToast
@@ -151,13 +170,13 @@ export function VersionButton({ onToast }: { onToast?: (text: string) => void } 
         {upgradable && <span className="version-update">update</span>}
         {(isNew || upgradable) && <span className={`version-dot${upgradable ? ' update' : ''}`} aria-hidden="true" />}
       </button>
-      {open && <ReleaseNotes version={version} changelog={release?.changelog ?? null} update={update} onRefresh={refresh} onClose={() => setOpen(false)} />}
+      {open && <ReleaseNotes version={version} changelog={release?.changelog ?? null} check={upd} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
 /** "v0.5.0 is available": its notes, and Upgrade (or why not, with the command to run by hand). */
-function UpdateBanner({ update, onRefresh }: { update: UpdateInfo; onRefresh: () => void }) {
+function UpdateBanner({ update }: { update: UpdateInfo }) {
   const [status, setStatus] = useState<UpdateStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [restarting, setRestarting] = useState(false)
@@ -232,9 +251,6 @@ function UpdateBanner({ update, onRefresh }: { update: UpdateInfo; onRefresh: ()
         <button type="button" className="primary" disabled={!update.canUpgrade || busy} onClick={() => void upgrade()} aria-describedby={!update.canUpgrade ? 'update-why' : undefined}>
           {busy ? 'Upgrading…' : `Upgrade to v${update.latest}`}
         </button>
-        <button type="button" className="ghost small" onClick={onRefresh} disabled={busy}>
-          Check again
-        </button>
       </div>
       {!update.canUpgrade && (
         <p id="update-why" className="update-why">
@@ -258,7 +274,38 @@ function UpdateBanner({ update, onRefresh }: { update: UpdateInfo; onRefresh: ()
   )
 }
 
-export function ReleaseNotes({ version, changelog, update, onRefresh, onClose }: { version: string; changelog: string | null; update?: UpdateInfo | null; onRefresh?: () => void; onClose: () => void }) {
+/** "Check for updates", what the last check said and when, and whether this canvas follows `claude plugin update`. */
+function UpdateCheckRow({ check }: { check: UpdateState }) {
+  // "checked 2 min ago" keeps up while the dialog is open
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 15_000)
+    return () => window.clearInterval(t)
+  }, [])
+  useEffect(() => setNow(Date.now()), [check.info, check.checking])
+  const s = checkSummary(check.info, check.checking, check.failed, now)
+  return (
+    <section className="update-check" aria-label="Updates">
+      <div className="update-check-row">
+        <button type="button" className="ghost small update-check-btn" onClick={check.refresh} disabled={check.checking}>
+          {check.checking ? 'Checking…' : 'Check for updates'}
+        </button>
+        <p className={`update-check-text tone-${s.tone}`} role="status" aria-live="polite">
+          {s.tone !== 'checking' && s.text}
+          {s.lastChecked && s.tone !== 'latest' && <span className="muted update-check-when">{s.text ? ' · ' : ''}{s.lastChecked}</span>}
+        </p>
+      </div>
+      {check.info?.followsPluginUpdate && (
+        <p className="muted update-check-follow">
+          This canvas restarts by itself after <code>claude plugin update</code>.
+        </p>
+      )}
+    </section>
+  )
+}
+
+export function ReleaseNotes({ version, changelog, check, onClose }: { version: string; changelog: string | null; check?: UpdateState; onClose: () => void }) {
+  const update = check?.info
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
@@ -302,8 +349,8 @@ export function ReleaseNotes({ version, changelog, update, onRefresh, onClose }:
           </button>
         </div>
         <div className="sheet-body release-body" tabIndex={0}>
-          {update?.available && <UpdateBanner update={update} onRefresh={onRefresh ?? (() => undefined)} />}
-          {update && !update.available && update.error && <p className="muted update-check-error">Could not check for a newer version: {update.error}</p>}
+          {check && <UpdateCheckRow check={check} />}
+          {update?.available && <UpdateBanner update={update} />}
           {changelog ? <Markdown text={notesForReading(changelog)} /> : <p className="muted">No release notes were found next to this server (CHANGELOG.md).</p>}
         </div>
       </div>

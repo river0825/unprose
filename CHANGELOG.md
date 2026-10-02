@@ -6,6 +6,16 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-10-02
+
+### Added
+- **Check for updates, now.** The release-notes dialog (the version button at the bottom of the rail) has a **Check for
+  updates** button: it asks GitHub again past the six-hour cache, shows "Checking…", then "You're on the latest
+  version (vX, checked just now)", the new version with its notes and **Upgrade**, or why it could not check in plain
+  words (a private repository says to set `GITHUB_TOKEN` or run `gh auth login`), with "last checked … ago". The
+  server answers a refresh within 30 s of the previous check with that check, to spare GitHub's rate limit. A plugin
+  canvas that follows `claude plugin update` says so in the dialog (docs/canvas.md → "Updating").
+
 ## [0.9.0] — 2026-10-02
 
 ### Added
@@ -417,7 +427,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/river0825/unprose/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/river0825/unprose/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/river0825/unprose/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/river0825/unprose/compare/v0.8.0...v0.8.1

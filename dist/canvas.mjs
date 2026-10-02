@@ -58534,7 +58534,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os4.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.9.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.9.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60189,12 +60189,14 @@ import fs10 from "node:fs";
 import path11 from "node:path";
 var SIX_HOURS = 6 * 60 * 60 * 1e3;
 var ERROR_TTL = 30 * 60 * 1e3;
+var REFRESH_THROTTLE = 30 * 1e3;
 var LOG_LINES2 = 200;
 var UpdateService = class {
   o;
   cache;
   checking;
   job = { running: false, log: [] };
+  following = false;
   constructor(o) {
     this.o = o;
     try {
@@ -60224,8 +60226,14 @@ var UpdateService = class {
     const age = this.now() - Date.parse(c.checkedAt);
     return age < (c.error ? ERROR_TTL : this.o.ttlMs ?? SIX_HOURS);
   }
+  /** The previous check is younger than REFRESH_THROTTLE: a refresh answers with it. */
+  recent(c) {
+    return !!c && this.now() - Date.parse(c.checkedAt) < REFRESH_THROTTLE;
+  }
   async lookup(refresh) {
     if (!refresh && this.fresh(this.cache))
+      return this.cache;
+    if (refresh && this.recent(this.cache))
       return this.cache;
     if (this.checking)
       return this.checking;
@@ -60248,9 +60256,10 @@ var UpdateService = class {
     const base = { current: this.o.current, install: this.o.install.kind, supported: s.ok, reason: s.reason };
     const command = (latest) => planUpgrade(this.o.install, latest ?? this.o.current ?? "0.0.0", this.o.pluginRef).command;
     if (!this.o.source)
-      return { ...base, available: false, error: "update checks are off (UNPROSE_UPDATE_CHECK=0)", command: command() };
+      return { ...base, ...this.following ? { followsPluginUpdate: true } : {}, available: false, error: "update checks are off (UNPROSE_UPDATE_CHECK=0)", command: command() };
+    const throttled = refresh && !this.checking && this.recent(this.cache);
     const c = await this.lookup(refresh);
-    return { ...base, latest: c.latest, available: isNewer(c.latest, this.o.current ?? void 0), notes: c.notes, url: c.url, checkedAt: c.checkedAt, source: c.source, error: c.error, command: command(c.latest) };
+    return { ...base, ...throttled ? { throttled: true } : {}, ...this.following ? { followsPluginUpdate: true } : {}, latest: c.latest, available: isNewer(c.latest, this.o.current ?? void 0), notes: c.notes, url: c.url, checkedAt: c.checkedAt, source: c.source, error: c.error, command: command(c.latest) };
   }
   status() {
     return { ...this.job, log: [...this.job.log] };
@@ -60362,6 +60371,7 @@ var UpdateService = class {
   followInstalled(handoff2, everyMs = 1e4) {
     if (this.o.install.kind !== "plugin" || !this.o.installedFile || this.o.launchd)
       return () => void 0;
+    this.following = true;
     let busy = false;
     const tried = /* @__PURE__ */ new Set();
     const tick = async () => {
@@ -60386,7 +60396,10 @@ var UpdateService = class {
     const timer = setInterval(() => void tick(), everyMs);
     timer.unref?.();
     void tick();
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      this.following = false;
+    };
   }
   /** Keep the plugin's canvas.json pointing at the running canvas, so the next session does not restart it. */
   recordState(pid, version2, entry) {

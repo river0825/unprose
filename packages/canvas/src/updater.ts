@@ -23,6 +23,10 @@ export interface UpdateCheck {
   reason?: string
   /** What to run by hand. */
   command: string
+  /** A refresh asked for within REFRESH_THROTTLE of the previous check: this is that check's result. */
+  throttled?: boolean
+  /** This canvas restarts by itself after `claude plugin update` (followInstalled is running). */
+  followsPluginUpdate?: boolean
 }
 
 export interface UpdateEvent {
@@ -95,12 +99,15 @@ interface Cached {
 
 const SIX_HOURS = 6 * 60 * 60 * 1000
 const ERROR_TTL = 30 * 60 * 1000
+/** "Check for updates" more often than this answers with the previous check (protects the GitHub rate limit). */
+export const REFRESH_THROTTLE = 30 * 1000
 const LOG_LINES = 200
 
 export class UpdateService {
   private cache?: Cached
   private checking?: Promise<Cached>
   private job: UpdateStatus = { running: false, log: [] }
+  private following = false
 
   constructor(private o: UpdateServiceOptions) {
     try {
@@ -131,8 +138,14 @@ export class UpdateService {
     return age < (c.error ? ERROR_TTL : (this.o.ttlMs ?? SIX_HOURS))
   }
 
+  /** The previous check is younger than REFRESH_THROTTLE: a refresh answers with it. */
+  private recent(c: Cached | undefined): boolean {
+    return !!c && this.now() - Date.parse(c.checkedAt) < REFRESH_THROTTLE
+  }
+
   private async lookup(refresh: boolean): Promise<Cached> {
     if (!refresh && this.fresh(this.cache)) return this.cache!
+    if (refresh && this.recent(this.cache)) return this.cache!
     if (this.checking) return this.checking
     const src = this.o.source!
     this.checking = src
@@ -159,9 +172,10 @@ export class UpdateService {
     const s = this.supported
     const base = { current: this.o.current, install: this.o.install.kind, supported: s.ok, reason: s.reason }
     const command = (latest?: string) => planUpgrade(this.o.install, latest ?? this.o.current ?? '0.0.0', this.o.pluginRef).command
-    if (!this.o.source) return { ...base, available: false, error: 'update checks are off (UNPROSE_UPDATE_CHECK=0)', command: command() }
+    if (!this.o.source) return { ...base, ...(this.following ? { followsPluginUpdate: true } : {}), available: false, error: 'update checks are off (UNPROSE_UPDATE_CHECK=0)', command: command() }
+    const throttled = refresh && !this.checking && this.recent(this.cache)
     const c = await this.lookup(refresh)
-    return { ...base, latest: c.latest, available: isNewer(c.latest, this.o.current ?? undefined), notes: c.notes, url: c.url, checkedAt: c.checkedAt, source: c.source, error: c.error, command: command(c.latest) }
+    return { ...base, ...(throttled ? { throttled: true } : {}), ...(this.following ? { followsPluginUpdate: true } : {}), latest: c.latest, available: isNewer(c.latest, this.o.current ?? undefined), notes: c.notes, url: c.url, checkedAt: c.checkedAt, source: c.source, error: c.error, command: command(c.latest) }
   }
 
   status(): UpdateStatus {
@@ -275,6 +289,7 @@ export class UpdateService {
   followInstalled(handoff: () => Handoff, everyMs = 10_000): () => void {
     // under launchd the same (old) command would come back: leave that setup to its own restart
     if (this.o.install.kind !== 'plugin' || !this.o.installedFile || this.o.launchd) return () => undefined
+    this.following = true
     let busy = false
     const tried = new Set<string>() // a version that failed to come up is not retried every tick
     const tick = async () => {
@@ -297,7 +312,10 @@ export class UpdateService {
     const timer = setInterval(() => void tick(), everyMs)
     timer.unref?.()
     void tick()
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+      this.following = false
+    }
   }
 
   /** Keep the plugin's canvas.json pointing at the running canvas, so the next session does not restart it. */
