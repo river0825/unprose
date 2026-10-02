@@ -3,6 +3,8 @@ import type { Author, Board, Change, DiagramKind, Item, Op, Wake } from './model
 import type { CardMove } from './diff.js'
 import type { BoardContext, FileHolder, Responder } from './routing.js'
 import type { FeedbackRecord } from './ports/feedbackStore.js'
+import { savedToken } from './credentials.js'
+import { userAgent } from './version.js'
 
 /** A board's settings (`GET /api/boards/:id/settings`, docs/canvas.md "Several agents on one board"). */
 export interface BoardSettings {
@@ -12,7 +14,7 @@ export interface BoardSettings {
   agentTurns: number
   holders: Array<{ key: string; source?: string; holder: FileHolder }>
   suggestion?: string
-  agents: Array<{ name: string; label: string; watching: boolean; seen?: string; holder: boolean }>
+  agents: Array<{ name: string; label: string; /** what people @mention it by */ handle?: string; watching: boolean; seen?: string; holder: boolean }>
   you?: string
   seq?: number
 }
@@ -30,9 +32,13 @@ export function canvasOrigin(url: string): string {
 }
 
 /** Can the canvas be reached? `GET /api/boards` within `timeoutMs`; the reason when it cannot (`auth` when it wants a token). */
-export async function probeCanvas(base: string, timeoutMs = 4000, token?: string): Promise<{ ok: true } | { ok: false; reason: string; auth?: boolean }> {
+export async function probeCanvas(base: string, timeoutMs = 4000, token?: string, component = 'mcp'): Promise<{ ok: true } | { ok: false; reason: string; auth?: boolean }> {
   try {
-    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: token ? { authorization: `Bearer ${token}` } : undefined })
+    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: { 'user-agent': userAgent(component), ...(token ? { authorization: `Bearer ${token}` } : {}) } })
+    if (res.status === 403) {
+      const why = ((await res.json().catch(() => ({}))) as { error?: string }).error
+      return { ok: false, reason: why ? `HTTP 403: ${why}` : `HTTP 403 — not the canvas's answer: something in front of it (Cloudflare?) refused the request` }
+    }
     if (res.status === 401) {
       const why = ((await res.json().catch(() => ({}))) as { error?: string }).error
       return { ok: false, auth: true, reason: token ? `the token was refused: ${why ?? 'HTTP 401'}` : 'this canvas wants an access token for requests from elsewhere (UNPROSE_TOKEN)' }
@@ -64,6 +70,8 @@ export interface CanvasClientOptions {
   agentName?: string
   /** The address people open (board links); default: the address this client calls. */
   publicUrl?: string
+  /** Who is calling, for the User-Agent (`unprose/<version> (<component>)`); default 'client'. */
+  component?: string
 }
 
 export class CanvasClient {
@@ -72,6 +80,7 @@ export class CanvasClient {
   readonly publicUrl: string
   private token?: string
   private agentName?: string
+  private component: string
   /** Said instead of the canvas's 401 while this agent is not connected yet (the pairing code to type). */
   authHint?: string
   /** Called on a 401 (e.g. to start pairing again). */
@@ -79,21 +88,27 @@ export class CanvasClient {
   constructor(baseUrl = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400', opts: CanvasClientOptions = {}) {
     this.baseUrl = canvasOrigin(baseUrl)
     this.publicUrl = opts.publicUrl ? canvasOrigin(opts.publicUrl) : this.baseUrl
-    this.token = opts.token ?? (process.env.UNPROSE_TOKEN || undefined)
+    // one credential for every client of a canvas (credentials.ts): UNPROSE_TOKEN, else the token a pairing code got
+    this.token = opts.token ?? (process.env.UNPROSE_TOKEN || savedToken(this.baseUrl) || undefined)
     this.agentName = opts.agentName ?? (process.env.UNPROSE_AGENT_NAME || undefined)
+    this.component = opts.component ?? 'client'
   }
 
   /** Use this token from now on (the device flow hands one over while the MCP server runs). */
-  setToken(token: string) {
+  setToken(token: string | undefined) {
     this.token = token
+  }
+  /** The token this client sends (the MCP server hands it to the design tools and subprocesses). */
+  get currentToken(): string | undefined {
+    return this.token
   }
   get hasToken() {
     return !!this.token
   }
 
-  /** The headers every call carries: the token, or the local agent's name. */
+  /** The headers every call carries: who is calling (User-Agent), and the token or the local agent's name. */
   headers(): Record<string, string> {
-    return this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { 'x-unprose-agent': this.agentName } : {}
+    return { 'user-agent': userAgent(this.component), ...(this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { 'x-unprose-agent': this.agentName } : {}) }
   }
 
   private async req<T>(method: string, p: string, body?: unknown): Promise<T> {
@@ -119,7 +134,12 @@ export class CanvasClient {
       this.onAuthNeeded?.()
       if (hint) throw new Error(hint)
     }
-    if (!res.ok) throw new Error((data as { error?: string })?.error ?? `${res.status} ${res.statusText}`)
+    if (!res.ok) {
+      const msg = (data as { error?: string })?.error
+      // a 403 without the canvas's own JSON: a proxy in front of it (Cloudflare) refused the request
+      if (res.status === 403 && !msg) throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} — not the canvas's answer: something in front of it (Cloudflare?) refused the request`)
+      throw new Error(msg ?? `${res.status} ${res.statusText}`)
+    }
     return data as T
   }
 
@@ -130,6 +150,13 @@ export class CanvasClient {
   }
   createBoard(input: { title: string; kind: DiagramKind; content?: unknown; items?: Item[]; meta?: Record<string, unknown>; author?: Author; project?: string; answeredBy?: 'me' }) {
     return this.req<{ board: Board }>('POST', '/api/boards', input).then((r) => r.board)
+  }
+  /**
+   * The board titled `title`, else a new one — decided by the canvas in one step, so two agents drawing at once get the
+   * same board (docs/canvas.md "Projects": the same project first, then the personal space, then any board you see).
+   */
+  boardByTitle(input: { title: string; kind: DiagramKind; project?: string; answeredBy?: 'me' }) {
+    return this.req<{ board: Board; reused?: boolean; ambiguous?: Array<{ id: string; project: string }> }>('POST', '/api/boards', { ...input, author: 'agent', reuse: 'title' })
   }
   projects() {
     return this.req<{ projects: Array<{ id: string; name: string; personal: boolean; boards: number; root?: string | null }> }>('GET', '/api/projects').then((r) => r.projects)
@@ -154,9 +181,16 @@ export class CanvasClient {
   template(id: string, kind: DiagramKind | undefined, content: unknown, at?: { x: number; y: number }, scope?: string, frame?: { key: string; title?: string; source?: string; level?: string; at?: { x: number; y: number } }) {
     return this.req<{ items: Item[]; ops: Op[]; unresolvedTraces?: Array<{ item: string; trace: { from: string; rel: string }; reason: string }> }>('POST', `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at, scope, ...(frame ? { frame } : {}) })
   }
-  /** Board-level fields (title, meta — meta is replaced whole). */
+  /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
   updateBoard(id: string, patch: { title?: string; meta?: Record<string, unknown> }) {
     return this.req<{ board: Board }>('PUT', `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board)
+  }
+  /**
+   * Merge into the board's meta (PATCH /api/boards/:id): only the keys given change (null removes one);
+   * `meta.diagrams` merges per diagram key — so two agents drawing different diagrams never overwrite each other.
+   */
+  patchBoard(id: string, patch: { title?: string; meta?: Record<string, unknown> }) {
+    return this.req<{ board: Board }>('PATCH', `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board)
   }
   changes(id: string, since = 0, author?: Author) {
     const q = new URLSearchParams({ since: String(since) })

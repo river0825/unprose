@@ -83,11 +83,45 @@ export function contextOf(meta: Meta): BoardContext | undefined {
   return c && typeof c === 'object' && str(c.text) ? c : undefined
 }
 
-/** Same agent? Names compare case-insensitively; `studio` is the default local agent. */
+/**
+ * The handle people @mention an agent by: its name as one word — lower case, spaces and other signs as `-`
+ * ("agent on Acme-Robins-MacBook-Pro" → `agent-on-acme-robins-macbook-pro`). The default local agent is
+ * `studio`. Names are unique by handle (the canvas refuses a second "codex b" next to "codex-b").
+ */
+export function handleOf(name: string): string {
+  const raw = name.trim().replace(/^@+/, '')
+  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === 'studio') return 'studio'
+  const h = raw
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}_.-]+/gu, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 60)
+    .replace(/[-.]+$/, '')
+  return h || 'agent'
+}
+
+/** Same agent? Names compare by their handle (case, spaces and signs do not matter); `studio` is the default local agent. */
 export function sameAgent(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false
-  const n = (s: string) => (s.toLowerCase() === 'studio' ? LOCAL_AGENT : s.toLowerCase())
-  return n(a) === n(b)
+  return handleOf(a) === handleOf(b)
+}
+
+/** The known agent a name or @handle means (its canonical name), or undefined. */
+export function resolveAgent(raw: string | undefined, known: string[]): string | undefined {
+  if (!raw || !raw.trim()) return undefined
+  const want = raw.trim().replace(/^@+/, '')
+  if (sameAgent(want, LOCAL_AGENT)) return LOCAL_AGENT
+  return known.find((n) => n === want) ?? known.find((n) => n.toLowerCase() === want.toLowerCase()) ?? known.find((n) => sameAgent(n, want))
+}
+
+/** "codex-b" or "codex-b (agent on mbp-b)" when the handle differs from the name — how a recipient is named to people. */
+export function agentLabel(name: string): string {
+  const h = handleOf(name)
+  const d = displayName(name)
+  return h === d ? `@${h}` : `@${h} (${d})`
 }
 
 /** A responder value from what a person or agent asked for: 'any', 'studio', or an agent's name ('me' = the caller). */
@@ -205,6 +239,32 @@ export function stampHolders(current: Meta, next: Record<string, unknown>, calle
   return out
 }
 
+/**
+ * PATCH /api/boards/:id: `patch` merged into `meta` — each top-level key given replaces that key (null removes it);
+ * `diagrams` merges per diagram key (an entry replaces that diagram's entry whole, null removes it). Two agents
+ * drawing different diagrams of one board, in turn or at once, never overwrite each other's entries.
+ */
+export function mergeBoardMeta(meta: Meta, patch: Record<string, unknown>): Record<string, unknown> {
+  const out: Data = { ...(meta ?? {}) }
+  for (const [k, v] of Object.entries(patch)) {
+    if (k === 'diagrams' && v && typeof v === 'object' && !Array.isArray(v)) {
+      const cur = out.diagrams && typeof out.diagrams === 'object' ? { ...(out.diagrams as Data) } : {}
+      for (const [key, d] of Object.entries(v as Data)) {
+        if (d === null || d === undefined) delete cur[key]
+        else cur[key] = d
+      }
+      out.diagrams = cur
+    } else if (v === null || v === undefined) delete out[k]
+    else out[k] = v
+  }
+  return out
+}
+
+/** The project roots a board's diagrams were drawn from (their holders' `root`), for "which project is this board in". */
+export function diagramRoots(meta: Meta): string[] {
+  return [...new Set(holdersOf(meta).map((h) => h.holder.root).filter((r): r is string => typeof r === 'string' && r.length > 0))]
+}
+
 /** `https://user:token@host/x.git` → `https://host/x.git`. */
 export function withoutCredentials(url: string): string {
   return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, '$1')
@@ -256,17 +316,24 @@ export function renameInMeta(meta: Meta, from: string, to: string): Record<strin
  */
 export function mentionIn(text: string | undefined, known: string[]): string | undefined {
   if (!text || !text.includes('@')) return undefined
-  const names = [...new Set([...known, 'studio'])].filter((n) => n && n.length <= 60).sort((a, b) => b.length - a.length)
+  // every agent answers to its name and to its handle (@agent-on-mbp-b for "agent on mbp-b")
+  const tokens: Array<{ token: string; name: string }> = []
+  for (const n of new Set([...known, 'studio'])) {
+    if (!n || n.length > 60) continue
+    const name = sameAgent(n, LOCAL_AGENT) ? LOCAL_AGENT : n
+    for (const t of new Set([n, handleOf(n)])) tokens.push({ token: t.toLowerCase(), name })
+  }
+  tokens.sort((a, b) => b.token.length - a.token.length)
   const re = /(^|[^\p{L}\p{N}_.@-])@/gu
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     const at = m.index + m[0].length
     const rest = text.slice(at).toLowerCase()
-    for (const n of names) {
-      if (!rest.startsWith(n.toLowerCase())) continue
-      const next = rest.charAt(n.length)
+    for (const { token, name } of tokens) {
+      if (!rest.startsWith(token)) continue
+      const next = rest.charAt(token.length)
       if (next && /[\p{L}\p{N}_-]/u.test(next)) continue
-      return sameAgent(n, LOCAL_AGENT) ? LOCAL_AGENT : n
+      return name
     }
   }
   return undefined
@@ -454,7 +521,7 @@ const clean = (data: Data | undefined): Data => {
 
 function withMention(data: Data, text: string | undefined, known: string[], was: Data | undefined, now: string, ask: unknown): Data {
   const d = { ...data }
-  const m = mentionIn(text, known) ?? (str(ask) ? (sameAgent(ask as string, LOCAL_AGENT) ? LOCAL_AGENT : (ask as string).slice(0, 60)) : undefined)
+  const m = mentionIn(text, known) ?? (str(ask) ? (resolveAgent(ask as string, known) ?? (ask as string).replace(/^@+/, '').slice(0, 60)) : undefined)
   if (m) {
     d.mention = m
     d.mentionAt = was && sameAgent(str(was.mention), m) && str(was.mentionAt) ? was.mentionAt : now

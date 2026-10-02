@@ -5,7 +5,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { startServer, ProjectsBoardRepository, type RunningServer } from '@awd/canvas'
-import { boardByTitle, registerProject, cmdBoards, type Api } from '../src/projects.js'
+import { boardByTitle, registerProject, cmdBoards, cmdProjects, type Api } from '../src/projects.js'
+import { repoRoot } from '../src/graphCanvas.js'
 
 const tmp = (n: string) => fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), `awd-cli-proj-${n}-`)))
 
@@ -33,7 +34,7 @@ test('a title is found in the project first, else anywhere (older boards), else 
   assert.equal((await boardByTitle(f.api, 'Plan', 'freeform', 'shop')).id, 'b_proj')
   assert.equal((await boardByTitle(f.api, 'Plan', 'freeform', 'other')).id, 'b_old', 'a board made before projects keeps being used')
   assert.equal((await boardByTitle(f.api, 'New', 'freeform', 'shop')).id, 'b_new')
-  assert.deepEqual(f.created, [{ title: 'New', kind: 'freeform', project: 'shop', answeredBy: 'me' }])
+  assert.deepEqual(f.created, [{ title: 'New', kind: 'freeform', project: 'shop', answeredBy: 'me', reuse: 'title' }], 'the canvas finds-or-creates in one step (no duplicate when two draws race)')
   assert.equal(await registerProject(f.api, '/x'), undefined, 'a canvas that refuses (remote) leaves boards personal')
 })
 
@@ -62,4 +63,58 @@ test('awd boards move: a personal board moves into <project>/.unprose/boards, UR
   const listed = (await (await fetch(`${srv.url}/api/boards`)).json()).boards.find((x: { id: string }) => x.id === b.id)
   assert.equal(listed.project, path.basename(root).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
   assert.equal(await cmdBoards(['move', 'title:nothing'], { to: root, canvas: srv.url }), false)
+})
+
+test('repoRoot: a repo or a project file decides; else the working directory; never a lone design/ folder', () => {
+  const home = tmp('home')
+  // a git repo (or a folder the canvas already stores boards in)
+  const repo = path.join(home, 'src', 'team-notes')
+  fs.mkdirSync(path.join(repo, '.git'), { recursive: true })
+  fs.mkdirSync(path.join(repo, 'design'))
+  assert.equal(repoRoot(path.join(repo, 'design'), '/', home), repo)
+  const unp = path.join(home, 'boards-here')
+  fs.mkdirSync(path.join(unp, '.unprose', 'boards'), { recursive: true })
+  fs.mkdirSync(path.join(unp, 'design'))
+  assert.equal(repoRoot(path.join(unp, 'design'), '/', home), unp)
+  // no repo: the nearest project file below home
+  const node = path.join(home, 'notes')
+  fs.mkdirSync(path.join(node, 'design'), { recursive: true })
+  fs.writeFileSync(path.join(node, 'AGENTS.md'), '# notes\n')
+  assert.equal(repoRoot(path.join(node, 'design'), '/', home), node)
+  // nothing at all: the working directory when the file is inside it …
+  const meeting = path.join(home, 'meeting')
+  fs.mkdirSync(path.join(meeting, 'design'), { recursive: true })
+  assert.equal(repoRoot(path.join(meeting, 'design'), meeting, home), meeting)
+  // … else the folder above design/ — never a project called "design"
+  assert.equal(repoRoot(path.join(meeting, 'design'), '/', home), meeting)
+  assert.equal(repoRoot(path.join(meeting, 'design'), path.join(meeting, 'design'), home), meeting, 'not even when the agent runs inside design/')
+  // the home folder is never the project (it has an AGENTS.md here)
+  fs.writeFileSync(path.join(home, 'AGENTS.md'), '# me\n')
+  const loose = path.join(home, 'loose')
+  fs.mkdirSync(loose)
+  assert.equal(repoRoot(loose, '/', home), loose)
+})
+
+test('awd projects remove: refused while it holds boards, --force moves them to personal; by directory or id', async () => {
+  const root = path.join(tmp('bogus'), 'design')
+  fs.mkdirSync(root)
+  const reg = await (await fetch(`${srv.url}/api/projects`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ root }) })).json()
+  const made = await (await fetch(`${srv.url}/api/boards`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Bogus', kind: 'freeform', project: reg.project.id }) })).json()
+  const out: string[] = []
+  const log = console.log
+  const err = console.error
+  console.log = (...a: unknown[]) => void out.push(a.join(' '))
+  console.error = (...a: unknown[]) => void out.push(a.join(' '))
+  try {
+    assert.equal(await cmdProjects(['remove', root], { canvas: srv.url }), false)
+    assert.match(out.join('\n'), /still stores 1 board/)
+    assert.equal(await cmdProjects(['remove', root], { canvas: srv.url, force: true }), true)
+    assert.match(out.join('\n'), new RegExp(`moved 1 board\\(s\\) to the personal space: ${made.board.id}`))
+    assert.equal(await cmdProjects(['remove', reg.project.id], { canvas: srv.url }), false, 'gone')
+  } finally {
+    console.log = log
+    console.error = err
+  }
+  const listed = (await (await fetch(`${srv.url}/api/boards`)).json()).boards.find((x: { id: string }) => x.id === made.board.id)
+  assert.equal(listed.project, 'personal')
 })

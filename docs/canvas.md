@@ -65,13 +65,13 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_read_board` | `id, format: outline\|json` | `outline` (default): compact text grouped by lane/frame with arrows and comments; `json`: raw items with ids and geometry |
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}` |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
-| `canvas_diff` | `id, since, author: user\|others\|agent\|all` | human-readable lines for every change after `since` (`others`: the person and the other agents, never you) |
-| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others, listen = mine\|all` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
+| `canvas_diff` | `id, since, from: person\|others\|all` (older spelling `author: user\|others\|agent\|all`) | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you) |
+| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others, listen = mine\|all` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
 | `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
 | `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) sets the responder — both logged |
-| `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board: posts an `@agent` thread (on `about[0]`, else loose) and blocks until it answers in the thread; on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
+| `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board (`agent`: its @handle or its name): posts an `@handle` thread (on `about[0]`, else loose) and blocks until it answers in the thread; the result says exactly who it was delivered to (*Delivered to @codex-b — watching this board now*, or that it is not watching / never seen); on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
 | `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
 | `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
@@ -107,8 +107,21 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
 - **Registering a project:** `awd-canvas serve --project <dir>` (repeatable); the Claude Code plugin
   registers the session's project (`CLAUDE_PROJECT_DIR`, else the working directory, lifted to its git
   top level) at session start and when the MCP server starts; `awd design draw` / `awd graph --canvas`
-  register the design or workflow file's repo. The registry is kept in `<personal dir>/.projects.json`;
+  register the design or workflow file's project. The registry is kept in `<personal dir>/.projects.json`;
   a project's id is the slug of its directory name (`-2`, `-3` … on a clash).
+- **Which folder is a file's project** (`repoRoot`, `packages/cli/src/graphCanvas.ts`): the nearest folder above
+  the file with `.git` or `.unprose/boards`; else the nearest with a project file (`package.json`, `AGENTS.md`,
+  `CLAUDE.md`, `pyproject.toml`, `go.mod`, `Cargo.toml`) below the home folder; else the working directory when the
+  file is inside it; else the folder above `design/` (`designs/`, `diagrams/`); else the file's folder. A folder of
+  design files alone (`~/meeting/design`) is never registered as a project called "design".
+- **Removing a project:** `awd projects remove <dir | id>` (`DELETE /api/projects/:id`, this machine only, like
+  registering) forgets it — its directory and files stay. Refused (`409`) while the project still stores boards;
+  `--force` (`?force=1`) first moves them to the personal space (URLs unchanged). `awd projects list` shows them.
+- **Boards by title** (`--board "title:…"`, `design_draw { board: "title:…" }`): the board with that title in the
+  file's project, else in the personal space, else any board you can see (made on another machine, or before
+  projects); an exact title before one differing only in case or spaces. Several equally good: the most recently
+  changed, and a warning naming them all (pass the id to pick another). Only when there is none is a board created —
+  by the canvas in the same step (`POST /api/boards { reuse: 'title' }`), so two draws at once share one board.
 - **Only from this machine:** anything that names a directory — `POST /api/projects`, `projectRoot`, moving
   a board — is accepted only from a loopback caller without proxy/tunnel forwarding headers (the canvas
   names a directory only for the machine it runs on; a tunnel such as cloudflared connects from localhost but adds
@@ -143,7 +156,7 @@ Remote agents](agents-setup.md#remote-agents-another-machine-or-the-cloud).
 |---|---|---|
 | this machine — loopback, no forwarding headers (`X-Forwarded-For`, `CF-Connecting-IP` …), no token | nothing (unchanged) | everything, including the local-only actions (registering projects, moving boards, upgrading) |
 | an agent with a token (`Authorization: Bearer …`), from anywhere — **also from this machine** | a token: made on the **Connected agents** page, or issued by OAuth / a pairing code | what the token allows (read or write, all or some projects / boards); writes are signed with its name; never the local-only actions |
-| a browser elsewhere (the tunnel, the LAN) | signing in once: a pairing code approved on the canvas, or a pasted token | a session cookie (`HttpOnly`, `SameSite=Strict`, `Secure` on https) with the scope it was given |
+| a browser elsewhere (the tunnel, the LAN) | signing in once: a pairing code approved on the canvas, or a pasted token | a session cookie (`HttpOnly`, `SameSite=Strict`, `Secure` on https) with the scope it was given. It is **the person**: its changes are the person's (`author: 'user'`, unnamed), so they wake agents waiting for the person |
 | anyone else from elsewhere | — | `401` with `WWW-Authenticate: Bearer resource_metadata=…` and a sentence saying how to connect |
 
 A cloudflared tunnel connects from loopback but adds its headers, so it is **not** local. The rule for "local" is
@@ -222,6 +235,9 @@ and streams with keep-alives, so a `canvas_wait` of up to 120 s survives proxies
 
 - Every change made with a token carries `by: <agent name>` (`Change.by`); diff lines read `[7 codex-laptop] …`,
   and the change feed shows the name. A token always writes as `author: 'agent'` — it cannot pose as the person.
+- A signed-in browser (a pairing code, or a pasted token, let it in) is the person, wherever it is: its changes are
+  `author: 'user'` without a name (`[7 user] …`), exactly like a page on the canvas machine — they wake
+  `canvas_wait({ from: 'person' })` and studio, and count as the person's word. It cannot write as an agent.
 - A local agent stays the default `agent`; set **`UNPROSE_AGENT_NAME=<name>`** for its MCP server or CLI to sign
   its changes (sent as `X-Unprose-Agent`, honoured only from this machine).
 - Presence names who is waiting: the board header says *“codex-laptop is watching”* (`presence.agents`).
@@ -249,11 +265,15 @@ After updating, requests through the tunnel need credentials; on the canvas mach
    for a pairing code by itself (the code shows in its tool results); or make a token and set `UNPROSE_TOKEN`; or
    switch the agent to the remote endpoint `https://<tunnel>/mcp` (OAuth). `awd design draw --canvas https://…` and
    the other CLI commands send `UNPROSE_TOKEN` too.
-3. **Cloudflare Access in front?** Keep it if you like; add bypass rules for the paths agents use (`/mcp`,
+3. **Scripts of your own** (curl, Python …) calling the canvas through a Cloudflare tunnel must send a `User-Agent`:
+   Cloudflare answers requests without one, or with a script's default one (`Python-urllib/3.x`), with a `403` before
+   they reach the canvas. Every Unprose client sends `User-Agent: unprose/<version> (<component>)`; the canvas's own
+   `401` says so when a request had no User-Agent or a script's default one.
+4. **Cloudflare Access in front?** Keep it if you like; add bypass rules for the paths agents use (`/mcp`,
    `/.well-known/*`, `/register`, `/authorize*`, `/token`, `/revoke`, `/device_authorization`) — agents cannot do a
    Cloudflare login — and let the canvas's own tokens protect them. Or keep only Cloudflare Access and set
    `UNPROSE_REMOTE_AUTH=off` (the old behaviour; remote agents then connect without approval).
-4. Set `UNPROSE_PUBLIC_URL=https://<tunnel>` on the canvas so the setup lines on the agents page and the OAuth
+5. Set `UNPROSE_PUBLIC_URL=https://<tunnel>` on the canvas so the setup lines on the agents page and the OAuth
    metadata use the tunnel address even when you open the page on `localhost`.
 
 ## Proposals and saving
@@ -331,11 +351,22 @@ which machine: **`codex-b`**, **`claude-a`**, `cursor-laptop`.
   machine or one allowed to manage agents). Its changes are signed with the new name from then on (earlier ones keep
   the old one); boards whose *Answered by* or file holders named it follow (logged as `renamed agent A → B`). Names
   are unique; `agent`, `user`, `studio`, `any`, `me` are taken.
-- The device flow names the token after `UNPROSE_AGENT_NAME`, else `agent on <hostname>` — rename it, or set
-  `UNPROSE_AGENT_NAME=codex-b` before the first pairing. A token always writes as its own name (it cannot take
-  another); `UNPROSE_AGENT_NAME` names a local agent that has no token.
-- The `awd` CLI (`design draw`, `graph --canvas`, `boards move`) sends `UNPROSE_TOKEN`, else the token the MCP server
-  got with a pairing code for that canvas (`~/.awd/tokens.json`, `UNPROSE_TOKENS_FILE`), else `UNPROSE_AGENT_NAME`.
+- **Handles.** Every agent is mentioned by its handle: its name as one word — lower case, spaces and signs as `-`
+  (`agent on Acme-Robins-MacBook-Pro` → `@agent-on-acme-robins-macbook-pro`; studio is `@studio`).
+  `@handle` and the exact name both work in comments and in `canvas_ask`; the handle shows in the agents list
+  (**Connected agents**, `canvas_context`, `GET …/settings` → `agents[].handle`), in the @ autocomplete (which inserts
+  it) and on chips. Names are unique by handle (a second "codex b" next to "codex-b" becomes "codex b-2"). The person's
+  message says who it went to (*You → @codex-b*).
+- The device flow names the token after `UNPROSE_AGENT_NAME`, else `<client>-<short host>` — the MCP client and
+  this machine, one word (`codex-acme-robins-mbp`; tokens paired before keep their `agent on <hostname>` name).
+  Rename it, or set `UNPROSE_AGENT_NAME=codex-b` before the first pairing. A token always writes as its own name (it
+  cannot take another); `UNPROSE_AGENT_NAME` names a local agent that has no token.
+- **One credential for every tool.** The stdio MCP server, the design tools it runs (`design_draw` …) and the `awd`
+  CLI (`design draw`, `graph --canvas`, `boards move`, `projects`) all send the same token for the same canvas:
+  `UNPROSE_TOKEN`, else the token a pairing code got for that canvas (`~/.awd/tokens.json`, `UNPROSE_TOKENS_FILE`;
+  a board link or a trailing slash names the same canvas), else `UNPROSE_AGENT_NAME` for a local canvas. The MCP
+  server puts the token it holds (also one it just paired) into its own `UNPROSE_TOKEN`, so the design tools and any
+  `awd` it starts use it even when `~/.awd` cannot be written (a sandbox).
 
 ### Who a comment is for
 
@@ -388,12 +419,12 @@ characters.
 ### Settings: Answered by, context, loop guard
 
 `GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{
-name, label, watching, seen?, holder }], you? }` (`holders` without machine and root for a caller elsewhere; an agent
+name, label, handle, watching, seen?, holder }], you? }` (`holders` without machine and root for a caller elsewhere; an agent
 token gets only the names active on that board). `PUT` the same path with any of `{ answeredBy: 'any' | 'studio' |
 'me' | <name> | null, context: <markdown> | null, agentTurns: 1–100 | null }` — needs write access (a read-only token
 gets `403`). Each change is **logged**: a change with no ops, `note` (*set "Answered by" to codex-b; updated the board
 context*) and `meta` (the keys set), so it shows in the change feed and the diff, and open pages update at once. A
-`PUT /api/boards/:id` of the whole meta (a redraw) never changes them. The context is at most 4 000 characters — link
+`PUT` / `PATCH /api/boards/:id` of the meta (a redraw) never changes them. The context is at most 4 000 characters — link
 to longer notes.
 
 In the UI: the board header's **Answered by** menu (studio & any agent · any agent · studio · each known agent, marked
@@ -407,7 +438,10 @@ top of the side panel (collapsible per viewer, links clickable, *Edit*). Agents 
 
 `awd design draw`, `awd graph --canvas` and `design_draw` (local, with a path) send, with the files snapshot, where
 the files live: `{ machine: <hostname>, root: <repo root>, repo: <folder name>, remote: <git remote get-url origin,
-credentials removed> }`. The canvas stamps `agent` (the caller's name, from its credentials) and `at`; a holder sent
+credentials removed> }` — so each diagram carries its own project root (`meta.diagrams[key].holder.root`). The
+board-level `meta.project.root` is only the default for a board drawn from one machine: `awd design draw` sets it
+when the board has none and never overwrites another machine's. Every writer merges its keys with `PATCH
+/api/boards/:id` (one diagram's entry, or `workflow`), so two machines drawing in turn keep each other's entries. The canvas stamps `agent` (the caller's name, from its credentials) and `at`; a holder sent
 unchanged from what the caller read (same `agent` and `at`) keeps the stored one, so nobody can record another agent
 as a holder. The remote `design_draw` (file text) records the caller with no paths. **Machine and root are shown only
 to callers on the canvas machine** (`GET /api/boards…`, the board socket, settings) — like other paths.
@@ -457,19 +491,21 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | Method | Path | Body / query | Returns |
 |---|---|---|---|
 | GET | `/api/boards` | `?project=<id>` | `{ boards: [{ id, title, kind, seq, items, project, … }] }` — only that project's boards with `project` |
-| POST | `/api/boards` | `{ title, kind, content? \| items?, meta?, author?, project?, projectRoot? }` | `201 { board, project }` — `content` is rendered with the kind's template; stored in `project` (an id; `personal` by default) or, from this machine, `projectRoot` (registered on the fly) |
+| POST | `/api/boards` | `{ title, kind, content? \| items?, meta?, author?, project?, projectRoot?, answeredBy?, reuse? }` | `201 { board, project }` — `content` is rendered with the kind's template; stored in `project` (an id; `personal` by default) or, from this machine, `projectRoot` (registered on the fly). `reuse: 'title'` (or `'title+kind'`): when a board with that title is visible (the project, then personal, then any), `200 { board, project, reused: true, where, ambiguous? }` instead of a new one |
 | GET | `/api/projects` | | `{ projects: [{ id, name, personal, boards, root? }] }` — `root` only for a caller on this machine |
 | POST | `/api/projects` | `{ root }` | `{ project }` — register (or find) a project; this machine only (`403` otherwise) |
+| DELETE | `/api/projects/:id` | `?force=1` | `{ removed, moved }` — forget a project (its files stay); `409` while it stores boards unless `force` (they move to personal); this machine only |
 | POST | `/api/boards/:id/move` | `{ project } \| { projectRoot }` | `{ board, project }` — move the snapshot and log into that project; this machine only |
 | GET | `/api/boards/:id` | | `{ board }` |
-| PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` |
+| PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — replaces meta whole (older clients; prefer PATCH) |
+| PATCH | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — merges: each top-level meta key given replaces that key (`null` removes it); `meta.diagrams` merges per diagram key (an entry replaces that diagram's, `null` removes it). Settings keys are ignored (they change through `/settings`); holders are stamped from the caller |
 | DELETE | `/api/boards/:id` | | `{ deleted }` |
 | POST | `/api/boards/:id/ops` | `{ author: 'agent'\|'user', ops: Op[], note? }` | `{ seq, change }` (atomic batch) |
 | GET | `/api/boards/:id/changes` | `?since=N&author=` | `{ changes: Change[], seq }` |
 | GET | `/api/boards/:id/diff` | `?since=N&author=` | `{ lines: string[], count, seq }` |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
 | GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
-| GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents, you?, seq? }`; a PUT is a logged change (`403` read-only) |
+| GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{ name, label, handle, watching, seen?, holder }], you?, seq? }`; a PUT is a logged change (`403` read-only) |
 | POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
 | POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |

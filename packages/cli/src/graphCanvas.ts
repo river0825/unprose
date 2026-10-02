@@ -4,8 +4,9 @@
 // drawing a second copy. Every block carries its full detail (docs/studio.md §1).
 
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
-import { boardByTitle, canvasHeaders, holderInfo, registerProject } from './projects.js'
+import { boardByTitle, canvasApi, canvasBase, holderInfo, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
@@ -23,17 +24,13 @@ export interface PushGraphOptions {
 }
 
 export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraphOptions = {}): Promise<{ base: string; boardId: string; seq: number; applied?: AppliedResult }> {
-  const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
+  const base = canvasBase(opts.canvas)
   const { graph, files } = withDetails(toGraph(def), opts.file)
   const title = `${def.name} — workflow.yaml`
-  const api = async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders(process.env, base) }, body: body === undefined ? undefined : JSON.stringify(body) })
-    if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${await res.text()}`)
-    return res.json() as Promise<T>
-  }
+  const api = canvasApi(base)
   // the board lives in the workflow's project (its repo), found there by title or created there
   const project = opts.file ? await registerProject(api, repoRoot(path.dirname(path.resolve(opts.file)))) : undefined
-  const board = await boardByTitle(api, title, 'workflow', project, (b) => b.kind === 'workflow')
+  const board = await boardByTitle(api, title, 'workflow', project, (b) => b.kind === 'workflow', true)
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem>; meta?: { workflow?: { statusUrl?: string } } & Record<string, unknown> } }>('GET', `/api/boards/${board.id}`)
   const { changes } = await api<{ changes: UserChange[] }>('GET', `/api/boards/${board.id}/changes?since=0&author=user`)
@@ -41,12 +38,11 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd graph: ${def.name}` })
   // A redraw without --runtime keeps the runtime the board already points at (studio redraws without one).
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || 'http://localhost:4311').replace(/\/$/, '')
-  // PUT replaces meta whole: keep the other keys, replace only `workflow`.
+  // PATCH merges: only `workflow` changes (whatever other machines wrote into the meta meanwhile stays).
   // the holder: this agent has the workflow's files (docs/canvas.md "Several agents on one board")
   const root = opts.file ? repoRoot(path.dirname(path.resolve(opts.file))) : undefined
   const holder = root ? { ...holderInfo(root), ...(opts.applied ? { applied: opts.applied } : {}) } : undefined
-  const meta = { ...current.meta, workflow: { statusUrl, name: def.name, file: opts.file ? path.resolve(opts.file) : undefined, ...files, ...(holder ? { holder } : {}) } }
-  await api('PUT', `/api/boards/${board.id}`, { meta })
+  await api('PATCH', `/api/boards/${board.id}`, { meta: { workflow: { statusUrl, name: def.name, file: opts.file ? path.resolve(opts.file) : undefined, ...files, ...(holder ? { holder } : {}) } } })
   const applied = opts.applied && root && opts.file ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: path.relative(root, path.resolve(opts.file)) }) : undefined
   return { base, boardId: board.id, seq, ...(applied ? { applied } : {}) }
 }
@@ -70,12 +66,40 @@ export function withDetails(graph: ReturnType<typeof toGraph>, file?: string) {
   }
 }
 
-/** The git top level above `dir`, else `dir` itself. */
-export function repoRoot(dir: string): string {
-  for (let d = dir; ; d = path.dirname(d)) {
-    if (fs.existsSync(path.join(d, '.git'))) return d
-    if (path.dirname(d) === d) return dir
+/** Files that make a folder a project root when there is no git repo (docs/canvas.md "Projects"). */
+const PROJECT_MARKERS = ['package.json', 'AGENTS.md', 'CLAUDE.md', 'pyproject.toml', 'go.mod', 'Cargo.toml']
+/** Folders that hold diagram files — never a project on their own (a `design/` without a repo is not "project design"). */
+const DESIGN_DIRS = new Set(['design', 'designs', 'diagrams'])
+
+/**
+ * The project a file in `dir` belongs to (the project it is registered as, and what its paths are relative to):
+ *   1. the nearest folder above with `.git` or `.unprose` (a repo, or a project the canvas already stores boards in);
+ *   2. else the nearest with a project file (package.json, AGENTS.md, CLAUDE.md, pyproject.toml, go.mod, Cargo.toml),
+ *      below the home folder;
+ *   3. else the working directory, when `dir` is inside it (and it is not the home folder or `/`);
+ *   4. else the folder above a `design/` (`designs/`, `diagrams/`) folder; else `dir`.
+ */
+export function repoRoot(dir: string, cwd = process.cwd(), home = os.homedir()): string {
+  const abs = path.resolve(dir)
+  const up = (stop: (d: string) => boolean): string | undefined => {
+    for (let d = abs; ; d = path.dirname(d)) {
+      if (stop(d)) return d
+      if (path.dirname(d) === d) return undefined
+    }
   }
+  const has = (d: string, f: string) => fs.existsSync(path.join(d, f))
+  const repo = up((d) => has(d, '.git') || has(d, path.join('.unprose', 'boards')))
+  if (repo) return repo
+  const homeDir = path.resolve(home)
+  const marked = up((d) => d !== homeDir && path.dirname(d) !== d && d.startsWith(homeDir === '/' ? '/' : homeDir + path.sep) && PROJECT_MARKERS.some((f) => has(d, f)))
+  if (marked) return marked
+  const wd = path.resolve(cwd)
+  if (wd !== homeDir && path.dirname(wd) !== wd && (abs === wd || abs.startsWith(wd + path.sep)) && !DESIGN_DIRS.has(path.basename(wd))) return wd
+  if (DESIGN_DIRS.has(path.basename(abs))) {
+    const parent = path.dirname(abs)
+    if (parent !== homeDir && path.dirname(parent) !== parent) return parent
+  }
+  return abs
 }
 
 // The redraw rules are pure and live in @awd/canvas (the server's remote design tools use them too).

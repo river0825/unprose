@@ -11,6 +11,9 @@ const readJson = (p) => JSON.parse(fs.readFileSync(file(p), 'utf8'))
 const writeJson = (p, v) => fs.writeFileSync(file(p), JSON.stringify(v, null, 2) + '\n')
 const MCP = 'packages/canvas/src/mcp.ts'
 const MCP_RE = /(\{ name: 'unprose', version: ')([^']+)(')/
+// the version every Unprose client sends in its User-Agent (unprose/<version> (<component>))
+const UA = 'packages/canvas/src/version.ts'
+const UA_RE = /(export const VERSION = ')([^']+)(')/
 
 /** Every version the release carries, by where it lives. */
 export function versions() {
@@ -22,6 +25,7 @@ export function versions() {
     '.claude-plugin/plugin.json': readJson('.claude-plugin/plugin.json').version,
     '.claude-plugin/marketplace.json': market.plugins?.find((p) => p.name === 'unprose')?.version,
     [MCP]: fs.readFileSync(file(MCP), 'utf8').match(MCP_RE)?.[2],
+    [UA]: fs.readFileSync(file(UA), 'utf8').match(UA_RE)?.[2],
   }
 }
 
@@ -40,6 +44,9 @@ export function setVersion(v) {
   const src = fs.readFileSync(file(MCP), 'utf8')
   if (!MCP_RE.test(src)) throw new Error(`${MCP}: McpServer version literal not found`)
   fs.writeFileSync(file(MCP), src.replace(MCP_RE, `$1${v}$3`))
+  const ua = fs.readFileSync(file(UA), 'utf8')
+  if (!UA_RE.test(ua)) throw new Error(`${UA}: VERSION literal not found`)
+  fs.writeFileSync(file(UA), ua.replace(UA_RE, `$1${v}$3`))
 }
 
 export const CHANGELOG = file('CHANGELOG.md')

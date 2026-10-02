@@ -6,6 +6,43 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-10-02
+
+### Fixed
+- **The person's browser through the tunnel is the person.** Changes from a browser signed in from elsewhere (a
+  pairing code or a pasted token) were signed "Chrome on macOS (ip)" and could be taken for an agent; agents waiting
+  for the person timed out while they edited. Now they are the person's (`author: 'user'`, unnamed — `[7 user] …`),
+  wake `canvas_wait` (default `from: 'person'`) and studio, and a browser can no longer write as an agent. Agent
+  tokens stay agents. `canvas_wait` and `canvas_diff` describe `from` (`person` | `others`, `all` for the diff) in
+  their schemas and descriptions.
+- **One credential for every tool.** After pairing, the stdio MCP server's canvas tools worked but `design_draw` got
+  HTTP 401: it read the token from a file the pairing could not always write. The MCP server now hands the token it
+  holds to the design tools and to any `awd` it starts (`UNPROSE_TOKEN` in its environment), and every client — the
+  canvas client, `awd design draw`, `awd graph --canvas`, `awd boards move` — uses `UNPROSE_TOKEN`, else the token a
+  pairing code saved for that canvas (a board link or a trailing slash now name the same canvas).
+- **No more last-writer overwrites of board meta.** `PATCH /api/boards/:id` merges: the keys given replace theirs,
+  `meta.diagrams` merges per diagram key. `awd design draw`, `awd graph --canvas`, the remote `design_draw` and the web
+  use it (PUT still replaces whole, for older clients). Each diagram keeps its own project root
+  (`meta.diagrams[key].holder.root`); the board-level `meta.project.root` is set only when the board has none, so a
+  second machine's draw no longer overwrites it. Studio also finds a board by its diagrams' roots.
+- **No bogus projects, no duplicate boards.** Without a git repo, a design file's project was its own folder — a
+  project named "design". Now: the nearest folder with `.git` or `.unprose`, else with a project file (`package.json`,
+  `AGENTS.md`, …), else the working directory, else the folder above `design/`. Title lookups (`--board
+  "title:…"`) find the board in the project, then the personal space, then any board you see, and the canvas
+  finds-or-creates in one step (`POST /api/boards { reuse: 'title' }`), so two draws at once share one board; several
+  boards with the title → the newest, with a warning naming them. `awd projects remove <dir | id> [--force]` (`DELETE
+  /api/projects/:id`, this machine only) forgets a project; `--force` moves its boards to the personal space.
+- **User-Agent.** Cloudflare (in front of most tunnels) answers requests with no User-Agent, or Python's default one,
+  with a 403 the canvas never sees. Every Unprose client now sends `User-Agent: unprose/<version> (<component>)` (MCP
+  servers, CLI, runtime, plugin scripts); a 403 that is not the canvas's own answer says so; the canvas's 401 mentions
+  the User-Agent when a request had none or a script's default one; docs/agents-setup.md says to set one in scripts.
+- **Mentionable handles.** Default device-flow names like "agent on Acme-Robins-MacBook-Pro" had spaces and could
+  not be @mentioned. Every agent now has a handle — its name as one word (`@agent-on-acme-robins-macbook-pro`) —
+  shown on Connected agents, in `canvas_context`, the @ autocomplete (which inserts it) and on chips; `@handle` and
+  the exact name both work, also in `canvas_ask`, which now says exactly who the question was delivered to and
+  whether they are watching. Names are unique by handle. New pairings are named `<client>-<short host>`
+  (`codex-acme-robins-mbp`); existing names stay. A person's message shows who it went to (*You → @codex-b*).
+
 ## [0.9.1] — 2026-10-02
 
 ### Added
@@ -427,7 +464,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/river0825/unprose/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/river0825/unprose/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/river0825/unprose/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/river0825/unprose/compare/v0.8.1...v0.8.2

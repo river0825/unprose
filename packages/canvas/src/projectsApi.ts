@@ -2,7 +2,7 @@
 // accepted from a local caller: loopback address and no proxy/tunnel forwarding headers (a tunnel
 // such as cloudflared connects from localhost but adds them).
 import type http from 'node:http'
-import { hasProjects, NotFound, PERSONAL_PROJECT, type BoardRepository, type ProjectInfo } from './ports/boardRepository.js'
+import { hasProjects, NotFound, PERSONAL_PROJECT, ProjectInUse, type BoardRepository, type ProjectInfo } from './ports/boardRepository.js'
 
 export class ProjectHttpError extends Error {
   constructor(
@@ -80,4 +80,21 @@ export async function moveRoute(store: BoardRepository, req: http.IncomingMessag
     throw new ProjectHttpError(e instanceof NotFound ? 404 : 500, (e as Error).message)
   }
   return { status: 200, body: { board: id, project } }
+}
+
+/**
+ * DELETE /api/projects/:id[?force=1] (local only, like registering): forget a project — its directory and files stay.
+ * 409 while it still stores boards, unless force: then they move to the personal space first.
+ */
+export async function unregisterRoute(store: BoardRepository, req: http.IncomingMessage, id: string, force: boolean) {
+  if (!isLocalRequest(req)) throw new ProjectHttpError(403, 'projects can only be removed from this machine')
+  if (!hasProjects(store)) throw new ProjectHttpError(400, 'this canvas store has no projects')
+  try {
+    const r = store.unregisterProject(id, { force })
+    return { status: 200, body: { removed: projectView(r.project, true, 0), moved: r.moved } }
+  } catch (e) {
+    if (e instanceof ProjectInUse) throw new ProjectHttpError(409, `${e.message} (?force=1 / awd projects remove --force)`)
+    if (e instanceof NotFound) throw new ProjectHttpError(404, e.message)
+    throw new ProjectHttpError(400, (e as Error).message)
+  }
 }

@@ -7,6 +7,10 @@ import YAML from 'yaml'
 import { lint, toGraph, toMermaid, replay, formatDuration, parseDuration, type Event, type Command, type RunState } from '@awd/core'
 import { loadWorkflow, keyFor, FileEventStore, FileMemoryStore, syncMemory, createRuntime, WORKER_NAMES, projectStates, FakeWorker, patternsOf, decisionsOf, cardForPattern, renderPatterns, canvasCards } from '@awd/runtime'
 import { pushGraphToCanvas } from './graphCanvas.js'
+import { VERSION } from '@awd/canvas/dist/version.js'
+
+// every request Unprose makes says who it is (User-Agent unprose/<version> (<component>)); the runtime reads it here
+process.env.UNPROSE_VERSION ||= VERSION
 
 const HELP = `awd — small event-driven agent workflows
 
@@ -26,6 +30,7 @@ const HELP = `awd — small event-driven agent workflows
   awd design  export-egon <domain-story file> --out <story.egn>                         # to Egon.io
   awd mcp                                # the Unprose MCP server (canvas + design tools + prompts) over AWD_CANVAS_URL
   awd boards  move <board id | title:...> --to <project dir> [--canvas URL]            # store a board in <project>/.unprose/boards
+  awd projects list | remove <project dir | id> [--force] [--canvas URL]              # forget a project (--force moves its boards to personal)
   awd run     <workflow.yaml> [--port 4311] [--worker fake|claude-code|anthropic|cli|herdr] [--store file|memory] [--store-dir DIR] [--quiet]
               --worker is the default runner; each agent may pick its own runner:. --worker fake overrides all of them.
               --store memory keeps the event log in RAM (demos, tests); file (default) appends to <store-dir>/events.ndjson.
@@ -398,6 +403,7 @@ try {
     case 'studio': await (await import('./studio.js')).cmdStudio(args[0], flags); break
     case 'mcp': await (await import('./mcp.js')).cmdMcp(); break
     case 'boards': process.exit((await (await import('./projects.js')).cmdBoards(args, flags)) ? 0 : 1)
+    case 'projects': process.exit((await (await import('./projects.js')).cmdProjects(args, flags)) ? 0 : 1)
     case 'run': await cmdRun(need(args, 0, 'workflow file'), flags); break
     case 'emit': cmdEmit(need(args, 0, 'workflow file'), need(args, 1, 'event type'), flags); break
     case 'status': cmdStatus(need(args, 0, 'workflow file'), args[1], flags); break

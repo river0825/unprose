@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { CommandSpec, Installer, Launcher } from '../../ports/update.js'
+import { userAgent } from '../../version.js'
 
 const lines = (onLine: (l: string) => void) => {
   let rest = ''
@@ -54,7 +55,7 @@ export class ChildInstaller implements Installer {
       try {
         for (const [file, url] of [[tgz, `${base}/v${version}/${name}`], [sum, `${base}/v${version}/${name}.sha256`]] as const) {
           onLine(`downloading ${url}`)
-          const r = await fetch(url)
+          const r = await fetch(url, { headers: { 'user-agent': userAgent('canvas') } })
           if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`)
           fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()))
         }
@@ -97,7 +98,7 @@ export class ProcessLauncher implements Launcher {
     const ctl = new AbortController()
     const timer = setTimeout(() => ctl.abort(), 800)
     try {
-      const r = await fetch(`http://127.0.0.1:${port}/api/version`, { signal: ctl.signal })
+      const r = await fetch(`http://127.0.0.1:${port}/api/version`, { signal: ctl.signal, headers: { 'user-agent': userAgent('canvas') } })
       if (!r.ok) return undefined
       const j = (await r.json()) as { version?: unknown }
       return typeof j.version === 'string' ? j.version : undefined

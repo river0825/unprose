@@ -465,7 +465,9 @@ agent's name. Studio, which runs where the files are, is the default way such a 
   `UNPROSE_AGENT_NAME`) whose name matches `edit.by` is a chat request (`agentProposals` in
   `runtime/src/application/studio.ts`), routed like the person's (board session, fork, queue). The default local agent
   signs nothing, so studio's own sessions never trigger themselves; a reply in a thread is talk, not a proposal. Studio
-  now long-polls with `author=others`, so a remote agent's proposal wakes it at once.
+  now long-polls with `author=others`, so a remote agent's proposal wakes it at once. The person's comments from a
+  browser signed in through the tunnel are the person's (`author: 'user'`, docs/canvas.md → Identity) and open chats
+  like a page on this machine.
 - **The brief** opens with *Proposed edit — from <agent>, another agent*: who proposed it, the diff, and the steps —
   check the file still has the base (`shasum -a 1 <file>`; if not, `git apply --check`, else rebase by hand or ask the
   agent to propose again from the redrawn board); reply in the thread first (who proposed it, what it changes, what it

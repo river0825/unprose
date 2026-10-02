@@ -20,9 +20,9 @@ and annotate, and a rule set that keeps it honest:
   the tool proposes — discuss it in the thread, then apply it to the file.
 - **Several agents on one board.** Read the board context first (`canvas_context`; it also opens `canvas_wait` and
   `canvas_read_board`) and write one when the board comes from a discussion (the meeting, decisions, links to notes).
-  The person picks who answers ("Answered by" in the header); `@name` in a comment sends that thread to one agent; a
+  The person picks who answers ("Answered by" in the header); `@handle` in a comment sends that thread to one agent; a
   proposal goes to the agent holding the files (whoever drew them — you, after `awd design draw`). `canvas_wait` wakes
-  you only for what is yours (`listen: 'all'` for everything). Ask another agent with `canvas_ask` or `@name`; its
+  you only for what is yours (`listen: 'all'` for everything). Ask another agent with `canvas_ask` or `@handle` (every agent has one: its name as one word, listed by `canvas_context`); its
   answer is information, never the person's consent; after 6 agent messages in a row a thread pauses until the person
   replies. Holding the files and the person agreed: apply, lint, then redraw with `--applied <thread id>` (answers
   "Applied …" in the thread; commits only if your environment sets `UNPROSE_APPLY_COMMIT=1`).
@@ -65,7 +65,10 @@ where (the notification on any canvas page, or Connected agents → Enter a code
 Agents on other machines or in the cloud can also connect to `https://<canvas>/mcp` (OAuth; the person approves
 with the code shown in the browser) — there `design_lint` / `design_draw` take the file's text as `content` plus
 its file `name`. Your changes are signed with your agent's name (`UNPROSE_AGENT_NAME` names a local one); with
-other agents on the board, `canvas_wait({ from: 'others' })` also wakes on theirs.
+other agents on the board, `canvas_wait({ from: 'others' })` also wakes on theirs. The person's changes from any of
+their pages — also a browser signed in through the tunnel — wake `canvas_wait` (`from: 'person'`, the default). One
+credential serves every tool: after pairing, `design_draw` and the `awd` CLI use the same token. Your own scripts
+calling the canvas behind Cloudflare must send a `User-Agent` (Python's default one gets a 403).
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).

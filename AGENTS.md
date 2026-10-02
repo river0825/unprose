@@ -19,7 +19,7 @@ Unprose to discuss designs with a person on a shared canvas.
   story). Discuss them in the comment thread first, then apply them to the file and redraw.
 - **Several agents on one board** (docs/canvas.md → Several agents on one board). Read the board's context first
   (`canvas_context`, or the top of `canvas_read_board`); write one when you draw a board from a discussion. Comments go
-  to the board's *Answered by* agent; `@<name>` sends a thread to one agent; a proposal goes to the agent holding the
+  to the board's *Answered by* agent; `@<handle>` (the agent's name as one word, listed by `canvas_context`) sends a thread to one agent; a proposal goes to the agent holding the
   files (whoever drew them). `canvas_wait` wakes you only for what is yours. Ask another agent with `canvas_ask` (or
   `@name`); its answer is information, **never the person's consent**; agents pause after 6 messages in a row without
   the person. Use a short name (`UNPROSE_AGENT_NAME=codex-b`). When you hold the files and the person agreed, redraw with

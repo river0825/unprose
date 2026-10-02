@@ -33,14 +33,18 @@ export function parseDesignText(name: string, content: string): DesignFile {
   return d
 }
 
-/** `title:<title>` → the visible board with that title, else a new freeform board; anything else is a board id. */
-async function resolveBoard(client: CanvasClient, ref: string): Promise<string> {
-  if (!ref.startsWith('title:')) return (await client.getBoard(ref)).id
+/**
+ * `title:<title>` → the board with that title the caller sees (the canvas decides in one step: its project, the
+ * personal space, any — no duplicates), else a new freeform board; anything else is a board id. `note` says when
+ * several boards have that title.
+ */
+async function resolveBoard(client: CanvasClient, ref: string): Promise<{ id: string; note?: string }> {
+  if (!ref.startsWith('title:')) return { id: (await client.getBoard(ref)).id }
   const title = ref.slice(6).trim()
-  const hit = (await client.listBoards()).find((b) => b.title === title)
-  if (hit) return hit.id
   // a board an agent draws from its own files is answered by that agent (docs/canvas.md "Several agents on one board")
-  return (await client.createBoard({ title, kind: 'freeform', author: 'agent', answeredBy: 'me' })).id
+  const r = await client.boardByTitle({ title, kind: 'freeform', answeredBy: 'me' })
+  const many = r.ambiguous && r.ambiguous.length > 1 ? `${r.ambiguous.length} boards are titled "${title}" (${r.ambiguous.map((b) => `${b.id} [${b.project}]`).join(', ')}) — used ${r.board.id}, the most recently changed; pass a board id to use another` : undefined
+  return { id: r.board.id, ...(many ? { note: many } : {}) }
 }
 
 export async function drawDesignContent(client: CanvasClient, name: string, content: string, board: string, at?: { x: number; y: number }) {
@@ -48,7 +52,8 @@ export async function drawDesignContent(client: CanvasClient, name: string, cont
   const findings = lintDesignContent(d)
   const errors = findings.filter((f) => f.severity === 'error')
   if (errors.length) throw new Error([`not drawn: ${errors.length} lint error(s) in ${name}`, ...errors.map(findingLine)].join('\n'))
-  const boardId = await resolveBoard(client, board)
+  const found = await resolveBoard(client, board)
+  const boardId = found.id
   const r = await client.template(boardId, d.kind as never, d.content, undefined, undefined, { key: d.key, title: d.title, source: name, level: d.level, ...(at ? { at } : {}) })
   // a UI mock's lint findings go on its elements (docs/diagrams.md §6c)
   const drawn = withDesignFindings(d, r.items as unknown as BoardItem[])
@@ -61,11 +66,10 @@ export async function drawDesignContent(client: CanvasClient, name: string, cont
   const grow = frame && items[frame.id] ? growFrame(items[frame.id], drawn, placed) : undefined
   if (grow) ops.push(grow)
   const { seq } = await client.apply(boardId, ops as unknown as Op[], 'agent', `design_draw: ${name}`)
-  // meta is replaced whole: keep every other key and every other diagram's entry
+  // only this diagram's entry changes (PATCH merges per diagram key: another agent's diagrams stay as they are)
   // the caller holds this file (the canvas stamps its name; there is no path to record from here)
-  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } }
-  await client.updateBoard(boardId, { meta: { ...current.meta, diagrams } })
-  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== 'error'), unresolved: r.unresolvedTraces ?? [] }
+  await client.patchBoard(boardId, { meta: { diagrams: { [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } } } })
+  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== 'error'), unresolved: r.unresolvedTraces ?? [], ...(found.note ? { note: found.note } : {}) }
 }
 
 /** design_lint / design_draw / design_propose_stories over file content, and the start prompts. */
@@ -113,7 +117,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
       guard(async () => {
         const r = await drawDesignContent(client, name, content, board, at)
         const unresolved = r.unresolved.length ? [`⚠ ${r.unresolved.length} trace(s) not drawn:`, ...r.unresolved.map((u) => `  ${u.item} —${u.trace.rel}→ ${u.trace.from}: ${u.reason === 'bad-ref' ? 'not a <diagram key>/<element id> ref' : 'target not found on the board'}`)] : []
-        return text([`✔ ${name} → frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...r.notes.map(findingLine), ...unresolved].join('\n'))
+        return text([`✔ ${name} → frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...(r.note ? [`⚠ ${r.note}`] : []), ...r.notes.map(findingLine), ...unresolved].join('\n'))
       }),
   )
 
@@ -137,7 +141,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
         if (es.kind !== 'event-storming' && es.kind !== 'domain-story') throw new Error(`${from_name} is a ${es.kind} diagram — propose stories from EventStorming or a domain story`)
         if (usm.kind !== 'user-story-map') throw new Error(`${into_name} is a ${usm.kind} diagram, not a story map`)
         const { candidates } = es.kind === 'domain-story' ? proposeFromDomainStory(es.content as never, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content as never }) : proposeStories(es.content as never, { esKey: es.key, existing: usm.content as never })
-        const boardId = await resolveBoard(client, board)
+        const boardId = (await resolveBoard(client, board)).id
         const current = await client.getBoard(boardId)
         const { ops, proposed, skipped } = proposalOps({ items: current.items as unknown as Record<string, BoardItem> }, candidates, usm.key, es.key)
         if (ops.length) await client.apply(boardId, ops as unknown as Op[], 'agent', `design_propose_stories: ${proposed} from ${es.key}`)

@@ -10,7 +10,9 @@ import { z } from 'zod'
 import { CanvasClient, canvasOrigin, probeCanvas } from './client.js'
 import { diagramKinds } from './templates/index.js'
 import type { Author, Board, DiagramKind, Item, Op } from './model.js'
-import { agentOf, displayName, sameAgent, threadRoot, type BoardContext } from './routing.js'
+import { agentLabel, agentOf, displayName, handleOf, resolveAgent, sameAgent, threadRoot, type BoardContext } from './routing.js'
+import { adoptToken, saveToken, savedToken } from './credentials.js'
+import { userAgent } from './version.js'
 
 const kindEnum = z.enum(diagramKinds as [DiagramKind, ...DiagramKind[]])
 
@@ -48,9 +50,9 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
   const tools = [
     'Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open',
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
-    'Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person\'s page to an item or frame)',
+    'Conversation: canvas_wait (block until the person comments or hands over; from: "person" (default) or "others" to also wake on other agents), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
-    'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; set "Answered by"), canvas_ask (ask another agent on the board and wait for its answer). Comments go to the board\'s responder ("Answered by"), an @mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours',
+    'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; set "Answered by"; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board\'s responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours',
     'Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself — use it whenever something gets in your way)',
     ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
@@ -76,8 +78,8 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
     'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).',
-    'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name.',
-    'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<name> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.',
+    'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python\'s default one with a 403.',
+    'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.',
   ].join('\n')
 }
 
@@ -109,7 +111,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.9.1' },
+    { name: 'unprose', version: '0.9.2' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -133,7 +135,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
       inputSchema: {},
     },
     async () => {
-      const version = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2000) })
+      const version = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2000), headers: { 'user-agent': userAgent(opts.remote ? 'remote-mcp' : 'mcp') } })
         .then((r) => (r.ok ? (r.json() as Promise<{ version?: string }>) : {}))
         .then((j) => (j as { version?: string }).version)
         .catch(() => undefined)
@@ -236,14 +238,16 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_diff',
     {
       title: 'What changed since seq',
-      description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions…). By default only the user's changes are returned; author 'others' adds the other agents' changes (never your own — for several agents on one board), 'agent' every agent's, 'all' everything.",
+      description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions…). Whose changes: `from` (the same words as canvas_wait) — 'person' (default: the person's changes, from any of their pages, also a browser signed in through a tunnel), 'others' (the person and the other agents — never your own; for several agents on one board), 'all' (everything, yours included). `author` is the older spelling ('user' = person, 'agent' = every agent's).",
       inputSchema: {
         id: z.string(),
         since: z.number().int().min(0),
-        author: z.enum(['user', 'others', 'agent', 'all']).default('user'),
+        from: z.enum(['person', 'others', 'all']).optional().describe("'person' (default): the person's changes; 'others': the person's and the other agents' (never yours); 'all': everything"),
+        author: z.enum(['user', 'others', 'agent', 'all']).optional().describe("older spelling of `from`: 'user' | 'others' | 'agent' (every agent's) | 'all'"),
       },
     },
-    async ({ id, since, author }) => {
+    async ({ id, since, from, author: rawAuthor }) => {
+      const author = from === 'person' ? 'user' : from ?? rawAuthor ?? 'user'
       const r = await client.diff(id, since, author === 'all' ? undefined : (author as Author | 'others'))
       if (!r.count) return text(`no ${author === 'all' ? '' : author + ' '}changes since seq ${since} (board seq ${r.seq})`)
       return text(`${r.count} change(s), board seq now ${r.seq}:\n${r.lines.join('\n')}`)
@@ -254,7 +258,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_wait',
     {
       title: 'Wait for the user to change the board',
-      description: 'Block until the user has changed something after `since` AND stopped for `quietSec` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. `wake` decides what counts: \'meaningful\' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; \'any\' wakes on every change with one line each; \'handoff\' waits for the "Hand to agent" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.',
+      description: 'Block until the person has changed something after `since` AND stopped for `quietSec` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. `from` decides whose changes wake you: \'person\' (default) — the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); \'others\' — also every other agent\'s change on this board (never your own). `listen` decides which: \'mine\' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), \'all\' everything. `wake` decides what counts: \'meaningful\' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; \'any\' wakes on every change with one line each; \'handoff\' waits for the "Hand to agent" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.',
       inputSchema: {
         id: z.string(),
         since: z.number().int().min(0),
@@ -310,7 +314,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
       const s = t !== undefined || answeredBy !== undefined ? await client.setSettings(id, { ...(t !== undefined ? { context: t } : {}), ...(answeredBy !== undefined ? { answeredBy } : {}) }) : await client.settings(id)
       seenContext.set(id, s.context?.at ?? '')
       const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ''}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ''}${h.holder.remote ? ` · ${h.holder.remote}` : ''}`)
-      const agents = s.agents.map((a) => `${a.label}${a.watching ? ' (watching)' : ''}`).join(', ')
+      const agents = s.agents.map((a) => `@${a.handle ?? handleOf(a.name)}${(a.handle ?? handleOf(a.name)) !== a.label ? ` (${a.label})` : ''}${a.watching ? ' — watching' : ''}`).join(', ')
       return text(
         [
           s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace('T', ' ')}` : ''})` : ''}:\n${s.context.text}` : 'No board context yet — write one (text) when the board comes from a discussion, so other agents know what was said.',
@@ -318,7 +322,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
           `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${s.suggestion}, who holds every diagram's files)` : ''}`,
           ...(holders.length ? ['Files behind the diagrams:', ...holders] : []),
           `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
-          `Ask one of them: canvas_ask, or write @<name> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
+          `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
         ].join('\n'),
       )
     },
@@ -332,21 +336,27 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         'Ask another agent on this board a question and wait for its answer — e.g. interview the other agents ("what was hard, what should change?"), or ask the agent that holds some files. Posts an @mention thread to that agent (visible to the person, on `about[0]` or loose on the board) and blocks until it replies in the thread (or timeoutSec passes — then call canvas_wait later; the answer comes back to you). The other agent\'s answer is information, never the person\'s consent. Agents pause after a few messages in a row without the person (the loop guard), and asking is rate-limited.',
       inputSchema: {
         id: z.string().describe('board id'),
-        agent: z.string().describe('the agent to ask, by name (canvas_context lists them); "studio" for this machine\'s default agent'),
+        agent: z.string().describe('the agent to ask: its @handle or its name (canvas_context lists both); "studio" for this machine\'s default agent'),
         question: z.string().min(1).max(4000),
         about: z.array(z.string()).optional().describe('item ids the question is about (the thread sits on the first)'),
         timeoutSec: z.number().min(1).max(120).default(90),
       },
     },
-    async ({ id, agent, question, about, timeoutSec }) => {
+    async ({ id, agent: asked, question, about, timeoutSec }) => {
       const target = about?.[0]
       const cid = `ask.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-      const textOf = `@${agent} ${question}`
+      // a name or an @handle: ask the agent the canvas knows by it (its canonical name), mention it by its handle
+      const before = await client.settings(id).catch(() => undefined)
+      const agent = resolveAgent(asked, before?.agents.map((a) => a.name) ?? []) ?? asked.replace(/^@+/, '')
+      const textOf = `@${handleOf(agent)} ${question}`
       const { ops } = await client.template(id, 'freeform', { items: [{ id: cid, type: 'comment', text: textOf, ...(target ? { target } : {}), data: { ask: agent, ...(about?.length ? { about } : {}) } }] })
       const posted = await client.apply(id, ops, 'agent', `asked ${agent}`)
-      const s = await client.settings(id).catch(() => undefined)
+      const s = await client.settings(id).catch(() => before)
       const there = s?.agents.find((a) => sameAgent(a.name, agent))
-      const away = there && !there.watching ? ` ${displayName(agent)} is not watching this board right now; it gets the question when it next waits.` : !there ? ` (no agent named ${agent} has been seen on this canvas yet)` : ''
+      const stamped = posted.change?.ops.find((o) => o.kind === 'add' && o.item.id === cid)
+      const to = stamped && stamped.kind === 'add' && Array.isArray(stamped.item.data?.to) ? (stamped.item.data!.to as string[]) : [agent]
+      const delivered = `Delivered to ${to.map(agentLabel).join(', ') || '(nobody — the thread is paused)'}${there ? (there.watching ? ' — watching this board now' : ' — not watching this board right now; it gets the question when it next waits') : ` — no agent named ${agent} has been seen on this canvas yet`}.`
+      const away = ` ${delivered}`
       let since = posted.seq
       const deadline = Date.now() + timeoutSec * 1000
       while (Date.now() < deadline) {
@@ -355,7 +365,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         since = w.seq
         const board = await client.getBoard(id)
         const answer = answerIn(board, cid, agent)
-        if (answer) return text(`${displayName(agent)} answered in thread ${cid}:\n${answer.text ?? ''}\n\nReply in the thread (canvas_add_items comment with target "${cid}") to go on — it goes back to ${displayName(agent)}. Board seq ${board.seq}.`)
+        if (answer) return text(`${delivered}\n${displayName(agent)} answered in thread ${cid}:\n${answer.text ?? ''}\n\nReply in the thread (canvas_add_items comment with target "${cid}") to go on — it goes back to ${displayName(agent)}. Board seq ${board.seq}.`)
         if (w.timedOut) break
       }
       return text(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`)
@@ -462,62 +472,38 @@ export function answerIn(board: Board, root: string, agent: string): Item | unde
     .pop()
 }
 
-/** Tokens this agent got through the device flow, per canvas address (`~/.awd/tokens.json`, 0600). */
-function tokenFile(): string {
-  return process.env.UNPROSE_TOKENS_FILE || path.join(os.homedir(), '.awd', 'tokens.json')
-}
-function savedToken(base: string): string | undefined {
-  try {
-    const j = JSON.parse(fs.readFileSync(tokenFile(), 'utf8')) as Record<string, string>
-    return typeof j[base] === 'string' ? j[base] : undefined
-  } catch {
-    return undefined
-  }
-}
-function saveToken(base: string, token: string | undefined) {
-  const f = tokenFile()
-  let j: Record<string, string> = {}
-  try {
-    j = JSON.parse(fs.readFileSync(f, 'utf8')) as Record<string, string>
-  } catch {
-    // first token
-  }
-  if (token) j[base] = token
-  else delete j[base]
-  fs.mkdirSync(path.dirname(f), { recursive: true, mode: 0o700 })
-  fs.writeFileSync(f, JSON.stringify(j, null, 2) + '\n', { mode: 0o600 })
-}
-
 /**
  * An agent without a browser connecting to a canvas elsewhere (RFC 8628, docs/canvas.md "Remote agents"):
  * ask for a pairing code, show it in every tool result until the person types it on the canvas, then use
  * the token (and keep it for next time).
  */
 async function connectWithCode(base: string, client: CanvasClient, name: string): Promise<void> {
-  const res = await fetch(`${base}/device_authorization`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_name: name, scope: 'write' }) })
+  const res = await fetch(`${base}/device_authorization`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': userAgent('mcp') }, body: new URLSearchParams({ client_name: name, scope: 'write' }) }).catch((e: Error) => ({ ok: false, status: 0, statusText: e.message, json: async () => ({ error_description: e.message }) }) as unknown as Response)
   const j = (await res.json().catch(() => ({}))) as { device_code?: string; user_code?: string; interval?: number; expires_in?: number; error_description?: string }
   if (!res.ok || !j.device_code || !j.user_code) {
     client.authHint = `This canvas (${base}) wants an access token and could not start a pairing code (${j.error_description ?? `HTTP ${res.status}`}). Ask the person for a token (canvas → Connected agents) and set UNPROSE_TOKEN.`
     return
   }
-  const hint = (code: string) => `Not connected to the canvas yet. Ask the person to type the code ${code} on the canvas (${base}): the notification "${name} wants to connect", or Connected agents → Enter a code. It expires in 10 minutes; then call this tool again.`
+  const hint = (code: string) => `Not connected to the canvas yet. Ask the person to type the code ${code} on the canvas (${base}): the notification "${name} wants to connect", or Connected agents → Enter a code. It expires in 10 minutes; then call this tool again. (You will be @${handleOf(name)} on the canvas.)`
   client.authHint = hint(j.user_code)
   process.stderr.write(`unprose MCP: ${client.authHint}\n`)
   const until = Date.now() + (j.expires_in ?? 600) * 1000
   let interval = Math.max(5, j.interval ?? 5) * 1000
   while (Date.now() < until) {
     await new Promise((r) => setTimeout(r, interval))
-    const t = await fetch(`${base}/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: j.device_code }) }).catch(() => undefined)
+    const t = await fetch(`${base}/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': userAgent('mcp') }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: j.device_code }) }).catch(() => undefined)
     const body = ((await t?.json().catch(() => ({}))) ?? {}) as { access_token?: string; error?: string }
     if (body.access_token) {
       client.setToken(body.access_token)
+      // one credential for every tool: the design tools (in-process) and any `awd` started from here use it too
+      adoptToken(body.access_token)
       client.authHint = undefined
       try {
         saveToken(base, body.access_token)
-      } catch {
-        // kept for this session only
+      } catch (e) {
+        process.stderr.write(`unprose MCP: could not keep the token in ${process.env.UNPROSE_TOKENS_FILE || '~/.awd/tokens.json'} (${(e as Error).message}); it works for this session\n`)
       }
-      process.stderr.write(`unprose MCP: connected to ${base} as ${name}\n`)
+      process.stderr.write(`unprose MCP: connected to ${base} as ${name} (@${handleOf(name)})\n`)
       return
     }
     if (body.error === 'slow_down') interval += 5000
@@ -531,6 +517,35 @@ async function connectWithCode(base: string, client: CanvasClient, name: string)
   }
 }
 
+/** "Acme-Robins-MacBook-Pro.local" → "acme-robins-mbp": the host part of a default agent name, short. */
+export function shortHost(host = os.hostname()): string {
+  const h = host
+    .replace(/\.(local|lan|home|localdomain)$/i, '')
+    .split('.')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/macbook-pro/g, 'mbp')
+    .replace(/macbook-air/g, 'mba')
+    .replace(/macbook/g, 'mb')
+    .replace(/^-+|-+$/g, '')
+  return h.slice(0, 24).replace(/-+$/, '') || 'host'
+}
+
+/** The MCP client's name as the agent knows it ("codex-mcp-client", "claude-code" …) → "codex", "claude", else "agent". */
+export function clientWord(clientName: string | undefined, env: NodeJS.ProcessEnv = process.env): string {
+  const n = (clientName ?? '').toLowerCase()
+  for (const w of ['codex', 'claude', 'cursor', 'gemini', 'opencode', 'windsurf', 'cline', 'goose', 'zed']) if (n.includes(w)) return w
+  if (env.CLAUDECODE || env.CLAUDE_CODE_ENTRYPOINT) return 'claude'
+  if (Object.keys(env).some((k) => k.startsWith('CODEX_'))) return 'codex'
+  const slug = n.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 16)
+  return slug || 'agent'
+}
+
+/** The name a pairing gives this agent when UNPROSE_AGENT_NAME is not set: "<client>-<short host>", e.g. codex-mbp-b (one word: it is its @handle). */
+export function defaultAgentName(clientName?: string, env: NodeJS.ProcessEnv = process.env, host = os.hostname()): string {
+  return env.UNPROSE_AGENT_NAME || `${clientWord(clientName, env)}-${shortHost(host)}`
+}
+
 export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
   // Fail with the reason, not as a bare "Connection closed" in the agent (river0825/unprose#5).
   const raw = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400'
@@ -542,11 +557,16 @@ export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
     process.exit(2)
   }
   // a token: UNPROSE_TOKEN, else one this agent got earlier with a pairing code
-  let token = process.env.UNPROSE_TOKEN || savedToken(base)
+  const fromEnv = process.env.UNPROSE_TOKEN || undefined
+  let token = fromEnv || savedToken(base)
   let probe = await probeCanvas(base, 4000, token)
-  if (!probe.ok && probe.auth && token && !process.env.UNPROSE_TOKEN) {
+  if (!probe.ok && probe.auth && token && !fromEnv) {
     // the saved token was revoked: forget it and pair again
-    saveToken(base, undefined)
+    try {
+      saveToken(base, undefined)
+    } catch {
+      // nothing to forget
+    }
     token = undefined
     probe = await probeCanvas(base)
   }
@@ -556,9 +576,11 @@ export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
     process.exit(1)
   }
   process.env.AWD_CANVAS_URL = base
-  const name = process.env.UNPROSE_AGENT_NAME || `agent on ${os.hostname().replace(/\.local$/, '')}`
-  const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME })
-  if (needsPairing) void connectWithCode(base, client, name)
+  // one credential for every tool: the canvas tools, the design tools (they run in-process and read the environment)
+  // and any `awd` command started from here all send the same token (docs/canvas.md "Remote agents")
+  adoptToken(token)
+  const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME, component: 'mcp' })
+  if (needsPairing) client.authHint = `Connecting to the canvas (${base}) — call this tool again in a few seconds to get the pairing code.`
   // Boards this session creates belong to its project (stored in <project>/.unprose/boards/). Only a
   // canvas on this machine accepts the registration; elsewhere the boards stay in its personal space.
   let project: string | undefined
@@ -572,4 +594,10 @@ export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
   }
   const server = createMcpServer(client, { project, extend })
   await server.connect(new StdioServerTransport())
+  if (needsPairing) {
+    // the pairing names the token after the MCP client ("codex-mbp-b"): wait briefly for it to introduce itself
+    const until = Date.now() + 3000
+    while (!server.server.getClientVersion() && Date.now() < until) await new Promise((r) => setTimeout(r, 50))
+    void connectWithCode(base, client, defaultAgentName(server.server.getClientVersion()?.name))
+  }
 }

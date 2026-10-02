@@ -3904,17 +3904,17 @@ var require_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node4, visitor, path13) {
-      const ctrl = callVisitor(key, node4, visitor, path13);
+    function visit_(key, node4, visitor, path14) {
+      const ctrl = callVisitor(key, node4, visitor, path14);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path13, ctrl);
-        return visit_(key, ctrl, visitor, path13);
+        replaceNode(key, path14, ctrl);
+        return visit_(key, ctrl, visitor, path14);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path13 = Object.freeze(path13.concat(node4));
+          path14 = Object.freeze(path14.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = visit_(i, node4.items[i], visitor, path13);
+            const ci = visit_(i, node4.items[i], visitor, path14);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3925,13 +3925,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path13 = Object.freeze(path13.concat(node4));
-          const ck = visit_("key", node4.key, visitor, path13);
+          path14 = Object.freeze(path14.concat(node4));
+          const ck = visit_("key", node4.key, visitor, path14);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = visit_("value", node4.value, visitor, path13);
+          const cv = visit_("value", node4.value, visitor, path14);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -3952,17 +3952,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node4, visitor, path13) {
-      const ctrl = await callVisitor(key, node4, visitor, path13);
+    async function visitAsync_(key, node4, visitor, path14) {
+      const ctrl = await callVisitor(key, node4, visitor, path14);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path13, ctrl);
-        return visitAsync_(key, ctrl, visitor, path13);
+        replaceNode(key, path14, ctrl);
+        return visitAsync_(key, ctrl, visitor, path14);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path13 = Object.freeze(path13.concat(node4));
+          path14 = Object.freeze(path14.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = await visitAsync_(i, node4.items[i], visitor, path13);
+            const ci = await visitAsync_(i, node4.items[i], visitor, path14);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3973,13 +3973,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path13 = Object.freeze(path13.concat(node4));
-          const ck = await visitAsync_("key", node4.key, visitor, path13);
+          path14 = Object.freeze(path14.concat(node4));
+          const ck = await visitAsync_("key", node4.key, visitor, path14);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = await visitAsync_("value", node4.value, visitor, path13);
+          const cv = await visitAsync_("value", node4.value, visitor, path14);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -4006,23 +4006,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node4, visitor, path13) {
+    function callVisitor(key, node4, visitor, path14) {
       if (typeof visitor === "function")
-        return visitor(key, node4, path13);
+        return visitor(key, node4, path14);
       if (identity.isMap(node4))
-        return visitor.Map?.(key, node4, path13);
+        return visitor.Map?.(key, node4, path14);
       if (identity.isSeq(node4))
-        return visitor.Seq?.(key, node4, path13);
+        return visitor.Seq?.(key, node4, path14);
       if (identity.isPair(node4))
-        return visitor.Pair?.(key, node4, path13);
+        return visitor.Pair?.(key, node4, path14);
       if (identity.isScalar(node4))
-        return visitor.Scalar?.(key, node4, path13);
+        return visitor.Scalar?.(key, node4, path14);
       if (identity.isAlias(node4))
-        return visitor.Alias?.(key, node4, path13);
+        return visitor.Alias?.(key, node4, path14);
       return void 0;
     }
-    function replaceNode(key, path13, node4) {
-      const parent = path13[path13.length - 1];
+    function replaceNode(key, path14, node4) {
+      const parent = path14[path14.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node4;
       } else if (identity.isPair(parent)) {
@@ -4634,10 +4634,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path13, value) {
+    function collectionFromPath(schema, path14, value) {
       let v2 = value;
-      for (let i = path13.length - 1; i >= 0; --i) {
-        const k2 = path13[i];
+      for (let i = path14.length - 1; i >= 0; --i) {
+        const k2 = path14[i];
         if (typeof k2 === "number" && Number.isInteger(k2) && k2 >= 0) {
           const a = [];
           a[k2] = v2;
@@ -4656,7 +4656,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path13) => path13 == null || typeof path13 === "object" && !!path13[Symbol.iterator]().next().done;
+    var isEmptyPath = (path14) => path14 == null || typeof path14 === "object" && !!path14[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -4686,11 +4686,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path13, value) {
-        if (isEmptyPath(path13))
+      addIn(path14, value) {
+        if (isEmptyPath(path14))
           this.add(value);
         else {
-          const [key, ...rest] = path13;
+          const [key, ...rest] = path14;
           const node4 = this.get(key, true);
           if (identity.isCollection(node4))
             node4.addIn(rest, value);
@@ -4704,8 +4704,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path13) {
-        const [key, ...rest] = path13;
+      deleteIn(path14) {
+        const [key, ...rest] = path14;
         if (rest.length === 0)
           return this.delete(key);
         const node4 = this.get(key, true);
@@ -4719,8 +4719,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path13, keepScalar) {
-        const [key, ...rest] = path13;
+      getIn(path14, keepScalar) {
+        const [key, ...rest] = path14;
         const node4 = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node4) ? node4.value : node4;
@@ -4738,8 +4738,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path13) {
-        const [key, ...rest] = path13;
+      hasIn(path14) {
+        const [key, ...rest] = path14;
         if (rest.length === 0)
           return this.has(key);
         const node4 = this.get(key, true);
@@ -4749,8 +4749,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path13, value) {
-        const [key, ...rest] = path13;
+      setIn(path14, value) {
+        const [key, ...rest] = path14;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -7265,9 +7265,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path13, value) {
+      addIn(path14, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path13, value);
+          this.contents.addIn(path14, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -7342,14 +7342,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path13) {
-        if (Collection.isEmptyPath(path13)) {
+      deleteIn(path14) {
+        if (Collection.isEmptyPath(path14)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path13) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path14) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -7364,10 +7364,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path13, keepScalar) {
-        if (Collection.isEmptyPath(path13))
+      getIn(path14, keepScalar) {
+        if (Collection.isEmptyPath(path14))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path13, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path14, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -7378,10 +7378,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path13) {
-        if (Collection.isEmptyPath(path13))
+      hasIn(path14) {
+        if (Collection.isEmptyPath(path14))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path13) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path14) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -7398,13 +7398,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path13, value) {
-        if (Collection.isEmptyPath(path13)) {
+      setIn(path14, value) {
+        if (Collection.isEmptyPath(path14)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path13), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path14), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path13, value);
+          this.contents.setIn(path14, value);
         }
       }
       /**
@@ -9365,9 +9365,9 @@ var require_cst_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path13) => {
+    visit2.itemAtPath = (cst, path14) => {
       let item = cst;
-      for (const [field, index] of path13) {
+      for (const [field, index] of path14) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -9376,23 +9376,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path13) => {
-      const parent = visit2.itemAtPath(cst, path13.slice(0, -1));
-      const field = path13[path13.length - 1][0];
+    visit2.parentCollection = (cst, path14) => {
+      const parent = visit2.itemAtPath(cst, path14.slice(0, -1));
+      const field = path14[path14.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path13, item, visitor) {
-      let ctrl = visitor(item, path13);
+    function _visit(path14, item, visitor) {
+      let ctrl = visitor(item, path14);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path13.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path14.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -9403,10 +9403,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path13);
+            ctrl = ctrl(item, path14);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path13) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path14) : ctrl;
     }
     exports.visit = visit2;
   }
@@ -10708,14 +10708,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs12 = this.flowScalar(this.type);
+              const fs13 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map2.items.push({ start, key: fs12, sep: [] });
+                map2.items.push({ start, key: fs13, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs12);
+                this.stack.push(fs13);
               } else {
-                Object.assign(it, { key: fs12, sep: [] });
+                Object.assign(it, { key: fs13, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -10843,13 +10843,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs12 = this.flowScalar(this.type);
+              const fs13 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs12, sep: [] });
+                fc.items.push({ start: [], key: fs13, sep: [] });
               else if (it.sep)
-                this.stack.push(fs12);
+                this.stack.push(fs13);
               else
-                Object.assign(it, { key: fs12, sep: [] });
+                Object.assign(it, { key: fs13, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -14386,8 +14386,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path13) {
-      let input2 = path13;
+    function removeDotSegments(path14) {
+      let input2 = path14;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -14796,8 +14796,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path13 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path13 && path13 !== "/" ? path13 : void 0;
+        const path14 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path14 && path14 !== "/" ? path14 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -18310,12 +18310,12 @@ var require_dist2 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs12, exportName) {
+    function addFormats(ajv, list2, fs13, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs12[f]);
+        ajv.addFormat(f, fs13[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -18324,16 +18324,16 @@ var require_dist2 = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs11 from "node:fs";
-import os6 from "node:os";
-import path12 from "node:path";
+import fs12 from "node:fs";
+import os7 from "node:os";
+import path13 from "node:path";
 import { execFile as execFile4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
 import http from "node:http";
-import fs7 from "node:fs";
-import path8 from "node:path";
+import fs8 from "node:fs";
+import path9 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/ws/wrapper.mjs
@@ -18351,6 +18351,15 @@ var HANDOFF_NOTE = "handoff";
 var NotFound = class extends Error {
 };
 var PERSONAL_PROJECT = "personal";
+var ProjectInUse = class extends Error {
+  project;
+  boards;
+  constructor(project, boards) {
+    super(`project ${project} still stores ${boards.length} board(s) (${boards.slice(0, 5).join(", ")}${boards.length > 5 ? " \u2026" : ""}); move them first, or force to move them to the personal space`);
+    this.project = project;
+    this.boards = boards;
+  }
+};
 function hasProjects(r) {
   return typeof r.registerProject === "function";
 }
@@ -18837,6 +18846,23 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
         fs.unlinkSync(f);
     return board;
   }
+  unregisterProject(projectId, opts = {}) {
+    if (projectId === PERSONAL_PROJECT)
+      throw new Error("the personal space cannot be removed");
+    const info = this.projects().find((x2) => x2.id === projectId);
+    const p = this.registered.find((r) => r.id === projectId);
+    if (!p || !info)
+      throw new NotFound(`project ${projectId} is not registered`);
+    const dir = boardsDirOf(p.root);
+    const boards = [...this.dirOf.entries()].filter(([, d]) => d === dir).map(([id]) => id);
+    if (boards.length && !opts.force)
+      throw new ProjectInUse(projectId, boards);
+    for (const id of boards)
+      this.moveBoard(id, PERSONAL_PROJECT);
+    this.registered = this.registered.filter((r) => r !== p);
+    this.writeRegistry();
+    return { project: info, moved: boards };
+  }
   // ---- persistence hooks ----
   persist(board) {
     writeSnapshot(this.dirFor(board.id), board);
@@ -19029,6 +19055,42 @@ async function moveRoute(store, req, id, readBody) {
   }
   return { status: 200, body: { board: id, project } };
 }
+async function unregisterRoute(store, req, id, force) {
+  if (!isLocalRequest(req))
+    throw new ProjectHttpError(403, "projects can only be removed from this machine");
+  if (!hasProjects(store))
+    throw new ProjectHttpError(400, "this canvas store has no projects");
+  try {
+    const r = store.unregisterProject(id, { force });
+    return { status: 200, body: { removed: projectView(r.project, true, 0), moved: r.moved } };
+  } catch (e) {
+    if (e instanceof ProjectInUse)
+      throw new ProjectHttpError(409, `${e.message} (?force=1 / awd projects remove --force)`);
+    if (e instanceof NotFound)
+      throw new ProjectHttpError(404, e.message);
+    throw new ProjectHttpError(400, e.message);
+  }
+}
+
+// packages/canvas/dist/boardLookup.js
+var norm = (s) => s.trim().replace(/\s+/g, " ");
+function pickBoardByTitle(boards, title, project, match = () => true) {
+  const want = norm(title);
+  const exact = boards.filter((b2) => norm(b2.title) === want && match(b2));
+  const loose = exact.length ? exact : boards.filter((b2) => norm(b2.title).toLowerCase() === want.toLowerCase() && match(b2));
+  const tiers = [
+    ["project", project && project !== "personal" ? loose.filter((b2) => b2.project === project) : []],
+    ["personal", loose.filter((b2) => (b2.project ?? "personal") === "personal")],
+    ["any", loose]
+  ];
+  for (const [where, list2] of tiers) {
+    if (!list2.length)
+      continue;
+    const sorted = [...list2].sort((a, b2) => String(b2.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
+    return { board: sorted[0], ambiguous: sorted.length > 1 ? sorted : [], where };
+  }
+  return { ambiguous: [] };
+}
 
 // packages/canvas/dist/updatePolicy.js
 function parseVersion(v2) {
@@ -19068,16 +19130,16 @@ function compareVersions(a, b2) {
   return 0;
 }
 var isNewer = (latest, current) => !!latest && !!current && compareVersions(latest, current) > 0;
-var norm = (p) => p.replace(/\\/g, "/").replace(/\/+$/, "");
-var dirname = (p) => norm(p).replace(/\/[^/]*$/, "") || "/";
-var join = (...parts) => norm(parts.join("/"));
+var norm2 = (p) => p.replace(/\\/g, "/").replace(/\/+$/, "");
+var dirname = (p) => norm2(p).replace(/\/[^/]*$/, "") || "/";
+var join = (...parts) => norm2(parts.join("/"));
 function detectInstall(entry, env, exists) {
-  const e = norm(entry);
+  const e = norm2(entry);
   const cache = /^(.*\/plugins\/cache\/[^/]+\/[^/]+\/[^/]+)(?:\/|$)/.exec(e);
   if (cache)
     return { kind: "plugin", root: cache[1] };
   if (env.CLAUDE_PLUGIN_ROOT)
-    return { kind: "plugin", root: norm(env.CLAUDE_PLUGIN_ROOT) };
+    return { kind: "plugin", root: norm2(env.CLAUDE_PLUGIN_ROOT) };
   const bundle = /^(.*\/runtime\/[^/]+)\/canvas\.mjs$/.exec(e);
   if (bundle)
     return { kind: "bundle", root: bundle[1] };
@@ -19108,7 +19170,7 @@ function nextEntry(install, entry, latest) {
     return join(dirname(install.root), latest, "scripts", "canvas.mjs");
   if (install.kind === "bundle" && install.root)
     return join(dirname(install.root), latest, "canvas.mjs");
-  return norm(entry);
+  return norm2(entry);
 }
 function nextArgs(install, argvAfterEntry) {
   if (install.kind !== "plugin")
@@ -19123,9 +19185,9 @@ function installedUpdate(json4, root, current, exists) {
   let best;
   for (const list2 of Object.values(plugins ?? {})) {
     for (const e of Array.isArray(list2) ? list2 : []) {
-      const p = typeof e?.installPath === "string" ? norm(e.installPath) : void 0;
+      const p = typeof e?.installPath === "string" ? norm2(e.installPath) : void 0;
       const v2 = typeof e?.version === "string" ? e.version : void 0;
-      if (!p || !v2 || dirname(p) !== parent || p === norm(root))
+      if (!p || !v2 || dirname(p) !== parent || p === norm2(root))
         continue;
       if (!isNewer(v2, current) || best && !isNewer(v2, best.version))
         continue;
@@ -19205,12 +19267,12 @@ function joinLines(lines2) {
   return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
 `).join("");
 }
-function unifiedDiff(before, after, path13 = "file", context = 3) {
+function unifiedDiff(before, after, path14 = "file", context = 3) {
   if (before === after)
     return "";
   const ops = lineOps(splitLines(before), splitLines(after));
   const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
-  const out = [`--- a/${path13}`, `+++ b/${path13}`];
+  const out = [`--- a/${path14}`, `+++ b/${path14}`];
   let k2 = 0;
   while (k2 < changed.length) {
     const lo = Math.max(0, changed[k2] - context);
@@ -19397,11 +19459,30 @@ function contextOf(meta3) {
   const c = meta3?.context;
   return c && typeof c === "object" && str(c.text) ? c : void 0;
 }
+function handleOf(name) {
+  const raw = name.trim().replace(/^@+/, "");
+  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === "studio")
+    return "studio";
+  const h = raw.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}_.-]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 60).replace(/[-.]+$/, "");
+  return h || "agent";
+}
 function sameAgent(a, b2) {
   if (!a || !b2)
     return false;
-  const n2 = (s) => s.toLowerCase() === "studio" ? LOCAL_AGENT : s.toLowerCase();
-  return n2(a) === n2(b2);
+  return handleOf(a) === handleOf(b2);
+}
+function resolveAgent(raw, known) {
+  if (!raw || !raw.trim())
+    return void 0;
+  const want = raw.trim().replace(/^@+/, "");
+  if (sameAgent(want, LOCAL_AGENT))
+    return LOCAL_AGENT;
+  return known.find((n2) => n2 === want) ?? known.find((n2) => n2.toLowerCase() === want.toLowerCase()) ?? known.find((n2) => sameAgent(n2, want));
+}
+function agentLabel(name) {
+  const h = handleOf(name);
+  const d = displayName(name);
+  return h === d ? `@${h}` : `@${h} (${d})`;
 }
 function parseResponder(raw, caller, by, at2) {
   if (raw === null || raw === "" || raw === "default")
@@ -19515,6 +19596,28 @@ function stampHolders(current, next, caller, now) {
   }
   return out;
 }
+function mergeBoardMeta(meta3, patch) {
+  const out = { ...meta3 ?? {} };
+  for (const [k2, v2] of Object.entries(patch)) {
+    if (k2 === "diagrams" && v2 && typeof v2 === "object" && !Array.isArray(v2)) {
+      const cur = out.diagrams && typeof out.diagrams === "object" ? { ...out.diagrams } : {};
+      for (const [key, d] of Object.entries(v2)) {
+        if (d === null || d === void 0)
+          delete cur[key];
+        else
+          cur[key] = d;
+      }
+      out.diagrams = cur;
+    } else if (v2 === null || v2 === void 0)
+      delete out[k2];
+    else
+      out[k2] = v2;
+  }
+  return out;
+}
+function diagramRoots(meta3) {
+  return [...new Set(holdersOf(meta3).map((h) => h.holder.root).filter((r) => typeof r === "string" && r.length > 0))];
+}
 function withoutCredentials(url2) {
   return url2.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1");
 }
@@ -19563,19 +19666,27 @@ function renameInMeta(meta3, from, to) {
 function mentionIn(text3, known) {
   if (!text3 || !text3.includes("@"))
     return void 0;
-  const names = [.../* @__PURE__ */ new Set([...known, "studio"])].filter((n2) => n2 && n2.length <= 60).sort((a, b2) => b2.length - a.length);
+  const tokens = [];
+  for (const n2 of /* @__PURE__ */ new Set([...known, "studio"])) {
+    if (!n2 || n2.length > 60)
+      continue;
+    const name = sameAgent(n2, LOCAL_AGENT) ? LOCAL_AGENT : n2;
+    for (const t of /* @__PURE__ */ new Set([n2, handleOf(n2)]))
+      tokens.push({ token: t.toLowerCase(), name });
+  }
+  tokens.sort((a, b2) => b2.token.length - a.token.length);
   const re2 = /(^|[^\p{L}\p{N}_.@-])@/gu;
   let m2;
   while (m2 = re2.exec(text3)) {
     const at2 = m2.index + m2[0].length;
     const rest = text3.slice(at2).toLowerCase();
-    for (const n2 of names) {
-      if (!rest.startsWith(n2.toLowerCase()))
+    for (const { token, name } of tokens) {
+      if (!rest.startsWith(token))
         continue;
-      const next = rest.charAt(n2.length);
+      const next = rest.charAt(token.length);
       if (next && /[\p{L}\p{N}_-]/u.test(next))
         continue;
-      return sameAgent(n2, LOCAL_AGENT) ? LOCAL_AGENT : n2;
+      return name;
     }
   }
   return void 0;
@@ -19730,7 +19841,7 @@ var clean = (data) => {
 };
 function withMention(data, text3, known, was, now, ask) {
   const d = { ...data };
-  const m2 = mentionIn(text3, known) ?? (str(ask) ? sameAgent(ask, LOCAL_AGENT) ? LOCAL_AGENT : ask.slice(0, 60) : void 0);
+  const m2 = mentionIn(text3, known) ?? (str(ask) ? resolveAgent(ask, known) ?? ask.replace(/^@+/, "").slice(0, 60) : void 0);
   if (m2) {
     d.mention = m2;
     d.mentionAt = was && sameAgent(str(was.mention), m2) && str(was.mentionAt) ? was.mentionAt : now;
@@ -20986,10 +21097,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path13) {
-  if (!path13)
+function getElementAtPath(obj, path14) {
+  if (!path14)
     return obj;
-  return path13.reduce((acc, key) => acc?.[key], obj);
+  return path14.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -21329,11 +21440,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path13, issues) {
+function prefixIssues(path14, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path13);
+    iss.path.unshift(path14);
     return iss;
   });
 }
@@ -21783,16 +21894,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path13 = []) => {
+  const processError = (error63, path14 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
       } else {
-        const fullpath = [...path13, ...issue2.path];
+        const fullpath = [...path14, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -21831,17 +21942,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path13 = []) => {
+  const processError = (error63, path14 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
       } else {
-        const fullpath = [...path13, ...issue2.path];
+        const fullpath = [...path14, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -21880,8 +21991,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path13 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path13) {
+  const path14 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path14) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -35584,13 +35695,13 @@ function _promise(Class2, innerType) {
 }
 // @__NO_SIDE_EFFECTS__
 function _custom(Class2, fn, _params) {
-  const norm2 = normalizeParams(_params);
-  norm2.abort ?? (norm2.abort = true);
+  const norm3 = normalizeParams(_params);
+  norm3.abort ?? (norm3.abort = true);
   const schema = new Class2({
     type: "custom",
     check: "custom",
     fn,
-    ...norm2
+    ...norm3
   });
   return schema;
 }
@@ -38983,13 +39094,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path13 = ref2.slice(1).split("/").filter(Boolean);
-  if (path13.length === 0) {
+  const path14 = ref2.slice(1).split("/").filter(Boolean);
+  if (path14.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path13[0] === defsKey) {
-    const key = path13[1] === void 0 ? void 0 : decodeJSONPointerSegment(path13[1]);
+  if (path14[0] === defsKey) {
+    const key = path14[1] === void 0 ? void 0 : decodeJSONPointerSegment(path14[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -41747,8 +41858,8 @@ function unwrap(s) {
   return s;
 }
 var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at = (path13, key) => typeof key === "number" ? `${path13}[${key}]` : path13 ? `${path13}.${key}` : key;
-function unknownFields(schema, value, path13 = "") {
+var at = (path14, key) => typeof key === "number" ? `${path14}[${key}]` : path14 ? `${path14}.${key}` : key;
+function unknownFields(schema, value, path14 = "") {
   const s = unwrap(schema);
   const d = def(s);
   if (d.type === "object" && isPlainObject2(value)) {
@@ -41757,16 +41868,16 @@ function unknownFields(schema, value, path13 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at(path13, k2)));
+        out.push(...unknownFields(shape[k2], v2, at(path14, k2)));
       else if (!open2)
-        out.push({ path: path13 || "(root)", field: k2 });
+        out.push({ path: path14 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path13, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path14, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path13, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path14, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -41774,7 +41885,7 @@ function unknownFields(schema, value, path13 = "") {
     });
     if (!fits.length)
       return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path13) })).sort((a, b2) => a.extra.length - b2.extra.length);
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path14) })).sort((a, b2) => a.extra.length - b2.extra.length);
     return ranked[0].extra;
   }
   return [];
@@ -41962,7 +42073,7 @@ function normalizeUiMock(raw) {
       used.add(id);
       return id;
     };
-    const el = (n2, path13) => {
+    const el = (n2, path14) => {
       const { type, id: _id, text: text3, label, children, note, goto, traces: traces2, items, ...props } = n2;
       const words = text3 ?? label;
       const id = alloc(n2.id, words, type);
@@ -41972,8 +42083,8 @@ function normalizeUiMock(raw) {
         type,
         ...words !== void 0 ? { text: words } : {},
         textKey: text3 === void 0 && label !== void 0 ? "label" : "text",
-        path: path13,
-        children: (children ?? []).map((ch, i) => el(ch, [...path13, "children", i])),
+        path: path14,
+        children: (children ?? []).map((ch, i) => el(ch, [...path14, "children", i])),
         props: { ...props, ...items ? { items: itemsOf(items, n2.active) } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
@@ -42293,8 +42404,8 @@ function lintUiMock(raw) {
     for (const e of walkUi(s.body))
       where.set(uiPathText(e.path), e.ref);
   }
-  const owner = (path13) => {
-    for (let p = path13; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+  const owner = (path14) => {
+    for (let p = path14; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
       const hit = where.get(p);
       if (hit)
         return hit;
@@ -44492,10 +44603,10 @@ function boardFiles(board) {
   const add = (files, from) => {
     if (!files || typeof files !== "object")
       return;
-    for (const [path13, text3] of Object.entries(files)) {
-      if (typeof text3 !== "string" || out.has(path13))
+    for (const [path14, text3] of Object.entries(files)) {
+      if (typeof text3 !== "string" || out.has(path14))
         continue;
-      out.set(path13, { path: path13, text: text3, sha: sha1(text3), truncated: truncated.has(path13), from });
+      out.set(path14, { path: path14, text: text3, sha: sha1(text3), truncated: truncated.has(path14), from });
     }
   };
   add(wf?.files, { workflow: true });
@@ -44890,8 +45001,8 @@ var shortUa = (ua) => {
   if (!ua)
     return "A browser";
   const b2 = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
-  const os7 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
-  return `${b2}${os7 ? ` on ${os7}` : ""}`;
+  const os8 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  return `${b2}${os8 ? ` on ${os8}` : ""}`;
 };
 var AccessService = class {
   opts;
@@ -45013,6 +45124,7 @@ var AccessService = class {
     return this.data.agents.map((r) => ({
       id: r.id,
       name: r.name,
+      handle: handleOf(r.name),
       via: r.via,
       scope: r.scope,
       ...r.projects?.length ? { projects: r.projects } : {},
@@ -45032,11 +45144,11 @@ var AccessService = class {
    * 'studio', 'any' and 'me' mean something in "Answered by" and @mentions).
    */
   uniqueName(name, except) {
-    const taken = /* @__PURE__ */ new Set(["agent", "user", "studio", "any", "me", ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => r.name.toLowerCase())]);
-    if (!taken.has(name.toLowerCase()))
+    const taken = new Set(["agent", "user", "studio", "any", "me", ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => handleOf(r.name))].map(handleOf));
+    if (!taken.has(handleOf(name)))
       return name;
     for (let i = 2; ; i++)
-      if (!taken.has(`${name}-${i}`.toLowerCase()))
+      if (!taken.has(handleOf(`${name}-${i}`)))
         return `${name}-${i}`;
   }
   addRecord(r) {
@@ -45200,8 +45312,8 @@ var AccessService = class {
     return r.pending ? { pending: r.pending, deviceCode } : { error: r.error };
   }
   /** A browser reached from elsewhere asks to be let in. */
-  startBrowser(ip, userAgent) {
-    return this.open({ via: "browser", name: `${shortUa(userAgent)} (${ip})`, scope: "write", ip, userAgent });
+  startBrowser(ip, userAgent2) {
+    return this.open({ via: "browser", name: `${shortUa(userAgent2)} (${ip})`, scope: "write", ip, userAgent: userAgent2 });
   }
   /**
    * Allow or deny a pending request. A page on this machine (`approver.kind === 'local'`) needs no code; a
@@ -45388,12 +45500,12 @@ var AccessService = class {
    * Sign a browser in with a pasted token: a new browser session with the token's scope and limits (never
    * `manage`), so the person's page acts as a person — not as the agent the token belongs to.
    */
-  sessionFromToken(token, ip, userAgent) {
+  sessionFromToken(token, ip, userAgent2) {
     const rec = this.byToken(token);
     if (!rec)
       return void 0;
     const session = newSecret("unps");
-    this.addRecord({ name: `${shortUa(userAgent)} (with ${rec.name}'s token)`, via: "browser", scope: rec.scope, ...limits(rec), tokenHash: hashSecret(session), createdBy: rec.name, lastIp: ip, lastUserAgent: userAgent?.slice(0, 200) });
+    this.addRecord({ name: `${shortUa(userAgent2)} (with ${rec.name}'s token)`, via: "browser", scope: rec.scope, ...limits(rec), tokenHash: hashSecret(session), createdBy: rec.name, lastIp: ip, lastUserAgent: userAgent2?.slice(0, 200) });
     return session;
   }
   /** Sign out: a browser session forgets itself. */
@@ -49526,6 +49638,61 @@ var StreamableHTTPServerTransport = class {
   }
 };
 
+// packages/canvas/dist/credentials.js
+import fs6 from "node:fs";
+import os4 from "node:os";
+import path7 from "node:path";
+
+// packages/canvas/dist/version.js
+var VERSION = "0.9.2";
+function userAgent(component) {
+  return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
+}
+
+// packages/canvas/dist/credentials.js
+function tokenKey(base) {
+  try {
+    const u3 = new URL(base.trim());
+    const cut = u3.pathname.search(/\/(b|api|docs|mcp)(\/|$)/);
+    const prefix = (cut >= 0 ? u3.pathname.slice(0, cut) : u3.pathname).replace(/\/+$/, "");
+    return `${u3.origin}${prefix}`;
+  } catch {
+    return base.trim().replace(/\/+$/, "");
+  }
+}
+function tokenFile(env = process.env) {
+  return env.UNPROSE_TOKENS_FILE || path7.join(env.HOME || os4.homedir(), ".awd", "tokens.json");
+}
+function readTokens(env) {
+  try {
+    const j2 = JSON.parse(fs6.readFileSync(tokenFile(env), "utf8"));
+    return j2 && typeof j2 === "object" ? j2 : {};
+  } catch {
+    return {};
+  }
+}
+function savedToken(base, env = process.env) {
+  const j2 = readTokens(env);
+  const t = j2[tokenKey(base)] ?? j2[base.replace(/\/+$/, "")];
+  return typeof t === "string" && t ? t : void 0;
+}
+function saveToken(base, token, env = process.env) {
+  const f = tokenFile(env);
+  const j2 = readTokens(env);
+  if (token)
+    j2[tokenKey(base)] = token;
+  else
+    delete j2[tokenKey(base)];
+  fs6.mkdirSync(path7.dirname(f), { recursive: true, mode: 448 });
+  fs6.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
+}
+function adoptToken(token, env = process.env) {
+  if (token)
+    env.UNPROSE_TOKEN = token;
+  else
+    delete env.UNPROSE_TOKEN;
+}
+
 // packages/canvas/dist/client.js
 function canvasOrigin(url2) {
   const u3 = new URL(url2.trim());
@@ -49533,9 +49700,13 @@ function canvasOrigin(url2) {
   const prefix = (cut >= 0 ? u3.pathname.slice(0, cut) : u3.pathname).replace(/\/+$/, "");
   return `${u3.origin}${prefix}`;
 }
-async function probeCanvas(base, timeoutMs = 4e3, token) {
+async function probeCanvas(base, timeoutMs = 4e3, token, component = "mcp") {
   try {
-    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: token ? { authorization: `Bearer ${token}` } : void 0 });
+    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: { "user-agent": userAgent(component), ...token ? { authorization: `Bearer ${token}` } : {} } });
+    if (res.status === 403) {
+      const why = (await res.json().catch(() => ({}))).error;
+      return { ok: false, reason: why ? `HTTP 403: ${why}` : `HTTP 403 \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request` };
+    }
     if (res.status === 401) {
       const why = (await res.json().catch(() => ({}))).error;
       return { ok: false, auth: true, reason: token ? `the token was refused: ${why ?? "HTTP 401"}` : "this canvas wants an access token for requests from elsewhere (UNPROSE_TOKEN)" };
@@ -49557,6 +49728,7 @@ var CanvasClient = class {
   publicUrl;
   token;
   agentName;
+  component;
   /** Said instead of the canvas's 401 while this agent is not connected yet (the pairing code to type). */
   authHint;
   /** Called on a 401 (e.g. to start pairing again). */
@@ -49564,19 +49736,24 @@ var CanvasClient = class {
   constructor(baseUrl = process.env.AWD_CANVAS_URL ?? "http://localhost:4400", opts = {}) {
     this.baseUrl = canvasOrigin(baseUrl);
     this.publicUrl = opts.publicUrl ? canvasOrigin(opts.publicUrl) : this.baseUrl;
-    this.token = opts.token ?? (process.env.UNPROSE_TOKEN || void 0);
+    this.token = opts.token ?? (process.env.UNPROSE_TOKEN || savedToken(this.baseUrl) || void 0);
     this.agentName = opts.agentName ?? (process.env.UNPROSE_AGENT_NAME || void 0);
+    this.component = opts.component ?? "client";
   }
   /** Use this token from now on (the device flow hands one over while the MCP server runs). */
   setToken(token) {
     this.token = token;
   }
+  /** The token this client sends (the MCP server hands it to the design tools and subprocesses). */
+  get currentToken() {
+    return this.token;
+  }
   get hasToken() {
     return !!this.token;
   }
-  /** The headers every call carries: the token, or the local agent's name. */
+  /** The headers every call carries: who is calling (User-Agent), and the token or the local agent's name. */
   headers() {
-    return this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { "x-unprose-agent": this.agentName } : {};
+    return { "user-agent": userAgent(this.component), ...this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { "x-unprose-agent": this.agentName } : {} };
   }
   async req(method, p, body) {
     let res;
@@ -49601,8 +49778,12 @@ var CanvasClient = class {
       if (hint)
         throw new Error(hint);
     }
-    if (!res.ok)
-      throw new Error(data?.error ?? `${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const msg = data?.error;
+      if (res.status === 403 && !msg)
+        throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request`);
+      throw new Error(msg ?? `${res.status} ${res.statusText}`);
+    }
     return data;
   }
   /** Boards, optionally only those of one project (a project id, or 'personal'). */
@@ -49612,6 +49793,13 @@ var CanvasClient = class {
   }
   createBoard(input2) {
     return this.req("POST", "/api/boards", input2).then((r) => r.board);
+  }
+  /**
+   * The board titled `title`, else a new one — decided by the canvas in one step, so two agents drawing at once get the
+   * same board (docs/canvas.md "Projects": the same project first, then the personal space, then any board you see).
+   */
+  boardByTitle(input2) {
+    return this.req("POST", "/api/boards", { ...input2, author: "agent", reuse: "title" });
   }
   projects() {
     return this.req("GET", "/api/projects").then((r) => r.projects);
@@ -49636,9 +49824,16 @@ var CanvasClient = class {
   template(id, kind, content, at2, scope, frame) {
     return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at2, scope, ...frame ? { frame } : {} });
   }
-  /** Board-level fields (title, meta — meta is replaced whole). */
+  /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
   updateBoard(id, patch) {
     return this.req("PUT", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
+  }
+  /**
+   * Merge into the board's meta (PATCH /api/boards/:id): only the keys given change (null removes one);
+   * `meta.diagrams` merges per diagram key — so two agents drawing different diagrams never overwrite each other.
+   */
+  patchBoard(id, patch) {
+    return this.req("PATCH", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
   }
   changes(id, since = 0, author) {
     const q2 = new URLSearchParams({ since: String(since) });
@@ -49699,8 +49894,8 @@ var CanvasClient = class {
   files(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
   }
-  file(id, path13) {
-    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path13)}`).then((r) => r.file);
+  file(id, path14) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path14)}`).then((r) => r.file);
   }
   /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
   propose(id, input2) {
@@ -50270,12 +50465,11 @@ ${hint}` : ""}`);
 }
 async function resolveBoard(client, ref2) {
   if (!ref2.startsWith("title:"))
-    return (await client.getBoard(ref2)).id;
+    return { id: (await client.getBoard(ref2)).id };
   const title = ref2.slice(6).trim();
-  const hit = (await client.listBoards()).find((b2) => b2.title === title);
-  if (hit)
-    return hit.id;
-  return (await client.createBoard({ title, kind: "freeform", author: "agent", answeredBy: "me" })).id;
+  const r = await client.boardByTitle({ title, kind: "freeform", answeredBy: "me" });
+  const many = r.ambiguous && r.ambiguous.length > 1 ? `${r.ambiguous.length} boards are titled "${title}" (${r.ambiguous.map((b2) => `${b2.id} [${b2.project}]`).join(", ")}) \u2014 used ${r.board.id}, the most recently changed; pass a board id to use another` : void 0;
+  return { id: r.board.id, ...many ? { note: many } : {} };
 }
 async function drawDesignContent(client, name, content, board, at2) {
   const d = parseDesignText(name, content);
@@ -50283,7 +50477,8 @@ async function drawDesignContent(client, name, content, board, at2) {
   const errors = findings.filter((f) => f.severity === "error");
   if (errors.length)
     throw new Error([`not drawn: ${errors.length} lint error(s) in ${name}`, ...errors.map(findingLine)].join("\n"));
-  const boardId = await resolveBoard(client, board);
+  const found = await resolveBoard(client, board);
+  const boardId = found.id;
   const r = await client.template(boardId, d.kind, d.content, void 0, void 0, { key: d.key, title: d.title, source: name, level: d.level, ...at2 ? { at: at2 } : {} });
   const drawn = withDesignFindings(d, r.items);
   const current = await client.getBoard(boardId);
@@ -50296,9 +50491,8 @@ async function drawDesignContent(client, name, content, board, at2) {
   if (grow)
     ops.push(grow);
   const { seq } = await client.apply(boardId, ops, "agent", `design_draw: ${name}`);
-  const diagrams = { ...current.meta?.diagrams ?? {}, [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } };
-  await client.updateBoard(boardId, { meta: { ...current.meta, diagrams } });
-  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== "error"), unresolved: r.unresolvedTraces ?? [] };
+  await client.patchBoard(boardId, { meta: { diagrams: { [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } } } });
+  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== "error"), unresolved: r.unresolvedTraces ?? [], ...found.note ? { note: found.note } : {} };
 }
 function registerContentDesignTools(server, client, o = {}) {
   const guard = async (fn) => {
@@ -50333,7 +50527,7 @@ function registerContentDesignTools(server, client, o = {}) {
   }, async ({ name, content, board, at: at2 }) => guard(async () => {
     const r = await drawDesignContent(client, name, content, board, at2);
     const unresolved = r.unresolved.length ? [`\u26A0 ${r.unresolved.length} trace(s) not drawn:`, ...r.unresolved.map((u3) => `  ${u3.item} \u2014${u3.trace.rel}\u2192 ${u3.trace.from}: ${u3.reason === "bad-ref" ? "not a <diagram key>/<element id> ref" : "target not found on the board"}`)] : [];
-    return text([`\u2714 ${name} \u2192 frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...r.notes.map(findingLine), ...unresolved].join("\n"));
+    return text([`\u2714 ${name} \u2192 frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...r.note ? [`\u26A0 ${r.note}`] : [], ...r.notes.map(findingLine), ...unresolved].join("\n"));
   }));
   server.registerTool("design_propose_stories", {
     title: "Propose stories from EventStorming",
@@ -50353,7 +50547,7 @@ function registerContentDesignTools(server, client, o = {}) {
     if (usm.kind !== "user-story-map")
       throw new Error(`${into_name} is a ${usm.kind} diagram, not a story map`);
     const { candidates } = es.kind === "domain-story" ? proposeFromDomainStory(es.content, { dsKey: es.key, storyName: es.title ?? es.key, existing: usm.content }) : proposeStories(es.content, { esKey: es.key, existing: usm.content });
-    const boardId = await resolveBoard(client, board);
+    const boardId = (await resolveBoard(client, board)).id;
     const current = await client.getBoard(boardId);
     const { ops, proposed, skipped } = proposalOps({ items: current.items }, candidates, usm.key, es.key);
     if (ops.length)
@@ -50377,9 +50571,9 @@ function registerContentDesignTools(server, client, o = {}) {
 
 // packages/canvas/dist/mcp.js
 import { execFile } from "node:child_process";
-import fs6 from "node:fs";
-import os4 from "node:os";
-import path7 from "node:path";
+import fs7 from "node:fs";
+import os5 from "node:os";
+import path8 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -50755,8 +50949,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path13, errorMaps, issueData } = params;
-  const fullPath = [...path13, ...issueData.path || []];
+  const { data, path: path14, errorMaps, issueData } = params;
+  const fullPath = [...path14, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -50871,11 +51065,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path13, key) {
+  constructor(parent, value, path14, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path13;
+    this._path = path14;
     this._key = key;
   }
   get path() {
@@ -54426,11 +54620,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path13) {
-  if (path13.length === 0) {
+function getDotPath(path14) {
+  if (path14.length === 0) {
     return "object root";
   }
-  return path13.reduce((acc, seg, index) => {
+  return path14.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -58489,9 +58683,9 @@ function helpText(o) {
   const tools = [
     "Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open",
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
-    "Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person's page to an item or frame)",
+    'Conversation: canvas_wait (block until the person comments or hands over; from: "person" (default) or "others" to also wake on other agents), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
-    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; set "Answered by"), canvas_ask (ask another agent on the board and wait for its answer). Comments go to the board's responder ("Answered by"), an @mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
+    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; set "Answered by"; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
     "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
@@ -58517,24 +58711,24 @@ function helpText(o) {
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
     `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
-    "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name.",
-    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<name> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.`
+    "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python's default one with a 403.",
+    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.`
   ].join("\n");
 }
-function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os4.homedir()) {
-  const start = path7.resolve(env.CLAUDE_PROJECT_DIR || cwd);
-  for (let d = start; ; d = path7.dirname(d)) {
-    if (fs6.existsSync(path7.join(d, ".git")))
+function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os5.homedir()) {
+  const start = path8.resolve(env.CLAUDE_PROJECT_DIR || cwd);
+  for (let d = start; ; d = path8.dirname(d)) {
+    if (fs7.existsSync(path8.join(d, ".git")))
       return d;
-    if (path7.dirname(d) === d)
+    if (path8.dirname(d) === d)
       break;
   }
-  if (start === path7.resolve(home) || path7.dirname(start) === start)
+  if (start === path8.resolve(home) || path8.dirname(start) === start)
     return void 0;
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.9.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.9.2" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -58552,7 +58746,7 @@ function createMcpServer(client = new CanvasClient(), opts = {}) {
     description: "What Unprose can do \u2014 the diagrams, the tools, the comment loop and the ways to start (slash commands / prompts). Call it when the person asks what Unprose is, what it can do, or how to begin; pass the answer on in their language.",
     inputSchema: {}
   }, async () => {
-    const version2 = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2e3) }).then((r) => r.ok ? r.json() : {}).then((j2) => j2.version).catch(() => void 0);
+    const version2 = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2e3), headers: { "user-agent": userAgent(opts.remote ? "remote-mcp" : "mcp") } }).then((r) => r.ok ? r.json() : {}).then((j2) => j2.version).catch(() => void 0);
     return text2(helpText({ designTools: !!extra.designTools, prompts: extra.prompts ?? [], canvas: client.publicUrl, version: version2, remote: opts.remote }));
   });
   server.registerTool("canvas_list_boards", {
@@ -58633,13 +58827,15 @@ ${CONTENT_HELP}`,
   });
   server.registerTool("canvas_diff", {
     title: "What changed since seq",
-    description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions\u2026). By default only the user's changes are returned; author 'others' adds the other agents' changes (never your own \u2014 for several agents on one board), 'agent' every agent's, 'all' everything.",
+    description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions\u2026). Whose changes: `from` (the same words as canvas_wait) \u2014 'person' (default: the person's changes, from any of their pages, also a browser signed in through a tunnel), 'others' (the person and the other agents \u2014 never your own; for several agents on one board), 'all' (everything, yours included). `author` is the older spelling ('user' = person, 'agent' = every agent's).",
     inputSchema: {
       id: external_exports.string(),
       since: external_exports.number().int().min(0),
-      author: external_exports.enum(["user", "others", "agent", "all"]).default("user")
+      from: external_exports.enum(["person", "others", "all"]).optional().describe("'person' (default): the person's changes; 'others': the person's and the other agents' (never yours); 'all': everything"),
+      author: external_exports.enum(["user", "others", "agent", "all"]).optional().describe("older spelling of `from`: 'user' | 'others' | 'agent' (every agent's) | 'all'")
     }
-  }, async ({ id, since, author }) => {
+  }, async ({ id, since, from, author: rawAuthor }) => {
+    const author = from === "person" ? "user" : from ?? rawAuthor ?? "user";
     const r = await client.diff(id, since, author === "all" ? void 0 : author);
     if (!r.count)
       return text2(`no ${author === "all" ? "" : author + " "}changes since seq ${since} (board seq ${r.seq})`);
@@ -58648,7 +58844,7 @@ ${r.lines.join("\n")}`);
   });
   server.registerTool("canvas_wait", {
     title: "Wait for the user to change the board",
-    description: 'Block until the user has changed something after `since` AND stopped for `quietSec` (default 2.5 s) \u2014 or pressed "Hand to agent" in the UI, which returns at once. `wake` decides what counts: \'meaningful\' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one "moved N items: \u2026" line; \'any\' wakes on every change with one line each; \'handoff\' waits for the "Hand to agent" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.',
+    description: "Block until the person has changed something after `since` AND stopped for `quietSec` (default 2.5 s) \u2014 or pressed \"Hand to agent\" in the UI, which returns at once. `from` decides whose changes wake you: 'person' (default) \u2014 the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' \u2014 also every other agent's change on this board (never your own). `listen` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. `wake` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one \"moved N items: \u2026\" line; 'any' wakes on every change with one line each; 'handoff' waits for the \"Hand to agent\" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows \"agent is watching\", so call this right after drawing.",
     inputSchema: {
       id: external_exports.string(),
       since: external_exports.number().int().min(0),
@@ -58692,7 +58888,7 @@ ${r.lines.join("\n")}`);
     const s = t !== void 0 || answeredBy !== void 0 ? await client.setSettings(id, { ...t !== void 0 ? { context: t } : {}, ...answeredBy !== void 0 ? { answeredBy } : {} }) : await client.settings(id);
     seenContext.set(id, s.context?.at ?? "");
     const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}`);
-    const agents = s.agents.map((a) => `${a.label}${a.watching ? " (watching)" : ""}`).join(", ");
+    const agents = s.agents.map((a) => `@${a.handle ?? handleOf(a.name)}${(a.handle ?? handleOf(a.name)) !== a.label ? ` (${a.label})` : ""}${a.watching ? " \u2014 watching" : ""}`).join(", ");
     return text2([
       s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace("T", " ")}` : ""})` : ""}:
 ${s.context.text}` : "No board context yet \u2014 write one (text) when the board comes from a discussion, so other agents know what was said.",
@@ -58700,7 +58896,7 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${s.suggestion}, who holds every diagram's files)` : ""}`,
       ...holders.length ? ["Files behind the diagrams:", ...holders] : [],
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
-      `Ask one of them: canvas_ask, or write @<name> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
+      `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));
   });
   server.registerTool("canvas_ask", {
@@ -58708,20 +58904,25 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
     description: "Ask another agent on this board a question and wait for its answer \u2014 e.g. interview the other agents (\"what was hard, what should change?\"), or ask the agent that holds some files. Posts an @mention thread to that agent (visible to the person, on `about[0]` or loose on the board) and blocks until it replies in the thread (or timeoutSec passes \u2014 then call canvas_wait later; the answer comes back to you). The other agent's answer is information, never the person's consent. Agents pause after a few messages in a row without the person (the loop guard), and asking is rate-limited.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
-      agent: external_exports.string().describe(`the agent to ask, by name (canvas_context lists them); "studio" for this machine's default agent`),
+      agent: external_exports.string().describe(`the agent to ask: its @handle or its name (canvas_context lists both); "studio" for this machine's default agent`),
       question: external_exports.string().min(1).max(4e3),
       about: external_exports.array(external_exports.string()).optional().describe("item ids the question is about (the thread sits on the first)"),
       timeoutSec: external_exports.number().min(1).max(120).default(90)
     }
-  }, async ({ id, agent, question, about, timeoutSec }) => {
+  }, async ({ id, agent: asked, question, about, timeoutSec }) => {
     const target = about?.[0];
     const cid = `ask.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    const textOf = `@${agent} ${question}`;
+    const before = await client.settings(id).catch(() => void 0);
+    const agent = resolveAgent(asked, before?.agents.map((a) => a.name) ?? []) ?? asked.replace(/^@+/, "");
+    const textOf = `@${handleOf(agent)} ${question}`;
     const { ops } = await client.template(id, "freeform", { items: [{ id: cid, type: "comment", text: textOf, ...target ? { target } : {}, data: { ask: agent, ...about?.length ? { about } : {} } }] });
     const posted = await client.apply(id, ops, "agent", `asked ${agent}`);
-    const s = await client.settings(id).catch(() => void 0);
+    const s = await client.settings(id).catch(() => before);
     const there = s?.agents.find((a) => sameAgent(a.name, agent));
-    const away = there && !there.watching ? ` ${displayName(agent)} is not watching this board right now; it gets the question when it next waits.` : !there ? ` (no agent named ${agent} has been seen on this canvas yet)` : "";
+    const stamped = posted.change?.ops.find((o) => o.kind === "add" && o.item.id === cid);
+    const to = stamped && stamped.kind === "add" && Array.isArray(stamped.item.data?.to) ? stamped.item.data.to : [agent];
+    const delivered = `Delivered to ${to.map(agentLabel).join(", ") || "(nobody \u2014 the thread is paused)"}${there ? there.watching ? " \u2014 watching this board now" : " \u2014 not watching this board right now; it gets the question when it next waits" : ` \u2014 no agent named ${agent} has been seen on this canvas yet`}.`;
+    const away = ` ${delivered}`;
     let since = posted.seq;
     const deadline = Date.now() + timeoutSec * 1e3;
     while (Date.now() < deadline) {
@@ -58731,7 +58932,8 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       const board = await client.getBoard(id);
       const answer = answerIn(board, cid, agent);
       if (answer)
-        return text2(`${displayName(agent)} answered in thread ${cid}:
+        return text2(`${delivered}
+${displayName(agent)} answered in thread ${cid}:
 ${answer.text ?? ""}
 
 Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2014 it goes back to ${displayName(agent)}. Board seq ${board.seq}.`);
@@ -58813,39 +59015,14 @@ function answerIn(board, root, agent) {
   const when = (i) => String(i.data?.postedAt ?? i.updatedAt);
   return Object.values(board.items).filter((i) => i.type === "comment" && i.id !== root && threadRoot(board, i).id === root && sameAgent(agentOf(i), agent)).sort((a, b2) => when(a).localeCompare(when(b2))).pop();
 }
-function tokenFile() {
-  return process.env.UNPROSE_TOKENS_FILE || path7.join(os4.homedir(), ".awd", "tokens.json");
-}
-function savedToken(base) {
-  try {
-    const j2 = JSON.parse(fs6.readFileSync(tokenFile(), "utf8"));
-    return typeof j2[base] === "string" ? j2[base] : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function saveToken(base, token) {
-  const f = tokenFile();
-  let j2 = {};
-  try {
-    j2 = JSON.parse(fs6.readFileSync(f, "utf8"));
-  } catch {
-  }
-  if (token)
-    j2[base] = token;
-  else
-    delete j2[base];
-  fs6.mkdirSync(path7.dirname(f), { recursive: true, mode: 448 });
-  fs6.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
-}
 async function connectWithCode(base, client, name) {
-  const res = await fetch(`${base}/device_authorization`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_name: name, scope: "write" }) });
+  const res = await fetch(`${base}/device_authorization`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": userAgent("mcp") }, body: new URLSearchParams({ client_name: name, scope: "write" }) }).catch((e) => ({ ok: false, status: 0, statusText: e.message, json: async () => ({ error_description: e.message }) }));
   const j2 = await res.json().catch(() => ({}));
   if (!res.ok || !j2.device_code || !j2.user_code) {
     client.authHint = `This canvas (${base}) wants an access token and could not start a pairing code (${j2.error_description ?? `HTTP ${res.status}`}). Ask the person for a token (canvas \u2192 Connected agents) and set UNPROSE_TOKEN.`;
     return;
   }
-  const hint = (code) => `Not connected to the canvas yet. Ask the person to type the code ${code} on the canvas (${base}): the notification "${name} wants to connect", or Connected agents \u2192 Enter a code. It expires in 10 minutes; then call this tool again.`;
+  const hint = (code) => `Not connected to the canvas yet. Ask the person to type the code ${code} on the canvas (${base}): the notification "${name} wants to connect", or Connected agents \u2192 Enter a code. It expires in 10 minutes; then call this tool again. (You will be @${handleOf(name)} on the canvas.)`;
   client.authHint = hint(j2.user_code);
   process.stderr.write(`unprose MCP: ${client.authHint}
 `);
@@ -58853,16 +59030,19 @@ async function connectWithCode(base, client, name) {
   let interval = Math.max(5, j2.interval ?? 5) * 1e3;
   while (Date.now() < until) {
     await new Promise((r) => setTimeout(r, interval));
-    const t = await fetch(`${base}/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: j2.device_code }) }).catch(() => void 0);
+    const t = await fetch(`${base}/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": userAgent("mcp") }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: j2.device_code }) }).catch(() => void 0);
     const body = await t?.json().catch(() => ({})) ?? {};
     if (body.access_token) {
       client.setToken(body.access_token);
+      adoptToken(body.access_token);
       client.authHint = void 0;
       try {
         saveToken(base, body.access_token);
-      } catch {
+      } catch (e) {
+        process.stderr.write(`unprose MCP: could not keep the token in ${process.env.UNPROSE_TOKENS_FILE || "~/.awd/tokens.json"} (${e.message}); it works for this session
+`);
       }
-      process.stderr.write(`unprose MCP: connected to ${base} as ${name}
+      process.stderr.write(`unprose MCP: connected to ${base} as ${name} (@${handleOf(name)})
 `);
       return;
     }
@@ -58877,6 +59057,25 @@ async function connectWithCode(base, client, name) {
     void connectWithCode(base, client, name);
   };
 }
+function shortHost(host = os5.hostname()) {
+  const h = host.replace(/\.(local|lan|home|localdomain)$/i, "").split(".")[0].toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/macbook-pro/g, "mbp").replace(/macbook-air/g, "mba").replace(/macbook/g, "mb").replace(/^-+|-+$/g, "");
+  return h.slice(0, 24).replace(/-+$/, "") || "host";
+}
+function clientWord(clientName, env = process.env) {
+  const n2 = (clientName ?? "").toLowerCase();
+  for (const w2 of ["codex", "claude", "cursor", "gemini", "opencode", "windsurf", "cline", "goose", "zed"])
+    if (n2.includes(w2))
+      return w2;
+  if (env.CLAUDECODE || env.CLAUDE_CODE_ENTRYPOINT)
+    return "claude";
+  if (Object.keys(env).some((k2) => k2.startsWith("CODEX_")))
+    return "codex";
+  const slug = n2.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
+  return slug || "agent";
+}
+function defaultAgentName(clientName, env = process.env, host = os5.hostname()) {
+  return env.UNPROSE_AGENT_NAME || `${clientWord(clientName, env)}-${shortHost(host)}`;
+}
 async function runMcp(extend2) {
   const raw = process.env.AWD_CANVAS_URL ?? "http://localhost:4400";
   let base;
@@ -58887,10 +59086,14 @@ async function runMcp(extend2) {
 `);
     process.exit(2);
   }
-  let token = process.env.UNPROSE_TOKEN || savedToken(base);
+  const fromEnv = process.env.UNPROSE_TOKEN || void 0;
+  let token = fromEnv || savedToken(base);
   let probe = await probeCanvas(base, 4e3, token);
-  if (!probe.ok && probe.auth && token && !process.env.UNPROSE_TOKEN) {
-    saveToken(base, void 0);
+  if (!probe.ok && probe.auth && token && !fromEnv) {
+    try {
+      saveToken(base, void 0);
+    } catch {
+    }
     token = void 0;
     probe = await probeCanvas(base);
   }
@@ -58901,10 +59104,10 @@ async function runMcp(extend2) {
     process.exit(1);
   }
   process.env.AWD_CANVAS_URL = base;
-  const name = process.env.UNPROSE_AGENT_NAME || `agent on ${os4.hostname().replace(/\.local$/, "")}`;
-  const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME });
+  adoptToken(token);
+  const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME, component: "mcp" });
   if (needsPairing)
-    void connectWithCode(base, client, name);
+    client.authHint = `Connecting to the canvas (${base}) \u2014 call this tool again in a few seconds to get the pairing code.`;
   let project;
   const root = sessionProjectRoot();
   if (root && !needsPairing) {
@@ -58917,6 +59120,12 @@ async function runMcp(extend2) {
   }
   const server = createMcpServer(client, { project, extend: extend2 });
   await server.connect(new StdioServerTransport());
+  if (needsPairing) {
+    const until = Date.now() + 3e3;
+    while (!server.server.getClientVersion() && Date.now() < until)
+      await new Promise((r) => setTimeout(r, 50));
+    void connectWithCode(base, client, defaultAgentName(server.server.getClientVersion()?.name));
+  }
 }
 
 // packages/canvas/dist/remoteMcp.js
@@ -58944,8 +59153,8 @@ async function handleMcp(req, res, grant, ctx, body) {
 }
 
 // packages/canvas/dist/server.js
-var __dirname3 = path8.dirname(fileURLToPath3(import.meta.url));
-var WEB_DIST = [path8.join(__dirname3, "web"), path8.resolve(__dirname3, "../web/dist")].find((d) => fs7.existsSync(path8.join(d, "index.html"))) ?? path8.resolve(__dirname3, "../web/dist");
+var __dirname3 = path9.dirname(fileURLToPath3(import.meta.url));
+var WEB_DIST = [path9.join(__dirname3, "web"), path9.resolve(__dirname3, "../web/dist")].find((d) => fs8.existsSync(path9.join(d, "index.html"))) ?? path9.resolve(__dirname3, "../web/dist");
 var MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -58968,18 +59177,18 @@ function studioArgv(template, project) {
 }
 var realOf = (p) => {
   try {
-    return fs7.realpathSync(p);
+    return fs8.realpathSync(p);
   } catch {
-    return path8.resolve(p);
+    return path9.resolve(p);
   }
 };
 function studioProjectOf(board, projects) {
-  const claims = [board.meta?.project?.root, board.meta?.workflow?.file];
+  const claims = [board.meta?.project?.root, board.meta?.workflow?.file, ...diagramRoots(board.meta)];
   for (const c of claims) {
-    if (typeof c !== "string" || !path8.isAbsolute(c))
+    if (typeof c !== "string" || !path9.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path8.sep));
+    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path9.sep));
     if (hit)
       return hit;
   }
@@ -58987,7 +59196,7 @@ function studioProjectOf(board, projects) {
 }
 function studioSessions(p) {
   try {
-    const j2 = JSON.parse(fs7.readFileSync(path8.join(p.root, ".awd", "studio", "status.json"), "utf8"));
+    const j2 = JSON.parse(fs8.readFileSync(path9.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
     const n2 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
@@ -59005,6 +59214,13 @@ var HttpError = class extends Error {
 };
 function isAuthor(a) {
   return a === "agent" || a === "user";
+}
+function blockedUserAgent(ua) {
+  return !ua || !ua.trim() || /^(python-urllib|python-requests|curl|wget|go-http-client|java\/|libwww-perl)/i.test(ua.trim());
+}
+function userAgentHint(req) {
+  const ua = req.headers["user-agent"];
+  return blockedUserAgent(typeof ua === "string" ? ua : void 0) ? ` Your request has ${ua ? `the User-Agent "${String(ua).slice(0, 40)}"` : "no User-Agent"}: behind Cloudflare (most tunnels) such requests get a 403 before they reach the canvas \u2014 send your own, e.g. "User-Agent: my-agent/1.0".` : "";
 }
 function needsTokenText(origin) {
   return `This canvas answers requests from elsewhere only with credentials. Agents: connect your MCP client to ${origin}/mcp \u2014 it signs in with OAuth and the person approves it on the canvas by typing the code your browser shows; an agent without a browser: POST ${origin}/device_authorization (client_name=<your name>) and tell the person the user_code to type on the canvas; or send "Authorization: Bearer <token>" with a token from the canvas page Connected agents (AWD_CANVAS_URL + UNPROSE_TOKEN for the stdio MCP server). People: open ${origin} and sign in.`;
@@ -59062,9 +59278,9 @@ function startServer(opts = {}) {
   const actor = (req, g2, asked, fallback) => {
     if (g2.as === "agent")
       return { author: "agent", by: g2.name };
-    const author = isAuthor(asked) ? asked : fallback;
     if (g2.as === "browser")
-      return { author, by: g2.name };
+      return { author: "user" };
+    const author = isAuthor(asked) ? asked : fallback;
     if (author === "agent") {
       const by = agentName(req, g2);
       return by ? { author, by } : { author };
@@ -59147,7 +59363,7 @@ function startServer(opts = {}) {
       agentTurns: maxTurns(b2),
       holders,
       suggestion: !r && soleHolder(b2.meta) && !sameAgent(soleHolder(b2.meta), LOCAL_AGENT) ? soleHolder(b2.meta) : void 0,
-      agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), watching: watching.has(name), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
+      agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w2) => sameAgent(w2, name)), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
       you: agentName(req, g2) ?? (g2.as === "browser" ? g2.name : void 0)
     };
   };
@@ -59226,12 +59442,12 @@ function startServer(opts = {}) {
     return store.get(id);
   };
   const serveStatic = (res, rel) => {
-    const safe = path8.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-    const file2 = path8.join(webDist, safe);
-    if (!file2.startsWith(webDist) || !fs7.existsSync(file2) || fs7.statSync(file2).isDirectory())
+    const safe = path9.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+    const file2 = path9.join(webDist, safe);
+    if (!file2.startsWith(webDist) || !fs8.existsSync(file2) || fs8.statSync(file2).isDirectory())
       return false;
-    res.writeHead(200, { "content-type": MIME[path8.extname(file2)] ?? "application/octet-stream" });
-    fs7.createReadStream(file2).pipe(res);
+    res.writeHead(200, { "content-type": MIME[path9.extname(file2)] ?? "application/octet-stream" });
+    fs8.createReadStream(file2).pipe(res);
     return true;
   };
   const fallbackPage = (boards) => `<!doctype html><meta charset="utf-8"><title>awd-canvas</title>
@@ -59300,7 +59516,8 @@ function startServer(opts = {}) {
       "www-authenticate": `Bearer realm="unprose", resource_metadata="${o}/.well-known/oauth-protected-resource${mcp ? "/mcp" : ""}"${invalid ? ', error="invalid_token"' : ""}`,
       "access-control-expose-headers": "www-authenticate"
     });
-    res.end(JSON.stringify(mcp ? { jsonrpc: "2.0", error: { code: -32001, message: invalid ?? needsTokenText(o) }, id: null } : { error: invalid ?? needsTokenText(o), signIn: true }));
+    const why = (invalid ?? needsTokenText(o)) + userAgentHint(req);
+    res.end(JSON.stringify(mcp ? { jsonrpc: "2.0", error: { code: -32001, message: why }, id: null } : { error: why, signIn: true }));
   };
   const handle = async (req, res) => {
     const url2 = new URL(req.url ?? "/", "http://localhost");
@@ -59340,6 +59557,10 @@ function startServer(opts = {}) {
           const boardProjects = new Set(store.list().filter((b2) => visible(grant, b2.id)).map((b2) => projectOf(b2.id)));
           return { ...r, body: { projects: body.projects.filter((p) => canSeeProject(grant, p.id) && (!grant.boards?.length || boardProjects.has(p.id))) } };
         });
+      }
+      if (parts[1] === "projects" && parts[2] && !parts[3] && method === "DELETE") {
+        const force = ["1", "true", "yes"].includes(url2.searchParams.get("force") ?? "");
+        return projectReply(res, () => unregisterRoute(store, req, decodeURIComponent(parts[2]), force));
       }
       if (parts[1] === "update")
         return updateRoute(req, res, method, parts[2], url2);
@@ -59396,6 +59617,14 @@ function startServer(opts = {}) {
             throw new HttpError(400, "title required");
           if (!body.kind || !diagramKinds.includes(body.kind))
             throw new HttpError(400, `kind must be one of ${diagramKinds.join(", ")}`);
+          if (body.reuse === "title" || body.reuse === "title+kind") {
+            const seen = store.list().filter((b2) => visible(grant, b2.id)).map((b2) => ({ id: b2.id, title: b2.title, kind: b2.kind, project: projectOf(b2.id), updatedAt: b2.updatedAt }));
+            const found = pickBoardByTitle(seen, body.title, project ?? void 0, body.reuse === "title+kind" ? (b2) => b2.kind === body.kind : void 0);
+            if (found.board) {
+              const b2 = store.get(found.board.id);
+              return json4(res, 200, { board: viewOf(grant, b2), project: found.board.project, reused: true, where: found.where, ...found.ambiguous.length ? { ambiguous: found.ambiguous.map((x2) => ({ id: x2.id, project: x2.project, updatedAt: x2.updatedAt })) } : {} });
+            }
+          }
           let items = body.items;
           if (!items && body.content !== void 0) {
             const parsed = contentSchemas[body.kind].safeParse(body.content);
@@ -59428,8 +59657,9 @@ function startServer(opts = {}) {
           if (typeof body.title === "string")
             patch.title = body.title;
           if (body.meta && typeof body.meta === "object") {
+            const sent = method === "PATCH" ? mergeBoardMeta(board.meta, body.meta) : body.meta;
             const w2 = actor(req, grant, "agent", "agent");
-            const meta3 = stampHolders(board.meta, body.meta, w2.by ?? LOCAL_AGENT, (/* @__PURE__ */ new Date()).toISOString());
+            const meta3 = stampHolders(board.meta, sent, w2.by ?? (w2.author === "user" ? "user" : LOCAL_AGENT), (/* @__PURE__ */ new Date()).toISOString());
             for (const k2 of SETTINGS_KEYS) {
               if (board.meta?.[k2] !== void 0)
                 meta3[k2] = board.meta[k2];
@@ -59449,7 +59679,7 @@ function startServer(opts = {}) {
         return projectReply(res, () => moveRoute(store, req, id, () => readBody(req)));
       if (sub === "ops" && method === "POST") {
         const body = await readBody(req);
-        if (!isAuthor(body.author) && grant.as !== "agent")
+        if (!isAuthor(body.author) && !grant.as)
           throw new HttpError(400, "author must be 'agent' or 'user'");
         const who = actor(req, grant, body.author, "agent");
         const ops = routed(board, stampAttribution(board, assertOps(body.ops), who.by), who.author);
@@ -59726,7 +59956,7 @@ function startServer(opts = {}) {
               args,
               cwd: project.root,
               env: { AWD_CANVAS_URL: `http://localhost:${port()}` },
-              logFile: studio.logDir ? path8.join(studio.logDir, `studio-${project.name}.log`) : void 0
+              logFile: studio.logDir ? path9.join(studio.logDir, `studio-${project.name}.log`) : void 0
             });
             return json4(res, 200, view(info));
           }
@@ -59759,8 +59989,8 @@ function startServer(opts = {}) {
         const file2 = resolveDocAsset(docsDir, decodeURIComponent(parts.slice(2).join("/")));
         if (!file2)
           throw new HttpError(404, "asset not found");
-        res.writeHead(200, { "content-type": MIME[path8.extname(file2)] ?? "application/octet-stream" });
-        return void fs7.createReadStream(file2).pipe(res);
+        res.writeHead(200, { "content-type": MIME[path9.extname(file2)] ?? "application/octet-stream" });
+        return void fs8.createReadStream(file2).pipe(res);
       }
       const rendered = renderDoc(docsDir, decodeURIComponent(parts[1]).replace(/\.md$/, ""));
       if (!rendered)
@@ -59769,7 +59999,7 @@ function startServer(opts = {}) {
     }
     if (method !== "GET")
       throw new HttpError(405, "method not allowed");
-    const hasUi = fs7.existsSync(path8.join(webDist, "index.html"));
+    const hasUi = fs8.existsSync(path9.join(webDist, "index.html"));
     if (parts[0] === "b" || parts.length === 0 || parts[0] === "agents" && parts.length === 1) {
       if (hasUi)
         return void serveStatic(res, "index.html");
@@ -59916,8 +60146,8 @@ function escapeHtml2(s) {
 
 // packages/canvas/dist/adapters/process/spawn.js
 import { spawn } from "node:child_process";
-import fs8 from "node:fs";
-import path9 from "node:path";
+import fs9 from "node:fs";
+import path10 from "node:path";
 
 // packages/canvas/dist/ports/processSupervisor.js
 var LOG_LINES = 50;
@@ -59935,8 +60165,8 @@ var SpawnSupervisor = class {
       return this.info(key);
     const e = { running: true, since: (/* @__PURE__ */ new Date()).toISOString(), log: cur?.log ?? [] };
     if (spec.logFile) {
-      fs8.mkdirSync(path9.dirname(spec.logFile), { recursive: true });
-      e.file = fs8.createWriteStream(spec.logFile, { flags: "a" });
+      fs9.mkdirSync(path10.dirname(spec.logFile), { recursive: true });
+      e.file = fs9.createWriteStream(spec.logFile, { flags: "a" });
     }
     this.entries.set(key, e);
     const push = (line) => {
@@ -60022,7 +60252,7 @@ var GitHubReleaseSource = class {
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), this.o.timeoutMs ?? 1e4);
       try {
-        const r = await f(url2, { headers: { accept: "application/vnd.github+json", "user-agent": "unprose-canvas", ...headers }, signal: ctl.signal });
+        const r = await f(url2, { headers: { accept: "application/vnd.github+json", "user-agent": userAgent("canvas"), ...headers }, signal: ctl.signal });
         if (r.ok)
           return releaseFrom(await r.json(), source);
         if (r.status === 404)
@@ -60058,9 +60288,9 @@ var GitHubReleaseSource = class {
 // packages/canvas/dist/adapters/update/installer.js
 import { createHash as createHash3 } from "node:crypto";
 import { execFile as execFile3, spawn as spawn2 } from "node:child_process";
-import fs9 from "node:fs";
-import os5 from "node:os";
-import path10 from "node:path";
+import fs10 from "node:fs";
+import os6 from "node:os";
+import path11 from "node:path";
 var lines = (onLine) => {
   let rest = "";
   return (chunk) => {
@@ -60094,55 +60324,55 @@ var ChildInstaller = class {
   async downloadRuntime(version2, dir, onLine) {
     const name = `unprose-runtime-v${version2}.tgz`;
     const base = (process.env.AWD_RUNTIME_URL || this.o.base || `https://github.com/${this.o.repo}/releases/download`).replace(/\/$/, "");
-    const tmp = fs9.mkdtempSync(path10.join(os5.tmpdir(), "unprose-upgrade-"));
+    const tmp = fs10.mkdtempSync(path11.join(os6.tmpdir(), "unprose-upgrade-"));
     try {
-      const tgz = path10.join(tmp, name);
-      const sum = path10.join(tmp, `${name}.sha256`);
+      const tgz = path11.join(tmp, name);
+      const sum = path11.join(tmp, `${name}.sha256`);
       try {
         for (const [file2, url2] of [[tgz, `${base}/v${version2}/${name}`], [sum, `${base}/v${version2}/${name}.sha256`]]) {
           onLine(`downloading ${url2}`);
-          const r = await fetch(url2);
+          const r = await fetch(url2, { headers: { "user-agent": userAgent("canvas") } });
           if (!r.ok)
             throw new Error(`HTTP ${r.status} for ${url2}`);
-          fs9.writeFileSync(file2, Buffer.from(await r.arrayBuffer()));
+          fs10.writeFileSync(file2, Buffer.from(await r.arrayBuffer()));
         }
       } catch (e) {
         onLine(`direct download failed (${e.message}); trying gh release download`);
         await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
       }
-      const want = fs9.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
-      const got = createHash3("sha256").update(fs9.readFileSync(tgz)).digest("hex");
+      const want = fs10.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
+      const got = createHash3("sha256").update(fs10.readFileSync(tgz)).digest("hex");
       if (!want || want !== got)
         throw new Error(`checksum mismatch for ${name}`);
-      const out = path10.join(tmp, "x");
-      fs9.mkdirSync(out);
+      const out = path11.join(tmp, "x");
+      fs10.mkdirSync(out);
       await execText("tar", ["-xzf", tgz, "-C", out]);
-      fs9.mkdirSync(path10.dirname(dir), { recursive: true });
-      fs9.rmSync(dir, { recursive: true, force: true });
-      fs9.renameSync(out, dir);
+      fs10.mkdirSync(path11.dirname(dir), { recursive: true });
+      fs10.rmSync(dir, { recursive: true, force: true });
+      fs10.renameSync(out, dir);
       onLine(`unpacked into ${dir}`);
     } finally {
-      fs9.rmSync(tmp, { recursive: true, force: true });
+      fs10.rmSync(tmp, { recursive: true, force: true });
     }
   }
   exists(p) {
-    return fs9.existsSync(p);
+    return fs10.existsSync(p);
   }
 };
 var ProcessLauncher = class {
   spawnDetached(entry, args, env, logFile) {
-    fs9.mkdirSync(path10.dirname(logFile), { recursive: true });
-    const fd = fs9.openSync(logFile, "a");
+    fs10.mkdirSync(path11.dirname(logFile), { recursive: true });
+    const fd = fs10.openSync(logFile, "a");
     const child = spawn2(process.execPath, [entry, ...args], { detached: true, stdio: ["ignore", fd, fd], env });
     child.unref();
-    fs9.closeSync(fd);
+    fs10.closeSync(fd);
     return child.pid ?? -1;
   }
   async probeVersion(port) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 800);
     try {
-      const r = await fetch(`http://127.0.0.1:${port}/api/version`, { signal: ctl.signal });
+      const r = await fetch(`http://127.0.0.1:${port}/api/version`, { signal: ctl.signal, headers: { "user-agent": userAgent("canvas") } });
       if (!r.ok)
         return void 0;
       const j2 = await r.json();
@@ -60185,8 +60415,8 @@ var FakeUpdateSource = class {
 };
 
 // packages/canvas/dist/updater.js
-import fs10 from "node:fs";
-import path11 from "node:path";
+import fs11 from "node:fs";
+import path12 from "node:path";
 var SIX_HOURS = 6 * 60 * 60 * 1e3;
 var ERROR_TTL = 30 * 60 * 1e3;
 var REFRESH_THROTTLE = 30 * 1e3;
@@ -60201,7 +60431,7 @@ var UpdateService = class {
     this.o = o;
     try {
       if (o.cacheFile) {
-        const c = JSON.parse(fs10.readFileSync(o.cacheFile, "utf8"));
+        const c = JSON.parse(fs11.readFileSync(o.cacheFile, "utf8"));
         if (c.current === o.current)
           this.cache = c;
       }
@@ -60242,8 +60472,8 @@ var UpdateService = class {
       this.cache = c;
       try {
         if (this.o.cacheFile) {
-          fs10.mkdirSync(path11.dirname(this.o.cacheFile), { recursive: true });
-          fs10.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
+          fs11.mkdirSync(path12.dirname(this.o.cacheFile), { recursive: true });
+          fs11.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
         }
       } catch {
       }
@@ -60356,12 +60586,12 @@ var UpdateService = class {
       return void 0;
     let json4;
     try {
-      json4 = JSON.parse(fs10.readFileSync(installedFile, "utf8"));
+      json4 = JSON.parse(fs11.readFileSync(installedFile, "utf8"));
     } catch {
       return void 0;
     }
     const found = installedUpdate(json4, install.root, this.o.current, (p) => this.o.installer.exists(p));
-    return found && { version: found.version, entry: path11.join(found.root, "scripts", "canvas.mjs") };
+    return found && { version: found.version, entry: path12.join(found.root, "scripts", "canvas.mjs") };
   }
   /**
    * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
@@ -60407,12 +60637,12 @@ var UpdateService = class {
     if (!f)
       return;
     try {
-      const s = JSON.parse(fs10.readFileSync(f, "utf8"));
+      const s = JSON.parse(fs11.readFileSync(f, "utf8"));
       if (s.pid !== (this.o.pid ?? process.pid))
         return;
-      const root = this.o.install.kind === "plugin" ? path11.dirname(path11.dirname(entry)) : s.root;
-      const runtime = this.o.install.kind === "plugin" ? path11.join(String(root), "dist") : path11.dirname(entry);
-      fs10.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
+      const root = this.o.install.kind === "plugin" ? path12.dirname(path12.dirname(entry)) : s.root;
+      const runtime = this.o.install.kind === "plugin" ? path12.join(String(root), "dist") : path12.dirname(entry);
+      fs11.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
     } catch {
     }
   }
@@ -60678,43 +60908,43 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path12.dirname(d)) {
-    if (fs11.existsSync(path12.join(d, ".git")))
+  for (let d = dir; ; d = path13.dirname(d)) {
+    if (fs12.existsSync(path13.join(d, ".git")))
       return d;
-    if (path12.dirname(d) === d)
+    if (path13.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path12.dirname(path12.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path13.dirname(path13.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs11.realpathSync(path12.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path12.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs12.realpathSync(path13.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path13.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs11.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs12.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path12.join(os6.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path13.join(os7.homedir(), "Library", "Logs", "awd") };
 }
 function updateService(env) {
   const repo = env.UNPROSE_UPDATE_REPO || "river0825/unprose";
   const entry = (() => {
     try {
-      return fs11.realpathSync(process.argv[1] ?? "");
+      return fs12.realpathSync(process.argv[1] ?? "");
     } catch {
       return process.argv[1] ?? "";
     }
   })();
-  const install = detectInstall(entry, env, (p) => fs11.existsSync(p));
+  const install = detectInstall(entry, env, (p) => fs12.existsSync(p));
   const current = findRelease().version;
   const off = env.UNPROSE_UPDATE_CHECK === "0";
   const fake = env.UNPROSE_UPDATE_FAKE_LATEST;
   const source = off ? void 0 : fake ? new FakeUpdateSource({ version: fake, source: "fake (UNPROSE_UPDATE_FAKE_LATEST)", notes: `### Added
 - A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env });
-  const home = os6.homedir();
-  const stateFile = env.CLAUDE_PLUGIN_DATA ? path12.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path12.join(home, ".awd", "plugin", "canvas.json");
+  const home = os7.homedir();
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path13.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path13.join(home, ".awd", "plugin", "canvas.json");
   return new UpdateService({
     current,
     install,
@@ -60724,10 +60954,10 @@ function updateService(env) {
     entry,
     argv: process.argv.slice(2),
     env: Object.fromEntries(Object.entries(env).filter((e) => typeof e[1] === "string")),
-    cacheFile: fake ? void 0 : path12.join(home, ".awd", "update-check.json"),
-    logFile: path12.join(home, ".awd", "canvas-upgrade.log"),
+    cacheFile: fake ? void 0 : path13.join(home, ".awd", "update-check.json"),
+    logFile: path13.join(home, ".awd", "canvas-upgrade.log"),
     stateFile,
-    installedFile: path12.join(env.CLAUDE_CONFIG_DIR || path12.join(home, ".claude"), "plugins", "installed_plugins.json"),
+    installedFile: path13.join(env.CLAUDE_CONFIG_DIR || path13.join(home, ".claude"), "plugins", "installed_plugins.json"),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
   });
 }
@@ -60742,7 +60972,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path12.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path13.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -60754,7 +60984,7 @@ async function main() {
         const p = store.registerProject(root);
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
       }
-      const agentsFile = path12.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
+      const agentsFile = path13.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
       const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== "off";
       const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth });
       const feedback = new FileFeedbackStore(defaultFeedbackFile(agentsFile));
@@ -60779,7 +61009,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs11.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs12.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

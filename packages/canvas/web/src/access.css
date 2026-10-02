@@ -315,3 +315,9 @@ button.danger {
 .feedback-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .feedback-list li { border: 1px solid var(--rule); border-radius: var(--radius); padding: 8px 10px; background: var(--paper); }
 .feedback-list li > div + div { margin-top: 4px; color: var(--ink); }
+
+/* an agent's @handle next to its name (what people mention it by) */
+.agent-handle {
+  margin-left: 0.45em;
+  font-weight: 400;
+}

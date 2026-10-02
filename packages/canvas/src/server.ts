@@ -8,7 +8,8 @@ import { NotFound, type BoardRepository } from './ports/boardRepository.js'
 import type { ProcessInfo, ProcessSupervisor } from './ports/processSupervisor.js'
 import { createBoardRepository } from './adapters/boards/index.js'
 import { hasProjects } from './ports/boardRepository.js'
-import { isLocalRequest, moveRoute, ProjectHttpError, projectsRoute, resolveProject } from './projectsApi.js'
+import { isLocalRequest, moveRoute, ProjectHttpError, projectsRoute, resolveProject, unregisterRoute } from './projectsApi.js'
+import { pickBoardByTitle } from './boardLookup.js'
 import type { Handoff, UpdateService } from './updater.js'
 import { redactPaths } from './updatePolicy.js'
 import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
@@ -20,7 +21,7 @@ import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
 import { applyOps, diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
-import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, displayName, holdersOf, LOCAL_AGENT, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, sameAgent, soleHolder, stampHolders, stampRouting } from './routing.js'
+import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, sameAgent, soleHolder, stampHolders, stampRouting } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
@@ -118,7 +119,8 @@ const realOf = (p: string) => {
  * `meta.workflow.file` (absolute) must be inside one of them — a board's own paths only select.
  */
 export function studioProjectOf(board: Board, projects: StudioProject[]): StudioProject | undefined {
-  const claims = [(board.meta?.project as { root?: unknown } | undefined)?.root, (board.meta?.workflow as { file?: unknown } | undefined)?.file]
+  // the board-level root (the default for a board drawn from one machine), the workflow file, then each diagram's own root
+  const claims = [(board.meta?.project as { root?: unknown } | undefined)?.root, (board.meta?.workflow as { file?: unknown } | undefined)?.file, ...diagramRoots(board.meta)]
   for (const c of claims) {
     if (typeof c !== 'string' || !path.isAbsolute(c)) continue
     const want = realOf(c)
@@ -159,6 +161,19 @@ class HttpError extends Error {
 
 function isAuthor(a: unknown): a is Author {
   return a === 'agent' || a === 'user'
+}
+
+/** A request whose User-Agent Cloudflare (in front of most tunnels) blocks: none, or a script's default one. */
+export function blockedUserAgent(ua: string | undefined): boolean {
+  return !ua || !ua.trim() || /^(python-urllib|python-requests|curl|wget|go-http-client|java\/|libwww-perl)/i.test(ua.trim())
+}
+
+/** One sentence for a 401 / 403 when the caller's User-Agent would be blocked behind Cloudflare (docs/agents-setup.md). */
+function userAgentHint(req: http.IncomingMessage): string {
+  const ua = req.headers['user-agent']
+  return blockedUserAgent(typeof ua === 'string' ? ua : undefined)
+    ? ` Your request has ${ua ? `the User-Agent "${String(ua).slice(0, 40)}"` : 'no User-Agent'}: behind Cloudflare (most tunnels) such requests get a 403 before they reach the canvas — send your own, e.g. "User-Agent: my-agent/1.0".`
+    : ''
 }
 
 /** Requests from elsewhere that bring no credentials (docs/canvas.md "Remote agents"). */
@@ -213,8 +228,10 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   /** Who a write is from: an agent token always writes as its agent; a person's page and this machine say who they are. */
   const actor = (req: http.IncomingMessage, g: Grant, asked: unknown, fallback: Author): { author: Author; by?: string } => {
     if (g.as === 'agent') return { author: 'agent', by: g.name }
+    // a signed-in browser (a pairing code or a pasted token let it in) is the person — wherever it is: its changes
+    // are the person's ('user', unnamed), so they wake agents waiting for the person and count as the person's word
+    if (g.as === 'browser') return { author: 'user' }
     const author = isAuthor(asked) ? asked : fallback
-    if (g.as === 'browser') return { author, by: g.name }
     if (author === 'agent') {
       const by = agentName(req, g)
       return by ? { author, by } : { author }
@@ -295,7 +312,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       suggestion: !r && soleHolder(b.meta) && !sameAgent(soleHolder(b.meta), LOCAL_AGENT) ? soleHolder(b.meta) : undefined,
       agents: knownAgents(b.id, g)
         .sort((a, z) => (a === LOCAL_AGENT ? -1 : z === LOCAL_AGENT ? 1 : a.localeCompare(z)))
-        .map((name) => ({ name, label: displayName(name), watching: watching.has(name), ...(seen[name] ? { seen: seen[name] } : {}), holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
+        .map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w) => sameAgent(w, name)), ...(seen[name] ? { seen: seen[name] } : {}), holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
       you: agentName(req, g) ?? (g.as === 'browser' ? g.name : undefined),
     }
   }
@@ -458,7 +475,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       'www-authenticate': `Bearer realm="unprose", resource_metadata="${o}/.well-known/oauth-protected-resource${mcp ? '/mcp' : ''}"${invalid ? ', error="invalid_token"' : ''}`,
       'access-control-expose-headers': 'www-authenticate',
     })
-    res.end(JSON.stringify(mcp ? { jsonrpc: '2.0', error: { code: -32001, message: invalid ?? needsTokenText(o) }, id: null } : { error: invalid ?? needsTokenText(o), signIn: true }))
+    const why = (invalid ?? needsTokenText(o)) + userAgentHint(req)
+    res.end(JSON.stringify(mcp ? { jsonrpc: '2.0', error: { code: -32001, message: why }, id: null } : { error: why, signIn: true }))
   }
 
   const handle = async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -501,6 +519,10 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           return { ...r, body: { projects: body.projects.filter((p) => canSeeProject(grant, p.id) && (!grant.boards?.length || boardProjects.has(p.id))) } }
         })
       }
+      if (parts[1] === 'projects' && parts[2] && !parts[3] && method === 'DELETE') {
+        const force = ['1', 'true', 'yes'].includes(url.searchParams.get('force') ?? '')
+        return projectReply(res, () => unregisterRoute(store, req, decodeURIComponent(parts[2]), force))
+      }
       if (parts[1] === 'update') return updateRoute(req, res, method, parts[2], url)
       // ---- Feedback about Unprose itself (docs/canvas.md "Feedback") ----
       if (parts[1] === 'feedback' && !parts[2]) {
@@ -539,13 +561,23 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         }
         if (method === 'POST') {
           needWrite(grant)
-          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string; answeredBy?: unknown }
+          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string; answeredBy?: unknown; reuse?: unknown }
           const placed = projectForNewBoard(grant, body.project)
           if (placed.error) throw new HttpError(403, placed.error)
           const project = projectOrError(res, () => resolveProject(store, req, placed.project, body.projectRoot))
           if (project === null) return
           if (!body.title || typeof body.title !== 'string') throw new HttpError(400, 'title required')
           if (!body.kind || !diagramKinds.includes(body.kind)) throw new HttpError(400, `kind must be one of ${diagramKinds.join(', ')}`)
+          // find-or-create by title in one step (docs/canvas.md "Projects"): the same project first, then the personal
+          // space, then any board this caller sees — so two draws at once, or from two machines, share one board
+          if (body.reuse === 'title' || body.reuse === 'title+kind') {
+            const seen = store.list().filter((b) => visible(grant, b.id)).map((b) => ({ id: b.id, title: b.title, kind: b.kind, project: projectOf(b.id), updatedAt: b.updatedAt }))
+            const found = pickBoardByTitle(seen, body.title, project ?? undefined, body.reuse === 'title+kind' ? (b) => b.kind === body.kind : undefined)
+            if (found.board) {
+              const b = store.get(found.board.id)!
+              return json(res, 200, { board: viewOf(grant, b), project: found.board.project, reused: true, where: found.where, ...(found.ambiguous.length ? { ambiguous: found.ambiguous.map((x) => ({ id: x.id, project: x.project, updatedAt: x.updatedAt })) } : {}) })
+            }
+          }
           let items = body.items
           if (!items && body.content !== undefined) {
             const parsed = contentSchemas[body.kind].safeParse(body.content)
@@ -576,9 +608,12 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           const patch: { title?: string; meta?: Record<string, unknown> } = {}
           if (typeof body.title === 'string') patch.title = body.title
           if (body.meta && typeof body.meta === 'object') {
+            // PUT replaces meta whole (kept for older clients); PATCH merges the keys given, `diagrams` per diagram key,
+            // so two machines drawing in turn never overwrite each other's entries (docs/canvas.md "HTTP API")
+            const sent = method === 'PATCH' ? mergeBoardMeta(board.meta, body.meta) : body.meta
             // the file holders are stamped from the caller; the board settings change only through /settings
             const w = actor(req, grant, 'agent', 'agent')
-            const meta = stampHolders(board.meta, body.meta, w.by ?? LOCAL_AGENT, new Date().toISOString())
+            const meta = stampHolders(board.meta, sent, w.by ?? (w.author === 'user' ? 'user' : LOCAL_AGENT), new Date().toISOString())
             for (const k of SETTINGS_KEYS) {
               if (board.meta?.[k] !== undefined) meta[k] = board.meta[k]
               else delete meta[k]
@@ -596,7 +631,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
 
       if (sub === 'ops' && method === 'POST') {
         const body = (await readBody(req)) as { author?: unknown; ops?: unknown; note?: string }
-        if (!isAuthor(body.author) && grant.as !== 'agent') throw new HttpError(400, "author must be 'agent' or 'user'")
+        // a token is always its agent and a signed-in browser always the person: only this machine must say who it is
+        if (!isAuthor(body.author) && !grant.as) throw new HttpError(400, "author must be 'agent' or 'user'")
         const who = actor(req, grant, body.author, 'agent')
         // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity")
         const ops = routed(board, stampAttribution(board, assertOps(body.ops), who.by), who.author)

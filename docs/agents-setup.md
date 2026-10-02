@@ -82,7 +82,9 @@ server with this message.
 A canvas elsewhere wants credentials (docs/canvas.md → [Remote agents](canvas.md#remote-agents)). Without
 `UNPROSE_TOKEN` the MCP server asks for a **pairing code** by itself: every tool result says *"Ask the person to
 type the code ABCD-EFGH on the canvas"* until the person types it there (the notification on any open page, or
-**Connected agents → Enter a code**), then it keeps the token in `~/.awd/tokens.json` for next time. Or make a
+**Connected agents → Enter a code**), then it keeps the token in `~/.awd/tokens.json` for next time. That one token
+serves every tool — the canvas tools, `design_draw` and the other design tools, and the `awd` CLI (`awd design draw
+--canvas …`, `awd graph --canvas`, `awd boards move`), which read the same file; nothing else to pass. Or make a
 token on the canvas page **Connected agents** and pass it:
 
 ```bash
@@ -90,7 +92,28 @@ claude mcp add unprose -e AWD_CANVAS_URL=https://canvas.example.com -e UNPROSE_T
 ```
 
 `UNPROSE_AGENT_NAME` names your agent: its changes read `[7 claude-laptop] …` in the change feed (also for a local
-canvas). Simpler for a canvas elsewhere: connect to its own MCP endpoint, next section.
+canvas). Without it, a pairing names the token `<client>-<short host>` (e.g. `codex-acme-robins-mbp`). Every agent
+is mentioned by its handle — its name as one word (`@claude-laptop`); `canvas_context` lists them. Simpler for a
+canvas elsewhere: connect to its own MCP endpoint, next section.
+
+### Behind Cloudflare: send a User-Agent
+
+Most tunnels (cloudflared) put Cloudflare in front of the canvas. Cloudflare answers requests that carry no
+`User-Agent`, or a script's default one — Python's `Python-urllib/3.x`, also `python-requests`, `curl`, `Go-http-client`
+in some configurations — with **HTTP 403** before they reach the canvas, so the agent sees a 403 that the canvas never
+sent. Every Unprose client sends `User-Agent: unprose/<version> (<component>)` (the MCP servers, the `awd` CLI, the
+plugin's scripts). **Scripts of your own must set one too**:
+
+```python
+urllib.request.Request(url, headers={"User-Agent": "my-agent/1.0", "Authorization": f"Bearer {token}"})
+```
+
+```bash
+curl -A "my-agent/1.0" -H "Authorization: Bearer $UNPROSE_TOKEN" https://canvas.example.com/api/boards
+```
+
+A 403 whose body is an HTML page (not the canvas's JSON `{ "error": … }`) came from Cloudflare; the canvas's own `401`
+mentions the User-Agent when a request had none or a script's default one.
 
 ## Remote agents: another machine or the cloud
 
@@ -199,8 +222,9 @@ env = { AWD_CANVAS_URL = "https://canvas.example.com", UNPROSE_AGENT_NAME = "cod
 
 The first canvas tool call says *"Ask the person to type the code ABCD-EFGH on the canvas"*; type it on any canvas
 page (or **Connected agents → Enter a code**). The token is called `codex-b` (without `UNPROSE_AGENT_NAME` it would be
-`agent on <hostname>` — rename it on **Connected agents → Rename**). The `awd` CLI on machine B uses the same saved
-token for that canvas, so `awd design draw` is signed `codex-b` too. (Or make a token named `codex-b` on Connected
+`codex-<short host>` — rename it on **Connected agents → Rename**); people mention it as `@codex-b`. Every tool and the
+`awd` CLI on machine B use the same saved token for that canvas, so `design_draw` and `awd design draw` are signed
+`codex-b` too. (Or make a token named `codex-b` on Connected
 agents at machine A and set `UNPROSE_TOKEN` on B.)
 
 **2. Codex draws from its repo (machine B).**
@@ -212,7 +236,8 @@ awd design draw design/signup.es.yaml   --board "title:Meeting 2026-10-02" --can
 awd design draw design/scope.story-map.yaml --board "title:Meeting 2026-10-02" --canvas https://canvas.example.com
 ```
 
-The board is new, so it is **answered by codex-b**, and every frame records its **holder**: *Files: team-notes ·
+The board is new, so it is **answered by codex-b** (a second draw with the same title finds it — in the project, the
+personal space or anywhere codex-b can see — rather than making another), and every frame records its **holder**: *Files: team-notes ·
 held by codex-b · drawn just now*, with the git remote (machine A's own pages also see *on mbp-b (…/src/team-notes)*).
 
 **3. Codex writes the context** — what the meeting decided and where the notes are — so any agent that picks the

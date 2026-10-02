@@ -3,6 +3,7 @@
 // the count and description instead of adding a twin.
 
 import type { ReflectionCard } from '../../application/reflection.js'
+import { canvasUserAgent } from './userAgent.js'
 
 export interface CanvasCardsOptions {
   base?: string
@@ -19,7 +20,7 @@ export function canvasCards(opts: CanvasCardsOptions = {}) {
   const base = (opts.base ?? process.env.AWD_CANVAS_URL ?? 'http://localhost:4400').replace(/\/$/, '')
   const f = opts.fetch ?? fetch
   const req = async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await f(base + p, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await f(base + p, { method, headers: { 'content-type': 'application/json', 'user-agent': canvasUserAgent('runtime') }, body: body === undefined ? undefined : JSON.stringify(body) })
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${(await res.text()).slice(0, 200)}`)
     return res.json() as Promise<T>
   }

@@ -10,7 +10,7 @@ import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, prop
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
-import { boardByTitle, canvasHeaders, holderInfo, registerProject } from './projects.js'
+import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 
 type Flags = Record<string, string | boolean>
@@ -64,13 +64,7 @@ export function cmdDesignLint(file: string): boolean {
 type BoardItem = { id: string; type: string; parent?: string; x?: number; y?: number; w?: number; h?: number; from?: string; to?: string; text?: string; data?: Record<string, unknown>; [k: string]: unknown }
 type Board = { id: string; title: string; kind: string; items: Record<string, BoardItem>; meta?: Record<string, unknown> }
 
-function canvasApi(base: string) {
-  return async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders(process.env, base) }, body: body === undefined ? undefined : JSON.stringify(body) })
-    if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${(await res.text()).slice(0, 300)}`)
-    return res.json() as Promise<T>
-  }
-}
+const canvasApi = projectApi
 type Api = ReturnType<typeof canvasApi>
 
 /**
@@ -102,7 +96,7 @@ export interface DrawOptions {
 export interface UnresolvedTrace { item: string; trace: { from: string; rel: string }; reason: string }
 
 export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult }> {
-  const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
+  const base = canvasBase(opts.canvas)
   const api = canvasApi(base)
   const abs = path.resolve(file)
   const text = fs.readFileSync(abs, 'utf8')
@@ -128,11 +122,13 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const grow = frame && current.items[frame.id] ? growFrame(current.items[frame.id], drawn, placed) : undefined
   if (grow) ops.push(grow)
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design draw: ${source}` })
-  // PUT replaces meta whole: keep every other key, and every other diagram's entry.
-  // the holder: this agent has the files (the canvas stamps the name and the time; docs/canvas.md "Several agents on one board")
+  // PATCH merges: only this diagram's entry changes — another machine's diagrams and keys stay as they are.
+  // the holder: this agent has the files and where (machine, root — the project root per diagram); the canvas stamps the
+  // name and the time (docs/canvas.md "Several agents on one board"). The board-level `project.root` is only the default
+  // for a board drawn from one machine: set when the board has none, never overwritten by another machine's draw.
   const holder = { ...holderInfo(root), ...(opts.applied ? { applied: opts.applied } : {}) }
-  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text }, holder } }
-  await api('PUT', `/api/boards/${board.id}`, { meta: { ...current.meta, project: { root }, diagrams } })
+  const projectRoot = (current.meta?.project as { root?: unknown } | undefined)?.root
+  await api('PATCH', `/api/boards/${board.id}`, { meta: { diagrams: { [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text }, holder } }, ...(typeof projectRoot === 'string' && projectRoot ? {} : { project: { root } }) } })
   const applied = opts.applied ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: source }) : undefined
   return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, ...(applied ? { applied } : {}) }
 }
@@ -147,7 +143,7 @@ export function unresolvedReport(list: UnresolvedTrace[]): string[] {
 // ── proposals: stories from EventStorming (docs/diagrams.md §4) — proposalOps is in @awd/canvas/diagrams ──
 
 export async function proposeStoriesToBoard(esFile: string, usmFile: string, opts: DrawOptions) {
-  const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
+  const base = canvasBase(opts.canvas)
   const api = canvasApi(base)
   const es = parseDesignFile(esFile, fs.readFileSync(esFile, 'utf8'))
   const usm = parseDesignFile(usmFile, fs.readFileSync(usmFile, 'utf8'))

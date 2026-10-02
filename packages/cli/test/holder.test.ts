@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { AccessService, MemoryAccessStore, MemoryBoardRepository, startServer, type RunningServer } from '@awd/canvas'
+import { AccessService, MemoryAccessStore, MemoryBoardRepository, startServer, VERSION, type RunningServer } from '@awd/canvas'
 import { drawDesign } from '../src/design.js'
 import { afterApplied, appliedMessage } from '../src/applied.js'
 import { canvasHeaders, holderInfo, type Api } from '../src/projects.js'
@@ -86,7 +86,60 @@ test('canvasHeaders: UNPROSE_TOKEN, else the token saved for that canvas by a pa
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'unprose-tokens-'))
   const file = path.join(dir, 'tokens.json')
   fs.writeFileSync(file, JSON.stringify({ 'https://canvas.example.com': 'unp_saved' }))
-  assert.deepEqual(canvasHeaders({ UNPROSE_TOKEN: 'unp_env', UNPROSE_TOKENS_FILE: file }, 'https://canvas.example.com'), { authorization: 'Bearer unp_env' })
-  assert.deepEqual(canvasHeaders({ UNPROSE_TOKENS_FILE: file, UNPROSE_AGENT_NAME: 'codex-b' }, 'https://canvas.example.com/'), { authorization: 'Bearer unp_saved' })
-  assert.deepEqual(canvasHeaders({ UNPROSE_TOKENS_FILE: file, UNPROSE_AGENT_NAME: 'codex-b' }, 'http://localhost:4400'), { 'x-unprose-agent': 'codex-b' })
+  const ua = { 'user-agent': `unprose/${VERSION} (cli)` }
+  assert.deepEqual(canvasHeaders({ UNPROSE_TOKEN: 'unp_env', UNPROSE_TOKENS_FILE: file }, 'https://canvas.example.com'), { ...ua, authorization: 'Bearer unp_env' })
+  assert.deepEqual(canvasHeaders({ UNPROSE_TOKENS_FILE: file, UNPROSE_AGENT_NAME: 'codex-b' }, 'https://canvas.example.com/'), { ...ua, authorization: 'Bearer unp_saved' })
+  assert.deepEqual(canvasHeaders({ UNPROSE_TOKENS_FILE: file, UNPROSE_AGENT_NAME: 'codex-b' }, 'https://canvas.example.com/b/b_123?focus=x'), { ...ua, authorization: 'Bearer unp_saved' }, 'a board link names the same canvas')
+  assert.deepEqual(canvasHeaders({ UNPROSE_TOKENS_FILE: file, UNPROSE_AGENT_NAME: 'codex-b' }, 'http://localhost:4400'), { ...ua, 'x-unprose-agent': 'codex-b' })
+})
+
+/** Run `fn` with these environment variables (restored after). */
+async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
+  const was = Object.fromEntries(Object.keys(vars).map((k) => [k, process.env[k]]))
+  for (const [k, v] of Object.entries(vars)) if (v === undefined) delete process.env[k]
+  else process.env[k] = v
+  try {
+    return await fn()
+  } finally {
+    for (const [k, v] of Object.entries(was)) if (v === undefined) delete process.env[k]
+    else process.env[k] = v
+  }
+}
+
+test('one credential: awd design draw picks up the token a pairing code saved for this canvas (no UNPROSE_TOKEN)', async () => {
+  const { token } = access.createToken({ name: 'codex-paired' }, 't')
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'unprose-tokens-')), 'tokens.json')
+  // the MCP server saved it under the canvas origin; the CLI is given a board link
+  fs.writeFileSync(file, JSON.stringify({ [srv.url.replace('localhost', '127.0.0.1')]: token }))
+  const r = await withEnv({ UNPROSE_TOKENS_FILE: file, UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: undefined }, () =>
+    drawDesign(path.join(repo, 'design', 'shop.es.yaml'), { board: 'title:Paired draw', canvas: `${srv.url.replace('localhost', '127.0.0.1')}/b/anything` }),
+  )
+  const h = (store.get(r.boardId)!.meta!.diagrams as Record<string, { holder: Record<string, string> }>)['shop-es'].holder
+  assert.equal(h.agent, 'codex-paired', 'signed with the paired token, not as the local default agent')
+  assert.equal(access.list().find((a) => a.name === 'codex-paired')!.lastUserAgent, `unprose/${VERSION} (cli)`)
+})
+
+test('the token the MCP server adopted (UNPROSE_TOKEN in its environment) is what design_draw sends', async () => {
+  const { token } = access.createToken({ name: 'codex-adopted' }, 't')
+  const r = await withEnv({ UNPROSE_TOKEN: token, UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => drawDesign(path.join(repo, 'design', 'shop.es.yaml'), { board: 'title:Adopted draw', canvas: srv.url }))
+  const h = (store.get(r.boardId)!.meta!.diagrams as Record<string, { holder: Record<string, string> }>)['shop-es'].holder
+  assert.equal(h.agent, 'codex-adopted')
+})
+
+test('two machines drawing on one board in turn: each keeps its diagram, the board-level root stays the first one\'s', async () => {
+  // machine B: another repo with another diagram
+  const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'unprose-holder-b-')))
+  execFileSync('git', ['-C', other, 'init', '-q'])
+  fs.mkdirSync(path.join(other, 'design'))
+  fs.writeFileSync(path.join(other, 'design', 'scope.story-map.yaml'), 'activities:\n  - text: Sign up\n    steps:\n      - text: Enter e-mail\n        stories:\n          - text: As a visitor I sign up\n')
+  const a = await drawDesign(path.join(repo, 'design', 'shop.es.yaml'), { board: 'title:Two machines', canvas: srv.url })
+  const b = await drawDesign(path.join(other, 'design', 'scope.story-map.yaml'), { board: 'title:Two machines', canvas: srv.url })
+  assert.equal(a.boardId, b.boardId, 'the same board, found by title')
+  const meta = store.get(a.boardId)!.meta as { project: { root: string }; diagrams: Record<string, { holder: { root: string } }> }
+  assert.equal(meta.project.root, repo, 'the board-level default is not overwritten by the second machine')
+  assert.equal(meta.diagrams['shop-es'].holder.root, repo)
+  assert.equal(meta.diagrams[b.key].holder.root, other, 'each diagram knows its own project root')
+  // A redraws: B's diagram stays
+  await drawDesign(path.join(repo, 'design', 'shop.es.yaml'), { board: a.boardId, canvas: srv.url })
+  assert.ok((store.get(a.boardId)!.meta as { diagrams: Record<string, unknown> }).diagrams[b.key])
 })

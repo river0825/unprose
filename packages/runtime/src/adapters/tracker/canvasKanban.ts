@@ -5,6 +5,7 @@
 
 import type { CardDraft, TrackerCard, WorkTracker } from '../../ports/workTracker.js'
 import { kanbanScope } from '../triggers/canvasTrigger.js'
+import { canvasUserAgent } from '../canvas/userAgent.js'
 
 export interface CanvasKanbanOptions {
   /** Board id or `title:<board title>`. */
@@ -28,7 +29,7 @@ export class CanvasKanbanTracker implements WorkTracker {
   }
 
   private async req<T>(method: string, p: string, body?: unknown): Promise<T> {
-    const res = await this.f(this.base + p, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await this.f(this.base + p, { method, headers: { 'content-type': 'application/json', 'user-agent': canvasUserAgent('runtime') }, body: body === undefined ? undefined : JSON.stringify(body) })
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${(await res.text()).slice(0, 200)}`)
     return res.json() as Promise<T>
   }

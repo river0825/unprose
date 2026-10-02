@@ -3,6 +3,7 @@
 // PATH (its own login). The first answer wins; otherwise one readable error.
 import { execFile } from 'node:child_process'
 import type { ReleaseInfo, UpdateSource } from '../../ports/update.js'
+import { userAgent } from '../../version.js'
 
 export interface GitHubSourceOptions {
   repo: string
@@ -45,7 +46,7 @@ export class GitHubReleaseSource implements UpdateSource {
       const ctl = new AbortController()
       const timer = setTimeout(() => ctl.abort(), this.o.timeoutMs ?? 10_000)
       try {
-        const r = await f(url, { headers: { accept: 'application/vnd.github+json', 'user-agent': 'unprose-canvas', ...headers }, signal: ctl.signal })
+        const r = await f(url, { headers: { accept: 'application/vnd.github+json', 'user-agent': userAgent('canvas'), ...headers }, signal: ctl.signal })
         if (r.ok) return releaseFrom((await r.json()) as GitHubRelease, source)
         if (r.status === 404) notFound = true
         tries.push(`${source}: HTTP ${r.status}`)

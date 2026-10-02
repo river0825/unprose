@@ -8,7 +8,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { newId, type Author, type Board, type Change } from '../../model.js'
-import { NotFound, PERSONAL_PROJECT, type CreateBoardInput, type ProjectBoards, type ProjectInfo } from '../../ports/boardRepository.js'
+import { NotFound, PERSONAL_PROJECT, ProjectInUse, type CreateBoardInput, type ProjectBoards, type ProjectInfo } from '../../ports/boardRepository.js'
 import { BoardRepositoryBase } from './base.js'
 import { defaultBoardsDir } from './location.js'
 
@@ -124,6 +124,20 @@ export class ProjectsBoardRepository extends BoardRepositoryBase implements Proj
     this.dirOf.set(boardId, to)
     for (const f of [path.join(from, `${boardId}.json`), log]) if (fs.existsSync(f)) fs.unlinkSync(f)
     return board
+  }
+
+  unregisterProject(projectId: string, opts: { force?: boolean } = {}): { project: ProjectInfo; moved: string[] } {
+    if (projectId === PERSONAL_PROJECT) throw new Error('the personal space cannot be removed')
+    const info = this.projects().find((x) => x.id === projectId)
+    const p = this.registered.find((r) => r.id === projectId)
+    if (!p || !info) throw new NotFound(`project ${projectId} is not registered`)
+    const dir = boardsDirOf(p.root)
+    const boards = [...this.dirOf.entries()].filter(([, d]) => d === dir).map(([id]) => id)
+    if (boards.length && !opts.force) throw new ProjectInUse(projectId, boards)
+    for (const id of boards) this.moveBoard(id, PERSONAL_PROJECT)
+    this.registered = this.registered.filter((r) => r !== p)
+    this.writeRegistry()
+    return { project: info, moved: boards }
   }
 
   // ---- persistence hooks ----

@@ -3,7 +3,7 @@
 // message the mention shows as a chip, and a routed message says who talks to whom ("codex-b → claude-a").
 import { useMemo, useRef, useState, type KeyboardEvent, type TextareaHTMLAttributes } from 'react'
 import type { Item } from '../../../src/model'
-import { displayName, LOCAL_AGENT, sameAgent } from '../../../src/routing'
+import { displayName, handleOf, LOCAL_AGENT, sameAgent } from '../../../src/routing'
 import { useBoardSettings } from './BoardAgents'
 import './agents.css'
 
@@ -24,15 +24,16 @@ export function MentionTextarea({ boardId, value, onValue, onKeyDown, ...rest }:
   const [pick, setPick] = useState(0)
   const options = useMemo(() => {
     if (!q) return []
-    const agents = settings?.agents ?? [{ name: LOCAL_AGENT, label: 'studio', watching: false, holder: false }]
+    const agents = (settings?.agents ?? [{ name: LOCAL_AGENT, label: 'studio', watching: false, holder: false }]).map((a) => ({ ...a, handle: a.handle ?? handleOf(a.name) }))
     const want = q.query.toLowerCase()
-    return agents.filter((a) => a.label.toLowerCase().startsWith(want) || a.name.toLowerCase().startsWith(want) || (want.length > 1 && a.label.toLowerCase().includes(want))).slice(0, 8)
+    return agents.filter((a) => a.handle.startsWith(want) || a.label.toLowerCase().startsWith(want) || a.name.toLowerCase().startsWith(want) || (want.length > 1 && (a.label.toLowerCase().includes(want) || a.handle.includes(want)))).slice(0, 8)
   }, [q, settings])
   const open = options.length > 0
   const listId = `mention-list-${boardId}`
-  const insert = (label: string) => {
+  // an agent is mentioned by its handle: one word, so "agent on mbp-b" goes in as @agent-on-mbp-b
+  const insert = (handle: string) => {
     if (!q) return
-    const token = label.includes(' ') ? label : label
+    const token = handle
     const next = `${value.slice(0, q.start)}@${token} ${value.slice(q.start + 1 + q.query.length)}`
     onValue(next)
     setQ(undefined)
@@ -72,7 +73,7 @@ export function MentionTextarea({ boardId, value, onValue, onKeyDown, ...rest }:
             }
             if ((e.key === 'Enter' && !e.metaKey && !e.ctrlKey) || e.key === 'Tab') {
               e.preventDefault()
-              insert(options[pick].label)
+              insert(options[pick].handle)
               return
             }
             if (e.key === 'Escape') {
@@ -96,11 +97,11 @@ export function MentionTextarea({ boardId, value, onValue, onKeyDown, ...rest }:
               className={i === pick ? 'on' : undefined}
               onMouseDown={(e) => {
                 e.preventDefault()
-                insert(a.label)
+                insert(a.handle)
               }}
             >
-              <span className="mention-chip">@{a.label}</span>
-              <span className="muted">{[a.name === LOCAL_AGENT ? 'this machine' : '', a.holder ? 'holds files' : '', a.watching ? 'here' : ''].filter(Boolean).join(' · ')}</span>
+              <span className="mention-chip">@{a.handle}</span>
+              <span className="muted">{[a.handle !== a.label ? a.label : '', a.name === LOCAL_AGENT ? 'this machine' : '', a.holder ? 'holds files' : '', a.watching ? 'here' : ''].filter(Boolean).join(' · ')}</span>
             </li>
           ))}
         </ul>
@@ -112,7 +113,7 @@ export function MentionTextarea({ boardId, value, onValue, onKeyDown, ...rest }:
 /** A message's text with its @mention shown as a chip. */
 export function MentionText({ text, mention }: { text: string; mention?: string }) {
   if (!mention) return <>{text}</>
-  const labels = [displayName(mention), mention].filter((v, i, all) => all.indexOf(v) === i)
+  const labels = [displayName(mention), mention, handleOf(mention)].filter((v, i, all) => all.indexOf(v) === i)
   const re = new RegExp(`@(${labels.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\p{L}\\p{N}_-])`, 'giu')
   const out: Array<string | { chip: string }> = []
   let last = 0
@@ -130,12 +131,16 @@ export function MentionText({ text, mention }: { text: string; mention?: string 
   )
 }
 
-/** "codex-b → claude-a" for a message the canvas routed by a mention; undefined otherwise. */
+/** How a recipient reads: "@codex-b", or "@agent-on-mbp-b (agent on mbp-b)" when the handle differs from the name. */
+const recipient = (n: string) => (handleOf(n) === displayName(n) ? `@${handleOf(n)}` : `@${handleOf(n)} (${displayName(n)})`)
+
+/** "codex-b → @claude-a": who a message was delivered to (the canvas stamps it: a mention, a proposal, the board's responder); undefined for "anyone". */
 export function routeLabel(m: Item): { from: string; to: string[] } | undefined {
   const to = m.data?.to
-  if (m.data?.route !== 'mention' || !Array.isArray(to) || !to.length) return undefined
-  const from = m.createdBy === 'agent' ? displayName(typeof m.data?.by === 'string' ? m.data.by : LOCAL_AGENT) : 'You'
-  return { from, to: (to as string[]).filter((n) => !sameAgent(n, from)).map(displayName) }
+  if (!Array.isArray(to) || !to.length || m.data?.route === 'paused') return undefined
+  const fromName = m.createdBy === 'agent' ? (typeof m.data?.by === 'string' ? m.data.by : LOCAL_AGENT) : undefined
+  const from = fromName ? displayName(fromName) : 'You'
+  return { from, to: (to as string[]).filter((n) => !fromName || !sameAgent(n, fromName)).map(recipient) }
 }
 
 /** An agent message in a mention thread, between agents (no person in it). */

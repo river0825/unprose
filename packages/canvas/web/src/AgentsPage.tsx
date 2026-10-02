@@ -8,6 +8,7 @@ import { timeAgo } from './time'
 import { RequestCard } from './components/RequestCard'
 import { usePendingRequests } from './components/AccessCenter'
 import './access.css'
+import { handleOf } from '../../src/routing'
 
 const HOW: Record<AgentView['via'], string> = { token: 'Token', oauth: 'OAuth', device: 'Device code', browser: 'Browser' }
 
@@ -228,6 +229,7 @@ function AgentRow({ a, canManage, onChange }: { a: AgentView; canManage: boolean
         ) : (
           <>
             <strong>{a.name}</strong>
+            {a.via !== 'browser' && <span className="mention-chip agent-handle" title="Mention it in a comment with this handle">@{a.handle ?? handleOf(a.name)}</span>}
             {canManage && !a.revokedAt && (
               <button type="button" className="link agent-rename-btn" onClick={() => (setName(a.name), setRenaming(true))} aria-label={`Rename ${a.name}`}>
                 Rename

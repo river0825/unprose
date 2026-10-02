@@ -12,6 +12,7 @@ import { evalCondition, templateDeep, type WorkflowDefinition, type TriggerDef }
 import type { EventStore } from '../../ports/eventStore.js'
 import type { TriggerSource } from '../../ports/triggerSource.js'
 import { keyFor } from '../../application/keys.js'
+import { canvasUserAgent } from '../canvas/userAgent.js'
 
 export interface CardMove {
   cardId: string
@@ -133,7 +134,7 @@ export function canvasSource(opts: CanvasTriggerOptions): TriggerSource {
 
   const baseFor = (t: TriggerDef) => (t.canvas ?? env.AWD_CANVAS_URL ?? 'http://localhost:4400').replace(/\/$/, '')
   const getJson = async <T,>(url: string, signal?: AbortSignal): Promise<T> => {
-    const r = await f(url, { signal })
+    const r = await f(url, { signal, headers: { 'user-agent': canvasUserAgent('runtime') } })
     if (!r.ok) throw Object.assign(new Error(`${url} → ${r.status}`), { status: r.status })
     return r.json() as Promise<T>
   }

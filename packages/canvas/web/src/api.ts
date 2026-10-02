@@ -43,7 +43,8 @@ export const api = {
       .then((b) => ('board' in b ? b.board : b)),
   updateBoard: (id: string, patch: { title?: string }) =>
     fetch(`/api/boards/${encodeURIComponent(id)}`, {
-      method: 'PUT',
+      // PATCH merges (only what is sent changes); PUT would replace the board's meta whole
+      method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     })

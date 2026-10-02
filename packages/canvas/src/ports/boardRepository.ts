@@ -104,6 +104,21 @@ export interface ProjectBoards {
   projectOf(boardId: string): string
   /** Move a board (snapshot and change log) into another project; the old files go only after the copy succeeded. */
   moveBoard(boardId: string, projectId: string): Board
+  /**
+   * Forget a registered project (its directory and files stay). Refuses (ProjectInUse) while it still stores boards,
+   * unless `force`: then they move to the personal space first. Returns the boards moved.
+   */
+  unregisterProject(projectId: string, opts?: { force?: boolean }): { project: ProjectInfo; moved: string[] }
+}
+
+/** The project still stores boards (unregister it with force to move them to the personal space). */
+export class ProjectInUse extends Error {
+  constructor(
+    readonly project: string,
+    readonly boards: string[],
+  ) {
+    super(`project ${project} still stores ${boards.length} board(s) (${boards.slice(0, 5).join(', ')}${boards.length > 5 ? ' …' : ''}); move them first, or force to move them to the personal space`)
+  }
 }
 
 export function hasProjects(r: BoardRepository): r is BoardRepository & ProjectBoards {

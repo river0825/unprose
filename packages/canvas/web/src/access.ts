@@ -18,6 +18,8 @@ export interface AccessMe {
 export interface AgentView {
   id: string
   name: string
+  /** What people @mention it by (absent on older canvases). */
+  handle?: string
   via: 'token' | 'oauth' | 'device' | 'browser'
   scope: 'read' | 'write'
   projects?: string[]

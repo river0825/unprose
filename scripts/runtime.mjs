@@ -62,10 +62,13 @@ export function parseSha256(text) {
   return m ? m[1].toLowerCase() : undefined
 }
 
+/** `unprose/<version> (<component>)`: every request Unprose makes says who it is (Cloudflare refuses requests without one). */
+export const userAgent = (component) => `unprose/${pluginVersion() ?? 'dev'} (${component})`
+
 export const assetName = (version) => `unprose-runtime-v${version}.tgz`
 
 async function fetchBuffer(url, timeoutMs) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), redirect: 'follow' })
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), redirect: 'follow', headers: { 'user-agent': userAgent('plugin') } })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`)
   return Buffer.from(await res.arrayBuffer())
 }
@@ -255,13 +258,13 @@ const PATH_OPTIONS = new Set(['--dir', '--project', '--studio-project', '--studi
 
 export async function probeCanvas(target, timeoutMs = 1500) {
   try {
-    const res = await fetch(`${target}/api/version`, { signal: AbortSignal.timeout(timeoutMs) })
+    const res = await fetch(`${target}/api/version`, { signal: AbortSignal.timeout(timeoutMs), headers: { 'user-agent': userAgent('plugin') } })
     if (res.ok) {
       const j = await res.json().catch(() => ({}))
       return { reachable: true, version: j.version ?? undefined, pid: typeof j.pid === 'number' ? j.pid : undefined }
     }
     // a canvas older than /api/version still answers /api/boards
-    const b = await fetch(`${target}/api/boards`, { signal: AbortSignal.timeout(timeoutMs) }).catch(() => undefined)
+    const b = await fetch(`${target}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: { 'user-agent': userAgent('plugin') } }).catch(() => undefined)
     return b?.ok ? { reachable: true } : { reachable: false }
   } catch {
     return { reachable: false }
@@ -414,7 +417,7 @@ export async function registerSessionProject({ env = process.env, cwd = process.
   const root = sessionProjectRoot(env, cwd)
   if (!root || !isLocal(target)) return undefined
   try {
-    const res = await fetch(`${target}/api/projects`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ root }), signal: AbortSignal.timeout(timeoutMs) })
+    const res = await fetch(`${target}/api/projects`, { method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': userAgent('plugin') }, body: JSON.stringify({ root }), signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) return undefined
     return (await res.json()).project?.id
   } catch {

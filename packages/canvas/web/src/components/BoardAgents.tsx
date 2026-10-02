@@ -12,6 +12,8 @@ import './agents.css'
 export interface AgentRow {
   name: string
   label: string
+  /** What people @mention it by (absent on older canvases: derive it with handleOf). */
+  handle?: string
   watching: boolean
   seen?: string
   holder: boolean

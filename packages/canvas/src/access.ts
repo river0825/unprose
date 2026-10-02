@@ -13,6 +13,7 @@ import type { AccessRequestView } from './model.js'
 import type { AccessData, AccessStore, AgentRecord, OAuthClientRecord } from './ports/accessStore.js'
 import { cleanName, hashSecret, LOCAL_GRANT, newSecret, normalizeCode, OPEN_GRANT, pairingCode, pkceMatches, redirectUriOk, sameCode, sameHash, scopeFrom, type Grant, type Scope } from './accessPolicy.js'
 import { isLocalRequest } from './projectsApi.js'
+import { handleOf } from './routing.js'
 
 export const SESSION_COOKIE = 'unprose_session'
 const TEN_MIN = 10 * 60_000
@@ -31,6 +32,8 @@ const DEVICE_INTERVAL_S = 5
 export interface AgentView {
   id: string
   name: string
+  /** What people @mention it by (routing.ts handleOf). */
+  handle: string
   via: AgentRecord['via']
   scope: Scope
   projects?: string[]
@@ -276,6 +279,7 @@ export class AccessService {
       .map((r) => ({
         id: r.id,
         name: r.name,
+        handle: handleOf(r.name),
         via: r.via,
         scope: r.scope,
         ...(r.projects?.length ? { projects: r.projects } : {}),
@@ -297,9 +301,10 @@ export class AccessService {
    * 'studio', 'any' and 'me' mean something in "Answered by" and @mentions).
    */
   private uniqueName(name: string, except?: string): string {
-    const taken = new Set(['agent', 'user', 'studio', 'any', 'me', ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => r.name.toLowerCase())])
-    if (!taken.has(name.toLowerCase())) return name
-    for (let i = 2; ; i++) if (!taken.has(`${name}-${i}`.toLowerCase())) return `${name}-${i}`
+    // unique by handle too, so every agent has its own @handle ("codex b" and "codex-b" would both be @codex-b)
+    const taken = new Set(['agent', 'user', 'studio', 'any', 'me', ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => handleOf(r.name))].map(handleOf))
+    if (!taken.has(handleOf(name))) return name
+    for (let i = 2; ; i++) if (!taken.has(handleOf(`${name}-${i}`))) return `${name}-${i}`
   }
 
   private addRecord(r: Omit<AgentRecord, 'id' | 'createdAt'>): AgentRecord {
