@@ -6,6 +6,49 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-10-02
+
+### Changed
+- **Waiting on a board costs fewer tokens.** Every time `canvas_wait` returns, the agent's model re-reads its
+  conversation; an idle agent woke about 30 times an hour.
+  - `canvas_wait` blocks up to 30 minutes (`timeoutSec` ≤ 1800, default 300; also the remote `/mcp` and
+    `GET /wait`, `timeout` ≤ 1 800 000 ms).
+  - A wait with nothing for you returns one line — `nothing new on b_x (seq 93; 2 change(s) for others) — wait again
+    with since: 93` — without the board context. The context comes with the first wait on a board and after it
+    changes; over the stateless remote `/mcp` the canvas remembers per agent × board what it sent (15 minutes after
+    the last wait; `GET /wait?context=changed`).
+  - New `untilMention: true` (`GET /wait?until=mention`): wake only when you are addressed personally (an @mention,
+    a reply in a thread you were mentioned or asked in, a proposal to files you hold), to idle on a busy board.
+  - Long waits stay connected: `GET /wait` sends a space every 20 s before its JSON (proxies, and Node's `fetch`
+    after 300 s, drop silent requests); `canvas_wait` reports MCP progress every 20 s when the client sends a progress
+    token. When the client goes away the wait ends at once and the page stops showing "agent is watching".
+  - Docs: "Watching cheaply" in docs/canvas.md (studio for always-on watching, client timeouts: Claude Code
+    `MCP_TOOL_TIMEOUT`, Codex `tool_timeout_sec`); the skill and AGENTS.md say to wait long and not poll.
+- **Domain stories are drawn roomier.** Every activity arrow gets room for its number circle and verb, measured with
+  the snapshot's text metrics. A new file option `layout: { spacing: compact | normal | roomy, gapX?, gapY? }`
+  (docs/diagrams.md §6b): `compact` keeps the earlier spacing. Egon.io import/export ignores it.
+
+### Fixed
+- **Wire labels never cover cards.** On a real board the label "updates · 更新視圖" sat over both cards it joined.
+  A label is now 11 px (cards are 13 px; a domain-story verb 12 px) on a lighter backing, and it is placed where it
+  covers no card: along the wire, then beside it; if it does not fit it wraps to two lines, then is cut with … (the
+  whole text in the tooltip and while the wire is selected); with no room at all it becomes a small dot on the wire
+  that shows the label on hover or selection. The page, the server snapshot and the layout check share one rule
+  (`src/edgeLabel.ts`). `canvas_check_layout` reports `[label]` findings (cut, hidden as a dot, or dragged onto a
+  card) with how far to move a card or what short form to give. Agents steer a label with the supported
+  `data.label: { at: 0..1, short }` on the arrow (docs/canvas.md "Wires → Wire labels").
+- **A wire or item the person deleted stays deleted on redraw.** Deleting a file-drawn wire or item in a diagram frame
+  now marks it deleted (`data.pending: { kind: 'remove', deleted }`, drawn struck) instead of dropping it, so the next
+  redraw cannot bring it back from the file. The panel offers **Ask AI to remove it from the file** and **Undo**.
+  Deletions made earlier or over the API are found in the change log. The dry run lists these as "kept removed: you
+  deleted it — the file still has it; propose the file change?". Once the file drops the item it is removed for good
+  and the mark goes with it (docs/diagrams.md "What a redraw keeps").
+- **EventStorming reads left → right only.** A retry or revision is drawn as a later occurrence of the sticky
+  (`<id>.again`, `data.repeats`) instead of a wire looping back. A read model that informs a command sits on the row
+  between its event and that command, so a sequence such as compose → cadences created → cadence library → configure
+  → experiment configured stays on one row. Variant branches get their own row (docs/diagrams.md §3).
+
+
 ## [0.10.0] — 2026-10-02
 
 ### Added
@@ -566,7 +609,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/river0825/unprose/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/river0825/unprose/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/river0825/unprose/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/river0825/unprose/compare/v0.9.0...v0.9.1

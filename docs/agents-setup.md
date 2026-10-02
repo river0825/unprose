@@ -167,6 +167,7 @@ authentication **OAuth** → approve with the code as above.
 [mcp_servers.unprose]
 url = "https://canvas.example.com/mcp"
 bearer_token_env_var = "UNPROSE_TOKEN"   # export UNPROSE_TOKEN=unp_… (a token from Connected agents)
+tool_timeout_sec = 1900                  # let canvas_wait block up to 30 min (Codex's default is 60 s)
 ```
 
 Or the stdio server with `AWD_CANVAS_URL` (previous section), which pairs with a code by itself.
@@ -276,6 +277,7 @@ Add to `~/.codex/config.toml`:
 command = "node"
 args = ["<unprose>/scripts/mcp.mjs"]
 env = { AWD_CANVAS_URL = "http://localhost:4400" }
+tool_timeout_sec = 1900   # canvas_wait may block up to 30 min; Codex's default (60 s) cuts it short
 ```
 
 Codex reads `AGENTS.md` for project instructions; copy or link this repository's `AGENTS.md` into the
@@ -292,6 +294,25 @@ Stdio server: command `node`, args `["<unprose>/scripts/mcp.mjs"]`, environment
 
 Agents without MCP can still use the CLI (`node <unprose>/scripts/awd.mjs design …`) and the
 canvas HTTP API (`docs/canvas.md`).
+
+## Waiting cheaply: long waits, client timeouts
+
+Every time `canvas_wait` returns, the agent's model re-reads the conversation — that is what an idle watcher costs.
+So wait long (`timeoutSec` defaults to 300, up to 1800 = 30 min), never poll, and on a busy board pass
+`untilMention: true` to wake only when you are `@mentioned` (or a proposal touches your files). A wait with nothing
+for you returns one line: `nothing new on b_x (seq 93) — wait again with since: 93`. For always-on watching use studio
+on the canvas machine: it costs no model tokens while idle ([canvas.md → Watching cheaply](canvas.md#watching-cheaply)).
+
+Your MCP client must let the call run that long:
+
+- **Claude Code**: `MCP_TOOL_TIMEOUT` (milliseconds) — unset, it is about 28 hours, so nothing to do for stdio. Over
+  HTTP (the remote `/mcp`) the idle limit `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (default 5 min) may end a quiet call
+  first; keep `timeoutSec` ≤ 240 there or raise it.
+- **Codex**: `tool_timeout_sec` in the server's `[mcp_servers.unprose]` table (seconds, default 60) — set 1900.
+- **Others**: their per-request timeout (the MCP SDK's default is 60 s).
+
+If the client gives up first, nothing breaks: the canvas sees the request close, stops showing "agent is watching",
+and you call `canvas_wait` again with the same `since`.
 
 ## Tips: read big boards, see what you drew
 

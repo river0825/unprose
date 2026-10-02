@@ -46,6 +46,8 @@ function nodeClass(it: Item): { className?: string } {
   const c = [
     // an element the agent proposed (a story from EventStorming) is dashed until the file has it
     it.type !== 'comment' && it.data?.pending ? 'node-pending' : '',
+    // deleted by the person, still in the file: struck until the file no longer has it (docs/diagrams.md "What a redraw keeps")
+    it.type !== 'comment' && (it.data?.pending as { deleted?: unknown } | undefined)?.deleted ? 'node-deleted' : '',
     it.data?.ds === 'group' ? 'ds-group' : it.data?.ds === 'annotation' ? 'ds-annotation' : '',
     passThrough(it) ? 'awd-container' : '',
     ownLock(it) ? 'node-locked' : '',

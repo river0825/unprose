@@ -6,11 +6,13 @@
 import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
+import { EDGE_LABEL, labelControl, labelHits, labelLines, labelSize } from './edgeLabel.js'
+import { labelObstacles, wireLabel, wireShape, wireText } from './wireGeometry.js'
 /** The template sticky (templates/util.ts STICKY_W × STICKY_H) — not imported: util.ts pulls node:crypto, and the web bundles this file. */
 const STICKY_W = 160
 const STICKY_H = 110
 
-export type LayoutKind = 'overlap' | 'clipped' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout'
+export type LayoutKind = 'overlap' | 'clipped' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout'
 
 export interface LayoutFinding {
   /** the item the finding is about */
@@ -43,7 +45,7 @@ export class LayoutError extends Error {
   }
 }
 
-const KINDS: LayoutKind[] = ['clipped', 'overlap', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout']
+const KINDS: LayoutKind[] = ['clipped', 'overlap', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout']
 
 /** Overlaps smaller than this (in both directions) are hairline touches, not overlaps. */
 const OVERLAP_TOL = 6
@@ -223,6 +225,47 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
         suggestion: `${size}; sizes come from the template — do not scale stickies up to fill space`,
       })
     }
+  }
+
+  // ---- wire labels: on a card, cut short, or only a dot (edgeLabel.ts — the page and the snapshot place them alike) ----
+  const obstacles = labelObstacles(shown)
+  for (const w of Object.values(shown.items)) {
+    if (w.type !== 'arrow' || !w.from || !w.to || !inScope.has(w.from) || !inScope.has(w.to)) continue
+    const text = wireText(w)
+    const shape = text ? wireShape(shown, w) : undefined
+    const label = shape ? wireLabel(w, shape, obstacles) : undefined
+    if (!label || !shape) continue
+    const a = shown.items[w.from]
+    const z = shown.items[w.to]
+    const what = `label "${short(text, 32)}" of the wire ${nameOf(a)} → ${nameOf(z)}`
+    if (label.dragged) {
+      const covered = labelHits(label.x, label.y, label.w, label.h, obstacles, 0)
+      if (!covered.length) continue
+      const names = covered.slice(0, 3).map((b) => nameOf(shown.items[b.id])).join(', ')
+      add(w, { kind: 'label', message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: 'drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire', others: covered.map((b) => b.id) })
+      continue
+    }
+    if (label.mode !== 'dot' && label.mode !== 'cut') continue
+    // the room between the two ends, and what the whole label needs
+    const gapX = Math.max(z.x - (a.x + a.w), a.x - (z.x + z.w))
+    const gapY = Math.max(z.y - (a.y + a.h), a.y - (z.y + z.h))
+    const whole = labelSize(labelLines(text, EDGE_LABEL.maxW, label.font).lines, label.font)
+    const across = gapX >= gapY
+    const gap = Math.max(0, across ? gapX : gapY)
+    const need = (across ? whole.w : whole.h) + EDGE_LABEL.gap * 2 + 4
+    const move = across ? `move ${nameOf(z)} ${r(need - gap)} px ${z.x >= a.x ? 'right' : 'left'} (to x ${r(z.x >= a.x ? z.x + need - gap : z.x - (need - gap))})` : `move ${nameOf(z)} ${r(need - gap)} px ${z.y >= a.y ? 'down' : 'up'} (to y ${r(z.y >= a.y ? z.y + need - gap : z.y - (need - gap))})`
+    const fit = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label.font * 0.55)))
+    const shorter = labelControl(w.data).short ? 'a shorter data.label.short' : 'a short form in data.label.short'
+    const instead = `${fit >= 3 ? `${shorter} (about ${fit} characters fit)` : shorter}, or shorten the label`
+    add(w, {
+      kind: 'label',
+      message:
+        label.mode === 'dot'
+          ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need)}): the page shows only a dot there, the text on hover`
+          : `${what} is cut to "${label.lines.join(' ')}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need)})`,
+      suggestion: need - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
+      others: [a.id, z.id],
+    })
   }
 
   // ---- drawn somewhere else than stored ----

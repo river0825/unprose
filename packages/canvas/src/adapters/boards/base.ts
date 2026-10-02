@@ -197,14 +197,20 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     const matching = () => this.changes(id, { since, author, match: opts.match }).filter((c) => !isBookkeeping(c))
     const existing = matching()
     if (existing.some((c) => c.note === HANDOFF_NOTE)) return Promise.resolve(existing)
+    if (opts.signal?.aborted) return Promise.resolve([])
     this.setWatching(id, who, +1)
     return new Promise((resolve) => {
       let woke = existing.some((c) => wakes(c, wake))
       let quiet: ReturnType<typeof setTimeout> | undefined
+      let done = false
+      const onAbort = () => finish([])
       const finish = (result: Change[]) => {
+        if (done) return
+        done = true
         clearTimeout(deadline)
         if (quiet) clearTimeout(quiet)
         off()
+        opts.signal?.removeEventListener('abort', onAbort)
         this.setWatching(id, who, -1)
         resolve(result)
       }
@@ -219,6 +225,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
         else armQuiet()
       })
       const deadline = setTimeout(() => finish(woke ? matching() : []), timeoutMs)
+      opts.signal?.addEventListener('abort', onAbort, { once: true })
       if (woke) armQuiet()
     })
   }

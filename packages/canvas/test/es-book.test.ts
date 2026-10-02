@@ -39,9 +39,18 @@ test('command → system → event, event → policy → command (p.202)', () =>
 
 test('read models: events update them, they inform people and commands (p.200-202)', () => {
   assert.ok(wire('studio-es.event.reply-posted', 'studio-es.read-model.thread'))
-  assert.ok(wire('studio-es.read-model.thread', 'studio-es.command.send-ask'))
-  const person = items.find((i) => i.role === 'person')!
+  // The thread is updated by the last event and informs the first command: the designer reads it and sends
+  // another ask. That is a later occurrence of "Send Ask AI" right after the read model (with its person above),
+  // not a wire looping back to the start of the board (docs/diagrams.md §3, "Time only runs forward").
+  const again = byId('studio-es.command.send-ask.again')
+  assert.equal(again.text, 'Send Ask AI')
+  assert.equal(again.data?.repeats, 'studio-es.command.send-ask')
+  assert.equal(again.data?.occurrence, true)
+  assert.ok(wire('studio-es.read-model.thread', again.id))
+  assert.ok(!wire('studio-es.read-model.thread', 'studio-es.command.send-ask'), 'no wire back to the first occurrence')
+  const person = items.find((i) => i.role === 'person' && i.data?.for === 'send-ask.again')!
   assert.ok(wire('studio-es.read-model.thread', person.id))
+  assert.ok(person.y + person.h <= again.y && centre(person) === centre(again), 'the person stands above the repeated command')
 })
 
 test('an external system raises its event; pivotal events are larger; time-triggered events say so', () => {
@@ -155,4 +164,83 @@ test('the file order of events is the timeline: an unrelated later event is not 
 test('the demo board (lanes, old content shape) has no overlapping stickies', () => {
   const out = renderEventStorming(demoBoards[0].content as never, { now: NOW }).filter((i) => i.type === 'sticky')
   for (let a = 0; a < out.length; a++) for (let b = a + 1; b < out.length; b++) assert.ok(!overlaps(out[a], out[b]), `${out[a].text} overlaps ${out[b].text}`)
+})
+
+// ── time only runs forward: sequences on one row, retries as later occurrences ────────────────
+
+const everyWire = new Set(['handles', 'produces', 'triggers', 'raises', 'updates', 'informs'])
+/** Wires (flow, updates, informs) whose target is drawn left of (or above-and-behind) their source. */
+function backwards(out: Item[]): string[] {
+  const at = new Map(out.map((i) => [i.id, i]))
+  return out
+    .filter((i) => i.type === 'arrow' && everyWire.has(i.role ?? ''))
+    .filter((w) => {
+      const [a, b] = [at.get(w.from!)!, at.get(w.to!)!]
+      if (a.parent !== b.parent && (a.parent?.includes('aggregate') || b.parent?.includes('aggregate'))) return false
+      return centre(b) < centre(a)
+    })
+    .map((w) => `${w.role} ${at.get(w.from!)!.text} → ${at.get(w.to!)!.text}`)
+}
+
+export const contactLoop = {
+  level: 'process' as const,
+  people: [{ id: 'marketer', text: 'Marketer · 行銷' }],
+  systems: [{ id: 'loop', text: 'Contact Loop' }, { id: 'crm', text: 'CRM', external: true, raises: ['contact-replied'] }],
+  events: [
+    { id: 'cadences-created', text: 'Cadences created · 節奏已建立' },
+    { id: 'experiment-configured', text: 'Experiment configured · 實驗已設定' },
+    { id: 'conflict-found', text: 'Conflict found · 發現衝突' },
+    { id: 'variant-b-started', text: 'Variant B started · B 版本啟動' },
+    { id: 'contact-replied', text: 'Contact replied · 聯絡人回覆' },
+    { id: 'loop-closed', text: 'Loop closed · 循環結束' },
+  ],
+  commands: [
+    { id: 'compose', text: 'Compose cadences · 撰寫節奏', by: 'marketer', system: 'loop', produces: 'cadences-created' },
+    { id: 'configure', text: 'Configure experiment · 設定實驗', by: 'marketer', system: 'loop', produces: 'experiment-configured' },
+    { id: 'check', text: 'Check conflicts · 檢查衝突', system: 'loop', produces: 'conflict-found' },
+    { id: 'start-b', text: 'Start variant B · 啟動 B 版本', system: 'loop', produces: 'variant-b-started' },
+    { id: 'close', text: 'Close loop · 結束循環', system: 'loop', produces: 'loop-closed' },
+  ],
+  policies: [
+    { id: 'whenever-configured', text: 'Whenever configured, check · 設定後檢查', when: 'experiment-configured', then: 'check' },
+    { id: 'whenever-conflict', text: 'Whenever a conflict, revise · 衝突時重設', when: 'conflict-found', then: 'configure' },
+    { id: 'split-b', text: 'Whenever configured, split B · 設定後分流', when: 'experiment-configured', then: 'start-b' },
+    { id: 'whenever-replied', text: 'Whenever replied, close · 回覆後結束', when: 'contact-replied', then: 'close' },
+  ],
+  readModels: [
+    { id: 'cadence-library', text: 'Cadence library · 節奏庫', updatedBy: 'cadences-created', informs: 'configure' },
+    { id: 'configuration-conflicts', text: 'Configuration conflicts · 設定衝突', updatedBy: 'conflict-found', informs: 'marketer' },
+  ],
+}
+
+test('a read model in the middle of a sequence sits on the row: compose → created → library → configure → configured', () => {
+  const out = renderEventStorming(contactLoop, { now: NOW })
+  const by = (id: string) => out.find((i) => i.id === id)!
+  const row = ['es.command.compose', 'es.system.loop.compose', 'es.event.cadences-created', 'es.read-model.cadence-library', 'es.command.configure', 'es.system.loop.configure', 'es.event.experiment-configured'].map(by)
+  for (const it of row) assert.equal(it.y, row[0].y, `${it.text} is on the row`)
+  for (let i = 1; i < row.length; i++) assert.ok(row[i - 1].x < row[i].x, `${row[i - 1].text} before ${row[i].text}`)
+  assert.ok(out.find((w) => w.type === 'arrow' && w.from === 'es.read-model.cadence-library' && w.to === 'es.command.configure' && w.role === 'informs'))
+})
+
+test('a retry is a later occurrence of the command, further right — no wire runs back to the left', () => {
+  const out = renderEventStorming(contactLoop, { now: NOW })
+  const by = (id: string) => out.find((i) => i.id === id)!
+  const again = by('es.command.configure.again')
+  assert.equal(again.text, 'Configure experiment · 設定實驗')
+  assert.equal(again.data?.repeats, 'es.command.configure')
+  assert.ok(again.x > by('es.policy.whenever-conflict').x, 'after the policy that asks for it')
+  assert.ok(out.find((w) => w.type === 'arrow' && w.from === 'es.policy.whenever-conflict' && w.to === again.id && w.label === 'then'))
+  assert.ok(!out.find((w) => w.type === 'arrow' && w.from === 'es.policy.whenever-conflict' && w.to === 'es.command.configure'))
+  // the branch (variant B) gets a row of its own
+  assert.ok(by('es.event.variant-b-started').y > by('es.event.experiment-configured').y)
+  // a read model that informs a person gets that person after it, not before
+  const conflicts = by('es.read-model.configuration-conflicts')
+  const informs = out.find((w) => w.type === 'arrow' && w.from === conflicts.id && w.role === 'informs')!
+  assert.ok(centre(by(informs.to!)) >= centre(conflicts))
+})
+
+test('time only runs forward: no flow, updates or informs wire points left (studio, demo, a Contact Loop-like board)', () => {
+  for (const out of [items, renderEventStorming(demoBoards[0].content as never, { now: NOW }), renderEventStorming(contactLoop, { now: NOW })]) assert.deepEqual(backwards(out), [])
+  const loop = renderEventStorming(contactLoop, { now: NOW }).filter((i) => i.type === 'sticky')
+  for (let a = 0; a < loop.length; a++) for (let b = a + 1; b < loop.length; b++) assert.ok(!overlaps(loop[a], loop[b]), `${loop[a].text} overlaps ${loop[b].text}`)
 })

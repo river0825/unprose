@@ -10,6 +10,7 @@ import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/e
 import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
 import { REL_NAMES, tracesOf } from '../diagrams/traces'
 import { pendingOf, type Pending } from '../inspector/pending'
+import { deletedOf, describeDeleted } from '../diagrams/deleteProposal'
 import { MODELS, type DiscussModel } from '../inspector/detail'
 import { useModelChoice } from '../inspector/useModel'
 import { useFrozen } from '../flow/freeze'
@@ -75,7 +76,7 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
   )
 }
 
-const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere' }
+const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', label: 'wire label', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere' }
 
 /** The layout check (src/layoutCheck.ts): what overlaps, is cut off, sticks out or is far too big in this frame — the same findings agents get. */
 function LayoutFindings({ board, diagramKey, onSelect }: { board: Board; diagramKey: string; onSelect: (id: string) => void }) {
@@ -178,12 +179,15 @@ export function DiagramElementPanel({
   onSelect,
   onProposalChat,
   onDismiss,
+  onUndo,
 }: {
   board: Board
   item: Item
   onSelect: (id: string) => void
   onProposalChat: (ids: string[], text: string, model: DiscussModel, proposal: Pending) => void
   onDismiss: (id: string) => void
+  /** takes back a deletion the file still has */
+  onUndo?: (id: string) => void
 }) {
   const diagram = diagramOf(board, item)
   if (!diagram) return null
@@ -211,6 +215,7 @@ export function DiagramElementPanel({
       ) : null}
       {typeof item.data?.note === 'string' ? <p className="muted">{item.data.note}</p> : null}
       {pending?.kind === 'add' && item.type !== 'arrow' ? <StoryProposal board={board} item={item} pending={pending} onProposalChat={onProposalChat} onDismiss={onDismiss} /> : null}
+      {deletedOf(item) && pending ? <DeletedProposal item={item} pending={pending} onProposalChat={onProposalChat} onUndo={onUndo} /> : null}
       {rule || (nb && (nb.before.length || nb.after.length)) ? (
         <section className="insp-sec">
           <h3>Grammar</h3>
@@ -260,6 +265,49 @@ export function DiagramElementPanel({
 }
 
 /** A story the agent proposed (docs/diagrams.md §4): accept = ask the AI to write it; dismiss = drop it. */
+/** The person deleted something the file drew: ask the AI to remove it from the file, or take the deletion back. */
+function DeletedProposal({ item, pending, onProposalChat, onUndo }: { item: Item; pending: Pending; onProposalChat: (ids: string[], text: string, model: DiscussModel, proposal: Pending) => void; onUndo?: (id: string) => void }) {
+  const [model, pickModel] = useModelChoice()
+  const [note, setNote] = useState('')
+  const [sent, setSent] = useState(false)
+  const what = item.type === 'arrow' ? `the wire${item.label ? ` “${item.label}”` : ''} (${item.from} → ${item.to})` : `“${nameOf(item)}” (${item.id})`
+  const ask = () => {
+    onProposalChat([item.id, ...(item.type === 'arrow' ? [item.from, item.to].filter((x): x is string => !!x) : [])], `I deleted ${what} on the board; please remove it from the file.${note.trim() ? `\n\n${note.trim()}` : ''}`, model, pending)
+    setSent(true)
+  }
+  return (
+    <div className="wire-proposal remove dg-proposal" role="group" aria-label="Deleted on the board">
+      <p>
+        <span className="wire-tag remove">remove?</span> {describeDeleted(item)}
+      </p>
+      <label className="insp-model-note">
+        <span className="muted">Note for the AI (optional)</span>
+        <textarea value={note} rows={2} onChange={(e) => setNote(e.target.value)} placeholder="e.g. the policy should trigger the review instead" />
+      </label>
+      <div className="insp-send">
+        <label className="insp-model">
+          <span>Model</span>
+          <select value={model} onChange={(e) => pickModel(e.target.value as DiscussModel)}>
+            {MODELS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        {onUndo ? (
+          <button type="button" className="small" onClick={() => onUndo(item.id)}>
+            Undo
+          </button>
+        ) : null}
+        <button type="button" className="primary small" onClick={ask} disabled={sent}>
+          {sent ? 'Sent to the AI' : 'Ask AI to remove it from the file'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function StoryProposal({
   board,
   item,

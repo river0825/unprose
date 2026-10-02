@@ -44,7 +44,7 @@ Claude Code in a checkout of this repo gets the tools through the dev-only proje
 ```
 agent  canvas_create_board(kind:'event-storming', content) → { id, url, seq: 1 }
 agent  "I drew the pipeline as an event storm at <url>. Move things or comment; I'm watching."
-agent  canvas_wait(id, since: 1)                      ← blocks up to 120 s; the UI shows "agent is watching"
+agent  canvas_wait(id, since: 1)                      ← blocks up to 30 min (default 5); the UI shows "agent is watching"
 user   drags 'Build claimed' into the Planning lane, adds a comment "this is where it gets stuck"
        …and stops for 2.5 s (or presses "Hand to agent") — the wait resolves only once the person is done
 agent  ← "[3 user] event "Build claimed" [es.event.build-claimed-…]: moved from Build → Planning
@@ -69,9 +69,9 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}`; and the layout lock: `lock {id}` / `lock {frame: '<diagram key>'}` / `unlock …` set or clear `data.lock: 'layout'` (redraws and the kanban auto-layout never move a locked item; a locked frame keeps everything in it — docs/diagrams.md "What a redraw keeps"). An agent may unlock only what an agent locked |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
-| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short |
+| `canvas_wait` | `id, since, timeoutSec = 300 (≤ 1800), quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, untilMention = false, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short. `untilMention: true` wakes only when you are addressed personally (an @mention, a reply in a thread you were mentioned or asked in, a proposal to files you hold). Nothing for you within `timeoutSec`: one line, `nothing new on b_x (seq 93; 2 change(s) for others) — wait again with since: 93` ([Watching cheaply](#watching-cheaply)) |
 | `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image when the canvas has a rasterizer, else the SVG text ([Seeing the board](#seeing-the-board)) |
-| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban) — each with a suggestion; the same list is in the frame panel |
+| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden / on a card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban) — each with a suggestion; the same list is in the frame panel |
 | `canvas_approve` | `code, scope?, name?, board?` | **local agent only** (never on `/mcp`): approve a connect request by the pairing code the person read out; logged on `board` ([Who may approve and manage](#who-may-approve-and-manage)) |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
@@ -85,6 +85,37 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `design_draw` | `file, board, at?, applied?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link; records you as the holder of the file; `applied` = the proposal thread this redraw applies ([Applying](#applying---applied-and-committing)) |
 | `design_propose_stories` | `from, into, board` | `awd design propose-stories`: story candidates from EventStorming / a domain story as dashed proposals; the story-map file is not written |
 | `design_egon` | `action: import\|export, file, out` | `awd design import-egon` / `export-egon` (Egon.io) |
+
+### Watching cheaply
+
+An agent watching a board pays in model tokens **every time `canvas_wait` returns**: the model re-reads the
+conversation and calls again. While nobody is on the board that is pure cost, so:
+
+- **Always-on watching belongs to studio** (`awd studio`, docs/studio.md): it runs on the canvas machine and uses no
+  model at all while idle — an agent session starts only when a comment is for it.
+- **Wait long.** `timeoutSec` defaults to 300 and goes up to 1800 (30 min): an idle agent wakes twice an hour instead
+  of thirty times. Never poll with short waits or `canvas_diff` in a loop.
+- **Idle answers are one line.** A wait that ends with nothing for you returns
+  `nothing new on b_x (seq 93; 2 change(s) for others) — wait again with since: 93` — no context, no instructions.
+  The board context comes only with the first wait on a board (per MCP session; over the stateless remote `/mcp` the
+  canvas remembers it per agent × board until 15 minutes after its last wait) and again after it changes.
+- **`untilMention: true`** on a busy board: you wake only when you are addressed personally — `@you`, a reply in a
+  thread you were mentioned or asked in, a proposal to files you hold — not for every comment on a board you answer.
+  The idle line counts what you slept through (`3 not addressed to you`); `canvas_diff` shows it.
+
+**Client timeouts.** The MCP client may give up before the canvas does. That is harmless: the wait is simply
+abandoned — the canvas notices the closed request, frees the watcher (the page stops saying "agent is watching") —
+and you call `canvas_wait` again with the same `since`; nothing is lost. To let a 30-minute wait finish:
+
+| Client | Setting |
+|---|---|
+| Claude Code | `MCP_TOOL_TIMEOUT` (milliseconds; unset it is very long, about 28 h — a hard wall-clock limit that progress does not extend). Long calls can also end on the idle limit `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (default 30 min for stdio, 5 min for HTTP servers such as the remote `/mcp`); keep `timeoutSec` under it or raise it |
+| Codex | `tool_timeout_sec` under `[mcp_servers.unprose]` in `~/.codex/config.toml` (seconds, default 60): set `tool_timeout_sec = 1900` for 30-minute waits, or pass `timeoutSec` below it |
+| Other MCP clients | their per-request timeout (the MCP SDK default is 60 s); clients built on the SDK with `resetTimeoutOnProgress` stay alive, since `canvas_wait` reports progress every 20 s when the call carries a progress token |
+
+The connection itself stays healthy: `GET /wait` answers with a space every 20 s during a long wait (proxies such as
+Cloudflare drop silent requests after 100 s, Node's `fetch` after 300 s) and the JSON follows; the remote `/mcp`
+stream sends SSE keep-alives.
 
 Paths are relative to the session's project. The `design_*` tools are served by `awd mcp` (not by
 `awd-canvas mcp`); the canvas's remote endpoint `/mcp` serves `design_lint` / `design_draw` / `design_propose_stories`
@@ -197,13 +228,15 @@ snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region 
 **Layout check.** `canvas_check_layout { id, frame?, limit? }` (`GET /api/boards/:id/layout?frame=` → `{ findings, counts,
 checked, lines }`, `src/layoutCheck.ts`) is pure geometry on the positions as drawn: items overlapping their siblings,
 text likely cut off (the same text metrics), items outside their parent or off their lane, items 3× the median of
-their siblings or far larger than the template sticky (160×110), and items drawn elsewhere than stored (a kanban card's
-x / y are not where it shows — its stored y only orders the column). Each finding says what to do. The frame panel on
+their siblings or far larger than the template sticky (160×110), wire labels that do not fit beside their wire (cut
+with …, or only a dot — [Wires → Wire labels](#wires)) or were dragged onto a card, and items drawn elsewhere than
+stored (a kanban card's x / y are not where it shows — its stored y only orders the column). Each finding says what to do. The frame panel on
 the page lists the same findings under **Layout**.
 
 ```
 Layout: 5 finding(s) — 5 clipped (198 items checked; positions as the page draws them)
 - [clipped] text of hotspot "改 workflow.yaml 要重啟 awd run；…" likely cut off: needs ~6 lines at 13 px, the 120×80 box fits 3 #runner-es.hotspot.… — make it 44 px taller (h 124), or wider, or shorten the text
+- [label] label "updates · 更新視圖" of the wire event "Conflict found" → read-model "Configuration conflicts" has no free spot beside the wire (the gap is 40 px, the label needs ~112): the page shows only a dot there, the text on hover #cl.w2 — move read-model "Configuration conflicts" 72 px right (to x 512) to make room, or give it a short form in data.label.short (about 4 characters fit), or shorten the label
 - [moved-by-layout] card "Drop legacy_contacts table" is stored at 1170,410 but the page draws it at 1188,164 … — set y to reorder (x is ignored)
 - [oversized] sticky "檔案是唯一真相 …" is 262×210, 3.1× a template sticky (160×110) — use 160×110; do not scale stickies up to fill space
 ```
@@ -425,7 +458,7 @@ instead of a path — the canvas cannot read the agent's files; the agent keeps 
 `design_egon` (writes files), workflow files (`awd graph`) and `canvas_approve` (approving pairing codes) stay with the local tools. To change a file behind a board (a workflow's yaml, a design file drawn from the person's machine) a remote agent proposes: `canvas_files` → `canvas_propose_edit` ([Proposals and saving](#proposals-and-saving)). The start prompts
 (`eventstorm`, `storymap` …) are MCP prompts. New boards are not opened in a browser on the canvas machine: the
 tool returns the link to give the person. `/mcp` is stateless (each POST stands alone; nothing is lost on a restart)
-and streams with keep-alives, so a `canvas_wait` of up to 120 s survives proxies.
+and streams with keep-alives, so a `canvas_wait` of up to 30 min survives proxies ([Watching cheaply](#watching-cheaply)).
 
 ### Identity: who did what
 
@@ -623,8 +656,9 @@ wakes on everything, as before. `canvas_diff` and `canvas_read_board` always sho
 filtered. Studio applies the same `to` (docs/studio.md §11).
 
 The wait answer also carries the board's `context` and `answeredBy`; the MCP `canvas_wait` prints the context in full
-the first time it sees it on a board (and after it changes) — over the stateless remote `/mcp`, every time, cut at 600
-characters.
+the first time it sees it on a board (and after it changes). The stateless remote `/mcp` asks `GET /wait?context=changed`:
+the canvas then sends the context only the first time this agent waits on the board (remembered per agent × board until
+15 minutes after its last wait) or after it changed, cut at 600 characters.
 
 ### Settings: Answered by, context, loop guard
 
@@ -723,7 +757,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | GET | `/api/boards/:id/layout` | `?frame=&limit=` | `{ findings: [{ id, kind, message, suggestion, others?, frame? }], counts, checked, frame?, lines }` |
 | POST | `/api/approve` | `{ code, scope?: 'read', name?, board? }` | `{ status, approved: { name, via, scope, ip }, audit, seq? }` — the local agent only (`canvas_approve`); `403` for tokens, sessions, browsers and anything not from loopback, `404` an unknown code, `429` after ten wrong ones |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
-| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all&frame=&from=&kinds=&summary=1&maxChars=` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
+| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all&until=mention&context=changed&frame=&from=&kinds=&summary=1&maxChars=` | long-poll, `timeout` up to 1 800 000 ms (30 min; a longer wait sends a space every 20 s before the JSON, and ends when the client goes away); `until=mention`: only changes addressing the caller personally wake it (`notMentioned` counts the rest); `context=changed`: `context` only when this agent has not seen it; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
 | GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{ name, label, handle, watching, seen?, holder }], you?, seq? }`; a PUT is a logged change (`403` read-only) |
 | POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
@@ -1023,8 +1057,25 @@ nothing here is stored on the board, and a copied image shows what is shown.
   facing sides (right → left, bottom → top …), one side into a perpendicular one (one bend), and a loop under or
   over both boxes — and the route that **crosses the fewest boxes** wins, then the shortest; the facing pair wins
   a near tie (40 px), so a wire changes sides only when that clears a box. A straight run sits in the best gap
-  between boxes, wires sharing a side are spread along it, and a label sits on the wire's own run, never on a box.
-  Going back along the same row a wire loops under (or over) rather than lying on the forward wire.
+  between boxes, wires sharing a side are spread along it, and a label sits on the wire's own run, never on a box
+  (below). Going back along the same row a wire loops under (or over) rather than lying on the forward wire.
+- **Wire labels** (`src/edgeLabel.ts` — the page, the server snapshot and the layout check use the same rule). A
+  label is set smaller than the text on the cards (11 px; a domain-story verb 12 px; cards 13 px) on a light
+  backing, and **never covers a card**: it is tried along the wire's runs (the run out of the source first), then
+  beside the line; when it does not fit it is wrapped to two lines, then cut with **…** (the whole label is in its
+  tooltip and shows while the wire is selected); when not even a short cut fits — two cards 40 px apart — only a
+  small **dot** sits on the wire, and hovering or selecting it shows the label. A label the person dragged
+  (`data.bend`) stays where they put it. Agents steer a label with one supported field on the arrow, set by
+  `canvas_apply` like any data:
+
+  ```json
+  { "kind": "update", "id": "<arrow id>", "patch": { "data": { "label": { "at": 0.3, "short": "updates" } } } }
+  ```
+
+  `at` (0 … 1, 0 = the source end) is where along the wire to try first; `short` is the text shown when the whole
+  label does not fit (keep the full one in `label`). Anything else in `data.label` is ignored. `canvas_check_layout`
+  reports a label that is cut, hidden as a dot or dragged onto a card (`[label]`), with how far to move a card or a
+  `short` to give.
 - **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
 - **Wires: All / Selected / None** (bottom-right corner, **W** cycles; remembered per viewer in this browser).
   *Selected* draws only the wires touching the selected blocks (others are hidden, not faded); *None* hides

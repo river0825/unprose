@@ -171,9 +171,11 @@ export function byPos(a: Item, b: Item): number {
 
 /** Pending proposal on an item (`data.pending`): "proposed add", "proposed remove", "proposed text". */
 export function pendingTag(it: Item): string | undefined {
-  const p = it.data?.pending as { kind?: unknown; by?: unknown } | undefined
+  const p = it.data?.pending as { kind?: unknown; by?: unknown; deleted?: unknown } | undefined
   if (!p || typeof p !== 'object') return undefined
   const kind = typeof p.kind === 'string' ? p.kind : 'change'
+  // deleted on the board by the person, still in the file (docs/diagrams.md "What a redraw keeps")
+  if (kind === 'remove' && p.deleted) return 'deleted by the person — the file still has it: proposed remove from the file'
   return `proposed ${kind}${typeof p.by === 'string' ? ` by ${displayName(p.by)}` : ''}`
 }
 

@@ -557,7 +557,16 @@ function withMention(data: Data, text: string | undefined, known: string[], was:
  * It wakes `me` like the person's comment would, even while `me` waits for the person only.
  */
 export function asksMe(board: Board, change: Change, me: string): boolean {
-  if (change.author !== 'agent' || sameAgent(change.by ?? LOCAL_AGENT, me)) return false
+  return change.author === 'agent' && mentionsMe(board, change, me)
+}
+
+/**
+ * A change that addresses `me` personally — a comment routed to `me` by an @mention (or a reply in a thread
+ * where `me` was mentioned / did the asking) or by a proposal to files `me` holds — by anyone but `me`.
+ * Being the board's responder ("Answered by") does not count: `canvas_wait({ untilMention: true })` wakes only on this.
+ */
+export function mentionsMe(board: Board, change: Change, me: string): boolean {
+  if (change.author === 'agent' && sameAgent(change.by ?? LOCAL_AGENT, me)) return false
   return change.ops.some((op) => {
     const id = op.kind === 'add' ? op.item.id : op.id
     const it = board.items[id] ?? (op.kind === 'add' ? op.item : undefined)

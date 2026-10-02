@@ -20,8 +20,8 @@ import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
-import { applyOps, diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
-import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
+import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
@@ -83,6 +83,11 @@ export interface ServerOptions {
   agentTurns?: number
   /** Agent-to-agent @mentions one agent may post per window (default UNPROSE_AGENT_MENTIONS, else 20 per 10 minutes). */
   agentMentions?: { max: number; windowMs: number }
+  /**
+   * A long GET /wait sends a space every this many ms (default 20 000) so proxies and HTTP clients (Node's fetch
+   * gives up after 300 s without a byte) keep the connection; the JSON answer follows. Tests shorten it.
+   */
+  waitKeepAliveMs?: number
 }
 
 /** Board settings kept in `meta`, changed only through /settings (logged), never by a PUT of the whole meta. */
@@ -283,7 +288,25 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   }
   /** Stamp who each comment is for (data.to, data.route, mentions, the loop guard). */
   const routed = (board: Board, ops: Op[], author: Author): Op[] => stampRouting(board, ops, knownAgents(board.id), new Date().toISOString(), (b, o) => applyOps(b, o, author).board, maxTurns(board))
-  const mentionLimit = opts.agentMentions ?? { max: Number(process.env.UNPROSE_AGENT_MENTIONS) || 20, windowMs: 10 * 60_000 }
+  /**
+   * `GET /wait?context=changed` (the stateless remote /mcp): the board context comes back only the first time an
+   * agent waits on a board, or after it changed. Remembered per agent × board until CONTEXT_SEEN_TTL_MS after its
+   * last wait — a new conversation after a pause sees it again.
+   */
+  /** Remote /mcp requests in flight (so a cancel can end a canvas_wait — remoteMcp.ts). */
+  const mcpInflight = new Map<string, Set<() => void>>()
+  const contextSeen = new Map<string, { key: string; at: number }>()
+  const CONTEXT_SEEN_TTL_MS = 15 * 60_000
+  const contextOnce = (agent: string, boardId: string, ctx: ReturnType<typeof contextOf>): ReturnType<typeof contextOf> | undefined => {
+    const now = Date.now()
+    if (contextSeen.size > 1000) for (const [k, v] of contextSeen) if (now - v.at > CONTEXT_SEEN_TTL_MS) contextSeen.delete(k)
+    const k = `${agent}\u0000${boardId}`
+    const was = contextSeen.get(k)
+    const key = ctx ? (ctx.at ?? ctx.text) : ''
+    contextSeen.set(k, { key, at: now })
+    return was && now - was.at <= CONTEXT_SEEN_TTL_MS && was.key === key ? undefined : ctx
+  }
+  const mentionLimit = opts.agentMentions ??{ max: Number(process.env.UNPROSE_AGENT_MENTIONS) || 20, windowMs: 10 * 60_000 }
   const mentionLog = new Map<string, number[]>()
   /** The rate limit on agent-to-agent @mentions (per agent): 429 past it. */
   const checkMentionRate = (ops: Op[], author: Author, by: string | undefined) => {
@@ -511,7 +534,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       const { grant, error } = await auth()
       if (error || !grant) return unauthorized(req, res, true, error)
       const body = method === 'POST' ? await readBody(req) : undefined
-      return handleMcp(req, res, grant, { access, loopback: `http://127.0.0.1:${listeningPort}`, publicUrl: publicOrigin(req) }, body)
+      return handleMcp(req, res, grant, { access, loopback: `http://127.0.0.1:${listeningPort}`, publicUrl: publicOrigin(req), inflight: mcpInflight }, body)
     }
 
     // ---- API ----
@@ -754,7 +777,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       }
       if (sub === 'wait' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? board.seq)
-        const timeout = Math.min(Number(url.searchParams.get('timeout') ?? 30000), 120000)
+        const timeout = Math.max(0, Math.min(Number(url.searchParams.get('timeout') ?? 30000) || 0, WAIT_MAX_SEC * 1000))
+        // ?until=mention: only a change addressing this agent personally (an @mention, a proposal to its files) wakes it
+        const untilMention = url.searchParams.get('until') === 'mention'
         const quietRaw = url.searchParams.get('quiet')
         const quietMs = quietRaw === null ? undefined : Math.max(0, Math.min(Number(quietRaw) || 0, 30000))
         const wakeRaw = url.searchParams.get('wake') ?? 'meaningful'
@@ -774,17 +799,57 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const cf = changeFilterOf(url)
         if (cf?.frame) agentScale(() => filterChanges(board, [], cf))
         const passes = (c: Change) => !cf || filterChanges(now(), [c], cf).length > 0
-        const match = (c: Change) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c) && passes(c)
-        const woke = await store.waitFor(id, since, timeout, undefined, { quietMs, wake, match, who: name })
-        const changes = cf ? filterChanges(store.get(id)!, woke, cf) : woke
-        const allLines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
-        const page = pageLines(allLines, { maxChars: numParam(url, 'maxChars'), seq: store.get(id)!.seq })
-        const lines = boolParam(url, 'summary') && allLines.length > 1 ? [diffSummary(store.get(id)!, changes, allLines, { since, last: numParam(url, 'last') ?? 10 })] : page.left ? [...page.lines, `… ${page.left} more line(s) not shown (size cap) — canvas_diff({ since: ${since}, cursor: "${page.nextCursor}" }) or summary: true`] : page.lines
-        const cur = readByAgent(id, changes, f.author, name)
-        const last = changes.length ? changes[changes.length - 1].seq : cur.seq
-        const notForYou = all ? 0 : store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c) && !forMe(c)).length
-        const r = responderOf(cur.meta)
-        return json(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines, notForYou, answeredBy: responderLabel(r), responder: r ?? null, context: contextOf(cur.meta) ?? null })
+        const personal = (c: Change) => !untilMention || mentionsMe(now(), c, me)
+        const match = (c: Change) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c) && passes(c) && personal(c)
+        // the client went away (an MCP client timed out, the agent was stopped): end the wait and free the watcher
+        // slot at once, so the page stops saying "agent is watching"
+        const gone = new AbortController()
+        const onClose = () => {
+          if (!res.writableEnded) gone.abort()
+        }
+        res.on('close', onClose)
+        // a long wait keeps the connection alive with a space now and then (JSON allows leading whitespace)
+        const keepAliveMs = opts.waitKeepAliveMs ?? 20_000
+        const keepAlive =
+          timeout > keepAliveMs
+            ? setInterval(() => {
+                if (res.writableEnded || gone.signal.aborted) return
+                if (!res.headersSent) res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' })
+                res.write(' ')
+              }, keepAliveMs)
+            : undefined
+        const reply = (status: number, body: unknown) => {
+          if (!res.headersSent) return json(res, status, body)
+          res.end(JSON.stringify(body))
+        }
+        let woke: Change[]
+        try {
+          woke = await store.waitFor(id, since, timeout, undefined, { quietMs, wake, match, who: name, signal: gone.signal })
+        } finally {
+          if (keepAlive) clearInterval(keepAlive)
+          res.off('close', onClose)
+        }
+        if (gone.signal.aborted) return void (res.writableEnded || res.end())
+        try {
+          if (!store.get(id)) throw new NotFound(`board ${id} not found`)
+          const changes = cf ? filterChanges(store.get(id)!, woke, cf) : woke
+          const allLines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
+          const page = pageLines(allLines, { maxChars: numParam(url, 'maxChars'), seq: store.get(id)!.seq })
+          const lines = boolParam(url, 'summary') && allLines.length > 1 ? [diffSummary(store.get(id)!, changes, allLines, { since, last: numParam(url, 'last') ?? 10 })] : page.left ? [...page.lines, `… ${page.left} more line(s) not shown (size cap) — canvas_diff({ since: ${since}, cursor: "${page.nextCursor}" }) or summary: true`] : page.lines
+          const cur = readByAgent(id, changes, f.author, name)
+          const last = changes.length ? changes[changes.length - 1].seq : cur.seq
+          const between = store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c))
+          const notForYou = all ? 0 : between.filter((c) => !forMe(c)).length
+          // untilMention: changes that were for this agent but did not address it personally (they did not wake it)
+          const notMentioned = untilMention ? between.filter((c) => forMe(c) && passes(c) && !mentionsMe(cur, c, me) && c.ops.some((op) => !isLayoutOnly(op, c.before[op.kind === 'add' ? op.item.id : op.id]))).length : 0
+          const r = responderOf(cur.meta)
+          const ctx = contextOf(cur.meta)
+          const context = url.searchParams.get('context') === 'changed' ? contextOnce(me, id, ctx) : ctx
+          return reply(200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines, notForYou, ...(untilMention ? { notMentioned } : {}), answeredBy: responderLabel(r), responder: r ?? null, context: context ?? null })
+        } catch (e) {
+          if (!res.headersSent) throw e
+          return reply(500, { error: (e as Error).message ?? 'internal error' })
+        }
       }
       // ---- Board settings: who answers, the context note, the loop guard (docs/canvas.md "Several agents on one board") ----
       if (sub === 'settings') {

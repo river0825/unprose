@@ -68,6 +68,16 @@ export const domainStorySchema = z.object({
     .min(1),
   groups: z.array(z.object({ id: z.string().optional(), text: z.string().min(1), members: z.array(z.string()).default([]) })).default([]),
   annotations: z.array(z.object({ id: z.string().optional(), on: z.string(), text: z.string().min(1) })).default([]),
+  /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
+  layout: z
+    .object({
+      spacing: z.enum(['compact', 'normal', 'roomy']).optional(),
+      /** horizontal pitch of the actor grid in px (overrides the spacing's) */
+      gapX: z.number().min(240).max(2000).optional(),
+      /** vertical pitch of the actor grid in px */
+      gapY: z.number().min(180).max(2000).optional(),
+    })
+    .optional(),
 })
 export type DomainStoryContent = z.input<typeof domainStorySchema>
 
@@ -95,6 +105,8 @@ export interface DsModel {
   sentences: DsSentence[]
   groups: Array<{ id: string; text: string; members: string[] }>
   annotations: Array<{ id: string; on: string; text: string }>
+  /** Drawing spacing from the file's `layout` (absent: the default, `normal`). */
+  layout?: { spacing?: 'compact' | 'normal' | 'roomy'; gapX?: number; gapY?: number }
   /** References that matched nothing (unknown actors are still drawn, as persons). */
   unresolved: Array<{ element: string; field: string; ref: string }>
   /** Marks a normalized model (vs raw content). */
@@ -155,7 +167,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const on = elementRef(a.on, id, 'on')
     return on ? [{ id, on, text: a.text }] : []
   })
-  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, unresolved, dsModel: true }
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.layout ? { layout: c.layout } : {}), unresolved, dsModel: true }
 }
 
 /** "② Customer sends application form to Clerk" — a sentence read out, as the method intends. */

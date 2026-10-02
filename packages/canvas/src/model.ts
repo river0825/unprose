@@ -29,6 +29,14 @@ export type Author = 'agent' | 'user'
 /** What wakes a waiting agent: every change, only changes in meaning (not layout), or only a handoff. */
 export type Wake = 'any' | 'meaningful' | 'handoff'
 
+/**
+ * The longest one wait may block (canvas_wait timeoutSec, GET /wait timeout): 30 minutes. Every return costs a
+ * waiting agent model tokens, so long waits are cheap waits (docs/canvas.md "Watching cheaply").
+ */
+export const WAIT_MAX_SEC = 1800
+/** canvas_wait's default timeoutSec. */
+export const WAIT_DEFAULT_SEC = 300
+
 /** Semantic colour tokens; the UI maps them to light/dark values. */
 export type ColorToken =
   | 'orange'

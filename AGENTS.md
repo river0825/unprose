@@ -73,6 +73,10 @@ The MCP server also carries the diagram-file tools (`design_lint`, `design_draw`
    workflow (agent pipeline). Link related elements across diagrams with `traces`.
 2. Write the file, lint, draw; give the person the board URL.
 3. Wait for comments (MCP `canvas_wait`), answer in the thread, record open questions as hotspots.
+   Wait long (`timeoutSec` up to 1800) and don't poll: every return costs tokens; a one-line `nothing new … — wait
+   again with since: N` means call again. `untilMention: true` wakes you only when you are @mentioned. Always-on
+   watching is studio's job (docs/canvas.md "Watching cheaply"); raise your client's tool timeout (Codex
+   `tool_timeout_sec`, Claude Code `MCP_TOOL_TIMEOUT`) — if it times out first, call again with the same `since`.
    When you ask the person to look at something, call `canvas_focus` (item ids or a frame key, plus a note) so
    their page takes them there, and include the returned link.
 4. On agreement: edit the file, lint, redraw.

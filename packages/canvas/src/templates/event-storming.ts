@@ -10,7 +10,7 @@
 import type { Item } from '../model.js'
 import { ES_COLORS, ES_LEGEND, normalizeEventStorming, type EsModel, type EventStormingContent } from '../diagrams/eventStorming.js'
 import { slugify } from '../diagrams/ids.js'
-import { branchSiblings, placeFlow, type Node } from './esTimeline.js'
+import { branchSiblings, placeFlow, type Again, type Node } from './esTimeline.js'
 import { GAP, LANE_HEADER, PAD, SMALL_H, SMALL_W, STICKY_H, STICKY_W, arrow, fit, make, offsetAll, type RenderOpts } from './util.js'
 
 export { eventStormingSchema, type EventStormingContent } from '../diagrams/eventStorming.js'
@@ -90,6 +90,7 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   const edges: Array<[string, string]> = []
   const systemOcc = new Map<string, string>() // `${system}|${anchor}` → item id
   const nodeOf = new Map<string, string>() // element id → its flow node id (item id)
+  const inlineRm = new Set<string>() // read models drawn as a flow step (they inform a command)
   const ev = (id: string) => itemId('event', id)
   for (const e of m.events) {
     nodes.push({ id: ev(e.id), band: bandOfEvent(e.id) })
@@ -119,6 +120,20 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
       for (const e of p.when) edges.push([ev(e), po])
       for (const k of p.then) edges.push([po, itemId('command', k)])
     }
+    // A read model that informs a command is a step of the flow (read model → person → command, p.201): it sits
+    // on the row between the event that updates it and the command it informs, not in a strip of its own.
+    for (const r of m.readModels) {
+      const cmds = r.informs.filter((x) => m.kindOf.get(x) === 'command' && nodeOf.has(x))
+      if (!cmds.length) continue
+      const rm = itemId('read-model', r.id)
+      const updates = r.updatedBy.filter((e) => eventById.has(e))
+      const band = aggOf.has(r.id) ? `agg:${aggOf.get(r.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : (nodes.find((n) => n.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0))
+      nodes.push({ id: rm, band })
+      nodeOf.set(r.id, rm)
+      inlineRm.add(r.id)
+      for (const e of updates) edges.push([ev(e), rm])
+      for (const k of cmds) edges.push([rm, itemId('command', k)])
+    }
   }
   // Systems that raise events on their own (external systems, p.88): a flow node before the event on a
   // detailed board, a sticky under the event on the big picture.
@@ -138,9 +153,12 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   const timeline = m.events.map((e) => ev(e.id))
   let rank: Map<string, number>
   let row: Map<string, number>
+  let again: Again[] = []
+  let retarget = new Map<string, string>()
   if (detailed) {
     const siblings = branchSiblings(m)
-    ;({ rank, row } = placeFlow(nodes, edges, timeline, (a, b) => siblings(a.slice(scope.length + 7), b.slice(scope.length + 7))))
+    ;({ rank, row, again, retarget } = placeFlow(nodes, edges, timeline, (a, b) => siblings(a.slice(scope.length + 7), b.slice(scope.length + 7)), { time: flowTimes(m, itemId, systemOcc, inlineRm) }))
+    nodes.push(...again.map((a) => ({ id: a.id, band: a.band })))
     // Each aggregate numbers its own columns from zero.
     const minRank = new Map<string, number>()
     for (const n of nodes) if (n.band.startsWith('agg:')) minRank.set(n.band, Math.min(minRank.get(n.band) ?? Infinity, rank.get(n.id)!))
@@ -168,6 +186,7 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   // ── slots ──
   const slots: Slot[] = []
   const slot = (s: Omit<Slot, 'data'> & { data?: Record<string, unknown> }) => slots.push({ ...s, data: s.data ?? {} })
+  const rmWhere = new Map<string, { band: string; rank: number; row: number }>() // where each read model sits
   const personAt = new Map<string, string>() // `${band}|${rank}|${row}|${person}` → item id (one person sticky per cell)
   const personSlot = (person: string, where: { band: string; rank: number; row: number }, anchor: string) => {
     const key = `${where.band}|${where.rank}|${where.row}|${person}`
@@ -207,19 +226,48 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
       const po = itemId('policy', p.id)
       slot({ ...at(po), strip: 'main', id: po, role: 'policy', text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...(p.person ? { person: personText(p.person) } : {}) } })
     }
-    // A read model sits above the person (or command) it informs — it is what they look at before acting
-    // (p.201); one that informs no command sits just after the first event that updates it.
+    // A read model that informs a command is a step on the row, before that command (placed with the flow);
+    // one that informs only people (or nothing) sits just after the last event that updates it, above the row,
+    // so the wires into it run forward.
     for (const r of m.readModels) {
-      const informedCommand = r.informs.find((x) => m.kindOf.get(x) === 'command' && nodeOf.has(x))
-      const firstUpdate = r.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b) => a!.rank - b!.rank)[0]
-      const where = (informedCommand ? atElement(informedCommand) : undefined) ?? (firstUpdate ? { ...firstUpdate, rank: firstUpdate.rank + 1 } : undefined) ?? { band: timelineBand(0), rank: 0, row: 0 }
-      nodeOf.set(r.id, itemId('read-model', r.id))
-      slot({ ...where, strip: 'read-model', id: itemId('read-model', r.id), role: 'read-model', text: r.text, color: ES_COLORS['read-model'], w: STICKY_W, h: STICKY_H, data: { element: r.id, updatedBy: r.updatedBy, informs: r.informs, ...(r.traces.length ? { traces: r.traces } : {}) } })
+      const rm = itemId('read-model', r.id)
+      const lastUpdate = r.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b) => b!.rank - a!.rank)[0]
+      const inline = inlineRm.has(r.id) && rank.has(rm)
+      const where = inline ? at(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 }
+      nodeOf.set(r.id, rm)
+      rmWhere.set(r.id, where)
+      slot({ ...where, strip: inline ? 'main' : 'read-model', id: rm, role: 'read-model', text: r.text, color: ES_COLORS['read-model'], w: STICKY_W, h: STICKY_H, data: { element: r.id, updatedBy: r.updatedBy, informs: r.informs, ...(r.traces.length ? { traces: r.traces } : {}) } })
     }
   }
   for (const x of raisers) {
     if (detailed) slot({ ...at(x.id), strip: 'main', id: x.id, role: systemRole(x.system), text: systemText(x.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x.system, occurrence: true, for: x.event } })
     else slot({ ...at(ev(x.event)), strip: 'below', id: x.id, role: systemRole(x.system), text: systemText(x.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x.system, occurrence: true, for: x.event } })
+  }
+  // Later occurrences (a retry, a command repeated after a read model): the same sticky again, further right,
+  // marked as a repeat of the first one (data.repeats); a command's person stands above it again.
+  for (const a of again) {
+    const orig = slots.find((s) => s.id === a.of)
+    if (!orig) continue
+    slot({ ...at(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } })
+    const k = orig.role === 'command' ? m.commands.find((c) => c.id === orig.data.element) : undefined
+    if (k?.by) personSlot(k.by, at(a.id), a.id.slice(`${scope}.command.`.length))
+  }
+  // A read model informs a person: an occurrence of that person at or after the read model, else one more
+  // occurrence in the read model's column — never a wire back to the left.
+  if (detailed) {
+    for (const r of m.readModels) {
+      const where = rmWhere.get(r.id)
+      if (!where) continue
+      for (const x of r.informs) {
+        if (m.kindOf.get(x) !== 'person') continue
+        const later = [...personAt.keys()].some((key) => {
+          const parts = key.split('|')
+          const [band, rk, person] = [parts.slice(0, -3).join('|'), Number(parts[parts.length - 3]), parts[parts.length - 1]]
+          return person === x && rk >= where.rank && (band === where.band || (!band.startsWith('agg:') && !where.band.startsWith('agg:')))
+        })
+        if (!later) personSlot(x, where, r.id)
+      }
+    }
   }
   for (const ms of m.milestones) {
     const where = atElement(ms.before) ?? { band: timelineBand(0), rank: 0, row: 0 }
@@ -379,41 +427,84 @@ export function renderEventStorming(raw: EventStormingContent, opts: RenderOpts 
   // ── arrows, from the model's relations ──
   const arrows: Item[] = []
   const has = (id: string) => itemOf.has(id)
+  // a wire that would point back in time goes to the later occurrence instead (esTimeline.ts)
+  const to = (from: string, target: string) => retarget.get(`${from}>${target}`) ?? target
   if (detailed) {
     for (const k of m.commands) {
       const cmd = itemId('command', k.id)
       const sys = k.system ? systemOcc.get(`${k.system}|${k.id}`) : undefined
-      if (sys) arrows.push(arrow(scope, cmd, sys, now, undefined, 'handles'))
+      if (sys) arrows.push(arrow(scope, cmd, to(cmd, sys), now, undefined, 'handles'))
       k.produces.forEach((e, i) => {
-        if (!has(ev(e))) return
-        arrows.push(arrow(scope, sys ?? cmd, ev(e), now, undefined, 'produces', i ? { data: { branch: i } } : {}))
+        const target = to(sys ?? cmd, ev(e))
+        if (!has(target)) return
+        arrows.push(arrow(scope, sys ?? cmd, target, now, undefined, 'produces', i ? { data: { branch: i } } : {}))
       })
     }
     for (const p of m.policies) {
       const po = itemId('policy', p.id)
-      for (const e of p.when) if (has(ev(e))) arrows.push(arrow(scope, ev(e), po, now, 'whenever', 'triggers'))
-      for (const k of p.then) arrows.push(arrow(scope, po, itemId('command', k), now, 'then', 'triggers'))
+      for (const e of p.when) if (has(ev(e))) arrows.push(arrow(scope, ev(e), to(ev(e), po), now, 'whenever', 'triggers'))
+      for (const k of p.then) arrows.push(arrow(scope, po, to(po, itemId('command', k)), now, 'then', 'triggers'))
     }
     for (const r of m.readModels) {
       const rm = itemId('read-model', r.id)
       const rmX = itemOf.get(rm)?.x ?? 0
-      for (const e of r.updatedBy) if (has(ev(e))) arrows.push(arrow(scope, ev(e), rm, now, undefined, 'updates'))
+      for (const e of r.updatedBy) if (has(ev(e))) arrows.push(arrow(scope, ev(e), to(ev(e), rm), now, undefined, 'updates'))
       for (const x of r.informs) {
         // a person it informs: the occurrence of that person nearest after the read model (a forward wire),
         // else the nearest one before it (a short loop, not one across the whole board)
         const occurrences = [...personAt.entries()].filter(([key]) => key.endsWith(`|${x}`)).map(([, id]) => itemOf.get(id)).filter((it): it is Item => Boolean(it))
         const person = occurrences.filter((it) => it.x >= rmX).sort((a, b) => a.x - b.x)[0] ?? occurrences.sort((a, b) => b.x - a.x)[0]
-        const target = m.kindOf.get(x) === 'command' ? itemId('command', x) : person?.id
+        const target = m.kindOf.get(x) === 'command' ? to(rm, itemId('command', x)) : person?.id
         if (target && has(target)) arrows.push(arrow(scope, rm, target, now, 'informs', 'informs'))
       }
     }
   }
   for (const [key, id] of systemOcc) {
     const [sys, anchor] = key.split('|')
-    if (m.kindOf.get(anchor) === 'event' && has(ev(anchor)) && has(id)) arrows.push(arrow(scope, id, ev(anchor), now, undefined, 'raises', { data: { system: sys } }))
+    if (m.kindOf.get(anchor) === 'event' && has(ev(anchor)) && has(id)) arrows.push(arrow(scope, id, to(id, ev(anchor)), now, undefined, 'raises', { data: { system: sys } }))
   }
 
   return offsetAll([...lanes, ...aggFrames, ...items, ...arrows], opts.at)
+}
+
+/**
+ * When each flow node happens, for telling a wire that points back in time (esTimeline.ts): an event at its
+ * place in the file; a command just before the first event it produces (or just after the policy that
+ * triggers it); its system between the two; a policy just after the last event it reacts to; a read model
+ * on the flow just after the last event that updates it (or just before the command it informs).
+ */
+function flowTimes(m: EsModel, itemId: (role: string, element: string) => string, systemOcc: Map<string, string>, inlineRm: Set<string>): Map<string, number> {
+  const t = new Map<string, number>()
+  const idx = new Map(m.events.map((e, i) => [e.id, i]))
+  for (const e of m.events) t.set(itemId('event', e.id), idx.get(e.id)!)
+  const policyT = new Map<string, number>()
+  for (const p of m.policies) {
+    const when = p.when.map((e) => idx.get(e)).filter((x): x is number => x !== undefined)
+    if (when.length) policyT.set(p.id, Math.max(...when) + 0.25)
+    if (policyT.has(p.id)) t.set(itemId('policy', p.id), policyT.get(p.id)!)
+  }
+  const commandT = new Map<string, number>()
+  for (const k of m.commands) {
+    const produced = k.produces.map((e) => idx.get(e)).filter((x): x is number => x !== undefined)
+    const by = m.policies.filter((p) => p.then.includes(k.id) && policyT.has(p.id)).map((p) => policyT.get(p.id)!)
+    const at = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : undefined
+    if (at === undefined) continue
+    commandT.set(k.id, at)
+    t.set(itemId('command', k.id), at)
+  }
+  for (const [key, id] of systemOcc) {
+    const anchor = key.slice(key.indexOf('|') + 1)
+    if (commandT.has(anchor)) t.set(id, commandT.get(anchor)! + 0.2)
+    else if (idx.has(anchor)) t.set(id, idx.get(anchor)! - 0.3)
+  }
+  for (const r of m.readModels) {
+    if (!inlineRm.has(r.id)) continue
+    const updates = r.updatedBy.map((e) => idx.get(e)).filter((x): x is number => x !== undefined)
+    const cmds = r.informs.map((x) => commandT.get(x)).filter((x): x is number => x !== undefined)
+    const at = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : undefined
+    if (at !== undefined) t.set(itemId('read-model', r.id), at)
+  }
+  return t
 }
 
 /** A row of legend stickies for the kinds this diagram uses, each with the book's page (p.314). */

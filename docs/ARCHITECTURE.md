@@ -463,7 +463,7 @@ sequenceDiagram
   A->>B: canvas_create_board(kind: event-storming, content)
   B-->>A: { id, url, seq: 1 }
   A-->>U: 「我把 pipeline 畫成 event storm：<url>，動一動它」
-  A->>B: canvas_wait(id, since: 1, timeoutSec: 120)
+  A->>B: canvas_wait(id, since: 1, timeoutSec: 1800)
   U->>B: 拖 "Card planned" 到 "Human confirmed" 前面；留言「這裡會卡住」
   B-->>U: WS change (seq 2, 3)
   B-->>A: lines: ["moved …", "added comment on …"]

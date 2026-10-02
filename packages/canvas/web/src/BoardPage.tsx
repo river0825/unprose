@@ -41,6 +41,7 @@ import { useBoard } from './store'
 import { RunOverlay } from './run/RunOverlay'
 import { PanelResizer, usePanelWidth } from './components/PanelResizer'
 import { isUiElement, uiRemoveOps, uiRemovedIds, uiTextOp, uiUndoOps } from './diagrams/uiProposal'
+import { deletedOf, diagramRemoveOps, undoDeleteOps } from './diagrams/deleteProposal'
 import { addWire, isFlowWire, pendingOf, pickEventOp, relabelOp, removeOps, rewireOp, undoOps } from './inspector/pending'
 import { StudioControl } from './components/StudioControl'
 import { ResponderControl } from './components/BoardAgents'
@@ -526,6 +527,10 @@ function BoardInner({ id }: { id: string }) {
       // a UI mock element is not removed either: its removal from the file is proposed (docs/diagrams.md §6c)
       const ui = uiRemoveOps(board, targets, now)
       targets = targets.filter((t) => !ui.handled.includes(t))
+      // an item or wire a diagram file drew is not removed either: it is marked deleted (struck) — the person's
+      // deletion beats the file on a redraw, and the file holder is asked to remove it (docs/diagrams.md "What a redraw keeps")
+      const drawn = diagramRemoveOps(board, targets, now)
+      targets = targets.filter((t) => !drawn.handled.includes(t))
       const flowWires = targets.filter((t) => isFlowWire(board, board.items[t]))
       const proposed = flowWires.filter((t) => pendingOf(board.items[t])?.kind !== 'remove')
       const ids = new Set<string>()
@@ -539,17 +544,19 @@ function BoardInner({ id }: { id: string }) {
         }
       }
       for (const it of Object.values(board.items)) if (it.type === 'comment' && ids.has(threadRoot(board, it.id)?.id ?? '')) ids.add(it.id)
-      const ops: Op[] = [...ui.ops, ...proposed.flatMap((t) => removeOps(board, board.items[t], now))]
+      const ops: Op[] = [...ui.ops, ...drawn.ops, ...proposed.flatMap((t) => removeOps(board, board.items[t], now))]
       for (const i of ids) if (!ops.some((o) => o.kind === 'update' && o.id === i)) ops.push({ kind: 'remove', id: i })
       if (!ops.length) return
       void commit(
         ops,
-        ui.ops.length && ids.size === 0 && !proposed.length
+        drawn.ops.length && ids.size === 0 && !proposed.length && !ui.ops.length
+          ? `deleted ${drawn.ops.length} item${drawn.ops.length === 1 ? '' : 's'} the file still has (proposed removing ${drawn.ops.length === 1 ? 'it' : 'them'} from the file)`
+          : ui.ops.length && ids.size === 0 && !proposed.length
           ? `proposed removing ${ui.ops.length} element${ui.ops.length === 1 ? '' : 's'}`
           : proposed.length && ids.size === 0 ? `proposed removing ${proposed.length} wire${proposed.length === 1 ? '' : 's'}` : `deleted ${ids.size} item${ids.size === 1 ? '' : 's'}`,
       )
       // keep a wire (or UI element) whose removal was just proposed selected, so the panel shows the proposal
-      select(ids.size === 0 ? [...ui.handled, ...flowWires] : [])
+      select(ids.size === 0 ? [...ui.handled, ...drawn.handled, ...flowWires] : [])
     },
     [board, commit, select],
   )
@@ -577,8 +584,8 @@ function BoardInner({ id }: { id: string }) {
     (iid: string) => {
       const it = board?.items[iid]
       if (!board || !it) return
-      const ops = undoOps(board, it)
-      if (ops.length) void commit(ops, 'undid a wire proposal')
+      const ops = deletedOf(it) ? undoDeleteOps(it) : undoOps(board, it)
+      if (ops.length) void commit(ops, deletedOf(it) ? 'took back a deletion' : 'undid a wire proposal')
     },
     [board, commit],
   )

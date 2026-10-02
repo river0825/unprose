@@ -18,6 +18,8 @@
 // traces into it resolve to its actor.
 import type { Item } from '../model.js'
 import { normalizeDomainStory, readSentence, type DomainStoryContent, type DsModel, type DsSentence } from '../diagrams/domainStory.js'
+import { measure } from '../textMetrics.js'
+import { EDGE_LABEL } from '../edgeLabel.js'
 import { PAD, arrow, make, offsetAll, type RenderOpts } from './util.js'
 
 export { domainStorySchema, type DomainStoryContent } from '../diagrams/domainStory.js'
@@ -25,10 +27,59 @@ export { domainStorySchema, type DomainStoryContent } from '../diagrams/domainSt
 /** A pictogram item: icon on top, the name under it. */
 export const ICON_W = 132
 export const ICON_H = 100
-const CELL_W = 460 // actor grid: room for a work object and two labelled arrows between neighbours
-const CELL_H = 330
-const SPREAD = 150 // sideways gap between work objects that share the way between two actors
-const SLOT = 250 // distance of a receiver-less work object from its actor
+// Spacing (docs/diagrams.md §6b "Spacing"). The `compact` pitches are the earlier fixed ones; `normal` (the default)
+// and `roomy` scale them up, and on top of that every arrow gets room for its number circle and its verb, measured
+// with the same text metrics the snapshot and the layout check use (textMetrics.ts), so labels and numbers do not
+// crowd: a long verb widens the grid.
+const BASE = { cellW: 460, cellH: 330, spread: 150, slot: 250, nudge: 70 }
+export const DS_SPACING = { compact: 1, normal: 1.25, roomy: 1.55 } as const
+export type DsSpacing = keyof typeof DS_SPACING
+/** The verb's font on the board (edgeLabel.ts EDGE_LABEL.dsFont). */
+const DS_VERB_FONT = EDGE_LABEL.dsFont
+/** The number circle (22 px) sits ~24 px along the arrow: what an arrow needs before its verb starts. */
+const SEQ_ROOM = 22 + 24
+/** Air after the verb, per spacing. */
+const VERB_AIR: Record<DsSpacing, number> = { compact: 0, normal: 24, roomy: 60 }
+/** A verb wider than this is cut on the board anyway; it does not stretch the grid further. */
+const VERB_CAP = 220
+/** How far a floating arrow starts from the centre of a pictogram it leaves horizontally / vertically (ItemEdge floatingEnd). */
+const CUT_X = ICON_W / 2 + 6
+const CUT_Y = ICON_H / 2 + 6
+
+export interface DsGeometry {
+  /** actor grid pitch: room for a work object and two labelled arrows between neighbours */
+  cellW: number
+  cellH: number
+  /** sideways gap between work objects that share the way between two actors */
+  spread: number
+  /** distance of a receiver-less work object from its actor */
+  slot: number
+  /** step when nudging a work object off another */
+  nudge: number
+}
+
+/** The free length an activity arrow needs: number circle + verb + air. */
+export function arrowRoom(verb: string | undefined, spacing: DsSpacing = 'normal'): number {
+  return SEQ_ROOM + Math.min(VERB_CAP, verb ? measure(verb, DS_VERB_FONT) : 0) + VERB_AIR[spacing]
+}
+
+/** The grid for a story: its spacing's pitches, widened so the longest verb fits, then the file's explicit gaps. */
+export function dsGeometry(m: Pick<DsModel, 'sentences' | 'layout'>): DsGeometry {
+  const spacing: DsSpacing = m.layout?.spacing ?? 'normal'
+  const f = DS_SPACING[spacing]
+  // compact keeps the old fixed pitches (long verbs may crowd); normal and roomy make room for the longest verb
+  const need = spacing === 'compact' ? 0 : Math.max(arrowRoom(undefined, spacing), ...m.sentences.flatMap((s) => [arrowRoom(s.verb, spacing), arrowRoom(s.toLabel, spacing)]))
+  // a work object sits halfway between two actors: each half holds one arrow plus the two pictogram cuts
+  const cellW = Math.round(Math.max(BASE.cellW * f, 2 * (need + 2 * CUT_X)))
+  const cellH = Math.round(Math.max(BASE.cellH * f, 2 * (need + 2 * CUT_Y)))
+  return {
+    cellW: m.layout?.gapX ?? cellW,
+    cellH: m.layout?.gapY ?? cellH,
+    spread: Math.round(Math.max(BASE.spread * f, ICON_W + 18)),
+    slot: Math.round(Math.max(BASE.slot * f, need + 2 * CUT_X)),
+    nudge: Math.round(BASE.nudge * f),
+  }
+}
 const NOTE_W = 200
 const NOTE_H = 64
 
@@ -68,7 +119,7 @@ interface Layout {
   crossings: number
 }
 
-function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: Offset[]): Layout {
+function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: Offset[], g: DsGeometry): Layout {
   const cell = new Map<string, [number, number]>()
   const taken = new Set<string>()
   const put = (id: string, c: number, r: number) => {
@@ -94,7 +145,7 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
   for (const id of order) if (!cell.has(id)) near(id, [...cell.keys()][cell.size - 1])
 
   const actor = new Map<string, Box>()
-  for (const [id, [c, r]] of cell) actor.set(id, { x: c * CELL_W, y: r * CELL_H, w: ICON_W, h: ICON_H })
+  for (const [id, [c, r]] of cell) actor.set(id, { x: c * g.cellW, y: r * g.cellH, w: ICON_W, h: ICON_H })
 
   // Work objects: on the way from the actor to the receiver(s), spread sideways when the way is shared.
   const boxes: Box[] = [...actor.values()]
@@ -117,14 +168,14 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
       const n = wayCount.get(wayKey(s)) ?? 1
       const k = wayIndex.get(wayKey(s)) ?? 0
       wayIndex.set(wayKey(s), k + 1)
-      const shift = (k - (n - 1) / 2) * SPREAD
+      const shift = (k - (n - 1) / 2) * g.spread
       at = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift }
     } else {
       // no receiver: the first free slot around the actor
       perp = { x: 0, y: 1 }
-      at = { x: a.x + SLOT, y: a.y }
+      at = { x: a.x + g.slot, y: a.y }
       for (const [dx, dy] of SLOTS) {
-        const cand = { x: a.x + dx * SLOT, y: a.y + dy * SLOT * 0.75 }
+        const cand = { x: a.x + dx * g.slot, y: a.y + dy * g.slot * 0.75 }
         if (free({ x: cand.x - ICON_W / 2, y: cand.y - ICON_H / 2, w: ICON_W, h: ICON_H })) {
           at = cand
           break
@@ -134,7 +185,7 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
     // nudge sideways until it overlaps nothing
     let box = { x: at.x - ICON_W / 2, y: at.y - ICON_H / 2, w: ICON_W, h: ICON_H }
     for (let step = 1; !free(box) && step <= 12; step++) {
-      const d = Math.ceil(step / 2) * 70 * (step % 2 ? 1 : -1)
+      const d = Math.ceil(step / 2) * g.nudge * (step % 2 ? 1 : -1)
       box = { x: at.x + perp.x * d - ICON_W / 2, y: at.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H }
     }
     boxes.push(box)
@@ -180,9 +231,10 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   for (const a of m.actors) seen(a.id)
 
   // Try each placement preference; keep the fewest crossings (the first on a tie).
-  let best = layoutWith(m, sentences, order, PREFERENCES[0])
+  const g = dsGeometry(m)
+  let best = layoutWith(m, sentences, order, PREFERENCES[0], g)
   for (const pref of PREFERENCES.slice(1)) {
-    const l = layoutWith(m, sentences, order, pref)
+    const l = layoutWith(m, sentences, order, pref, g)
     if (l.crossings < best.crossings) best = l
   }
 

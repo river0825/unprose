@@ -1344,16 +1344,40 @@ textarea.selected-title:focus {
      (its children are elevated to ~1000). Labels therefore sit above that range. */
   z-index: 1500;
   pointer-events: all;
-  padding: 1px 5px;
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  line-height: 1.3;
-  max-width: 220px;
-  white-space: pre-wrap;
+  /* smaller than the 13 px card text and on a light backing (src/edgeLabel.ts EDGE_LABEL: font, lineHeight,
+     padX/padY). The lines are wrapped / cut where the label was placed, so it never covers a card. */
+  padding: 1px 4px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 14px;
+  white-space: pre;
+  text-align: center;
   cursor: default;
-  border-radius: var(--radius);
+  border-radius: 3px;
+}
+/* the whole label of a cut one, while it is selected or hovered from its dot: may cover cards, so it is solid and on top */
+.edge-label.revealed {
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--rule);
+  z-index: 2600;
+}
+/* a label with no free spot beside its wire: a small dot on the wire; hover or select it to read the label */
+.edge-label-dot {
+  position: absolute;
+  z-index: 1500;
+  pointer-events: all;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.5px solid var(--ink-2);
+  cursor: help;
+}
+.edge-label-dot:hover {
+  border-color: var(--marker);
 }
 .edge-label.selected {
   color: var(--marker);
@@ -1778,7 +1802,7 @@ kbd {
   padding: 0 7px;
   color: var(--ink-2);
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 /* a locked item (docs/diagrams.md "What a redraw keeps"): a small lock at its top-left corner; it is not dragged */
 .lock-badge {
@@ -1808,6 +1832,13 @@ kbd {
 .react-flow__node.node-pending > .item {
   border-style: dashed;
   opacity: 0.85;
+}
+/* deleted on the board, still in the file: faint and struck until the file holder removes it (deleteProposal.ts) */
+.react-flow__node.node-deleted > .item {
+  opacity: 0.38;
+  text-decoration: line-through;
+  outline: 1.5px dashed var(--danger);
+  outline-offset: 2px;
 }
 .node-tag {
   position: absolute;

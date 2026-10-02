@@ -111,7 +111,11 @@ calling the canvas behind Cloudflare must send a `User-Agent` (Python's default 
    the board URL and say what to look at.
 3. When you ask the person to look at something, call `canvas_focus` with the item ids or the frame key (and a
    one-line note) so their page jumps there — don't make them search. Put the returned link in your reply too.
-4. `canvas_wait` for their comments, moves and proposals; read the diff lines. Ignore pure layout moves.
+4. `canvas_wait` for their comments, moves and proposals; read the diff lines. Ignore pure layout moves. Wait
+   long — `timeoutSec: 1800` (30 min) is fine, every return costs tokens — and never poll with short waits or
+   `canvas_diff` loops. `nothing new on b_x (seq 93) — wait again with since: 93` means exactly that: call again
+   with that `since`. On a busy board pass `untilMention: true` to wake only when you are `@mentioned`. If your
+   client timed out the call, just call again with the same `since`.
 5. Answer in the comment thread (`canvas_add_items` with a `comment` targeting their comment). Mark open
    questions as hotspots in the file rather than guessing.
 6. When they agree, edit the file, lint, redraw — dashed proposals become solid.

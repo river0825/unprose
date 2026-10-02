@@ -17,7 +17,17 @@ export interface RemoteMcpContext {
   loopback: string
   /** The address people open (board links). */
   publicUrl: string
+  /**
+   * Requests in flight, by caller × JSON-RPC id: a stateless server cannot route `notifications/cancelled` (it comes
+   * in its own POST), so the endpoint looks the request up here and closes it — a cancelled canvas_wait then ends
+   * at once and frees its watcher slot instead of blocking until its timeout.
+   */
+  inflight?: Map<string, Set<() => void>>
 }
+
+type RpcMessage = { method?: unknown; id?: unknown; params?: { requestId?: unknown } }
+const messages = (body: unknown): RpcMessage[] => (Array.isArray(body) ? body : body && typeof body === 'object' ? [body] : []) as RpcMessage[]
+const callerKey = (grant: Grant, id: unknown) => `${grant.agentId ?? grant.name}\u0000${String(id)}`
 
 export async function handleMcp(req: http.IncomingMessage, res: http.ServerResponse, grant: Grant, ctx: RemoteMcpContext, body: unknown): Promise<void> {
   if (req.method !== 'POST') {
@@ -25,6 +35,16 @@ export async function handleMcp(req: http.IncomingMessage, res: http.ServerRespo
     res.writeHead(405, { allow: 'POST', 'content-type': 'application/json' })
     res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed: this endpoint is stateless, use POST' }, id: null }))
     return
+  }
+  const inflight = ctx.inflight
+  const msgs = messages(body)
+  if (inflight) {
+    for (const m of msgs) {
+      if (m.method !== 'notifications/cancelled' || m.params?.requestId === undefined) continue
+      const set = inflight.get(callerKey(grant, m.params.requestId))
+      // only when it is unambiguous (two conversations of one agent may reuse an id)
+      if (set?.size === 1) for (const stop of set) stop()
+    }
   }
   const { secret, release } = ctx.access.mintInternal(grant)
   const client = new CanvasClient(ctx.loopback, { token: secret, publicUrl: ctx.publicUrl })
@@ -34,10 +54,24 @@ export async function handleMcp(req: http.IncomingMessage, res: http.ServerRespo
     extend: (s, c) => registerContentDesignTools(s, c.client, { prompts: true }),
   })
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-  res.on('close', () => {
-    release()
+  const stop = () => {
     void transport.close()
     void server.close()
+  }
+  const keys = inflight ? msgs.filter((m) => typeof m.method === 'string' && m.id !== undefined && m.id !== null).map((m) => callerKey(grant, m.id)) : []
+  for (const k of keys) {
+    const set = inflight!.get(k) ?? new Set()
+    set.add(stop)
+    inflight!.set(k, set)
+  }
+  res.on('close', () => {
+    for (const k of keys) {
+      const set = inflight!.get(k)
+      set?.delete(stop)
+      if (set && !set.size) inflight!.delete(k)
+    }
+    release()
+    stop()
   })
   await server.connect(transport)
   await transport.handleRequest(req, res, body)

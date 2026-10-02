@@ -30,6 +30,8 @@ export interface WaitOptions {
   match?: (c: Change) => boolean
   /** The agent waiting (its name), so the page can say who is watching; default 'agent'. */
   who?: string
+  /** Abort the wait (the client went away): it resolves with no changes and frees its watcher slot at once. */
+  signal?: AbortSignal
 }
 
 export type ChangeListener = (change: Change) => void

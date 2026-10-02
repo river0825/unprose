@@ -55,6 +55,13 @@ export interface Pending {
   path?: Array<string | number>
   /** a UI mock text proposal for one value inside the element: a table cell ['rows', r, c] or a list item ['items', i] */
   sub?: Array<string | number>
+  /**
+   * The person deleted this file-drawn item or wire on the board (docs/diagrams.md "What a redraw keeps"): it stays
+   * marked (`kind: 'remove'`) until the file no longer has it — a redraw never brings it back as it was.
+   */
+  deleted?: 'item' | 'wire'
+  by?: string
+  at?: string
 }
 
 /** The words a UI mock element shows at `sub` (a table cell, a list item), as the board draws them. */
@@ -89,6 +96,8 @@ function withPresentation(drawn: BoardItem, was: BoardItem): BoardItem {
 
 /** Has the drawing (the files) caught up with what the person proposed? */
 export function isResolved(p: Pending, drawn: BoardItem[], itemId?: string): boolean {
+  // An item or wire the person deleted is explained once the file no longer draws it.
+  if (p.kind === 'remove' && p.deleted) return !(itemId && drawn.some((d) => d.id === itemId))
   // A text edit on a UI mock element (docs/diagrams.md §6c) is explained once the file says the new text —
   // or once the element is gone from the drawing (renamed or removed in the file: nothing left to hold).
   if (p.kind === 'text') {
@@ -127,7 +136,21 @@ export function planRedraw(board: Record<string, BoardItem>, drawn: BoardItem[],
 /** Who added an item: the last `add` of its id in the change log. */
 export interface ItemOrigin { author: string; by?: string; note?: string }
 /** A change of the board's log, as `GET /api/boards/:id/changes` returns it. */
-export interface LoggedChange { author?: string; by?: string; note?: string; ops: TemplateOp[] }
+export interface LoggedChange { author?: string; by?: string; note?: string; ts?: string; ops: TemplateOp[] }
+
+/**
+ * Items the person deleted and nobody added back since — from the change log, oldest first. A page that knows
+ * the rule marks a deletion instead (`data.pending.deleted`); this covers deletions made before, or over the API.
+ */
+export function removedByUser(changes: LoggedChange[]): Map<string, { at?: string }> {
+  const out = new Map<string, { at?: string }>()
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      if (op.kind === 'remove' && op.id && ch.author === 'user') out.set(op.id, ch.ts ? { at: ch.ts } : {})
+      else if (op.kind === 'add' && op.item?.id) out.delete(op.item.id)
+    }
+  return out
+}
 
 /** A change written by a redraw from files (`awd design draw`, design_draw, `awd graph`), not by hand. */
 export const isRedrawNote = (note: string | undefined): boolean => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note)
@@ -147,11 +170,13 @@ export interface RedrawInputs {
   placed: Set<string>
   /** who added each item (absent: decided from `createdBy` alone) */
   origins?: Map<string, ItemOrigin>
+  /** items the person deleted (the change log): a redraw does not bring them back as they were */
+  removed?: Map<string, { at?: string }>
 }
 
 /** From the board's whole change log (every author): what the person placed and who added what. */
 export function redrawInputs(changes: LoggedChange[]): Required<RedrawInputs> {
-  return { placed: placedByUser(changes.filter((c) => c.author === 'user') as UserChange[]), origins: originsOf(changes) }
+  return { placed: placedByUser(changes.filter((c) => c.author === 'user') as UserChange[]), origins: originsOf(changes), removed: removedByUser(changes) }
 }
 
 export interface PlanLine { id: string; label: string; why?: string }
@@ -168,6 +193,8 @@ export interface RedrawPlan {
   keptMoved: PlanLine[]
   /** the file would move or resize it, but it (or its frame) is locked */
   keptLocked: PlanLine[]
+  /** the person deleted it and the file still has it: kept removed (marked, a proposal to remove it from the file) */
+  keptRemoved: PlanLine[]
   /** proposals the files do not explain yet: left exactly as they are */
   held: PlanLine[]
   /** proposals the files now explain: replaced by the drawn element */
@@ -198,14 +225,15 @@ function same(a: unknown, b: unknown): boolean {
 }
 const changedKeys = (patch: Record<string, unknown>, was: BoardItem) => Object.keys(patch).filter((k) => !IGNORED.has(k) && !same(patch[k], was[k]))
 const lockOf = (board: Record<string, BoardItem>, id: string) => layoutLock(board as never, id)
+const KEPT_REMOVED = 'you deleted it — the file still has it; propose the file change?'
 
 /** The redraw's ops and, for the preview, what it does to each item and why. Pure: nothing is written. */
 export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem[], inputs: RedrawInputs, scope: RedrawScope = { prefix: SCOPE }): RedrawResult {
-  const { placed, origins } = inputs
+  const { placed, origins, removed } = inputs
   const drawnIds = new Set(drawn.map((d) => d.id))
   const held = new Set<string>() // pending, not yet resolved: untouchable
   const ops: TemplateOp[] = []
-  const plan: RedrawPlan = { prefix: scope.prefix, ...(scope.frame ? { frame: scope.frame } : {}), added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], held: [], settled: [], foreign: [] }
+  const plan: RedrawPlan = { prefix: scope.prefix, ...(scope.frame ? { frame: scope.frame } : {}), added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], keptRemoved: [], held: [], settled: [], foreign: [] }
   // A proposal belongs to this drawing when the item (or both ends of a wire the person drew) is in its scope;
   // another frame's proposals are not ours to settle.
   const owned = (it: BoardItem) =>
@@ -215,10 +243,11 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
     if (!p || !owned(it)) continue
     if (!isResolved(p, drawn, it.id)) {
       held.add(it.id)
-      plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` })
+      if (p.kind === 'remove' && p.deleted) plan.keptRemoved.push({ id: it.id, label: label(it), why: KEPT_REMOVED })
+      else plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` })
     } else if (!drawnIds.has(it.id)) {
       ops.push({ kind: 'remove', id: it.id }) // resolved: the drawn element replaces it
-      plan.settled.push({ id: it.id, label: label(it), why: 'the file now has it' })
+      plan.settled.push({ id: it.id, label: label(it), why: p.kind === 'remove' && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : 'the file now has it' })
     }
   }
   // geometry: a lock > the person's move > the file
@@ -227,6 +256,14 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
   for (const d of drawn) {
     if (held.has(d.id)) continue
     const was = board[d.id]
+    if (!was && removed?.has(d.id)) {
+      // the person deleted it (the change log) and the file still has it: it comes back only as the mark of that
+      // deletion — a removal proposal, drawn struck — never as it was
+      const pending: Pending = { kind: 'remove', deleted: d.type === 'arrow' ? 'wire' : 'item', by: 'user', ...(removed.get(d.id)?.at ? { at: removed.get(d.id)!.at } : {}) }
+      updates.push({ kind: 'add', item: { ...d, data: { ...(d.data ?? {}), pending } } })
+      plan.keptRemoved.push({ id: d.id, label: label(d), why: KEPT_REMOVED })
+      continue
+    }
     if (!was) {
       updates.push({ kind: 'add', item: d })
       plan.added.push({ id: d.id, label: label(d) })
@@ -317,6 +354,7 @@ const SECTIONS: Array<[keyof RedrawPlan, string, string]> = [
   ['removed', '-', 'removed'],
   ['keptMoved', '=', 'kept where the person moved it'],
   ['keptLocked', '#', 'kept: locked'],
+  ['keptRemoved', 'x', 'kept removed'],
   ['held', '?', 'proposals held'],
   ['settled', '>', 'proposals settled'],
   ['foreign', '*', 'not from this file (kept)'],

@@ -876,34 +876,34 @@ var require_receiver = __commonJS({
        * @return {Buffer} The consumed bytes
        * @private
        */
-      consume(n3) {
-        this._bufferedBytes -= n3;
-        if (n3 === this._buffers[0].length) return this._buffers.shift();
-        if (n3 < this._buffers[0].length) {
+      consume(n4) {
+        this._bufferedBytes -= n4;
+        if (n4 === this._buffers[0].length) return this._buffers.shift();
+        if (n4 < this._buffers[0].length) {
           const buf = this._buffers[0];
           this._buffers[0] = new FastBuffer(
             buf.buffer,
-            buf.byteOffset + n3,
-            buf.length - n3
+            buf.byteOffset + n4,
+            buf.length - n4
           );
-          return new FastBuffer(buf.buffer, buf.byteOffset, n3);
+          return new FastBuffer(buf.buffer, buf.byteOffset, n4);
         }
-        const dst = Buffer.allocUnsafe(n3);
+        const dst = Buffer.allocUnsafe(n4);
         do {
           const buf = this._buffers[0];
-          const offset = dst.length - n3;
-          if (n3 >= buf.length) {
+          const offset = dst.length - n4;
+          if (n4 >= buf.length) {
             dst.set(this._buffers.shift(), offset);
           } else {
-            dst.set(new Uint8Array(buf.buffer, buf.byteOffset, n3), offset);
+            dst.set(new Uint8Array(buf.buffer, buf.byteOffset, n4), offset);
             this._buffers[0] = new FastBuffer(
               buf.buffer,
-              buf.byteOffset + n3,
-              buf.length - n3
+              buf.byteOffset + n4,
+              buf.length - n4
             );
           }
-          n3 -= buf.length;
-        } while (n3 > 0);
+          n4 -= buf.length;
+        } while (n4 > 0);
         return dst;
       }
       /**
@@ -4731,8 +4731,8 @@ var require_Collection = __commonJS({
         return this.items.every((node4) => {
           if (!identity.isPair(node4))
             return false;
-          const n3 = node4.value;
-          return n3 == null || allowScalar && identity.isScalar(n3) && n3.value == null && !n3.commentBefore && !n3.comment && !n3.tag;
+          const n4 = node4.value;
+          return n4 == null || allowScalar && identity.isScalar(n4) && n4.value == null && !n4.commentBefore && !n4.comment && !n4.tag;
         });
       }
       /**
@@ -5468,9 +5468,9 @@ var require_log = __commonJS({
   "node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
-    function debug(logLevel, ...messages) {
+    function debug(logLevel, ...messages2) {
       if (logLevel === "debug")
-        console.log(...messages);
+        console.log(...messages2);
     }
     function warn(logLevel, warning) {
       if (logLevel === "debug" || logLevel === "warn") {
@@ -6175,18 +6175,18 @@ var require_stringifyNumber = __commonJS({
       const num = typeof value === "number" ? value : Number(value);
       if (!isFinite(num))
         return isNaN(num) ? ".nan" : num < 0 ? "-.inf" : ".inf";
-      let n3 = Object.is(value, -0) ? "-0" : JSON.stringify(value);
-      if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n3) && !n3.includes("e")) {
-        let i = n3.indexOf(".");
+      let n4 = Object.is(value, -0) ? "-0" : JSON.stringify(value);
+      if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n4) && !n4.includes("e")) {
+        let i = n4.indexOf(".");
         if (i < 0) {
-          i = n3.length;
-          n3 += ".";
+          i = n4.length;
+          n4 += ".";
         }
-        let d = minFractionDigits - (n3.length - i - 1);
+        let d = minFractionDigits - (n4.length - i - 1);
         while (d-- > 0)
-          n3 += "0";
+          n4 += "0";
       }
-      return n3;
+      return n4;
     }
     exports.stringifyNumber = stringifyNumber;
   }
@@ -6430,9 +6430,9 @@ var require_binary = __commonJS({
         type ?? (type = Scalar.Scalar.BLOCK_LITERAL);
         if (type !== Scalar.Scalar.QUOTE_DOUBLE) {
           const lineWidth = Math.max(ctx.options.lineWidth - ctx.indent.length, ctx.options.minContentWidth);
-          const n3 = Math.ceil(str2.length / lineWidth);
-          const lines2 = new Array(n3);
-          for (let i = 0, o = 0; i < n3; ++i, o += lineWidth) {
+          const n4 = Math.ceil(str2.length / lineWidth);
+          const lines2 = new Array(n4);
+          for (let i = 0, o = 0; i < n4; ++i, o += lineWidth) {
             lines2[i] = str2.substr(o, lineWidth);
           }
           str2 = lines2.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
@@ -6704,11 +6704,11 @@ var require_int2 = __commonJS({
             str2 = `0x${str2}`;
             break;
         }
-        const n4 = BigInt(str2);
-        return sign === "-" ? BigInt(-1) * n4 : n4;
+        const n5 = BigInt(str2);
+        return sign === "-" ? BigInt(-1) * n5 : n5;
       }
-      const n3 = parseInt(str2, radix);
-      return sign === "-" ? -1 * n3 : n3;
+      const n4 = parseInt(str2, radix);
+      return sign === "-" ? -1 * n4 : n4;
     }
     function intStringify(node4, radix, prefix) {
       const { value } = node4;
@@ -6857,15 +6857,15 @@ var require_timestamp = __commonJS({
     function parseSexagesimal(str2, asBigInt) {
       const sign = str2[0];
       const parts = sign === "-" || sign === "+" ? str2.substring(1) : str2;
-      const num = (n3) => asBigInt ? BigInt(n3) : Number(n3);
+      const num = (n4) => asBigInt ? BigInt(n4) : Number(n4);
       const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num(60) + num(p), num(0));
       return sign === "-" ? num(-1) * res : res;
     }
     function stringifySexagesimal(node4) {
       let { value } = node4;
-      let num = (n3) => n3;
+      let num = (n4) => n4;
       if (typeof value === "bigint")
-        num = (n3) => BigInt(n3);
+        num = (n4) => BigInt(n4);
       else if (isNaN(value) || !isFinite(value))
         return stringifyNumber.stringifyNumber(node4);
       let sign = "";
@@ -6885,7 +6885,7 @@ var require_timestamp = __commonJS({
           parts.unshift(value);
         }
       }
-      return sign + parts.map((n3) => String(n3).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
+      return sign + parts.map((n4) => String(n4).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
     }
     var intTime = {
       identify: (value) => typeof value === "bigint" || Number.isInteger(value),
@@ -8356,9 +8356,9 @@ var require_resolve_block_scalar = __commonJS({
         if (!chomp && (ch === "-" || ch === "+"))
           chomp = ch;
         else {
-          const n3 = Number(ch);
-          if (!indent && n3)
-            indent = n3;
+          const n4 = Number(ch);
+          if (!indent && n4)
+            indent = n4;
           else if (error62 === -1)
             error62 = offset + i;
         }
@@ -9579,8 +9579,8 @@ var require_lexer = __commonJS({
           return this.buffer[i + 1] === "\n";
         return false;
       }
-      charAt(n3) {
-        return this.buffer[this.pos + n3];
+      charAt(n4) {
+        return this.buffer[this.pos + n4];
       }
       continueScalar(offset) {
         let ch = this.buffer[offset];
@@ -9614,8 +9614,8 @@ var require_lexer = __commonJS({
           end -= 1;
         return this.buffer.substring(this.pos, end);
       }
-      hasChars(n3) {
-        return this.pos + n3 <= this.buffer.length;
+      hasChars(n4) {
+        return this.pos + n4 <= this.buffer.length;
       }
       setNext(state) {
         this.buffer = this.buffer.substring(this.pos);
@@ -9624,8 +9624,8 @@ var require_lexer = __commonJS({
         this.next = state;
         return null;
       }
-      peek(n3) {
-        return this.buffer.substr(this.pos, n3);
+      peek(n4) {
+        return this.buffer.substr(this.pos, n4);
       }
       *parseNext(next) {
         switch (next) {
@@ -9674,8 +9674,8 @@ var require_lexer = __commonJS({
             else
               break;
           }
-          const n3 = (yield* this.pushCount(dirEnd)) + (yield* this.pushSpaces(true));
-          yield* this.pushCount(line.length - n3);
+          const n4 = (yield* this.pushCount(dirEnd)) + (yield* this.pushSpaces(true));
+          yield* this.pushCount(line.length - n4);
           this.pushNewline();
           return "stream";
         }
@@ -9713,9 +9713,9 @@ var require_lexer = __commonJS({
         if (!ch1 && !this.atEnd)
           return this.setNext("block-start");
         if ((ch0 === "-" || ch0 === "?" || ch0 === ":") && isEmpty(ch1)) {
-          const n3 = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
+          const n4 = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
           this.indentNext = this.indentValue + 1;
-          this.indentValue += n3;
+          this.indentValue += n4;
           return "block-start";
         }
         return "doc";
@@ -9725,10 +9725,10 @@ var require_lexer = __commonJS({
         const line = this.getLine();
         if (line === null)
           return this.setNext("doc");
-        let n3 = yield* this.pushIndicators();
-        switch (line[n3]) {
+        let n4 = yield* this.pushIndicators();
+        switch (line[n4]) {
           case "#":
-            yield* this.pushCount(line.length - n3);
+            yield* this.pushCount(line.length - n4);
           // fallthrough
           case void 0:
             yield* this.pushNewline();
@@ -9751,9 +9751,9 @@ var require_lexer = __commonJS({
             return yield* this.parseQuotedScalar();
           case "|":
           case ">":
-            n3 += yield* this.parseBlockScalarHeader();
-            n3 += yield* this.pushSpaces(true);
-            yield* this.pushCount(line.length - n3);
+            n4 += yield* this.parseBlockScalarHeader();
+            n4 += yield* this.pushSpaces(true);
+            yield* this.pushCount(line.length - n4);
             yield* this.pushNewline();
             return yield* this.parseBlockScalar();
           default:
@@ -9784,18 +9784,18 @@ var require_lexer = __commonJS({
             return yield* this.parseLineStart();
           }
         }
-        let n3 = 0;
-        while (line[n3] === ",") {
-          n3 += yield* this.pushCount(1);
-          n3 += yield* this.pushSpaces(true);
+        let n4 = 0;
+        while (line[n4] === ",") {
+          n4 += yield* this.pushCount(1);
+          n4 += yield* this.pushSpaces(true);
           this.flowKey = false;
         }
-        n3 += yield* this.pushIndicators();
-        switch (line[n3]) {
+        n4 += yield* this.pushIndicators();
+        switch (line[n4]) {
           case void 0:
             return "flow";
           case "#":
-            yield* this.pushCount(line.length - n3);
+            yield* this.pushCount(line.length - n4);
             return "flow";
           case "{":
           case "[":
@@ -9839,10 +9839,10 @@ var require_lexer = __commonJS({
             end = this.buffer.indexOf("'", end + 2);
         } else {
           while (end !== -1) {
-            let n3 = 0;
-            while (this.buffer[end - 1 - n3] === "\\")
-              n3 += 1;
-            if (n3 % 2 === 0)
+            let n4 = 0;
+            while (this.buffer[end - 1 - n4] === "\\")
+              n4 += 1;
+            if (n4 % 2 === 0)
               break;
             end = this.buffer.indexOf('"', end + 1);
           }
@@ -9996,11 +9996,11 @@ var require_lexer = __commonJS({
         yield* this.pushToIndex(end + 1, true);
         return inFlow ? "flow" : "doc";
       }
-      *pushCount(n3) {
-        if (n3 > 0) {
-          yield this.buffer.substr(this.pos, n3);
-          this.pos += n3;
-          return n3;
+      *pushCount(n4) {
+        if (n4 > 0) {
+          yield this.buffer.substr(this.pos, n4);
+          this.pos += n4;
+          return n4;
         }
         return 0;
       }
@@ -10015,16 +10015,16 @@ var require_lexer = __commonJS({
         return 0;
       }
       *pushIndicators() {
-        let n3 = 0;
+        let n4 = 0;
         loop: while (true) {
           switch (this.charAt(0)) {
             case "!":
-              n3 += yield* this.pushTag();
-              n3 += yield* this.pushSpaces(true);
+              n4 += yield* this.pushTag();
+              n4 += yield* this.pushSpaces(true);
               continue loop;
             case "&":
-              n3 += yield* this.pushUntil(isNotAnchorChar);
-              n3 += yield* this.pushSpaces(true);
+              n4 += yield* this.pushUntil(isNotAnchorChar);
+              n4 += yield* this.pushSpaces(true);
               continue loop;
             case "-":
             // this is an error
@@ -10038,15 +10038,15 @@ var require_lexer = __commonJS({
                   this.indentNext = this.indentValue + 1;
                 else if (this.flowKey)
                   this.flowKey = false;
-                n3 += yield* this.pushCount(1);
-                n3 += yield* this.pushSpaces(true);
+                n4 += yield* this.pushCount(1);
+                n4 += yield* this.pushSpaces(true);
                 continue loop;
               }
             }
           }
           break loop;
         }
-        return n3;
+        return n4;
       }
       *pushTag() {
         if (this.charAt(1) === "<") {
@@ -10084,12 +10084,12 @@ var require_lexer = __commonJS({
         do {
           ch = this.buffer[++i];
         } while (ch === " " || allowTabs && ch === "	");
-        const n3 = i - this.pos;
-        if (n3 > 0) {
-          yield this.buffer.substr(this.pos, n3);
+        const n4 = i - this.pos;
+        if (n4 > 0) {
+          yield this.buffer.substr(this.pos, n4);
           this.pos = i;
         }
-        return n3;
+        return n4;
       }
       *pushUntil(test) {
         let i = this.pos;
@@ -10364,8 +10364,8 @@ var require_parser = __commonJS({
         }
         yield* this.pop();
       }
-      peek(n3) {
-        return this.stack[this.stack.length - n3];
+      peek(n4) {
+        return this.stack[this.stack.length - n4];
       }
       *pop(error62) {
         const token = error62 ?? this.stack.pop();
@@ -11633,17 +11633,17 @@ var require_codegen = __commonJS({
         this.nodes = nodes;
       }
       render(opts) {
-        return this.nodes.reduce((code, n3) => code + n3.render(opts), "");
+        return this.nodes.reduce((code, n4) => code + n4.render(opts), "");
       }
       optimizeNodes() {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
-          const n3 = nodes[i].optimizeNodes();
-          if (Array.isArray(n3))
-            nodes.splice(i, 1, ...n3);
-          else if (n3)
-            nodes[i] = n3;
+          const n4 = nodes[i].optimizeNodes();
+          if (Array.isArray(n4))
+            nodes.splice(i, 1, ...n4);
+          else if (n4)
+            nodes[i] = n4;
           else
             nodes.splice(i, 1);
         }
@@ -11653,16 +11653,16 @@ var require_codegen = __commonJS({
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
-          const n3 = nodes[i];
-          if (n3.optimizeNames(names, constants2))
+          const n4 = nodes[i];
+          if (n4.optimizeNames(names, constants2))
             continue;
-          subtractNames(names, n3.names);
+          subtractNames(names, n4.names);
           nodes.splice(i, 1);
         }
         return nodes.length > 0 ? this : void 0;
       }
       get names() {
-        return this.nodes.reduce((names, n3) => addNames(names, n3.names), {});
+        return this.nodes.reduce((names, n4) => addNames(names, n4.names), {});
       }
     };
     var BlockNode = class extends ParentNode {
@@ -12073,8 +12073,8 @@ var require_codegen = __commonJS({
       endFunc() {
         return this._endBlockNode(Func);
       }
-      optimize(n3 = 1) {
-        while (n3-- > 0) {
+      optimize(n4 = 1) {
+        while (n4-- > 0) {
           this._root.optimizeNodes();
           this._root.optimizeNames(this._root.names, this._constants);
         }
@@ -12088,19 +12088,19 @@ var require_codegen = __commonJS({
         this._nodes.push(node4);
       }
       _endBlockNode(N1, N2) {
-        const n3 = this._currNode;
-        if (n3 instanceof N1 || N2 && n3 instanceof N2) {
+        const n4 = this._currNode;
+        if (n4 instanceof N1 || N2 && n4 instanceof N2) {
           this._nodes.pop();
           return this;
         }
         throw new Error(`CodeGen: not in block "${N2 ? `${N1.kind}/${N2.kind}` : N1.kind}"`);
       }
       _elseNode(node4) {
-        const n3 = this._currNode;
-        if (!(n3 instanceof If)) {
+        const n4 = this._currNode;
+        if (!(n4 instanceof If)) {
           throw new Error('CodeGen: "else" without "if"');
         }
-        this._currNode = n3.else = node4;
+        this._currNode = n4.else = node4;
         return this;
       }
       get _root() {
@@ -12117,8 +12117,8 @@ var require_codegen = __commonJS({
     };
     exports.CodeGen = CodeGen;
     function addNames(names, from) {
-      for (const n3 in from)
-        names[n3] = (names[n3] || 0) + (from[n3] || 0);
+      for (const n4 in from)
+        names[n4] = (names[n4] || 0) + (from[n4] || 0);
       return names;
     }
     function addExprNames(names, from) {
@@ -12138,11 +12138,11 @@ var require_codegen = __commonJS({
           items.push(c);
         return items;
       }, []));
-      function replaceName(n3) {
-        const c = constants2[n3.str];
-        if (c === void 0 || names[n3.str] !== 1)
-          return n3;
-        delete names[n3.str];
+      function replaceName(n4) {
+        const c = constants2[n4.str];
+        if (c === void 0 || names[n4.str] !== 1)
+          return n4;
+        delete names[n4.str];
         return c;
       }
       function canOptimize(e) {
@@ -12150,8 +12150,8 @@ var require_codegen = __commonJS({
       }
     }
     function subtractNames(names, from) {
-      for (const n3 in from)
-        names[n3] = (names[n3] || 0) - (from[n3] || 0);
+      for (const n4 in from)
+        names[n4] = (names[n4] || 0) - (from[n4] || 0);
     }
     function not(x2) {
       return typeof x2 == "boolean" || typeof x2 == "number" || x2 === null ? !x2 : (0, code_1._)`!${par(x2)}`;
@@ -18365,6 +18365,8 @@ function hasProjects(r2) {
 }
 
 // packages/canvas/dist/model.js
+var WAIT_MAX_SEC = 1800;
+var WAIT_DEFAULT_SEC = 300;
 var diagramFrameId = (key) => `diagram.${key}`;
 function diagramSpecOf(item) {
   const d = item?.type === "frame" ? item.data?.diagram : void 0;
@@ -18653,15 +18655,23 @@ var BoardRepositoryBase = class {
     const existing = matching();
     if (existing.some((c) => c.note === HANDOFF_NOTE))
       return Promise.resolve(existing);
+    if (opts.signal?.aborted)
+      return Promise.resolve([]);
     this.setWatching(id, who3, 1);
     return new Promise((resolve) => {
       let woke = existing.some((c) => wakes(c, wake));
       let quiet;
+      let done = false;
+      const onAbort = () => finish([]);
       const finish = (result) => {
+        if (done)
+          return;
+        done = true;
         clearTimeout(deadline);
         if (quiet)
           clearTimeout(quiet);
         off();
+        opts.signal?.removeEventListener("abort", onAbort);
         this.setWatching(id, who3, -1);
         resolve(result);
       };
@@ -18680,15 +18690,16 @@ var BoardRepositoryBase = class {
           armQuiet();
       });
       const deadline = setTimeout(() => finish(woke ? matching() : []), timeoutMs);
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
       if (woke)
         armQuiet();
     });
   }
   watchers(id) {
-    let n3 = 0;
+    let n4 = 0;
     for (const c of this.watching.get(id)?.values() ?? [])
-      n3 += c;
-    return n3;
+      n4 += c;
+    return n4;
   }
   watcherNames(id) {
     return [...this.watching.get(id)?.entries() ?? []].filter(([, c]) => c > 0).map(([name]) => name).sort();
@@ -18713,11 +18724,11 @@ var BoardRepositoryBase = class {
     if (!seen)
       this.lastSeen.set(id, seen = /* @__PURE__ */ new Map());
     seen.set(who3, (/* @__PURE__ */ new Date()).toISOString());
-    const n3 = this.watchers(id);
+    const n4 = this.watchers(id);
     const names = this.watcherNames(id);
     for (const fn of this.presenceSubs) {
       try {
-        fn(id, n3, names);
+        fn(id, n4, names);
       } catch {
       }
     }
@@ -18815,8 +18826,8 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
       const taken = /* @__PURE__ */ new Set([PERSONAL_PROJECT, ...this.registered.map((r2) => r2.id)]);
       const base = projectSlug(path2.basename(real));
       let id = base;
-      for (let n3 = 2; taken.has(id); n3++)
-        id = `${base}-${n3}`;
+      for (let n4 = 2; taken.has(id); n4++)
+        id = `${base}-${n4}`;
       p = { id, root: real };
       this.registered.push(p);
       this.writeRegistry();
@@ -19241,11 +19252,11 @@ function lineOps(a, b2) {
     endA--;
     endB--;
   }
-  const n3 = endA - start;
+  const n4 = endA - start;
   const m2 = endB - start;
-  const lcs = new Int32Array((n3 + 1) * (m2 + 1));
+  const lcs = new Int32Array((n4 + 1) * (m2 + 1));
   const at2 = (i2, j3) => i2 * (m2 + 1) + j3;
-  for (let i2 = n3 - 1; i2 >= 0; i2--)
+  for (let i2 = n4 - 1; i2 >= 0; i2--)
     for (let j3 = m2 - 1; j3 >= 0; j3--)
       lcs[at2(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at2(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at2(i2 + 1, j3)], lcs[at2(i2, j3 + 1)]);
   const ops = [];
@@ -19253,12 +19264,12 @@ function lineOps(a, b2) {
     ops.push({ kind: " ", text: a[k2], a: k2, b: k2 });
   let i = 0;
   let j2 = 0;
-  while (i < n3 || j2 < m2) {
-    if (i < n3 && j2 < m2 && a[start + i] === b2[start + j2]) {
+  while (i < n4 || j2 < m2) {
+    if (i < n4 && j2 < m2 && a[start + i] === b2[start + j2]) {
       ops.push({ kind: " ", text: a[start + i], a: start + i, b: start + j2 });
       i++;
       j2++;
-    } else if (i < n3 && (j2 === m2 || lcs[at2(i + 1, j2)] >= lcs[at2(i, j2 + 1)])) {
+    } else if (i < n4 && (j2 === m2 || lcs[at2(i + 1, j2)] >= lcs[at2(i, j2 + 1)])) {
       ops.push({ kind: "-", text: a[start + i], a: start + i, b: start + j2 });
       i++;
     } else {
@@ -19473,8 +19484,8 @@ function responderName(r2) {
   return r2.mode === "studio" ? LOCAL_AGENT : r2.agent;
 }
 function responderLabel(r2) {
-  const n3 = responderName(r2);
-  return n3 ? displayName(n3) : "any agent";
+  const n4 = responderName(r2);
+  return n4 ? displayName(n4) : "any agent";
 }
 function displayName(name) {
   return name === LOCAL_AGENT ? "studio" : name;
@@ -19501,7 +19512,7 @@ function resolveAgent(raw, known) {
   const want = raw.trim().replace(/^@+/, "");
   if (sameAgent(want, LOCAL_AGENT))
     return LOCAL_AGENT;
-  return known.find((n3) => n3 === want) ?? known.find((n3) => n3.toLowerCase() === want.toLowerCase()) ?? known.find((n3) => sameAgent(n3, want));
+  return known.find((n4) => n4 === want) ?? known.find((n4) => n4.toLowerCase() === want.toLowerCase()) ?? known.find((n4) => sameAgent(n4, want));
 }
 function agentLabel(name) {
   const h = handleOf(name);
@@ -19696,11 +19707,11 @@ function mentionIn(text3, known) {
   if (!text3 || !text3.includes("@"))
     return void 0;
   const tokens = [];
-  for (const n3 of /* @__PURE__ */ new Set([...known, "studio"])) {
-    if (!n3 || n3.length > 60)
+  for (const n4 of /* @__PURE__ */ new Set([...known, "studio"])) {
+    if (!n4 || n4.length > 60)
       continue;
-    const name = sameAgent(n3, LOCAL_AGENT) ? LOCAL_AGENT : n3;
-    for (const t of /* @__PURE__ */ new Set([n3, handleOf(n3)]))
+    const name = sameAgent(n4, LOCAL_AGENT) ? LOCAL_AGENT : n4;
+    for (const t of /* @__PURE__ */ new Set([n4, handleOf(n4)]))
       tokens.push({ token: t.toLowerCase(), name });
   }
   tokens.sort((a, b2) => b2.token.length - a.token.length);
@@ -19757,19 +19768,19 @@ function threadOf(board, root) {
   return Object.values(board.items).filter((i) => i.type === "comment" && (i.id === root.id || threadRoot(board, i).id === root.id)).sort((a, b2) => a.id === root.id ? -1 : b2.id === root.id ? 1 : when(a).localeCompare(when(b2)));
 }
 function trailingAgentTurns(thread) {
-  let n3 = 0;
+  let n4 = 0;
   for (let i = thread.length - 1; i >= 0 && thread[i].createdBy === "agent"; i--)
-    n3++;
-  return n3;
+    n4++;
+  return n4;
 }
 function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
   const root = threadRoot(board, comment);
   const thread = threadOf(board, root);
   const author = agentOf(comment);
   const out = [];
-  const add = (n3) => {
-    if (n3 && !sameAgent(n3, author) && !out.some((o) => sameAgent(o, n3)))
-      out.push(n3);
+  const add = (n4) => {
+    if (n4 && !sameAgent(n4, author) && !out.some((o) => sameAgent(o, n4)))
+      out.push(n4);
   };
   if (author) {
     const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length);
@@ -19882,16 +19893,19 @@ function withMention(data, text3, known, was, now, ask) {
   return d;
 }
 function asksMe(board, change, me) {
-  if (change.author !== "agent" || sameAgent(change.by ?? LOCAL_AGENT, me))
+  return change.author === "agent" && mentionsMe(board, change, me);
+}
+function mentionsMe(board, change, me) {
+  if (change.author === "agent" && sameAgent(change.by ?? LOCAL_AGENT, me))
     return false;
   return change.ops.some((op) => {
     const id = op.kind === "add" ? op.item.id : op.id;
     const it = board.items[id] ?? (op.kind === "add" ? op.item : void 0);
     if (it?.type !== "comment")
       return false;
-    const route2 = it.data?.route;
+    const route = it.data?.route;
     const to = it.data?.to;
-    return (route2 === "mention" || route2 === "proposal") && Array.isArray(to) && to.some((n3) => typeof n3 === "string" && sameAgent(n3, me));
+    return (route === "mention" || route === "proposal") && Array.isArray(to) && to.some((n4) => typeof n4 === "string" && sameAgent(n4, me));
   });
 }
 var hasPendingNow = (op, before) => {
@@ -19912,7 +19926,7 @@ function addressedTo(board, change, me) {
     const item = board.items[id] ?? (op.kind === "add" ? op.item : void 0) ?? change.before[id] ?? void 0;
     if (item?.type === "comment") {
       const to = item.data?.to;
-      if (!Array.isArray(to) || to.some((n3) => typeof n3 === "string" && sameAgent(n3, me)))
+      if (!Array.isArray(to) || to.some((n4) => typeof n4 === "string" && sameAgent(n4, me)))
         return true;
       continue;
     }
@@ -19947,9 +19961,9 @@ function settingsLines(meta3) {
 }
 
 // packages/canvas/dist/outline.js
-var short = (s, n3 = 60) => {
+var short = (s, n4 = 60) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n3 ? t.slice(0, n3 - 1) + "\u2026" : t;
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
 };
 var KIND_LABEL = {
   "event-storming": "EventStorming",
@@ -20105,6 +20119,8 @@ function pendingTag(it) {
   if (!p || typeof p !== "object")
     return void 0;
   const kind = typeof p.kind === "string" ? p.kind : "change";
+  if (kind === "remove" && p.deleted)
+    return "deleted by the person \u2014 the file still has it: proposed remove from the file";
   return `proposed ${kind}${typeof p.by === "string" ? ` by ${displayName(p.by)}` : ""}`;
 }
 var who = (c) => c.createdBy === "agent" && typeof c.data?.by === "string" ? c.data.by : c.createdBy;
@@ -20199,9 +20215,9 @@ function outline(board, opts = {}) {
     }
     if (i.updatedBy === "user")
       f.push("edited by user");
-    const n3 = threadsOn.get(i.id)?.length;
-    if (n3 && only)
-      f.push(`${n3} thread${n3 === 1 ? "" : "s"}`);
+    const n4 = threadsOn.get(i.id)?.length;
+    if (n4 && only)
+      f.push(`${n4} thread${n4 === 1 ? "" : "s"}`);
     return f;
   };
   const line = (i, indent) => {
@@ -20248,9 +20264,9 @@ function outline(board, opts = {}) {
     printed.add(c.id);
     const spec = diagramSpecOf(c);
     if (spec) {
-      const n3 = descendants(tree, c.id).size;
+      const n4 = descendants(tree, c.id).size;
       const holder = holdersOf(board.meta).find((h) => h.key === spec.key);
-      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n3} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
+      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n4} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
       out.push(`${indent}## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short(c.text, 60)}" \u2014 ${bits.join(" \xB7 ")}  #${c.id}`);
     } else {
       const role = c.type === "ui" ? String(c.data?.ui?.type ?? "ui") : c.role ?? c.type;
@@ -20320,9 +20336,9 @@ function outline(board, opts = {}) {
 }
 
 // packages/canvas/dist/diff.js
-var short2 = (s, n3 = 60) => {
+var short2 = (s, n4 = 60) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n3 ? t.slice(0, n3 - 1) + "\u2026" : t;
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
 };
 function nameOf(item, board) {
   if (!item)
@@ -20604,12 +20620,12 @@ var changeWho = (c) => c.by ?? (c.author === "user" ? "person" : "agent");
 function fromMatches(c, from) {
   const who3 = changeWho(c).toLowerCase();
   return from.some((f) => {
-    const n3 = f.trim().toLowerCase();
-    if (n3 === "person" || n3 === "user")
+    const n4 = f.trim().toLowerCase();
+    if (n4 === "person" || n4 === "user")
       return c.author === "user";
-    if (n3 === "studio" || n3 === "agent")
+    if (n4 === "studio" || n4 === "agent")
       return c.author === "agent" && !c.by;
-    return who3 === n3;
+    return who3 === n4;
   });
 }
 function filterChanges(board, changes, f) {
@@ -20700,12 +20716,12 @@ function diffSummary(board, changes, lines2, o = { since: 0 }) {
     }
   }
   const last = o.last ?? 20;
-  const fmt = (m2) => [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n3]) => `${n3} ${k2}`).join(", ");
+  const fmt = (m2) => [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `${n4} ${k2}`).join(", ");
   const out = [`${changes.length} change(s) since seq ${o.since} (board seq ${board.seq}), ${ops} op(s), ${lines2.length} line(s)`];
   if (byWho.size)
     out.push("by who \xD7 kind:", ...[...byWho.entries()].map(([w2, m2]) => `  ${w2}: ${fmt(m2) || "\u2014"}`));
   if (byFrame.size)
-    out.push("by frame (ops):", ...[...byFrame.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n3]) => `  ${k2}: ${n3}`));
+    out.push("by frame (ops):", ...[...byFrame.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `  ${k2}: ${n4}`));
   if (lines2.length)
     out.push(`last ${Math.min(last, lines2.length)} line(s):`, ...lines2.slice(-last).map((l) => `  ${l}`));
   return out.join("\n");
@@ -25975,16 +25991,16 @@ var memo = {
           lastCtx = ctx;
           lastBucket = bucket;
         }
-        const hit = bucket.get(input2);
-        if (hit) {
-          payload.value = hit.value;
-          if (hit.issues) {
-            if (hit.issues.length)
-              payload.issues.push(...cloneIssues(hit.issues));
+        const hit2 = bucket.get(input2);
+        if (hit2) {
+          payload.value = hit2.value;
+          if (hit2.issues) {
+            if (hit2.issues.length)
+              payload.issues.push(...cloneIssues(hit2.issues));
           } else {
             payload.memo = true;
             state.backEdges ?? (state.backEdges = /* @__PURE__ */ new WeakSet());
-            state.backEdges.add(hit.value);
+            state.backEdges.add(hit2.value);
           }
           return payload;
         }
@@ -38720,17 +38736,17 @@ var ZodArray = /* @__PURE__ */ $constructor("ZodArray", (inst, def2) => {
   inst._zod.processJSONSchema = (ctx, json4, params) => arrayProcessor(inst, ctx, json4, params);
   inst.element = def2.element;
 }, {
-  min(n3, params) {
-    return this.check(_minLength(n3, params));
+  min(n4, params) {
+    return this.check(_minLength(n4, params));
   },
   nonempty(params) {
     return this.check(_minLength(1, params));
   },
-  max(n3, params) {
-    return this.check(_maxLength(n3, params));
+  max(n4, params) {
+    return this.check(_maxLength(n4, params));
   },
-  length(n3, params) {
-    return this.check(_length(n3, params));
+  length(n4, params) {
+    return this.check(_length(n4, params));
   },
   unwrap() {
     return this.element;
@@ -39687,8 +39703,8 @@ function containsRef(value) {
     return Object.values(sub).some(containsRef);
   });
 }
-function plural(n3) {
-  return n3 === 1 ? "element" : "elements";
+function plural(n4) {
+  return n4 === 1 ? "element" : "elements";
 }
 function checkArrayGuards(arraySchema, guards) {
   const guard = z.transform((value) => value).check((payload) => {
@@ -40411,8 +40427,8 @@ function idAllocator() {
   return (explicit, text3, fallback = "item") => {
     const base = explicit && explicit.trim() || slugify2(text3) || fallback;
     let id = base;
-    for (let n3 = 2; used.has(id); n3++)
-      id = `${base}-${n3}`;
+    for (let n4 = 2; used.has(id); n4++)
+      id = `${base}-${n4}`;
     used.add(id);
     return id;
   };
@@ -40538,9 +40554,9 @@ function normalizeEventStorming(raw) {
     if (kindOf.has(r2) && kinds.includes(kindOf.get(r2)))
       return r2;
     for (const k2 of kinds) {
-      const hit = byText.get(k2)?.get(r2);
-      if (hit)
-        return hit;
+      const hit2 = byText.get(k2)?.get(r2);
+      if (hit2)
+        return hit2;
     }
     unresolved.push({ element, field, ref: r2 });
     return void 0;
@@ -40627,10 +40643,10 @@ function normalizeEventStorming(raw) {
       sys.raises.push(ev);
   }
   const anyElement = ["event", "command", "policy", "read-model", "person", "system", "aggregate", "hotspot", "opportunity"];
-  const note = (kind, n3) => {
-    const id = declare(kind, n3.id, n3.text);
-    const target = n3.on ?? n3.near;
-    return { id, text: n3.text, on: target ? resolve(target, anyElement, id, "on") : void 0 };
+  const note = (kind, n4) => {
+    const id = declare(kind, n4.id, n4.text);
+    const target = n4.on ?? n4.near;
+    return { id, text: n4.text, on: target ? resolve(target, anyElement, id, "on") : void 0 };
   };
   const hotspots = c.hotspots.map((h) => ({ ...note("hotspot", h), kind: h.kind }));
   const opportunities = c.opportunities.map((o) => note("opportunity", o));
@@ -40717,10 +40733,12 @@ var ES_LEGEND = {
 };
 
 // packages/canvas/dist/templates/esTimeline.js
-function placeFlow(nodes, edges, timeline, siblings) {
+var againIdOf = (of, n4) => n4 ? `${of}.again-${n4 + 1}` : `${of}.again`;
+function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
   const isEvent = new Set(timeline);
-  const ids = nodes.map((n3) => n3.id);
+  const ids = nodes.map((n4) => n4.id);
   const known = new Set(ids);
+  const bandOf = new Map(nodes.map((n4) => [n4.id, n4.band]));
   const succ = new Map(ids.map((id) => [id, []]));
   const pred = new Map(ids.map((id) => [id, []]));
   const add = (a, b2) => {
@@ -40731,12 +40749,22 @@ function placeFlow(nodes, edges, timeline, siblings) {
   };
   for (const [a, b2] of edges)
     add(a, b2);
-  const starts = ids.filter((id) => pred.get(id).length === 0);
-  const state = /* @__PURE__ */ new Map();
   const back = /* @__PURE__ */ new Set();
+  const t = opts.time;
+  if (t) {
+    for (const a of ids)
+      for (const b2 of succ.get(a))
+        if (t.has(a) && t.has(b2) && t.get(a) > t.get(b2))
+          back.add(`${a}>${b2}`);
+  }
+  const byTime = (x2, y2) => (t?.get(x2) ?? Infinity) - (t?.get(y2) ?? Infinity);
+  const starts = ids.filter((id) => pred.get(id).every((p) => back.has(`${p}>${id}`)));
+  const state = /* @__PURE__ */ new Map();
   const visit2 = (id) => {
     state.set(id, 1);
     for (const s of succ.get(id)) {
+      if (back.has(`${id}>${s}`))
+        continue;
       if (state.get(s) === 1)
         back.add(`${id}>${s}`);
       else if (!state.has(s))
@@ -40744,9 +40772,31 @@ function placeFlow(nodes, edges, timeline, siblings) {
     }
     state.set(id, 2);
   };
-  for (const id of [...starts, ...ids])
+  for (const id of [...[...starts].sort(byTime), ...ids])
     if (!state.has(id))
       visit2(id);
+  const againId = opts.againId ?? againIdOf;
+  const again = [];
+  const retarget = /* @__PURE__ */ new Map();
+  const count = /* @__PURE__ */ new Map();
+  for (const a of [...ids]) {
+    for (const b2 of [...succ.get(a)]) {
+      if (!back.has(`${a}>${b2}`))
+        continue;
+      const n4 = count.get(b2) ?? 0;
+      count.set(b2, n4 + 1);
+      const id = againId(b2, n4);
+      const band = bandOf.get(a);
+      again.push({ id, of: b2, after: a, band });
+      retarget.set(`${a}>${b2}`, id);
+      ids.push(id);
+      known.add(id);
+      bandOf.set(id, band);
+      succ.set(id, []);
+      pred.set(id, []);
+      add(a, id);
+    }
+  }
   const forward = (a, b2) => !back.has(`${a}>${b2}`);
   const reaches = (from, to) => {
     const seen = /* @__PURE__ */ new Set();
@@ -40764,6 +40814,10 @@ function placeFlow(nodes, edges, timeline, siblings) {
     }
     return false;
   };
+  const causal = /* @__PURE__ */ new Set();
+  for (const [a, list2] of succ)
+    for (const b2 of list2)
+      causal.add(`${a}>${b2}`);
   const events = timeline.filter((e) => known.has(e));
   for (let i = 1; i < events.length; i++) {
     const [a, b2] = [events[i - 1], events[i]];
@@ -40782,7 +40836,31 @@ function placeFlow(nodes, edges, timeline, siblings) {
     if (next.length)
       rank.set(id, Math.max(rank.get(id), Math.min(...next) - 1));
   }
-  const bandOf = new Map(nodes.map((n3) => [n3.id, n3.band]));
+  const reach = /* @__PURE__ */ new Map();
+  for (const id of [...order].reverse())
+    reach.set(id, Math.max(rank.get(id), ...succ.get(id).filter((s) => forward(id, s)).map((s) => reach.get(s) ?? rank.get(s))));
+  const ancestors = /* @__PURE__ */ new Map();
+  const ancestorsOf = (id) => {
+    const hit2 = ancestors.get(id);
+    if (hit2)
+      return hit2;
+    const out = /* @__PURE__ */ new Set();
+    ancestors.set(id, out);
+    for (const p of pred.get(id)) {
+      if (!causal.has(`${p}>${id}`) || !forward(p, id))
+        continue;
+      out.add(p);
+      for (const x2 of ancestorsOf(p))
+        out.add(x2);
+    }
+    return out;
+  };
+  const branchOfFork = (a, s) => {
+    if (causal.has(`${a}>${s}`))
+      return false;
+    const mine = /* @__PURE__ */ new Set([a, ...ancestorsOf(a)]);
+    return pred.get(s).some((p) => causal.has(`${p}>${s}`) && forward(p, s) && !row.has(p) && [p, ...ancestorsOf(p)].some((x2) => mine.has(x2)));
+  };
   const taken = /* @__PURE__ */ new Set();
   const row = /* @__PURE__ */ new Map();
   const place2 = (id, want) => {
@@ -40793,16 +40871,18 @@ function placeFlow(nodes, edges, timeline, siblings) {
       r2++;
     row.set(id, r2);
     taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r2}`);
-    for (const s of succ.get(id))
-      if (forward(id, s))
-        place2(s, r2);
+    const next = succ.get(id).filter((s) => forward(id, s) && !branchOfFork(id, s));
+    const pos = new Map(next.map((s, i) => [s, i]));
+    next.sort((x2, y2) => reach.get(y2) - reach.get(x2) || pos.get(x2) - pos.get(y2));
+    for (const s of next)
+      place2(s, r2);
   };
   for (const id of order)
     if (pred.get(id).every((p) => !forward(p, id)))
       place2(id, 0);
   for (const id of ids)
     place2(id, 0);
-  return { rank, row };
+  return { rank, row, again, retarget };
 }
 function topo(ids, succ, forward) {
   const indeg = new Map(ids.map((id) => [id, 0]));
@@ -40962,6 +41042,7 @@ function renderEventStorming(raw, opts = {}) {
   const edges = [];
   const systemOcc = /* @__PURE__ */ new Map();
   const nodeOf = /* @__PURE__ */ new Map();
+  const inlineRm = /* @__PURE__ */ new Set();
   const ev = (id) => itemId("event", id);
   for (const e of m2.events) {
     nodes.push({ id: ev(e.id), band: bandOfEvent(e.id) });
@@ -40994,6 +41075,21 @@ function renderEventStorming(raw, opts = {}) {
       for (const k2 of p.then)
         edges.push([po, itemId("command", k2)]);
     }
+    for (const r2 of m2.readModels) {
+      const cmds = r2.informs.filter((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
+      if (!cmds.length)
+        continue;
+      const rm = itemId("read-model", r2.id);
+      const updates = r2.updatedBy.filter((e) => eventById.has(e));
+      const band = aggOf.has(r2.id) ? `agg:${aggOf.get(r2.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : nodes.find((n4) => n4.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0);
+      nodes.push({ id: rm, band });
+      nodeOf.set(r2.id, rm);
+      inlineRm.add(r2.id);
+      for (const e of updates)
+        edges.push([ev(e), rm]);
+      for (const k2 of cmds)
+        edges.push([rm, itemId("command", k2)]);
+    }
   }
   const raisers = [];
   for (const s of m2.systems) {
@@ -41012,16 +41108,19 @@ function renderEventStorming(raw, opts = {}) {
   const timeline = m2.events.map((e) => ev(e.id));
   let rank;
   let row;
+  let again = [];
+  let retarget = /* @__PURE__ */ new Map();
   if (detailed) {
     const siblings = branchSiblings(m2);
-    ({ rank, row } = placeFlow(nodes, edges, timeline, (a, b2) => siblings(a.slice(scope.length + 7), b2.slice(scope.length + 7))));
+    ({ rank, row, again, retarget } = placeFlow(nodes, edges, timeline, (a, b2) => siblings(a.slice(scope.length + 7), b2.slice(scope.length + 7)), { time: flowTimes(m2, itemId, systemOcc, inlineRm) }));
+    nodes.push(...again.map((a) => ({ id: a.id, band: a.band })));
     const minRank = /* @__PURE__ */ new Map();
-    for (const n3 of nodes)
-      if (n3.band.startsWith("agg:"))
-        minRank.set(n3.band, Math.min(minRank.get(n3.band) ?? Infinity, rank.get(n3.id)));
-    for (const n3 of nodes)
-      if (minRank.has(n3.band))
-        rank.set(n3.id, rank.get(n3.id) - minRank.get(n3.band));
+    for (const n4 of nodes)
+      if (n4.band.startsWith("agg:"))
+        minRank.set(n4.band, Math.min(minRank.get(n4.band) ?? Infinity, rank.get(n4.id)));
+    for (const n4 of nodes)
+      if (minRank.has(n4.band))
+        rank.set(n4.id, rank.get(n4.id) - minRank.get(n4.band));
   } else {
     rank = /* @__PURE__ */ new Map();
     row = /* @__PURE__ */ new Map();
@@ -41033,14 +41132,15 @@ function renderEventStorming(raw, opts = {}) {
       row.set(ev(e.id), 0);
     }
   }
-  const bandOf = new Map(nodes.map((n3) => [n3.id, n3.band]));
+  const bandOf = new Map(nodes.map((n4) => [n4.id, n4.band]));
   const at2 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
   const atElement = (element) => {
-    const n3 = element ? nodeOf.get(element) : void 0;
-    return n3 && rank.has(n3) ? at2(n3) : void 0;
+    const n4 = element ? nodeOf.get(element) : void 0;
+    return n4 && rank.has(n4) ? at2(n4) : void 0;
   };
   const slots = [];
   const slot = (s) => slots.push({ ...s, data: s.data ?? {} });
+  const rmWhere = /* @__PURE__ */ new Map();
   const personAt = /* @__PURE__ */ new Map();
   const personSlot = (person, where, anchor3) => {
     const key = `${where.band}|${where.rank}|${where.row}|${person}`;
@@ -41083,11 +41183,13 @@ function renderEventStorming(raw, opts = {}) {
       slot({ ...at2(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
     }
     for (const r2 of m2.readModels) {
-      const informedCommand = r2.informs.find((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
-      const firstUpdate = r2.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => a.rank - b2.rank)[0];
-      const where = (informedCommand ? atElement(informedCommand) : void 0) ?? (firstUpdate ? { ...firstUpdate, rank: firstUpdate.rank + 1 } : void 0) ?? { band: timelineBand(0), rank: 0, row: 0 };
-      nodeOf.set(r2.id, itemId("read-model", r2.id));
-      slot({ ...where, strip: "read-model", id: itemId("read-model", r2.id), role: "read-model", text: r2.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r2.id, updatedBy: r2.updatedBy, informs: r2.informs, ...r2.traces.length ? { traces: r2.traces } : {} } });
+      const rm = itemId("read-model", r2.id);
+      const lastUpdate = r2.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
+      const inline = inlineRm.has(r2.id) && rank.has(rm);
+      const where = inline ? at2(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
+      nodeOf.set(r2.id, rm);
+      rmWhere.set(r2.id, where);
+      slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r2.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r2.id, updatedBy: r2.updatedBy, informs: r2.informs, ...r2.traces.length ? { traces: r2.traces } : {} } });
     }
   }
   for (const x2 of raisers) {
@@ -41095,6 +41197,33 @@ function renderEventStorming(raw, opts = {}) {
       slot({ ...at2(x2.id), strip: "main", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
     else
       slot({ ...at2(ev(x2.event)), strip: "below", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
+  }
+  for (const a of again) {
+    const orig = slots.find((s) => s.id === a.of);
+    if (!orig)
+      continue;
+    slot({ ...at2(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } });
+    const k2 = orig.role === "command" ? m2.commands.find((c) => c.id === orig.data.element) : void 0;
+    if (k2?.by)
+      personSlot(k2.by, at2(a.id), a.id.slice(`${scope}.command.`.length));
+  }
+  if (detailed) {
+    for (const r2 of m2.readModels) {
+      const where = rmWhere.get(r2.id);
+      if (!where)
+        continue;
+      for (const x2 of r2.informs) {
+        if (m2.kindOf.get(x2) !== "person")
+          continue;
+        const later = [...personAt.keys()].some((key) => {
+          const parts = key.split("|");
+          const [band, rk, person] = [parts.slice(0, -3).join("|"), Number(parts[parts.length - 3]), parts[parts.length - 1]];
+          return person === x2 && rk >= where.rank && (band === where.band || !band.startsWith("agg:") && !where.band.startsWith("agg:"));
+        });
+        if (!later)
+          personSlot(x2, where, r2.id);
+      }
+    }
   }
   for (const ms of m2.milestones) {
     const where = atElement(ms.before) ?? { band: timelineBand(0), rank: 0, row: 0 };
@@ -41131,9 +41260,9 @@ function renderEventStorming(raw, opts = {}) {
       for (const st of STRIPS) {
         const key = `${r2}|${st}`;
         top.set(key, y3);
-        const n3 = depth.get(key) ?? 0;
-        if (n3)
-          y3 += n3 * unit.get(key) + (n3 - 1) * STACK + GAP;
+        const n4 = depth.get(key) ?? 0;
+        if (n4)
+          y3 += n4 * unit.get(key) + (n4 - 1) * STACK + GAP;
       }
       y3 += GAP;
     }
@@ -41154,8 +41283,8 @@ function renderEventStorming(raw, opts = {}) {
   const phaseBars = m2.phases.map((ph) => {
     const members2 = m2.events.filter((e) => e.phase === ph.id).map((e) => eventRank(e.id)).filter((r2) => r2 !== void 0);
     const from = eventRank(ph.from) ?? (members2.length ? Math.min(...members2) : 0);
-    const to = eventRank(ph.to) ?? (members2.length ? Math.max(...members2) : lastRank);
-    return { ph, from: Math.min(from, to), to: Math.max(from, to) };
+    const to2 = eventRank(ph.to) ?? (members2.length ? Math.max(...members2) : lastRank);
+    return { ph, from: Math.min(from, to2), to: Math.max(from, to2) };
   });
   const phaseRows = [];
   const phaseRowOf = phaseBars.map((b2) => {
@@ -41175,8 +41304,8 @@ function renderEventStorming(raw, opts = {}) {
   const laneSlug = /* @__PURE__ */ new Set();
   m2.lanes.forEach((name, i) => {
     let sl = slugify2(name) || "lane";
-    for (let n3 = 2; laneSlug.has(sl); n3++)
-      sl = `${slugify2(name) || "lane"}-${n3}`;
+    for (let n4 = 2; laneSlug.has(sl); n4++)
+      sl = `${slugify2(name) || "lane"}-${n4}`;
     laneSlug.add(sl);
     laneIds.set(laneKeys[i], itemId("lane", sl));
   });
@@ -41241,36 +41370,38 @@ function renderEventStorming(raw, opts = {}) {
     bottom = legend(m2, items, scope, bottom, now);
   const arrows = [];
   const has = (id) => itemOf.has(id);
+  const to = (from, target) => retarget.get(`${from}>${target}`) ?? target;
   if (detailed) {
     for (const k2 of m2.commands) {
       const cmd = itemId("command", k2.id);
       const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
       if (sys)
-        arrows.push(arrow(scope, cmd, sys, now, void 0, "handles"));
+        arrows.push(arrow(scope, cmd, to(cmd, sys), now, void 0, "handles"));
       k2.produces.forEach((e, i) => {
-        if (!has(ev(e)))
+        const target = to(sys ?? cmd, ev(e));
+        if (!has(target))
           return;
-        arrows.push(arrow(scope, sys ?? cmd, ev(e), now, void 0, "produces", i ? { data: { branch: i } } : {}));
+        arrows.push(arrow(scope, sys ?? cmd, target, now, void 0, "produces", i ? { data: { branch: i } } : {}));
       });
     }
     for (const p of m2.policies) {
       const po = itemId("policy", p.id);
       for (const e of p.when)
         if (has(ev(e)))
-          arrows.push(arrow(scope, ev(e), po, now, "whenever", "triggers"));
+          arrows.push(arrow(scope, ev(e), to(ev(e), po), now, "whenever", "triggers"));
       for (const k2 of p.then)
-        arrows.push(arrow(scope, po, itemId("command", k2), now, "then", "triggers"));
+        arrows.push(arrow(scope, po, to(po, itemId("command", k2)), now, "then", "triggers"));
     }
     for (const r2 of m2.readModels) {
       const rm = itemId("read-model", r2.id);
       const rmX = itemOf.get(rm)?.x ?? 0;
       for (const e of r2.updatedBy)
         if (has(ev(e)))
-          arrows.push(arrow(scope, ev(e), rm, now, void 0, "updates"));
+          arrows.push(arrow(scope, ev(e), to(ev(e), rm), now, void 0, "updates"));
       for (const x2 of r2.informs) {
         const occurrences = [...personAt.entries()].filter(([key]) => key.endsWith(`|${x2}`)).map(([, id]) => itemOf.get(id)).filter((it) => Boolean(it));
         const person = occurrences.filter((it) => it.x >= rmX).sort((a, b2) => a.x - b2.x)[0] ?? occurrences.sort((a, b2) => b2.x - a.x)[0];
-        const target = m2.kindOf.get(x2) === "command" ? itemId("command", x2) : person?.id;
+        const target = m2.kindOf.get(x2) === "command" ? to(rm, itemId("command", x2)) : person?.id;
         if (target && has(target))
           arrows.push(arrow(scope, rm, target, now, "informs", "informs"));
       }
@@ -41279,9 +41410,50 @@ function renderEventStorming(raw, opts = {}) {
   for (const [key, id] of systemOcc) {
     const [sys, anchor3] = key.split("|");
     if (m2.kindOf.get(anchor3) === "event" && has(ev(anchor3)) && has(id))
-      arrows.push(arrow(scope, id, ev(anchor3), now, void 0, "raises", { data: { system: sys } }));
+      arrows.push(arrow(scope, id, to(id, ev(anchor3)), now, void 0, "raises", { data: { system: sys } }));
   }
   return offsetAll([...lanes, ...aggFrames, ...items, ...arrows], opts.at);
+}
+function flowTimes(m2, itemId, systemOcc, inlineRm) {
+  const t = /* @__PURE__ */ new Map();
+  const idx = new Map(m2.events.map((e, i) => [e.id, i]));
+  for (const e of m2.events)
+    t.set(itemId("event", e.id), idx.get(e.id));
+  const policyT = /* @__PURE__ */ new Map();
+  for (const p of m2.policies) {
+    const when = p.when.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    if (when.length)
+      policyT.set(p.id, Math.max(...when) + 0.25);
+    if (policyT.has(p.id))
+      t.set(itemId("policy", p.id), policyT.get(p.id));
+  }
+  const commandT = /* @__PURE__ */ new Map();
+  for (const k2 of m2.commands) {
+    const produced = k2.produces.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    const by = m2.policies.filter((p) => p.then.includes(k2.id) && policyT.has(p.id)).map((p) => policyT.get(p.id));
+    const at2 = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : void 0;
+    if (at2 === void 0)
+      continue;
+    commandT.set(k2.id, at2);
+    t.set(itemId("command", k2.id), at2);
+  }
+  for (const [key, id] of systemOcc) {
+    const anchor3 = key.slice(key.indexOf("|") + 1);
+    if (commandT.has(anchor3))
+      t.set(id, commandT.get(anchor3) + 0.2);
+    else if (idx.has(anchor3))
+      t.set(id, idx.get(anchor3) - 0.3);
+  }
+  for (const r2 of m2.readModels) {
+    if (!inlineRm.has(r2.id))
+      continue;
+    const updates = r2.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    const cmds = r2.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
+    const at2 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
+    if (at2 !== void 0)
+      t.set(itemId("read-model", r2.id), at2);
+  }
+  return t;
 }
 function legend(m2, items, scope, bottom, now) {
   const used = /* @__PURE__ */ new Set();
@@ -41383,8 +41555,8 @@ function renderUserStoryMap(raw, opts = {}) {
   const laneSlugs = /* @__PURE__ */ new Set();
   m2.releases.forEach((rel, ri) => {
     let slug = slugify2(rel) || "release";
-    for (let n3 = 2; laneSlugs.has(slug); n3++)
-      slug = `${slugify2(rel) || "release"}-${n3}`;
+    for (let n4 = 2; laneSlugs.has(slug); n4++)
+      slug = `${slugify2(rel) || "release"}-${n4}`;
     laneSlugs.add(slug);
     const laneId = itemId("release", slug);
     const laneStories = [];
@@ -41546,13 +41718,13 @@ function renderWireframe(raw, opts = {}) {
 function layered(nodes, edges, opts = {}) {
   const gap = opts.gap ?? 40;
   const laneH = opts.laneH ?? 20;
-  const known = new Map(nodes.map((n3) => [n3.id, n3]));
+  const known = new Map(nodes.map((n4) => [n4.id, n4]));
   const valid = edges.map((e) => known.has(e.from) && known.has(e.to));
-  const out = new Map(nodes.map((n3) => [n3.id, []]));
+  const out = new Map(nodes.map((n4) => [n4.id, []]));
   edges.forEach((e, i) => valid[i] && out.get(e.from).push(i));
   const back = edges.map((e, i) => valid[i] && e.from === e.to);
   const state = /* @__PURE__ */ new Map();
-  const roots = [...nodes.filter((n3) => n3.source), ...nodes.filter((n3) => !n3.source)];
+  const roots = [...nodes.filter((n4) => n4.source), ...nodes.filter((n4) => !n4.source)];
   for (const r2 of roots) {
     if (state.get(r2.id))
       continue;
@@ -41578,13 +41750,13 @@ function layered(nodes, edges, opts = {}) {
     }
   }
   const forward = edges.map((e, i) => valid[i] && !back[i] && e.from !== e.to ? e : void 0);
-  const preds = new Map(nodes.map((n3) => [n3.id, []]));
-  const succs = new Map(nodes.map((n3) => [n3.id, []]));
+  const preds = new Map(nodes.map((n4) => [n4.id, []]));
+  const succs = new Map(nodes.map((n4) => [n4.id, []]));
   for (const e of forward)
     if (e)
       preds.get(e.to).push(e.from), succs.get(e.from).push(e.to);
-  const indeg = new Map(nodes.map((n3) => [n3.id, preds.get(n3.id).length]));
-  const queue = nodes.filter((n3) => indeg.get(n3.id) === 0).map((n3) => n3.id);
+  const indeg = new Map(nodes.map((n4) => [n4.id, preds.get(n4.id).length]));
+  const queue = nodes.filter((n4) => indeg.get(n4.id) === 0).map((n4) => n4.id);
   const layer = /* @__PURE__ */ new Map();
   for (let qi = 0; qi < queue.length; qi++) {
     const id = queue[qi];
@@ -41596,9 +41768,9 @@ function layered(nodes, edges, opts = {}) {
         queue.push(s);
     }
   }
-  for (const n3 of nodes)
-    if (!layer.has(n3.id))
-      layer.set(n3.id, 1);
+  for (const n4 of nodes)
+    if (!layer.has(n4.id))
+      layer.set(n4.id, 1);
   const depth = Math.max(0, ...layer.values());
   const layers = Array.from({ length: depth + 1 }, () => []);
   const slotUp = /* @__PURE__ */ new Map();
@@ -41611,8 +41783,8 @@ function layered(nodes, edges, opts = {}) {
     slotDown.get(a).push(b2);
     slotUp.get(b2).push(a);
   };
-  for (const n3 of nodes)
-    layers[layer.get(n3.id)].push({ id: n3.id, h: n3.h, dummy: false });
+  for (const n4 of nodes)
+    layers[layer.get(n4.id)].push({ id: n4.id, h: n4.h, dummy: false });
   forward.forEach((e, i) => {
     if (!e)
       return;
@@ -41645,7 +41817,7 @@ function layered(nodes, edges, opts = {}) {
   const sortBy = (ls, nb) => {
     const bary = new Map(ls.map((s) => {
       const ns = nb.get(s.id) ?? [];
-      return [s.id, ns.length ? ns.reduce((a, n3) => a + pos.get(n3), 0) / ns.length : pos.get(s.id)];
+      return [s.id, ns.length ? ns.reduce((a, n4) => a + pos.get(n4), 0) / ns.length : pos.get(s.id)];
     }));
     ls.sort((a, b2) => bary.get(a.id) - bary.get(b2.id) || pos.get(a.id) - pos.get(b2.id));
     ls.forEach((s, i) => pos.set(s.id, i));
@@ -41680,7 +41852,7 @@ function layered(nodes, edges, opts = {}) {
   const place2 = (ls, nb) => {
     const want = ls.map((s) => {
       const ns = nb.get(s.id) ?? [];
-      return ns.length ? median(ns.map((n3) => centre2(n3, hOf.get(n3)))) - s.h / 2 : y2.get(s.id);
+      return ns.length ? median(ns.map((n4) => centre2(n4, hOf.get(n4)))) - s.h / 2 : y2.get(s.id);
     });
     const ys = [...want];
     for (let i = 1; i < ls.length; i++)
@@ -41697,10 +41869,10 @@ function layered(nodes, edges, opts = {}) {
   }
   for (let l = 1; l < layers.length; l++)
     place2(layers[l], slotUp);
-  const top = Math.min(...nodes.map((n3) => y2.get(n3.id)));
+  const top = Math.min(...nodes.map((n4) => y2.get(n4.id)));
   const out2 = /* @__PURE__ */ new Map();
-  for (const n3 of nodes)
-    out2.set(n3.id, Math.round((y2.get(n3.id) - top) / 10) * 10);
+  for (const n4 of nodes)
+    out2.set(n4.id, Math.round((y2.get(n4.id) - top) / 10) * 10);
   return { layer, y: out2, back };
 }
 
@@ -41757,30 +41929,30 @@ function renderWorkflow(raw, opts = {}) {
   const COL4 = STICKY_W + labelGap(c.edges.map(edgeLabel));
   const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
   const scope = opts.scope ?? "wf";
-  const nodeId = (n3) => `${scope}.node.${n3}`;
+  const nodeId = (n4) => `${scope}.node.${n4}`;
   const items = [];
-  const known = new Set(c.nodes.map((n3) => n3.id));
-  const lay = layered(c.nodes.map((n3) => ({ id: n3.id, source: n3.kind === "trigger", h: STICKY_H })), c.edges.map((e) => ({ from: e.from, to: e.to })), { gap: GAP + 10 });
+  const known = new Set(c.nodes.map((n4) => n4.id));
+  const lay = layered(c.nodes.map((n4) => ({ id: n4.id, source: n4.kind === "trigger", h: STICKY_H })), c.edges.map((e) => ({ from: e.from, to: e.to })), { gap: GAP + 10 });
   const layer = lay.layer;
   const agentId = (a) => `${scope}.agent.${a}`;
   const frameH = c.agents.length ? LANE_HEADER + AGENT_H + PAD : 0;
   const graphTop = PAD + (frameH ? frameH + GAP * 2 : 0);
-  const labelOf = (n3) => n3.label ?? n3.id;
-  for (const n3 of c.nodes) {
-    const l = layer.get(n3.id);
-    const row = [...layer].filter(([id, k2]) => k2 === l && lay.y.get(id) < lay.y.get(n3.id)).length;
+  const labelOf = (n4) => n4.label ?? n4.id;
+  for (const n4 of c.nodes) {
+    const l = layer.get(n4.id);
+    const row = [...layer].filter(([id, k2]) => k2 === l && lay.y.get(id) < lay.y.get(n4.id)).length;
     items.push(make({
-      id: nodeId(n3.id),
+      id: nodeId(n4.id),
       type: "card",
       x: PAD + l * COL4,
-      y: graphTop + lay.y.get(n3.id),
+      y: graphTop + lay.y.get(n4.id),
       w: STICKY_W,
       h: STICKY_H,
-      text: labelOf(n3),
-      color: KIND_COLOR[n3.kind] ?? "grey",
-      role: n3.kind,
+      text: labelOf(n4),
+      color: KIND_COLOR[n4.kind] ?? "grey",
+      role: n4.kind,
       order: row,
-      data: { nodeId: n3.id, kind: n3.kind, config: n3.config ?? {}, ...n3.config?.agent ? { agent: n3.config.agent } : {}, ...n3.detail ? { detail: n3.detail } : {} }
+      data: { nodeId: n4.id, kind: n4.kind, config: n4.config ?? {}, ...n4.config?.agent ? { agent: n4.config.agent } : {}, ...n4.detail ? { detail: n4.detail } : {} }
     }, now));
   }
   for (const e of c.edges) {
@@ -41949,7 +42121,15 @@ var domainStorySchema = external_exports.object({
     traces: external_exports.array(traceSchema).optional()
   })).min(1),
   groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
-  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([])
+  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+  /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
+  layout: external_exports.object({
+    spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
+    /** horizontal pitch of the actor grid in px (overrides the spacing's) */
+    gapX: external_exports.number().min(240).max(2e3).optional(),
+    /** vertical pitch of the actor grid in px */
+    gapY: external_exports.number().min(180).max(2e3).optional()
+  }).optional()
 });
 function normalizeDomainStory(raw) {
   const c = domainStorySchema.parse(raw);
@@ -41960,9 +42140,9 @@ function normalizeDomainStory(raw) {
   const unresolved = [];
   const find = (list2, ref2) => list2.find((x2) => x2.id === ref2) ?? list2.find((x2) => x2.text === ref2) ?? list2.find((x2) => x2.id === slugify2(ref2));
   const actorRef = (ref2, element, field) => {
-    const hit = find(actors, ref2);
-    if (hit)
-      return hit.id;
+    const hit2 = find(actors, ref2);
+    if (hit2)
+      return hit2.id;
     unresolved.push({ element, field, ref: ref2 });
     const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
     actors.push(added);
@@ -41990,10 +42170,10 @@ function normalizeDomainStory(raw) {
     };
   });
   const elementRef = (ref2, element, field) => {
-    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
-    if (!hit)
+    const hit2 = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    if (!hit2)
       unresolved.push({ element, field, ref: ref2 });
-    return hit;
+    return hit2;
   };
   const groups = c.groups.map((g2) => {
     const id = alloc(g2.id, g2.text, "group");
@@ -42004,15 +42184,15 @@ function normalizeDomainStory(raw) {
     const on = elementRef(a.on, id, "on");
     return on ? [{ id, on, text: a.text }] : [];
   });
-  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, unresolved, dsModel: true };
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c.layout ? { layout: c.layout } : {}, unresolved, dsModel: true };
 }
 function readSentence(m2, s) {
   const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
   return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
 }
-function circled(n3) {
-  return n3 >= 1 && n3 <= 20 ? String.fromCodePoint(9312 + n3 - 1) : `(${n3})`;
+function circled(n4) {
+  return n4 >= 1 && n4 <= 20 ? String.fromCodePoint(9312 + n4 - 1) : `(${n4})`;
 }
 var QUICK_START = "domainstorytelling.org/quick-start-guide";
 function checkDomainStory(content) {
@@ -42025,15 +42205,15 @@ function checkDomainStory(content) {
       out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START });
   }
   const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
-  seqs.forEach((n3, i) => {
+  seqs.forEach((n4, i) => {
     const expected = i === 0 ? 1 : seqs[i - 1] + 1;
-    if (n3 !== expected)
-      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n3}`, page: QUICK_START });
+    if (n4 !== expected)
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n4}`, page: QUICK_START });
   });
-  for (const n3 of seqs) {
-    const same2 = m2.sentences.filter((s) => s.seq === n3);
+  for (const n4 of seqs) {
+    const same2 = m2.sentences.filter((s) => s.seq === n4);
     if (same2.length > 1)
-      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n3)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n4)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
   }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
@@ -42048,13 +42228,309 @@ function checkDomainStory(content) {
   return out;
 }
 
+// packages/canvas/dist/textMetrics.js
+function defaultFont(it) {
+  if (it.type === "text")
+    return it.role === "title" || it.role === "heading" ? 22 : 15;
+  if (it.type === "sticky" && it.role === "actor")
+    return 12.5;
+  if (it.type === "card" && it.role === "card")
+    return 13.5;
+  return 13;
+}
+var fontOf = (it) => it.fontSize ?? defaultFont(it);
+function textBoxOf(it) {
+  const font = fontOf(it);
+  const lh = (k2) => Math.round(font * k2 * 10) / 10;
+  switch (it.type) {
+    case "sticky":
+      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 10, padBottom: 14, padLeft: 10, center: it.role === "actor" };
+    case "card":
+      if (it.role === "card")
+        return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 };
+      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 };
+    case "text":
+      return { font, lineHeight: lh(1.5), weight: it.role === "title" || it.role === "heading" ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
+    case "frame":
+    case "lane":
+      return { font: 13.5, lineHeight: 18, weight: 600, padTop: 8, padRight: 10, padBottom: 0, padLeft: 10, nowrap: true };
+    case "wireframe":
+      if (it.role === "heading")
+        return { font: 17, lineHeight: 22, weight: 600, padTop: 2, padRight: 4, padBottom: 2, padLeft: 4 };
+      if (it.role === "button")
+        return { font: 13, lineHeight: 17, weight: 500, padTop: 0, padRight: 6, padBottom: 0, padLeft: 6, center: true };
+      return { font: 13, lineHeight: 19.5, weight: 400, padTop: 2, padRight: 8, padBottom: 2, padLeft: 8 };
+    default:
+      return { font, lineHeight: lh(1.4), weight: 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
+  }
+}
+var WIDE = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1f300}-\u{1faff}]/u;
+function charEm(ch) {
+  if (WIDE.test(ch))
+    return 1;
+  if (ch === " ")
+    return 0.26;
+  if (/[iljtfrI.,:;'|!()[\]{}`]/.test(ch))
+    return 0.3;
+  if (/[mwMW@%]/.test(ch))
+    return 0.85;
+  if (/[A-Z]/.test(ch))
+    return 0.64;
+  if (/[0-9]/.test(ch))
+    return 0.56;
+  return 0.53;
+}
+function measure(text3, font, weight = 400) {
+  let em = 0;
+  for (const ch of text3)
+    em += charEm(ch);
+  return em * font * (weight >= 600 ? 1.05 : weight >= 500 ? 1.02 : 1);
+}
+function wrap(text3, width, font, weight = 400) {
+  const out = [];
+  const w2 = Math.max(width, font);
+  for (const para of text3.replace(/\r\n/g, "\n").split("\n")) {
+    const tokens = para.match(/[ \t]+|[^\sᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]+|./gu) ?? [""];
+    let line = "";
+    for (const tok of tokens) {
+      const next = line + tok;
+      if (measure(next.trimEnd(), font, weight) <= w2 || line === "") {
+        if (measure(tok, font, weight) > w2 && line === "") {
+          for (const ch of tok) {
+            if (measure(line + ch, font, weight) > w2 && line)
+              out.push(line), line = "";
+            line += ch;
+          }
+          continue;
+        }
+        line = next;
+        continue;
+      }
+      out.push(line.trimEnd());
+      line = /^\s+$/.test(tok) ? "" : tok;
+      if (measure(line, font, weight) > w2) {
+        const long = line;
+        line = "";
+        for (const ch of long) {
+          if (measure(line + ch, font, weight) > w2 && line)
+            out.push(line), line = "";
+          line += ch;
+        }
+      }
+    }
+    out.push(line.trimEnd());
+  }
+  return out;
+}
+function fitText(it) {
+  const box = textBoxOf(it);
+  const innerW = Math.max(1, it.w - box.padLeft - box.padRight);
+  const text3 = it.text ?? "";
+  const lines2 = box.nowrap ? [text3.split("\n")[0] ?? ""] : wrap(text3, innerW, box.font, box.weight);
+  const innerH = Math.max(0, it.h - box.padTop - box.padBottom);
+  const glyph = (box.lineHeight - box.font) / 2 + 0.6 * box.font;
+  const fits = innerH + 0.5 < glyph ? 0 : Math.floor((innerH + 0.5 - glyph) / box.lineHeight) + 1;
+  const needH = Math.ceil(lines2.length * box.lineHeight + box.padTop + box.padBottom);
+  const clipped = text3.trim() !== "" && (box.nowrap ? measure(lines2[0], box.font, box.weight) > innerW + 1 : lines2.length > fits);
+  return { box, lines: lines2, fits, clipped, needH, innerW };
+}
+
+// packages/canvas/dist/edgeLabel.js
+var EDGE_LABEL = {
+  /** label text on a wire */
+  font: 11,
+  /** a domain-story verb (it carries the sentence, so a little larger — still under the 12.5 px pictogram names) */
+  dsFont: 12,
+  lineHeight: 14,
+  padX: 4,
+  padY: 1,
+  /** widest a label gets before it wraps */
+  maxW: 168,
+  /** at most this many lines; the rest is cut with … */
+  maxLines: 2,
+  /** air kept between a label and any card */
+  gap: 3,
+  /** the dot shown when the label fits nowhere */
+  dot: 10
+};
+function labelControl(data) {
+  const l = data?.label;
+  if (!l || typeof l !== "object" || Array.isArray(l))
+    return {};
+  const o = l;
+  const out = {};
+  if (typeof o.at === "number" && Number.isFinite(o.at))
+    out.at = Math.min(1, Math.max(0, o.at));
+  if (typeof o.short === "string" && o.short.trim())
+    out.short = o.short.trim();
+  return out;
+}
+function isLabelObstacle(it) {
+  if (it.type === "arrow" || it.type === "comment" || it.type === "frame" || it.type === "lane")
+    return false;
+  if (it.type === "wireframe" && it.role === "screen")
+    return false;
+  if (it.type === "ui" && it.data?.ui?.container)
+    return false;
+  if (DECOR.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
+    return false;
+  return true;
+}
+var DECOR = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
+function cutLine(s, maxW, font) {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (measure(t, font) <= maxW)
+    return t;
+  let out = "";
+  for (const ch of t) {
+    if (measure(out + ch + "\u2026", font) > maxW)
+      break;
+    out += ch;
+  }
+  return out.trimEnd() + "\u2026";
+}
+function labelLines(text3, width, font = EDGE_LABEL.font, maxLines = EDGE_LABEL.maxLines) {
+  const t = text3.replace(/\s+/g, " ").trim();
+  if (!t)
+    return { lines: [], cut: false };
+  if (measure(t, font) <= width)
+    return { lines: [t], cut: false };
+  const all = wrap(t, width, font);
+  if (all.length <= maxLines)
+    return { lines: all, cut: false };
+  const kept = all.slice(0, maxLines - 1);
+  const restStart = kept.reduce((n4, l) => t.indexOf(l, n4) + l.length, 0);
+  return { lines: [...kept, cutLine(t.slice(restStart), width, font)], cut: true };
+}
+function labelSize(lines2, font = EDGE_LABEL.font) {
+  const w2 = Math.max(0, ...lines2.map((l) => measure(l, font))) + EDGE_LABEL.padX * 2;
+  const lh = font === EDGE_LABEL.font ? EDGE_LABEL.lineHeight : Math.round(font * 1.25);
+  return { w: Math.ceil(w2), h: lines2.length * lh + EDGE_LABEL.padY * 2 };
+}
+var hit = (r2, b2, gap) => r2.x < b2.x + b2.w + gap && r2.x + r2.w + gap > b2.x && r2.y < b2.y + b2.h + gap && r2.y + r2.h + gap > b2.y;
+function labelHits(x2, y2, w2, h, boxes, gap = EDGE_LABEL.gap) {
+  const r2 = { x: x2 - w2 / 2, y: y2 - h / 2, w: w2, h };
+  return boxes.filter((b2) => hit(r2, b2, gap));
+}
+function pointAlong(path14, t) {
+  const lens = path14.slice(1).map((p, i) => Math.hypot(p.x - path14[i].x, p.y - path14[i].y));
+  const total = lens.reduce((a, b2) => a + b2, 0);
+  let d = total * t;
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i] || i === lens.length - 1) {
+      const k2 = lens[i] ? Math.min(1, d / lens[i]) : 0;
+      return { x: path14[i].x + (path14[i + 1].x - path14[i].x) * k2, y: path14[i].y + (path14[i + 1].y - path14[i].y) * k2 };
+    }
+    d -= lens[i];
+  }
+  return path14[0];
+}
+var FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
+function spots(path14, at2) {
+  const out = [];
+  const segs = path14.slice(1).map((b2, i) => ({ a: path14[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
+  const dirOf = (s) => {
+    const l = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) || 1;
+    return { x: (s.b.x - s.a.x) / l, y: (s.b.y - s.a.y) / l };
+  };
+  if (at2 !== void 0 && segs.length) {
+    const p = pointAlong(path14, at2);
+    const seg = segs.find((s) => Math.abs((s.b.x - s.a.x) * (p.y - s.a.y) - (s.b.y - s.a.y) * (p.x - s.a.x)) < 1 && p.x >= Math.min(s.a.x, s.b.x) - 1 && p.x <= Math.max(s.a.x, s.b.x) + 1 && p.y >= Math.min(s.a.y, s.b.y) - 1 && p.y <= Math.max(s.a.y, s.b.y) + 1) ?? segs[0];
+    out.push({ p, dir: dirOf(seg) });
+  }
+  const horizontal = (s) => Math.abs(s.b.y - s.a.y) < 1;
+  const ordered = [...segs.filter(horizontal), ...segs.filter((s) => !horizontal(s))];
+  for (const s of ordered)
+    for (const t of FRACTIONS)
+      out.push({ p: { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }, dir: dirOf(s) });
+  return out;
+}
+function placeEdgeLabel(text3, path14, boxes, o = {}) {
+  const full = text3.replace(/\s+/g, " ").trim();
+  if (!full || path14.length < 2)
+    return void 0;
+  const font = o.font ?? EDGE_LABEL.font;
+  const xs = path14.map((p) => p.x);
+  const ys = path14.map((p) => p.y);
+  const m2 = EDGE_LABEL.maxW;
+  const near = boxes.filter((b2) => b2.x < Math.max(...xs) + m2 && b2.x + b2.w > Math.min(...xs) - m2 && b2.y < Math.max(...ys) + m2 && b2.y + b2.h > Math.min(...ys) - m2);
+  const variants = [];
+  const seen = /* @__PURE__ */ new Set();
+  const push = (mode, lines2) => {
+    const k2 = lines2.join("\n");
+    if (!lines2.length || seen.has(k2))
+      return;
+    seen.add(k2);
+    variants.push({ mode, lines: lines2 });
+  };
+  const whole = labelLines(full, EDGE_LABEL.maxW, font);
+  push(whole.cut ? "cut" : "full", whole.lines);
+  if (o.short) {
+    const s = labelLines(o.short, EDGE_LABEL.maxW, font);
+    push(s.cut ? "cut" : "short", s.lines);
+  }
+  for (const w2 of [120, 88, 60]) {
+    const src = o.short ?? full;
+    const l = labelLines(src, w2, font);
+    push(l.cut ? "cut" : o.short ? "short" : "full", l.lines);
+    push("cut", [cutLine(src, w2, font)]);
+  }
+  const tries = spots(path14, o.at);
+  for (const v2 of variants) {
+    const { w: w2, h } = labelSize(v2.lines, font);
+    for (const p of o.prefer ?? [])
+      if (!labelHits(p.x, p.y, w2, h, near).length)
+        return { mode: v2.mode, x: p.x, y: p.y, w: w2, h, lines: v2.lines, text: full, font };
+    for (const s of tries)
+      if (!labelHits(s.p.x, s.p.y, w2, h, near).length)
+        return { mode: v2.mode, x: s.p.x, y: s.p.y, w: w2, h, lines: v2.lines, text: full, font };
+    for (const s of tries) {
+      let nx = -s.dir.y;
+      let ny = s.dir.x;
+      if (ny > 0 || ny === 0 && nx > 0)
+        nx = -nx, ny = -ny;
+      const d = Math.abs(nx) * (w2 / 2) + Math.abs(ny) * (h / 2) + 2;
+      for (const k2 of [1, -1]) {
+        const x2 = s.p.x + nx * d * k2;
+        const y2 = s.p.y + ny * d * k2;
+        if (!labelHits(x2, y2, w2, h, near).length)
+          return { mode: v2.mode, x: x2, y: y2, w: w2, h, lines: v2.lines, text: full, font };
+      }
+    }
+  }
+  const D2 = EDGE_LABEL.dot;
+  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path14, 0.5);
+  return { mode: "dot", x: dotAt.x, y: dotAt.y, w: D2, h: D2, lines: [], text: full, font };
+}
+
 // packages/canvas/dist/templates/domain-story.js
 var ICON_W = 132;
 var ICON_H = 100;
-var CELL_W = 460;
-var CELL_H = 330;
-var SPREAD = 150;
-var SLOT = 250;
+var BASE = { cellW: 460, cellH: 330, spread: 150, slot: 250, nudge: 70 };
+var DS_SPACING = { compact: 1, normal: 1.25, roomy: 1.55 };
+var DS_VERB_FONT = EDGE_LABEL.dsFont;
+var SEQ_ROOM = 22 + 24;
+var VERB_AIR = { compact: 0, normal: 24, roomy: 60 };
+var VERB_CAP = 220;
+var CUT_X = ICON_W / 2 + 6;
+var CUT_Y = ICON_H / 2 + 6;
+function arrowRoom(verb, spacing = "normal") {
+  return SEQ_ROOM + Math.min(VERB_CAP, verb ? measure(verb, DS_VERB_FONT) : 0) + VERB_AIR[spacing];
+}
+function dsGeometry(m2) {
+  const spacing = m2.layout?.spacing ?? "normal";
+  const f = DS_SPACING[spacing];
+  const need = spacing === "compact" ? 0 : Math.max(arrowRoom(void 0, spacing), ...m2.sentences.flatMap((s) => [arrowRoom(s.verb, spacing), arrowRoom(s.toLabel, spacing)]));
+  const cellW = Math.round(Math.max(BASE.cellW * f, 2 * (need + 2 * CUT_X)));
+  const cellH = Math.round(Math.max(BASE.cellH * f, 2 * (need + 2 * CUT_Y)));
+  return {
+    cellW: m2.layout?.gapX ?? cellW,
+    cellH: m2.layout?.gapY ?? cellH,
+    spread: Math.round(Math.max(BASE.spread * f, ICON_W + 18)),
+    slot: Math.round(Math.max(BASE.slot * f, need + 2 * CUT_X)),
+    nudge: Math.round(BASE.nudge * f)
+  };
+}
 var NOTE_W = 200;
 var NOTE_H = 64;
 var centre = (b2) => ({ x: b2.x + b2.w / 2, y: b2.y + b2.h / 2 });
@@ -42062,7 +42538,7 @@ var overlaps = (a, b2, gap = 16) => a.x < b2.x + b2.w + gap && b2.x < a.x + a.w 
 function countCrossings(segs) {
   const same2 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
   const orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
-  let n3 = 0;
+  let n4 = 0;
   for (let i = 0; i < segs.length; i++)
     for (let j2 = i + 1; j2 < segs.length; j2++) {
       const [a, b2] = segs[i];
@@ -42070,9 +42546,9 @@ function countCrossings(segs) {
       if (same2(a, c) || same2(a, d) || same2(b2, c) || same2(b2, d))
         continue;
       if (orient(a, b2, c) * orient(a, b2, d) < 0 && orient(c, d, a) * orient(c, d, b2) < 0)
-        n3++;
+        n4++;
     }
-  return n3;
+  return n4;
 }
 var PREFERENCES = [
   [[1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [0, 2], [2, 1], [2, -1]],
@@ -42081,7 +42557,7 @@ var PREFERENCES = [
   [[1, 1], [1, -1], [1, 0], [0, 1], [0, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [2, 1], [2, -1], [0, 2]]
 ];
 var SLOTS = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]];
-function layoutWith(m2, sentences, order, pref) {
+function layoutWith(m2, sentences, order, pref, g2) {
   const cell = /* @__PURE__ */ new Map();
   const taken = /* @__PURE__ */ new Set();
   const put = (id, c, r2) => {
@@ -42113,7 +42589,7 @@ function layoutWith(m2, sentences, order, pref) {
       near(id, [...cell.keys()][cell.size - 1]);
   const actor = /* @__PURE__ */ new Map();
   for (const [id, [c, r2]] of cell)
-    actor.set(id, { x: c * CELL_W, y: r2 * CELL_H, w: ICON_W, h: ICON_H });
+    actor.set(id, { x: c * g2.cellW, y: r2 * g2.cellH, w: ICON_W, h: ICON_H });
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
   const wayCount = /* @__PURE__ */ new Map();
@@ -42134,16 +42610,16 @@ function layoutWith(m2, sentences, order, pref) {
       const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
       const len = Math.hypot(t.x - a.x, t.y - a.y) || 1;
       perp = { x: -(t.y - a.y) / len, y: (t.x - a.x) / len };
-      const n3 = wayCount.get(wayKey(s)) ?? 1;
+      const n4 = wayCount.get(wayKey(s)) ?? 1;
       const k2 = wayIndex.get(wayKey(s)) ?? 0;
       wayIndex.set(wayKey(s), k2 + 1);
-      const shift = (k2 - (n3 - 1) / 2) * SPREAD;
+      const shift = (k2 - (n4 - 1) / 2) * g2.spread;
       at2 = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift };
     } else {
       perp = { x: 0, y: 1 };
-      at2 = { x: a.x + SLOT, y: a.y };
+      at2 = { x: a.x + g2.slot, y: a.y };
       for (const [dx, dy] of SLOTS) {
-        const cand = { x: a.x + dx * SLOT, y: a.y + dy * SLOT * 0.75 };
+        const cand = { x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 };
         if (free({ x: cand.x - ICON_W / 2, y: cand.y - ICON_H / 2, w: ICON_W, h: ICON_H })) {
           at2 = cand;
           break;
@@ -42152,7 +42628,7 @@ function layoutWith(m2, sentences, order, pref) {
     }
     let box = { x: at2.x - ICON_W / 2, y: at2.y - ICON_H / 2, w: ICON_W, h: ICON_H };
     for (let step = 1; !free(box) && step <= 12; step++) {
-      const d = Math.ceil(step / 2) * 70 * (step % 2 ? 1 : -1);
+      const d = Math.ceil(step / 2) * g2.nudge * (step % 2 ? 1 : -1);
       box = { x: at2.x + perp.x * d - ICON_W / 2, y: at2.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H };
     }
     boxes.push(box);
@@ -42195,9 +42671,10 @@ function renderDomainStory(raw, opts = {}) {
   }
   for (const a of m2.actors)
     seen(a.id);
-  let best = layoutWith(m2, sentences, order, PREFERENCES[0]);
+  const g2 = dsGeometry(m2);
+  let best = layoutWith(m2, sentences, order, PREFERENCES[0], g2);
   for (const pref of PREFERENCES.slice(1)) {
-    const l = layoutWith(m2, sentences, order, pref);
+    const l = layoutWith(m2, sentences, order, pref, g2);
     if (l.crossings < best.crossings)
       best = l;
   }
@@ -42238,8 +42715,8 @@ function renderDomainStory(raw, opts = {}) {
     }
   }
   const placed = [...actorItem.values(), ...objectItem.values()];
-  for (const n3 of m2.annotations) {
-    const target = actorItem.get(n3.on) ?? objectItem.get(n3.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n3.on);
+  for (const n4 of m2.annotations) {
+    const target = actorItem.get(n4.on) ?? objectItem.get(n4.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n4.on);
     const base = target ?? { x: 0, y: 0, w: 0, h: 0 };
     const candidates = [
       { x: base.x + base.w + 60, y: base.y - 10 },
@@ -42251,22 +42728,22 @@ function renderDomainStory(raw, opts = {}) {
     let at2 = candidates.find((p) => !placed.some((o) => overlaps(o, { ...p, w: NOTE_W, h: NOTE_H }))) ?? candidates[0];
     for (let k2 = 0; placed.some((o) => overlaps(o, { ...at2, w: NOTE_W, h: NOTE_H })) && k2 < 12; k2++)
       at2 = { x: at2.x, y: at2.y + NOTE_H + 20 };
-    const note = make({ id: itemId("note", n3.id), type: "text", x: at2.x, y: at2.y, w: NOTE_W, h: NOTE_H, text: n3.text, role: "annotation", data: { element: n3.id, on: n3.on, ds: "annotation" } }, now);
+    const note = make({ id: itemId("note", n4.id), type: "text", x: at2.x, y: at2.y, w: NOTE_W, h: NOTE_H, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
     placed.push(note);
     items.push(note);
     if (target)
       items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
   }
   const outlines = [];
-  for (const g2 of m2.groups) {
-    const members2 = g2.members.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
+  for (const g3 of m2.groups) {
+    const members2 = g3.members.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
     if (!members2.length)
       continue;
     const x0 = Math.min(...members2.map((b2) => b2.x)) - 36;
     const y0 = Math.min(...members2.map((b2) => b2.y)) - 48;
     const x1 = Math.max(...members2.map((b2) => b2.x + b2.w)) + 36;
     const y1 = Math.max(...members2.map((b2) => b2.y + b2.h)) + 30;
-    outlines.push(make({ id: itemId("group", g2.id), type: "frame", x: x0, y: y0, w: x1 - x0, h: y1 - y0, text: g2.text, color: "grey", role: "group", data: { element: g2.id, members: g2.members, ds: "group" } }, now));
+    outlines.push(make({ id: itemId("group", g3.id), type: "frame", x: x0, y: y0, w: x1 - x0, h: y1 - y0, text: g3.text, color: "grey", role: "group", data: { element: g3.id, members: g3.members, ds: "group" } }, now));
   }
   const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
   const minX = Math.min(...all.map((i) => i.x));
@@ -42512,8 +42989,8 @@ function normalizeUiMock(raw) {
   const usedScreens = /* @__PURE__ */ new Set();
   const screens = c.screens.map((s, si) => {
     let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
-    for (let n3 = 2; usedScreens.has(sid); n3++)
-      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n3}`;
+    for (let n4 = 2; usedScreens.has(sid); n4++)
+      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n4}`;
     usedScreens.add(sid);
     const device = s.device ?? c.device ?? "desktop";
     const theme = { theme: s.theme ?? c.theme ?? "light", accent: c.tokens?.accent ?? DEFAULT_ACCENT, radius: c.tokens?.radius ?? 8, font: c.tokens?.font ?? "sans" };
@@ -42521,15 +42998,15 @@ function normalizeUiMock(raw) {
     const alloc = (explicit, text3, type) => {
       const base = explicit && explicit.trim() || slugify2(text3 ?? "") || type;
       let id = base;
-      for (let n3 = 2; used.has(id); n3++)
-        id = `${base}-${n3}`;
+      for (let n4 = 2; used.has(id); n4++)
+        id = `${base}-${n4}`;
       used.add(id);
       return id;
     };
-    const el = (n3, path14) => {
-      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, ...props } = n3;
+    const el = (n4, path14) => {
+      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, ...props } = n4;
       const words = text3 ?? label2;
-      const id = alloc(n3.id, words, type);
+      const id = alloc(n4.id, words, type);
       return {
         id,
         ref: `${sid}/${id}`,
@@ -42538,7 +43015,7 @@ function normalizeUiMock(raw) {
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
         path: path14,
         children: (children ?? []).map((ch, i) => el(ch, [...path14, "children", i])),
-        props: { ...props, ...items ? { items: itemsOf(items, n3.active) } : {} },
+        props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
         traces: traces2 ?? []
@@ -42556,7 +43033,7 @@ function normalizeUiMock(raw) {
       ...s.note ? { note: s.note } : {},
       traces: s.traces ?? [],
       path: ["screens", si],
-      body: s.body.map((n3, i) => el(n3, ["screens", si, "body", i]))
+      body: s.body.map((n4, i) => el(n4, ["screens", si, "body", i]))
     };
   });
   return { screens, flows: c.flows };
@@ -42564,17 +43041,17 @@ function normalizeUiMock(raw) {
 function walkUi(els) {
   return els.flatMap((e) => [e, ...walkUi(e.children)]);
 }
-var WIDE = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
+var WIDE2 = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
 function textWidth(s, px = 14, bold = false) {
   let w2 = 0;
   for (const ch of s)
-    w2 += WIDE.test(ch) ? px : ch === " " ? px * 0.3 : /[A-Z0-9]/.test(ch) ? px * 0.64 : /[il.,:;'|!]/.test(ch) ? px * 0.3 : px * 0.54;
+    w2 += WIDE2.test(ch) ? px : ch === " " ? px * 0.3 : /[A-Z0-9]/.test(ch) ? px * 0.64 : /[il.,:;'|!]/.test(ch) ? px * 0.3 : px * 0.54;
   return Math.ceil(w2 * (bold ? 1.07 : 1));
 }
 function lineCount(s, px, maxW, bold = false) {
   if (!s)
     return 1;
-  return s.split("\n").reduce((n3, seg) => n3 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
+  return s.split("\n").reduce((n4, seg) => n4 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
 }
 var HEADING = { 1: { px: 28, lh: 36 }, 2: { px: 22, lh: 30 }, 3: { px: 18, lh: 26 }, 4: { px: 15, lh: 22 } };
 var BUTTON = { sm: { h: 32, pad: 12 }, md: { h: 36, pad: 16 }, lg: { h: 44, pad: 20 } };
@@ -42594,7 +43071,7 @@ function gapOf(el) {
   return el.type === "grid" ? 16 : el.type === "navbar" ? 8 : 12;
 }
 var titleH = (el) => el.type === "card" && el.text ? 26 : 0;
-function measure(el, avail) {
+function measure2(el, avail) {
   const p = el.props;
   const fixedW = p.w !== void 0 ? Math.min(p.w, avail) : void 0;
   const sz = p.size ?? "md";
@@ -42608,7 +43085,7 @@ function measure(el, avail) {
       const gap = gapOf(el);
       const w2 = fixedW ?? avail;
       const inner = w2 - pad * 2;
-      const hs = el.children.map((c) => measure(c, inner).h);
+      const hs = el.children.map((c) => measure2(c, inner).h);
       const head = titleH(el);
       const h = pad * 2 + head + (head && hs.length ? gap : 0) + hs.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, hs.length - 1);
       return { w: w2, h: Math.max(p.h ?? 0, h) };
@@ -42617,7 +43094,7 @@ function measure(el, avail) {
       const w2 = fixedW ?? avail;
       const pad = padOf(el);
       const widths = rowWidths(el, w2 - pad * 2);
-      const h = pad * 2 + Math.max(0, ...el.children.map((c, i) => measure(c, widths[i]).h));
+      const h = pad * 2 + Math.max(0, ...el.children.map((c, i) => measure2(c, widths[i]).h));
       return { w: w2, h: Math.max(p.h ?? 0, h) };
     }
     case "grid": {
@@ -42703,7 +43180,7 @@ function measure(el, avail) {
 }
 function rowWidths(el, inner) {
   const gap = gapOf(el);
-  const n3 = el.children.length;
+  const n4 = el.children.length;
   const colW = (inner - gap * 11) / 12;
   const widths = el.children.map((c) => {
     if (c.props.w !== void 0)
@@ -42711,11 +43188,11 @@ function rowWidths(el, inner) {
     if (c.props.span !== void 0)
       return colW * c.props.span + gap * (c.props.span - 1);
     if (HUG.has(c.type) || c.type === "sidebar")
-      return Math.min(measure(c, inner).w, inner);
+      return Math.min(measure2(c, inner).w, inner);
     return void 0;
   });
   const growers = widths.filter((w2) => w2 === void 0).length;
-  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n3 - 1);
+  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n4 - 1);
   const share = growers ? Math.max(24, (inner - used) / growers) : 0;
   return widths.map((w2) => Math.round(w2 ?? share));
 }
@@ -42727,7 +43204,7 @@ function gridCells(el, w2) {
   const rows = [];
   for (let i = 0; i < el.children.length; i += cols) {
     const items = el.children.slice(i, i + cols);
-    rows.push({ items, h: Math.max(0, ...items.map((c) => measure(c, cellW).h)) });
+    rows.push({ items, h: Math.max(0, ...items.map((c) => measure2(c, cellW).h)) });
   }
   return { cellW, rows };
 }
@@ -42746,7 +43223,7 @@ function place(el, x2, y2, w2, h, parent, out) {
       const inner = w2 - pad * 2;
       let cy = y2 + pad + titleH(el) + (titleH(el) && el.children.length ? gap : 0);
       for (const c of el.children) {
-        const m2 = measure(c, inner);
+        const m2 = measure2(c, inner);
         const cw = HUG.has(c.type) || c.props.w !== void 0 ? m2.w : inner;
         const cx = align2 === "center" ? x2 + pad + (inner - cw) / 2 : align2 === "end" ? x2 + pad + inner - cw : x2 + pad;
         place(c, cx, cy, cw, m2.h, holder, out);
@@ -42764,7 +43241,7 @@ function place(el, x2, y2, w2, h, parent, out) {
       let cx = x2 + pad + (j2 === "center" ? free / 2 : j2 === "end" ? free : 0);
       const rowH = h - pad * 2;
       el.children.forEach((c, i) => {
-        const m2 = measure(c, widths[i]);
+        const m2 = measure2(c, widths[i]);
         const stretch = align2 === "stretch" || align2 === void 0 && STRETCH.has(c.type);
         const ch = stretch ? Math.max(m2.h, rowH) : m2.h;
         const cy = stretch || align2 === "start" ? y2 + pad : align2 === "end" ? y2 + pad + rowH - ch : y2 + pad + (rowH - ch) / 2;
@@ -42777,7 +43254,7 @@ function place(el, x2, y2, w2, h, parent, out) {
       const { cellW, rows } = gridCells(el, w2);
       let cy = y2 + pad;
       for (const r2 of rows) {
-        r2.items.forEach((c, i) => place(c, x2 + pad + i * (cellW + gap), cy, cellW, align2 === "start" ? measure(c, cellW).h : r2.h, holder, out));
+        r2.items.forEach((c, i) => place(c, x2 + pad + i * (cellW + gap), cy, cellW, align2 === "start" ? measure2(c, cellW).h : r2.h, holder, out));
         cy += r2.h + gap;
       }
       return;
@@ -42785,7 +43262,7 @@ function place(el, x2, y2, w2, h, parent, out) {
     case "navbar": {
       let cx = x2 + w2 - pad;
       for (const c of [...el.children].reverse()) {
-        const m2 = measure(c, w2 / 2);
+        const m2 = measure2(c, w2 / 2);
         cx -= m2.w;
         place(c, cx, y2 + (h - m2.h) / 2, m2.w, m2.h, holder, out);
         cx -= gap;
@@ -42801,7 +43278,7 @@ function layoutScreen(s) {
   const inner = s.w - s.pad * 2;
   let y2 = s.pad;
   for (const el of s.body) {
-    const m2 = measure(el, inner);
+    const m2 = measure2(el, inner);
     const w2 = HUG.has(el.type) || el.props.w !== void 0 ? m2.w : inner;
     place(el, s.pad, y2, w2, m2.h, void 0, out);
     y2 += m2.h + s.gap;
@@ -42836,9 +43313,9 @@ function checkUiMock(raw) {
       if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
         out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
     }
-    for (const [id, n3] of explicit)
-      if (n3 > 1)
-        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n3} times in screen ${s.id}; the others become ${id}-2 \u2026` });
+    for (const [id, n4] of explicit)
+      if (n4 > 1)
+        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n4} times in screen ${s.id}; the others become ${id}-2 \u2026` });
   }
   for (const f of m2.flows) {
     if (!screens.has(f.to))
@@ -42859,9 +43336,9 @@ function lintUiMock(raw) {
   }
   const owner = (path14) => {
     for (let p = path14; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
-      const hit = where.get(p);
-      if (hit)
-        return hit;
+      const hit2 = where.get(p);
+      if (hit2)
+        return hit2;
       if (!/(\.[^.[\]]+|\[\d+\])$/.test(p))
         break;
     }
@@ -43168,11 +43645,11 @@ function G(u3) {
 }
 var _ = { exec: () => null };
 function k(u3, e = "") {
-  let t = typeof u3 == "string" ? u3 : u3.source, n3 = { replace: (r2, i) => {
+  let t = typeof u3 == "string" ? u3 : u3.source, n4 = { replace: (r2, i) => {
     let s = typeof i == "string" ? i : i.source;
-    return s = s.replace(m.caret, "$1"), t = t.replace(r2, s), n3;
+    return s = s.replace(m.caret, "$1"), t = t.replace(r2, s), n4;
   }, getRegex: () => new RegExp(t, e) };
-  return n3;
+  return n4;
 }
 var be = (() => {
   try {
@@ -43265,50 +43742,50 @@ function V(u3, e) {
     let o = false, l = s;
     for (; --l >= 0 && a[l] === "\\"; ) o = !o;
     return o ? "|" : " |";
-  }), n3 = t.split(m.splitPipe), r2 = 0;
-  if (n3[0].trim() || n3.shift(), n3.length > 0 && !n3.at(-1)?.trim() && n3.pop(), e) if (n3.length > e) n3.splice(e);
-  else for (; n3.length < e; ) n3.push("");
-  for (; r2 < n3.length; r2++) n3[r2] = n3[r2].trim().replace(m.slashPipe, "|");
-  return n3;
+  }), n4 = t.split(m.splitPipe), r2 = 0;
+  if (n4[0].trim() || n4.shift(), n4.length > 0 && !n4.at(-1)?.trim() && n4.pop(), e) if (n4.length > e) n4.splice(e);
+  else for (; n4.length < e; ) n4.push("");
+  for (; r2 < n4.length; r2++) n4[r2] = n4[r2].trim().replace(m.slashPipe, "|");
+  return n4;
 }
 function I(u3, e, t) {
-  let n3 = u3.length;
-  if (n3 === 0) return "";
+  let n4 = u3.length;
+  if (n4 === 0) return "";
   let r2 = 0;
-  for (; r2 < n3; ) {
-    let i = u3.charAt(n3 - r2 - 1);
+  for (; r2 < n4; ) {
+    let i = u3.charAt(n4 - r2 - 1);
     if (i === e && !t) r2++;
     else if (i !== e && t) r2++;
     else break;
   }
-  return u3.slice(0, n3 - r2);
+  return u3.slice(0, n4 - r2);
 }
 function de(u3, e) {
   if (u3.indexOf(e[1]) === -1) return -1;
   let t = 0;
-  for (let n3 = 0; n3 < u3.length; n3++) if (u3[n3] === "\\") n3++;
-  else if (u3[n3] === e[0]) t++;
-  else if (u3[n3] === e[1] && (t--, t < 0)) return n3;
+  for (let n4 = 0; n4 < u3.length; n4++) if (u3[n4] === "\\") n4++;
+  else if (u3[n4] === e[0]) t++;
+  else if (u3[n4] === e[1] && (t--, t < 0)) return n4;
   return t > 0 ? -2 : -1;
 }
 function ge(u3, e = 0) {
-  let t = e, n3 = "";
+  let t = e, n4 = "";
   for (let r2 of u3) if (r2 === "	") {
     let i = 4 - t % 4;
-    n3 += " ".repeat(i), t += i;
-  } else n3 += r2, t++;
-  return n3;
+    n4 += " ".repeat(i), t += i;
+  } else n4 += r2, t++;
+  return n4;
 }
-function fe(u3, e, t, n3, r2) {
+function fe(u3, e, t, n4, r2) {
   let i = e.href, s = e.title || null, a = u3[1].replace(r2.other.outputLinkReplace, "$1");
-  n3.state.inLink = true;
-  let o = { type: u3[0].charAt(0) === "!" ? "image" : "link", raw: t, href: i, title: s, text: a, tokens: n3.inlineTokens(a) };
-  return n3.state.inLink = false, o;
+  n4.state.inLink = true;
+  let o = { type: u3[0].charAt(0) === "!" ? "image" : "link", raw: t, href: i, title: s, text: a, tokens: n4.inlineTokens(a) };
+  return n4.state.inLink = false, o;
 }
 function nt(u3, e, t) {
-  let n3 = u3.match(t.other.indentCodeCompensation);
-  if (n3 === null) return e;
-  let r2 = n3[1];
+  let n4 = u3.match(t.other.indentCodeCompensation);
+  if (n4 === null) return e;
+  let r2 = n4[1];
   return e.split(`
 `).map((i) => {
     let s = i.match(t.other.beginningSpace);
@@ -43332,27 +43809,27 @@ var w = class {
   code(e) {
     let t = this.rules.block.code.exec(e);
     if (t) {
-      let n3 = t[0].replace(this.rules.other.codeRemoveIndent, "");
-      return { type: "code", raw: t[0], codeBlockStyle: "indented", text: this.options.pedantic ? n3 : I(n3, `
+      let n4 = t[0].replace(this.rules.other.codeRemoveIndent, "");
+      return { type: "code", raw: t[0], codeBlockStyle: "indented", text: this.options.pedantic ? n4 : I(n4, `
 `) };
     }
   }
   fences(e) {
     let t = this.rules.block.fences.exec(e);
     if (t) {
-      let n3 = t[0], r2 = nt(n3, t[3] || "", this.rules);
-      return { type: "code", raw: n3, lang: t[2] ? t[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : t[2], text: r2 };
+      let n4 = t[0], r2 = nt(n4, t[3] || "", this.rules);
+      return { type: "code", raw: n4, lang: t[2] ? t[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : t[2], text: r2 };
     }
   }
   heading(e) {
     let t = this.rules.block.heading.exec(e);
     if (t) {
-      let n3 = t[2].trim();
-      if (this.rules.other.endingHash.test(n3)) {
-        let r2 = I(n3, "#");
-        (this.options.pedantic || !r2 || this.rules.other.endingSpaceChar.test(r2)) && (n3 = r2.trim());
+      let n4 = t[2].trim();
+      if (this.rules.other.endingHash.test(n4)) {
+        let r2 = I(n4, "#");
+        (this.options.pedantic || !r2 || this.rules.other.endingSpaceChar.test(r2)) && (n4 = r2.trim());
       }
-      return { type: "heading", raw: t[0], depth: t[1].length, text: n3, tokens: this.lexer.inline(n3) };
+      return { type: "heading", raw: t[0], depth: t[1].length, text: n4, tokens: this.lexer.inline(n4) };
     }
   }
   hr(e) {
@@ -43363,15 +43840,15 @@ var w = class {
   blockquote(e) {
     let t = this.rules.block.blockquote.exec(e);
     if (t) {
-      let n3 = I(t[0], `
+      let n4 = I(t[0], `
 `).split(`
 `), r2 = "", i = "", s = [];
-      for (; n3.length > 0; ) {
+      for (; n4.length > 0; ) {
         let a = false, o = [], l;
-        for (l = 0; l < n3.length; l++) if (this.rules.other.blockquoteStart.test(n3[l])) o.push(n3[l]), a = true;
-        else if (!a) o.push(n3[l]);
+        for (l = 0; l < n4.length; l++) if (this.rules.other.blockquoteStart.test(n4[l])) o.push(n4[l]), a = true;
+        else if (!a) o.push(n4[l]);
         else break;
-        n3 = n3.slice(l);
+        n4 = n4.slice(l);
         let p = o.join(`
 `), c = p.replace(this.rules.other.blockquoteSetextReplace, `
     $1`).replace(this.rules.other.blockquoteSetextReplace2, "");
@@ -43379,20 +43856,20 @@ var w = class {
 ${p}` : p, i = i ? `${i}
 ${c}` : c;
         let d = this.lexer.state.top;
-        if (this.lexer.state.top = true, this.lexer.blockTokens(c, s, true), this.lexer.state.top = d, n3.length === 0) break;
+        if (this.lexer.state.top = true, this.lexer.blockTokens(c, s, true), this.lexer.state.top = d, n4.length === 0) break;
         let h = s.at(-1);
         if (h?.type === "code") break;
         if (h?.type === "blockquote") {
           let R = h, f = R.raw + `
-` + n3.join(`
+` + n4.join(`
 `), S = this.blockquote(f);
           s[s.length - 1] = S, r2 = r2.substring(0, r2.length - R.raw.length) + S.raw, i = i.substring(0, i.length - R.text.length) + S.text;
           break;
         } else if (h?.type === "list") {
           let R = h, f = R.raw + `
-` + n3.join(`
+` + n4.join(`
 `), S = this.list(f);
-          s[s.length - 1] = S, r2 = r2.substring(0, r2.length - h.raw.length) + S.raw, i = i.substring(0, i.length - R.raw.length) + S.raw, n3 = f.substring(s.at(-1).raw.length).split(`
+          s[s.length - 1] = S, r2 = r2.substring(0, r2.length - h.raw.length) + S.raw, i = i.substring(0, i.length - R.raw.length) + S.raw, n4 = f.substring(s.at(-1).raw.length).split(`
 `);
           continue;
         }
@@ -43403,9 +43880,9 @@ ${c}` : c;
   list(e) {
     let t = this.rules.block.list.exec(e);
     if (t) {
-      let n3 = t[1].trim(), r2 = n3.length > 1, i = { type: "list", raw: "", ordered: r2, start: r2 ? +n3.slice(0, -1) : "", loose: false, items: [] };
-      n3 = r2 ? `\\d{1,9}\\${n3.slice(-1)}` : `\\${n3}`, this.options.pedantic && (n3 = r2 ? n3 : "[*+-]");
-      let s = this.rules.other.listItemRegex(n3), a = false;
+      let n4 = t[1].trim(), r2 = n4.length > 1, i = { type: "list", raw: "", ordered: r2, start: r2 ? +n4.slice(0, -1) : "", loose: false, items: [] };
+      n4 = r2 ? `\\d{1,9}\\${n4.slice(-1)}` : `\\${n4}`, this.options.pedantic && (n4 = r2 ? n4 : "[*+-]");
+      let s = this.rules.other.listItemRegex(n4), a = false;
       for (; e; ) {
         let l = false, p = "", c = "";
         if (!(t = s.exec(e)) || this.rules.block.hr.test(e)) break;
@@ -43471,18 +43948,18 @@ ${c}` : c;
   def(e) {
     let t = this.rules.block.def.exec(e);
     if (t) {
-      let n3 = t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), r2 = t[2] ? t[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", i = t[3] ? t[3].substring(1, t[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : t[3];
-      return { type: "def", tag: n3, raw: t[0], href: r2, title: i };
+      let n4 = t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), r2 = t[2] ? t[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", i = t[3] ? t[3].substring(1, t[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : t[3];
+      return { type: "def", tag: n4, raw: t[0], href: r2, title: i };
     }
   }
   table(e) {
     let t = this.rules.block.table.exec(e);
     if (!t || !this.rules.other.tableDelimiter.test(t[2])) return;
-    let n3 = V(t[1]), r2 = t[2].replace(this.rules.other.tableAlignChars, "").split("|"), i = t[3]?.trim() ? t[3].replace(this.rules.other.tableRowBlankLine, "").split(`
+    let n4 = V(t[1]), r2 = t[2].replace(this.rules.other.tableAlignChars, "").split("|"), i = t[3]?.trim() ? t[3].replace(this.rules.other.tableRowBlankLine, "").split(`
 `) : [], s = { type: "table", raw: t[0], header: [], align: [], rows: [] };
-    if (n3.length === r2.length) {
+    if (n4.length === r2.length) {
       for (let a of r2) this.rules.other.tableAlignRight.test(a) ? s.align.push("right") : this.rules.other.tableAlignCenter.test(a) ? s.align.push("center") : this.rules.other.tableAlignLeft.test(a) ? s.align.push("left") : s.align.push(null);
-      for (let a = 0; a < n3.length; a++) s.header.push({ text: n3[a], tokens: this.lexer.inline(n3[a]), header: true, align: s.align[a] });
+      for (let a = 0; a < n4.length; a++) s.header.push({ text: n4[a], tokens: this.lexer.inline(n4[a]), header: true, align: s.align[a] });
       for (let a of i) s.rows.push(V(a, s.header.length).map((o, l) => ({ text: o, tokens: this.lexer.inline(o), header: false, align: s.align[l] })));
       return s;
     }
@@ -43490,16 +43967,16 @@ ${c}` : c;
   lheading(e) {
     let t = this.rules.block.lheading.exec(e);
     if (t) {
-      let n3 = t[1].trim();
-      return { type: "heading", raw: t[0], depth: t[2].charAt(0) === "=" ? 1 : 2, text: n3, tokens: this.lexer.inline(n3) };
+      let n4 = t[1].trim();
+      return { type: "heading", raw: t[0], depth: t[2].charAt(0) === "=" ? 1 : 2, text: n4, tokens: this.lexer.inline(n4) };
     }
   }
   paragraph(e) {
     let t = this.rules.block.paragraph.exec(e);
     if (t) {
-      let n3 = t[1].charAt(t[1].length - 1) === `
+      let n4 = t[1].charAt(t[1].length - 1) === `
 ` ? t[1].slice(0, -1) : t[1];
-      return { type: "paragraph", raw: t[0], text: n3, tokens: this.lexer.inline(n3) };
+      return { type: "paragraph", raw: t[0], text: n4, tokens: this.lexer.inline(n4) };
     }
   }
   text(e) {
@@ -43517,11 +43994,11 @@ ${c}` : c;
   link(e) {
     let t = this.rules.inline.link.exec(e);
     if (t) {
-      let n3 = t[2].trim();
-      if (!this.options.pedantic && this.rules.other.startAngleBracket.test(n3)) {
-        if (!this.rules.other.endAngleBracket.test(n3)) return;
-        let s = I(n3.slice(0, -1), "\\");
-        if ((n3.length - s.length) % 2 === 0) return;
+      let n4 = t[2].trim();
+      if (!this.options.pedantic && this.rules.other.startAngleBracket.test(n4)) {
+        if (!this.rules.other.endAngleBracket.test(n4)) return;
+        let s = I(n4.slice(0, -1), "\\");
+        if ((n4.length - s.length) % 2 === 0) return;
       } else {
         let s = de(t[2], "()");
         if (s === -2) return;
@@ -43535,24 +44012,24 @@ ${c}` : c;
         let s = this.rules.other.pedanticHrefTitle.exec(r2);
         s && (r2 = s[1], i = s[3]);
       } else i = t[3] ? t[3].slice(1, -1) : "";
-      return r2 = r2.trim(), this.rules.other.startAngleBracket.test(r2) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n3) ? r2 = r2.slice(1) : r2 = r2.slice(1, -1)), fe(t, { href: r2 && r2.replace(this.rules.inline.anyPunctuation, "$1"), title: i && i.replace(this.rules.inline.anyPunctuation, "$1") }, t[0], this.lexer, this.rules);
+      return r2 = r2.trim(), this.rules.other.startAngleBracket.test(r2) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n4) ? r2 = r2.slice(1) : r2 = r2.slice(1, -1)), fe(t, { href: r2 && r2.replace(this.rules.inline.anyPunctuation, "$1"), title: i && i.replace(this.rules.inline.anyPunctuation, "$1") }, t[0], this.lexer, this.rules);
     }
   }
   reflink(e, t) {
-    let n3;
-    if ((n3 = this.rules.inline.reflink.exec(e)) || (n3 = this.rules.inline.nolink.exec(e))) {
-      let r2 = (n3[2] || n3[1]).replace(this.rules.other.multipleSpaceGlobal, " "), i = t[r2.toLowerCase()];
+    let n4;
+    if ((n4 = this.rules.inline.reflink.exec(e)) || (n4 = this.rules.inline.nolink.exec(e))) {
+      let r2 = (n4[2] || n4[1]).replace(this.rules.other.multipleSpaceGlobal, " "), i = t[r2.toLowerCase()];
       if (!i) {
-        let s = n3[0].charAt(0);
+        let s = n4[0].charAt(0);
         return { type: "text", raw: s, text: s };
       }
-      return fe(n3, i, n3[0], this.lexer, this.rules);
+      return fe(n4, i, n4[0], this.lexer, this.rules);
     }
   }
-  emStrong(e, t, n3 = "") {
+  emStrong(e, t, n4 = "") {
     let r2 = this.rules.inline.emStrongLDelim.exec(e);
-    if (!r2 || !r2[1] && !r2[2] && !r2[3] && !r2[4] || r2[4] && n3.match(this.rules.other.unicodeAlphaNumeric)) return;
-    if (!(r2[1] || r2[3] || "") || !n3 || this.rules.inline.punctuation.exec(n3)) {
+    if (!r2 || !r2[1] && !r2[2] && !r2[3] && !r2[4] || r2[4] && n4.match(this.rules.other.unicodeAlphaNumeric)) return;
+    if (!(r2[1] || r2[3] || "") || !n4 || this.rules.inline.punctuation.exec(n4)) {
       let s = [...r2[0]].length - 1, a, o, l = s, p = 0, c = r2[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
       for (c.lastIndex = 0, t = t.slice(-1 * e.length + s); (r2 = c.exec(t)) !== null; ) {
         if (a = r2[1] || r2[2] || r2[3] || r2[4] || r2[5] || r2[6], !a) continue;
@@ -43578,18 +44055,18 @@ ${c}` : c;
   codespan(e) {
     let t = this.rules.inline.code.exec(e);
     if (t) {
-      let n3 = t[2].replace(this.rules.other.newLineCharGlobal, " "), r2 = this.rules.other.nonSpaceChar.test(n3), i = this.rules.other.startingSpaceChar.test(n3) && this.rules.other.endingSpaceChar.test(n3);
-      return r2 && i && (n3 = n3.substring(1, n3.length - 1)), { type: "codespan", raw: t[0], text: n3 };
+      let n4 = t[2].replace(this.rules.other.newLineCharGlobal, " "), r2 = this.rules.other.nonSpaceChar.test(n4), i = this.rules.other.startingSpaceChar.test(n4) && this.rules.other.endingSpaceChar.test(n4);
+      return r2 && i && (n4 = n4.substring(1, n4.length - 1)), { type: "codespan", raw: t[0], text: n4 };
     }
   }
   br(e) {
     let t = this.rules.inline.br.exec(e);
     if (t) return { type: "br", raw: t[0] };
   }
-  del(e, t, n3 = "") {
+  del(e, t, n4 = "") {
     let r2 = this.rules.inline.delLDelim.exec(e);
     if (!r2) return;
-    if (!(r2[1] || "") || !n3 || this.rules.inline.punctuation.exec(n3)) {
+    if (!(r2[1] || "") || !n4 || this.rules.inline.punctuation.exec(n4)) {
       let s = [...r2[0]].length - 1, a, o, l = s, p = this.rules.inline.delRDelim;
       for (p.lastIndex = 0, t = t.slice(-1 * e.length + s); (r2 = p.exec(t)) !== null; ) {
         if (a = r2[1] || r2[2] || r2[3] || r2[4] || r2[5] || r2[6], !a || (o = [...a].length, o !== s)) continue;
@@ -43607,30 +44084,30 @@ ${c}` : c;
   autolink(e) {
     let t = this.rules.inline.autolink.exec(e);
     if (t) {
-      let n3, r2;
-      return t[2] === "@" ? (n3 = t[1], r2 = "mailto:" + n3) : (n3 = t[1], r2 = n3), { type: "link", raw: t[0], text: n3, href: r2, tokens: [{ type: "text", raw: n3, text: n3 }] };
+      let n4, r2;
+      return t[2] === "@" ? (n4 = t[1], r2 = "mailto:" + n4) : (n4 = t[1], r2 = n4), { type: "link", raw: t[0], text: n4, href: r2, tokens: [{ type: "text", raw: n4, text: n4 }] };
     }
   }
   url(e) {
     let t;
     if (t = this.rules.inline.url.exec(e)) {
-      let n3, r2;
-      if (t[2] === "@") n3 = t[0], r2 = "mailto:" + n3;
+      let n4, r2;
+      if (t[2] === "@") n4 = t[0], r2 = "mailto:" + n4;
       else {
         let i;
         do
           i = t[0], t[0] = this.rules.inline._backpedal.exec(t[0])?.[0] ?? "";
         while (i !== t[0]);
-        n3 = t[0], t[1] === "www." ? r2 = "http://" + t[0] : r2 = t[0];
+        n4 = t[0], t[1] === "www." ? r2 = "http://" + t[0] : r2 = t[0];
       }
-      return { type: "link", raw: t[0], text: n3, href: r2, tokens: [{ type: "text", raw: n3, text: n3 }] };
+      return { type: "link", raw: t[0], text: n4, href: r2, tokens: [{ type: "text", raw: n4, text: n4 }] };
     }
   }
   inlineText(e) {
     let t = this.rules.inline.text.exec(e);
     if (t) {
-      let n3 = this.lexer.state.inRawBlock;
-      return { type: "text", raw: t[0], text: t[0], escaped: n3 };
+      let n4 = this.lexer.state.inRawBlock;
+      return { type: "text", raw: t[0], text: t[0], escaped: n4 };
     }
   }
 };
@@ -43658,12 +44135,12 @@ var x = class u {
     e = e.replace(m.carriageReturn, `
 `), this.blockTokens(e, this.tokens);
     for (let t = 0; t < this.inlineQueue.length; t++) {
-      let n3 = this.inlineQueue[t];
-      this.inlineTokens(n3.src, n3.tokens);
+      let n4 = this.inlineQueue[t];
+      this.inlineTokens(n4.src, n4.tokens);
     }
     return this.inlineQueue = [], this.tokens;
   }
-  blockTokens(e, t = [], n3 = false) {
+  blockTokens(e, t = [], n4 = false) {
     for (this.tokenizer.lexer = this, this.options.pedantic && (e = e.replace(m.tabCharGlobal, "    ").replace(m.spaceLine, "")); e; ) {
       let r2;
       if (this.options.extensions?.block?.some((s) => (r2 = s.call({ lexer: this }, e, t)) ? (e = e.substring(r2.raw.length), t.push(r2), true) : false)) continue;
@@ -43733,10 +44210,10 @@ var x = class u {
       }
       if (this.state.top && (r2 = this.tokenizer.paragraph(i))) {
         let s = t.at(-1);
-        n3 && s?.type === "paragraph" ? (s.raw += (s.raw.endsWith(`
+        n4 && s?.type === "paragraph" ? (s.raw += (s.raw.endsWith(`
 `) ? "" : `
 `) + r2.raw, s.text += `
-` + r2.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r2), n3 = i.length !== e.length, e = e.substring(r2.raw.length);
+` + r2.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r2), n4 = i.length !== e.length, e = e.substring(r2.raw.length);
         continue;
       }
       if (r2 = this.tokenizer.text(e)) {
@@ -43763,15 +44240,15 @@ var x = class u {
   }
   inlineTokens(e, t = []) {
     this.tokenizer.lexer = this;
-    let n3 = e, r2 = null;
+    let n4 = e, r2 = null;
     if (this.tokens.links) {
       let o = Object.keys(this.tokens.links);
-      if (o.length > 0) for (; (r2 = this.tokenizer.rules.inline.reflinkSearch.exec(n3)) !== null; ) o.includes(r2[0].slice(r2[0].lastIndexOf("[") + 1, -1)) && (n3 = n3.slice(0, r2.index) + "[" + "a".repeat(r2[0].length - 2) + "]" + n3.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
+      if (o.length > 0) for (; (r2 = this.tokenizer.rules.inline.reflinkSearch.exec(n4)) !== null; ) o.includes(r2[0].slice(r2[0].lastIndexOf("[") + 1, -1)) && (n4 = n4.slice(0, r2.index) + "[" + "a".repeat(r2[0].length - 2) + "]" + n4.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
     }
-    for (; (r2 = this.tokenizer.rules.inline.anyPunctuation.exec(n3)) !== null; ) n3 = n3.slice(0, r2.index) + "++" + n3.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
+    for (; (r2 = this.tokenizer.rules.inline.anyPunctuation.exec(n4)) !== null; ) n4 = n4.slice(0, r2.index) + "++" + n4.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
     let i;
-    for (; (r2 = this.tokenizer.rules.inline.blockSkip.exec(n3)) !== null; ) i = r2[2] ? r2[2].length : 0, n3 = n3.slice(0, r2.index + i) + "[" + "a".repeat(r2[0].length - i - 2) + "]" + n3.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
-    n3 = this.options.hooks?.emStrongMask?.call({ lexer: this }, n3) ?? n3;
+    for (; (r2 = this.tokenizer.rules.inline.blockSkip.exec(n4)) !== null; ) i = r2[2] ? r2[2].length : 0, n4 = n4.slice(0, r2.index + i) + "[" + "a".repeat(r2[0].length - i - 2) + "]" + n4.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
+    n4 = this.options.hooks?.emStrongMask?.call({ lexer: this }, n4) ?? n4;
     let s = false, a = "";
     for (; e; ) {
       s || (a = ""), s = false;
@@ -43795,7 +44272,7 @@ var x = class u {
         o.type === "text" && p?.type === "text" ? (p.raw += o.raw, p.text += o.text) : t.push(o);
         continue;
       }
-      if (o = this.tokenizer.emStrong(e, n3, a)) {
+      if (o = this.tokenizer.emStrong(e, n4, a)) {
         e = e.substring(o.raw.length), t.push(o);
         continue;
       }
@@ -43807,7 +44284,7 @@ var x = class u {
         e = e.substring(o.raw.length), t.push(o);
         continue;
       }
-      if (o = this.tokenizer.del(e, n3, a)) {
+      if (o = this.tokenizer.del(e, n4, a)) {
         e = e.substring(o.raw.length), t.push(o);
         continue;
       }
@@ -43852,11 +44329,11 @@ var y = class {
   space(e) {
     return "";
   }
-  code({ text: e, lang: t, escaped: n3 }) {
+  code({ text: e, lang: t, escaped: n4 }) {
     let r2 = (t || "").match(m.notSpaceStart)?.[0], i = e.replace(m.endingNewline, "") + `
 `;
-    return r2 ? '<pre><code class="language-' + T(r2) + '">' + (n3 ? i : T(i, true)) + `</code></pre>
-` : "<pre><code>" + (n3 ? i : T(i, true)) + `</code></pre>
+    return r2 ? '<pre><code class="language-' + T(r2) + '">' + (n4 ? i : T(i, true)) + `</code></pre>
+` : "<pre><code>" + (n4 ? i : T(i, true)) + `</code></pre>
 `;
   }
   blockquote({ tokens: e }) {
@@ -43879,12 +44356,12 @@ ${this.parser.parse(e)}</blockquote>
 `;
   }
   list(e) {
-    let t = e.ordered, n3 = e.start, r2 = "";
+    let t = e.ordered, n4 = e.start, r2 = "";
     for (let a = 0; a < e.items.length; a++) {
       let o = e.items[a];
       r2 += this.listitem(o);
     }
-    let i = t ? "ol" : "ul", s = t && n3 !== 1 ? ' start="' + n3 + '"' : "";
+    let i = t ? "ol" : "ul", s = t && n4 !== 1 ? ' start="' + n4 + '"' : "";
     return "<" + i + s + `>
 ` + r2 + "</" + i + `>
 `;
@@ -43901,15 +44378,15 @@ ${this.parser.parse(e)}</blockquote>
 `;
   }
   table(e) {
-    let t = "", n3 = "";
-    for (let i = 0; i < e.header.length; i++) n3 += this.tablecell(e.header[i]);
-    t += this.tablerow({ text: n3 });
+    let t = "", n4 = "";
+    for (let i = 0; i < e.header.length; i++) n4 += this.tablecell(e.header[i]);
+    t += this.tablerow({ text: n4 });
     let r2 = "";
     for (let i = 0; i < e.rows.length; i++) {
       let s = e.rows[i];
-      n3 = "";
-      for (let a = 0; a < s.length; a++) n3 += this.tablecell(s[a]);
-      r2 += this.tablerow({ text: n3 });
+      n4 = "";
+      for (let a = 0; a < s.length; a++) n4 += this.tablecell(s[a]);
+      r2 += this.tablerow({ text: n4 });
     }
     return r2 && (r2 = `<tbody>${r2}</tbody>`), `<table>
 <thead>
@@ -43923,8 +44400,8 @@ ${e}</tr>
 `;
   }
   tablecell(e) {
-    let t = this.parser.parseInline(e.tokens), n3 = e.header ? "th" : "td";
-    return (e.align ? `<${n3} align="${e.align}">` : `<${n3}>`) + t + `</${n3}>
+    let t = this.parser.parseInline(e.tokens), n4 = e.header ? "th" : "td";
+    return (e.align ? `<${n4} align="${e.align}">` : `<${n4}>`) + t + `</${n4}>
 `;
   }
   strong({ tokens: e }) {
@@ -43942,19 +44419,19 @@ ${e}</tr>
   del({ tokens: e }) {
     return `<del>${this.parser.parseInline(e)}</del>`;
   }
-  link({ href: e, title: t, tokens: n3 }) {
-    let r2 = this.parser.parseInline(n3), i = J(e);
+  link({ href: e, title: t, tokens: n4 }) {
+    let r2 = this.parser.parseInline(n4), i = J(e);
     if (i === null) return r2;
     e = i;
     let s = '<a href="' + e + '"';
     return t && (s += ' title="' + T(t) + '"'), s += ">" + r2 + "</a>", s;
   }
-  image({ href: e, title: t, text: n3, tokens: r2 }) {
-    r2 && (n3 = this.parser.parseInline(r2, this.parser.textRenderer));
+  image({ href: e, title: t, text: n4, tokens: r2 }) {
+    r2 && (n4 = this.parser.parseInline(r2, this.parser.textRenderer));
     let i = J(e);
-    if (i === null) return T(n3);
+    if (i === null) return T(n4);
     e = i;
-    let s = `<img src="${e}" alt="${T(n3)}"`;
+    let s = `<img src="${e}" alt="${T(n4)}"`;
     return t && (s += ` title="${T(t)}"`), s += ">", s;
   }
   text(e) {
@@ -44009,8 +44486,8 @@ var b = class u2 {
   parse(e) {
     this.renderer.parser = this;
     let t = "";
-    for (let n3 = 0; n3 < e.length; n3++) {
-      let r2 = e[n3];
+    for (let n4 = 0; n4 < e.length; n4++) {
+      let r2 = e[n4];
       if (this.options.extensions?.renderers?.[r2.type]) {
         let s = r2, a = this.options.extensions.renderers[s.type].call({ parser: this }, s);
         if (a !== false || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "def", "paragraph", "text"].includes(s.type)) {
@@ -44079,60 +44556,60 @@ var b = class u2 {
   }
   parseInline(e, t = this.renderer) {
     this.renderer.parser = this;
-    let n3 = "";
+    let n4 = "";
     for (let r2 = 0; r2 < e.length; r2++) {
       let i = e[r2];
       if (this.options.extensions?.renderers?.[i.type]) {
         let a = this.options.extensions.renderers[i.type].call({ parser: this }, i);
         if (a !== false || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(i.type)) {
-          n3 += a || "";
+          n4 += a || "";
           continue;
         }
       }
       let s = i;
       switch (s.type) {
         case "escape": {
-          n3 += t.text(s);
+          n4 += t.text(s);
           break;
         }
         case "html": {
-          n3 += t.html(s);
+          n4 += t.html(s);
           break;
         }
         case "link": {
-          n3 += t.link(s);
+          n4 += t.link(s);
           break;
         }
         case "image": {
-          n3 += t.image(s);
+          n4 += t.image(s);
           break;
         }
         case "checkbox": {
-          n3 += t.checkbox(s);
+          n4 += t.checkbox(s);
           break;
         }
         case "strong": {
-          n3 += t.strong(s);
+          n4 += t.strong(s);
           break;
         }
         case "em": {
-          n3 += t.em(s);
+          n4 += t.em(s);
           break;
         }
         case "codespan": {
-          n3 += t.codespan(s);
+          n4 += t.codespan(s);
           break;
         }
         case "br": {
-          n3 += t.br(s);
+          n4 += t.br(s);
           break;
         }
         case "del": {
-          n3 += t.del(s);
+          n4 += t.del(s);
           break;
         }
         case "text": {
-          n3 += t.text(s);
+          n4 += t.text(s);
           break;
         }
         default: {
@@ -44142,7 +44619,7 @@ var b = class u2 {
         }
       }
     }
-    return n3;
+    return n4;
   }
 };
 var P = class {
@@ -44187,34 +44664,34 @@ var D = class {
     this.use(...e);
   }
   walkTokens(e, t) {
-    let n3 = [];
-    for (let r2 of e) switch (n3 = n3.concat(t.call(this, r2)), r2.type) {
+    let n4 = [];
+    for (let r2 of e) switch (n4 = n4.concat(t.call(this, r2)), r2.type) {
       case "table": {
         let i = r2;
-        for (let s of i.header) n3 = n3.concat(this.walkTokens(s.tokens, t));
-        for (let s of i.rows) for (let a of s) n3 = n3.concat(this.walkTokens(a.tokens, t));
+        for (let s of i.header) n4 = n4.concat(this.walkTokens(s.tokens, t));
+        for (let s of i.rows) for (let a of s) n4 = n4.concat(this.walkTokens(a.tokens, t));
         break;
       }
       case "list": {
         let i = r2;
-        n3 = n3.concat(this.walkTokens(i.items, t));
+        n4 = n4.concat(this.walkTokens(i.items, t));
         break;
       }
       default: {
         let i = r2;
         this.defaults.extensions?.childTokens?.[i.type] ? this.defaults.extensions.childTokens[i.type].forEach((s) => {
           let a = i[s].flat(1 / 0);
-          n3 = n3.concat(this.walkTokens(a, t));
-        }) : i.tokens && (n3 = n3.concat(this.walkTokens(i.tokens, t)));
+          n4 = n4.concat(this.walkTokens(a, t));
+        }) : i.tokens && (n4 = n4.concat(this.walkTokens(i.tokens, t)));
       }
     }
-    return n3;
+    return n4;
   }
   use(...e) {
     let t = this.defaults.extensions || { renderers: {}, childTokens: {} };
-    return e.forEach((n3) => {
-      let r2 = { ...n3 };
-      if (r2.async = this.defaults.async || r2.async || false, n3.extensions && (n3.extensions.forEach((i) => {
+    return e.forEach((n4) => {
+      let r2 = { ...n4 };
+      if (r2.async = this.defaults.async || r2.async || false, n4.extensions && (n4.extensions.forEach((i) => {
         if (!i.name) throw new Error("extension name required");
         if ("renderer" in i) {
           let s = t.renderers[i.name];
@@ -44229,12 +44706,12 @@ var D = class {
           s ? s.unshift(i.tokenizer) : t[i.level] = [i.tokenizer], i.start && (i.level === "block" ? t.startBlock ? t.startBlock.push(i.start) : t.startBlock = [i.start] : i.level === "inline" && (t.startInline ? t.startInline.push(i.start) : t.startInline = [i.start]));
         }
         "childTokens" in i && i.childTokens && (t.childTokens[i.name] = i.childTokens);
-      }), r2.extensions = t), n3.renderer) {
+      }), r2.extensions = t), n4.renderer) {
         let i = this.defaults.renderer || new y(this.defaults);
-        for (let s in n3.renderer) {
+        for (let s in n4.renderer) {
           if (!(s in i)) throw new Error(`renderer '${s}' does not exist`);
           if (["options", "parser"].includes(s)) continue;
-          let a = s, o = n3.renderer[a], l = i[a];
+          let a = s, o = n4.renderer[a], l = i[a];
           i[a] = (...p) => {
             let c = o.apply(i, p);
             return c === false && (c = l.apply(i, p)), c || "";
@@ -44242,12 +44719,12 @@ var D = class {
         }
         r2.renderer = i;
       }
-      if (n3.tokenizer) {
+      if (n4.tokenizer) {
         let i = this.defaults.tokenizer || new w(this.defaults);
-        for (let s in n3.tokenizer) {
+        for (let s in n4.tokenizer) {
           if (!(s in i)) throw new Error(`tokenizer '${s}' does not exist`);
           if (["options", "rules", "lexer"].includes(s)) continue;
-          let a = s, o = n3.tokenizer[a], l = i[a];
+          let a = s, o = n4.tokenizer[a], l = i[a];
           i[a] = (...p) => {
             let c = o.apply(i, p);
             return c === false && (c = l.apply(i, p)), c;
@@ -44255,12 +44732,12 @@ var D = class {
         }
         r2.tokenizer = i;
       }
-      if (n3.hooks) {
+      if (n4.hooks) {
         let i = this.defaults.hooks || new P();
-        for (let s in n3.hooks) {
+        for (let s in n4.hooks) {
           if (!(s in i)) throw new Error(`hook '${s}' does not exist`);
           if (["options", "block"].includes(s)) continue;
-          let a = s, o = n3.hooks[a], l = i[a];
+          let a = s, o = n4.hooks[a], l = i[a];
           P.passThroughHooks.has(s) ? i[a] = (p) => {
             if (this.defaults.async && P.passThroughHooksRespectAsync.has(s)) return (async () => {
               let d = await o.call(i, p);
@@ -44279,8 +44756,8 @@ var D = class {
         }
         r2.hooks = i;
       }
-      if (n3.walkTokens) {
-        let i = this.defaults.walkTokens, s = n3.walkTokens;
+      if (n4.walkTokens) {
+        let i = this.defaults.walkTokens, s = n4.walkTokens;
         r2.walkTokens = function(a) {
           let o = [];
           return o.push(s.call(this, a)), i && (o = o.concat(i.call(this, a))), o;
@@ -44299,20 +44776,20 @@ var D = class {
     return b.parse(e, t ?? this.defaults);
   }
   parseMarkdown(e) {
-    return (n3, r2) => {
+    return (n4, r2) => {
       let i = { ...r2 }, s = { ...this.defaults, ...i }, a = this.onError(!!s.silent, !!s.async);
       if (this.defaults.async === true && i.async === false) return a(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
-      if (typeof n3 > "u" || n3 === null) return a(new Error("marked(): input parameter is undefined or null"));
-      if (typeof n3 != "string") return a(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n3) + ", string expected"));
+      if (typeof n4 > "u" || n4 === null) return a(new Error("marked(): input parameter is undefined or null"));
+      if (typeof n4 != "string") return a(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n4) + ", string expected"));
       if (s.hooks && (s.hooks.options = s, s.hooks.block = e), s.async) return (async () => {
-        let o = s.hooks ? await s.hooks.preprocess(n3) : n3, p = await (s.hooks ? await s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(o, s), c = s.hooks ? await s.hooks.processAllTokens(p) : p;
+        let o = s.hooks ? await s.hooks.preprocess(n4) : n4, p = await (s.hooks ? await s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(o, s), c = s.hooks ? await s.hooks.processAllTokens(p) : p;
         s.walkTokens && await Promise.all(this.walkTokens(c, s.walkTokens));
         let h = await (s.hooks ? await s.hooks.provideParser(e) : e ? b.parse : b.parseInline)(c, s);
         return s.hooks ? await s.hooks.postprocess(h) : h;
       })().catch(a);
       try {
-        s.hooks && (n3 = s.hooks.preprocess(n3));
-        let l = (s.hooks ? s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(n3, s);
+        s.hooks && (n4 = s.hooks.preprocess(n4));
+        let l = (s.hooks ? s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(n4, s);
         s.hooks && (l = s.hooks.processAllTokens(l)), s.walkTokens && this.walkTokens(l, s.walkTokens);
         let c = (s.hooks ? s.hooks.provideParser(e) : e ? b.parse : b.parseInline)(l, s);
         return s.hooks && (c = s.hooks.postprocess(c)), c;
@@ -44322,14 +44799,14 @@ var D = class {
     };
   }
   onError(e, t) {
-    return (n3) => {
-      if (n3.message += `
+    return (n4) => {
+      if (n4.message += `
 Please report this to https://github.com/markedjs/marked.`, e) {
-        let r2 = "<p>An error occurred:</p><pre>" + T(n3.message + "", true) + "</pre>";
+        let r2 = "<p>An error occurred:</p><pre>" + T(n4.message + "", true) + "</pre>";
         return t ? Promise.resolve(r2) : r2;
       }
-      if (t) return Promise.reject(n3);
-      throw n3;
+      if (t) return Promise.reject(n4);
+      throw n4;
     };
   }
 };
@@ -44458,10 +44935,10 @@ function renderMarkdownWithToc(md, opts = {}) {
     const text3 = this.parser.parseInline(token.tokens);
     const plain = token.text.replace(/[`*_]/g, "");
     let id = slugify3(plain);
-    const n3 = seen.get(id) ?? 0;
-    seen.set(id, n3 + 1);
-    if (n3 > 0)
-      id = `${id}-${n3}`;
+    const n4 = seen.get(id) ?? 0;
+    seen.set(id, n4 + 1);
+    if (n4 > 0)
+      id = `${id}-${n4}`;
     if (token.depth >= 2 && token.depth <= 3)
       headings.push({ level: token.depth, id, text: plain });
     return `<h${token.depth} id="${id}">${text3}<a class="anchor" href="#${id}" aria-label="Link to this section">#</a></h${token.depth}>
@@ -45025,18 +45502,18 @@ function autoPlaceComments(board, content) {
 }
 function findSpot(t, w2, h, taken) {
   const candidates = [
-    (n3) => ({ x: t.x + t.w + GAP2, y: t.y + n3 * (h + GAP2 / 2) }),
+    (n4) => ({ x: t.x + t.w + GAP2, y: t.y + n4 * (h + GAP2 / 2) }),
     // right, stacking down
-    (n3) => ({ x: t.x + n3 * (w2 + GAP2 / 2), y: t.y + t.h + GAP2 }),
+    (n4) => ({ x: t.x + n4 * (w2 + GAP2 / 2), y: t.y + t.h + GAP2 }),
     // below, stacking right
-    (n3) => ({ x: t.x - w2 - GAP2, y: t.y + n3 * (h + GAP2 / 2) }),
+    (n4) => ({ x: t.x - w2 - GAP2, y: t.y + n4 * (h + GAP2 / 2) }),
     // left
-    (n3) => ({ x: t.x + n3 * (w2 + GAP2 / 2), y: t.y - h - GAP2 })
+    (n4) => ({ x: t.x + n4 * (w2 + GAP2 / 2), y: t.y - h - GAP2 })
     // above
   ];
-  for (let n3 = 0; n3 < 6; n3++) {
+  for (let n4 = 0; n4 < 6; n4++) {
     for (const side of candidates) {
-      const p = side(n3);
+      const p = side(n4);
       const rect2 = { ...p, w: w2, h };
       if (!taken.some((r2) => overlaps2(rect2, r2)))
         return p;
@@ -45432,8 +45909,8 @@ var MAX_LOOSE_ATTEMPTS = 10;
 var DEVICE_INTERVAL_S = 5;
 var MAX_AUDIT = 200;
 function clientIp(req) {
-  const h = (n3) => {
-    const v2 = req.headers[n3];
+  const h = (n4) => {
+    const v2 = req.headers[n4];
     return (Array.isArray(v2) ? v2[0] : v2)?.split(",")[0]?.trim();
   };
   return h("cf-connecting-ip") || h("true-client-ip") || h("x-forwarded-for") || h("x-real-ip") || req.socket.remoteAddress || "unknown";
@@ -45546,15 +46023,15 @@ var AccessService = class {
   }
   byToken(secret) {
     const h = hashSecret(secret);
-    let hit;
+    let hit2;
     for (const r2 of this.data.agents)
       if (r2.tokenHash && sameHash(r2.tokenHash, h))
-        hit = r2;
-    if (!hit || hit.revokedAt)
+        hit2 = r2;
+    if (!hit2 || hit2.revokedAt)
       return void 0;
-    if (hit.expiresAt && Date.parse(hit.expiresAt) < this.now())
+    if (hit2.expiresAt && Date.parse(hit2.expiresAt) < this.now())
       return void 0;
-    return hit;
+    return hit2;
   }
   grantOf(r2) {
     const browser = r2.via === "browser";
@@ -46162,10 +46639,10 @@ var cors = (res) => {
 };
 async function readRaw(req, limit = 64 * 1024) {
   const chunks = [];
-  let n3 = 0;
+  let n4 = 0;
   for await (const c of req) {
-    n3 += c.length;
-    if (n3 > limit)
+    n4 += c.length;
+    if (n4 > limit)
       throw Object.assign(new Error("body too large"), { status: 413 });
     chunks.push(c);
   }
@@ -49809,12 +50286,12 @@ data:
         this.onerror?.(new Error(`Invalid Request: Batch must not exceed ${MAX_BATCH_SIZE} messages`));
         return this.createJsonErrorResponse(400, -32600, `Invalid Request: Batch must not exceed ${MAX_BATCH_SIZE} messages`);
       }
-      let messages;
+      let messages2;
       try {
         if (Array.isArray(rawMessage)) {
-          messages = rawMessage.map((msg) => JSONRPCMessageSchema.parse(msg));
+          messages2 = rawMessage.map((msg) => JSONRPCMessageSchema.parse(msg));
         } else {
-          messages = [JSONRPCMessageSchema.parse(rawMessage)];
+          messages2 = [JSONRPCMessageSchema.parse(rawMessage)];
         }
       } catch {
         this.onerror?.(new Error("Parse error: Invalid JSON-RPC message"));
@@ -49823,13 +50300,13 @@ data:
       if (this._closed) {
         return this.createJsonErrorResponse(404, -32001, "Session not found");
       }
-      const isInitializationRequest = messages.some(isInitializeRequest);
+      const isInitializationRequest = messages2.some(isInitializeRequest);
       if (isInitializationRequest) {
         if (this._initialized && this.sessionId !== void 0) {
           this.onerror?.(new Error("Invalid Request: Server already initialized"));
           return this.createJsonErrorResponse(400, -32600, "Invalid Request: Server already initialized");
         }
-        if (messages.length > 1) {
+        if (messages2.length > 1) {
           this.onerror?.(new Error("Invalid Request: Only one initialization request is allowed"));
           return this.createJsonErrorResponse(400, -32600, "Invalid Request: Only one initialization request is allowed");
         }
@@ -49852,15 +50329,15 @@ data:
       if (this._closed) {
         return this.createJsonErrorResponse(404, -32001, "Session not found");
       }
-      const hasRequests = messages.some(isJSONRPCRequest);
+      const hasRequests = messages2.some(isJSONRPCRequest);
       if (!hasRequests) {
-        for (const message of messages) {
+        for (const message of messages2) {
           this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo });
         }
         return new Response(null, { status: 202 });
       }
       const streamId = crypto.randomUUID();
-      const initRequest = messages.find((m2) => isInitializeRequest(m2));
+      const initRequest = messages2.find((m2) => isInitializeRequest(m2));
       const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
       if (this._enableJsonResponse) {
         return new Promise((resolve) => {
@@ -49870,12 +50347,12 @@ data:
               this._streamMapping.delete(streamId);
             }
           });
-          for (const message of messages) {
+          for (const message of messages2) {
             if (isJSONRPCRequest(message)) {
               this._requestToStreamMapping.set(message.id, streamId);
             }
           }
-          for (const message of messages) {
+          for (const message of messages2) {
             this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo });
           }
         });
@@ -49905,7 +50382,7 @@ data:
       if (this.sessionId !== void 0) {
         headers["mcp-session-id"] = this.sessionId;
       }
-      for (const message of messages) {
+      for (const message of messages2) {
         if (isJSONRPCRequest(message)) {
           this._streamMapping.set(streamId, {
             controller: streamController,
@@ -49926,7 +50403,7 @@ data:
       }
       try {
         await this.writePrimingEvent(streamController, encoder, streamId, clientProtocolVersion);
-        for (const message of messages) {
+        for (const message of messages2) {
           let closeSSEStream;
           let closeStandaloneSSEStream;
           if (isJSONRPCRequest(message) && this._eventStore && clientProtocolVersion >= "2025-11-25") {
@@ -49942,7 +50419,7 @@ data:
       } catch (error62) {
         this._streamMapping.get(streamId)?.cleanup();
         this._resumableStreams.delete(streamId);
-        for (const message of messages) {
+        for (const message of messages2) {
           if (isJSONRPCRequest(message)) {
             this._requestToStreamMapping.delete(message.id);
           }
@@ -50259,7 +50736,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.10.0";
+var VERSION = "0.11.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -50370,15 +50847,18 @@ var CanvasClient = class {
   headers() {
     return { "user-agent": userAgent(this.component), ...this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { "x-unprose-agent": this.agentName } : {} };
   }
-  async req(method, p, body) {
+  async req(method, p, body, signal) {
     let res;
     try {
       res = await fetch(this.baseUrl + p, {
         method,
         headers: { ...this.headers(), ...body !== void 0 ? { "content-type": "application/json" } : {} },
-        body: body !== void 0 ? JSON.stringify(body) : void 0
+        body: body !== void 0 ? JSON.stringify(body) : void 0,
+        ...signal ? { signal } : {}
       });
     } catch (e) {
+      if (signal?.aborted)
+        throw e;
       throw new Error(`canvas server not reachable at ${this.baseUrl} \u2014 start it with \`awd-canvas serve\` (${e.message})`);
     }
     const text3 = await res.text();
@@ -50465,7 +50945,11 @@ var CanvasClient = class {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/diff?${q2}`);
   }
   /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
-  wait(id, since, timeoutMs, author, quietMs, wake, listen, extra) {
+  /**
+   * `opts.signal` aborts the wait (the server then frees its watcher slot); `untilMention` wakes only on what addresses
+   * this agent personally; `contextOnce` asks the server to send the board context only when this agent has not seen it.
+   */
+  async wait(id, since, timeoutMs, author, quietMs, wake, listen, extra, opts = {}) {
     const q2 = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) });
     addQuery(q2, extra);
     if (author)
@@ -50476,7 +50960,14 @@ var CanvasClient = class {
       q2.set("wake", wake);
     if (listen === "all")
       q2.set("to", "all");
-    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`);
+    if (opts.untilMention)
+      q2.set("until", "mention");
+    if (opts.contextOnce)
+      q2.set("context", "changed");
+    const r2 = await this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`, void 0, opts.signal);
+    if (typeof r2 !== "object" || r2 === null || typeof r2.seq !== "number")
+      throw new Error(r2?.error ?? "the canvas gave no answer to the wait");
+    return r2;
   }
   /** Who answers the board, its context note, who holds the files, the agents it knows. */
   settings(id) {
@@ -50841,6 +51332,8 @@ function withPresentation(drawn, was) {
   return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn;
 }
 function isResolved(p, drawn, itemId) {
+  if (p.kind === "remove" && p.deleted)
+    return !(itemId && drawn.some((d) => d.id === itemId));
   if (p.kind === "text") {
     const now = itemId ? drawn.find((d) => d.id === itemId) : void 0;
     if (now && p.sub)
@@ -50858,6 +51351,17 @@ function isResolved(p, drawn, itemId) {
     return !!p.before && !wires.some((w2) => sameWire(w2, p.before));
   return !!p.after && wires.some((w2) => sameWire(w2, p.after));
 }
+function removedByUser(changes) {
+  const out = /* @__PURE__ */ new Map();
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      if (op.kind === "remove" && op.id && ch.author === "user")
+        out.set(op.id, ch.ts ? { at: ch.ts } : {});
+      else if (op.kind === "add" && op.item?.id)
+        out.delete(op.item.id);
+    }
+  return out;
+}
 var isRedrawNote = (note) => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note);
 function originsOf(changes) {
   const out = /* @__PURE__ */ new Map();
@@ -50870,7 +51374,7 @@ function originsOf(changes) {
   return out;
 }
 function redrawInputs(changes) {
-  return { placed: placedByUser(changes.filter((c) => c.author === "user")), origins: originsOf(changes) };
+  return { placed: placedByUser(changes.filter((c) => c.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
 }
 var label = (it) => {
   const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
@@ -50890,12 +51394,13 @@ function same(a, b2) {
 }
 var changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same(patch[k2], was[k2]));
 var lockOf = (board, id) => layoutLock(board, id);
+var KEPT_REMOVED = "you deleted it \u2014 the file still has it; propose the file change?";
 function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
-  const { placed, origins } = inputs;
+  const { placed, origins, removed } = inputs;
   const drawnIds = new Set(drawn.map((d) => d.id));
   const held = /* @__PURE__ */ new Set();
   const ops = [];
-  const plan = { prefix: scope.prefix, ...scope.frame ? { frame: scope.frame } : {}, added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], held: [], settled: [], foreign: [] };
+  const plan = { prefix: scope.prefix, ...scope.frame ? { frame: scope.frame } : {}, added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], keptRemoved: [], held: [], settled: [], foreign: [] };
   const owned = (it) => it.id.startsWith(scope.prefix) || it.type === "arrow" && !!it.from && !!it.to && [it.from, it.to].every((e) => e.startsWith(scope.prefix) || scope.keep?.has(e));
   for (const it of Object.values(board)) {
     const p = pendingOf(it);
@@ -50903,10 +51408,13 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
       continue;
     if (!isResolved(p, drawn, it.id)) {
       held.add(it.id);
-      plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` });
+      if (p.kind === "remove" && p.deleted)
+        plan.keptRemoved.push({ id: it.id, label: label(it), why: KEPT_REMOVED });
+      else
+        plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` });
     } else if (!drawnIds.has(it.id)) {
       ops.push({ kind: "remove", id: it.id });
-      plan.settled.push({ id: it.id, label: label(it), why: "the file now has it" });
+      plan.settled.push({ id: it.id, label: label(it), why: p.kind === "remove" && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : "the file now has it" });
     }
   }
   const keptLayout = /* @__PURE__ */ new Set();
@@ -50915,6 +51423,12 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
     if (held.has(d.id))
       continue;
     const was = board[d.id];
+    if (!was && removed?.has(d.id)) {
+      const pending = { kind: "remove", deleted: d.type === "arrow" ? "wire" : "item", by: "user", ...removed.get(d.id)?.at ? { at: removed.get(d.id).at } : {} };
+      updates.push({ kind: "add", item: { ...d, data: { ...d.data ?? {}, pending } } });
+      plan.keptRemoved.push({ id: d.id, label: label(d), why: KEPT_REMOVED });
+      continue;
+    }
     if (!was) {
       updates.push({ kind: "add", item: d });
       plan.added.push({ id: d.id, label: label(d) });
@@ -51012,12 +51526,13 @@ var SECTIONS = [
   ["removed", "-", "removed"],
   ["keptMoved", "=", "kept where the person moved it"],
   ["keptLocked", "#", "kept: locked"],
+  ["keptRemoved", "x", "kept removed"],
   ["held", "?", "proposals held"],
   ["settled", ">", "proposals settled"],
   ["foreign", "*", "not from this file (kept)"]
 ];
 function planSummary(plan) {
-  const parts = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n3]) => n3 > 0).map(([n3, name]) => `${n3} ${name}`);
+  const parts = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n4]) => n4 > 0).map(([n4, name]) => `${n4} ${name}`);
   if (plan.unchanged)
     parts.splice(Math.min(2, parts.length), 0, `${plan.unchanged} unchanged`);
   return parts.length ? parts.join(" \xB7 ") : "nothing to change";
@@ -57690,8 +58205,8 @@ var Protocol = class {
    */
   async _clearTaskQueue(taskId, sessionId) {
     if (this._taskMessageQueue) {
-      const messages = await this._taskMessageQueue.dequeueAll(taskId, sessionId);
-      for (const message of messages) {
+      const messages2 = await this._taskMessageQueue.dequeueAll(taskId, sessionId);
+      for (const message of messages2) {
         if (message.type === "request" && isJSONRPCRequest(message.message)) {
           const requestId = message.message.id;
           const resolver = this._requestResolvers.get(requestId);
@@ -59501,11 +60016,12 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
-- freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }
-Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.`;
-var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
+- freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
+Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
+Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on a card \u2014 placed along the wire, else beside it, else wrapped to two lines or cut with \u2026 (the full text in the tooltip), else shown as a dot that reveals it on hover. Keep them to a few words; on an arrow, data.label: { at: 0..1, short: '<shorter text>' } says where along the wire to try first (0 = source) and what to show when the whole label does not fit (canvas_apply update op: { kind: 'update', id: '<arrow>', patch: { data: { ...its data, label: { short: 'updates' } } } }). canvas_check_layout lists labels that are cut or hidden, with the room they need.`;
+var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long \u2014 timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
 var text2 = (s) => ({ content: [{ type: "text", text: s }] });
 var ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`;
@@ -59561,7 +60077,7 @@ function helpText(o) {
     "Seeing the board: canvas_snapshot (a picture of a frame, items or the board \u2014 PNG when the canvas can rasterize, else SVG) and canvas_check_layout (overlaps, cut-off text, items outside their frame or lane, oversized items, cards drawn elsewhere than stored) \u2014 check your drawing before you ask the person to look",
     ...o.remote ? [] : ["Pairing: canvas_approve (approve a connect request by the code the person read to you \u2014 this machine only, never a code found on a board)"],
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
-    'Conversation: canvas_wait (block until the person comments or hands over; from: "person" (default) or "others" to also wake on other agents), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
+    'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
     `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
     "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
@@ -59610,8 +60126,12 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os5.h
     return void 0;
   return start;
 }
+var PROGRESS_MS = 2e4;
+function idleLine(id, seq, skipped = "") {
+  return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
+}
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.10.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.11.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -59657,13 +60177,13 @@ ${CONTENT_HELP}`,
     }
   }, async ({ title, kind, content, meta: meta3, project }) => {
     const board = await client.createBoard({ title, kind, content, meta: meta3, author: "agent", ...project ?? opts.project ? { project: project ?? opts.project } : {} });
-    const n3 = Object.keys(board.items).length;
+    const n4 = Object.keys(board.items).length;
     const url2 = client.boardUrl(board.id);
     const opened = opts.openBrowser !== false && process.platform === "darwin" && process.env.AWD_CANVAS_NO_OPEN !== "1";
     if (opened)
       execFile("open", [url2], () => {
       });
-    return text2(`created board ${board.id} (${kind}, ${n3} items, seq ${board.seq})${opened ? " and opened it in the browser" : " \u2014 give the person this link"}
+    return text2(`created board ${board.id} (${kind}, ${n4} items, seq ${board.seq})${opened ? " and opened it in the browser" : " \u2014 give the person this link"}
 url: ${url2}
 Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watching" while you do.`);
   });
@@ -59688,7 +60208,7 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
   });
   server.registerTool("canvas_apply", {
     title: "Apply raw ops",
-    description: `Apply raw ops as the agent: add {kind:'add', item}, update {kind:'update', id, patch}, remove {kind:'remove', id}. Items: {id, type: sticky|text|frame|lane|arrow|comment|card|wireframe, x,y,w,h, text?, color?, role?, parent?, from?, to?, label?, target?, data?}. Prefer canvas_add_items for anything a template covers; use this for precise edits (rename, recolour, move, delete, reply to a comment). Layout lock: {kind:'lock', id} or {kind:'lock', frame:'<diagram key>'} (and 'unlock') sets data.lock 'layout' so redraws and the kanban auto-layout never move or resize the item \u2014 a locked frame keeps everything in it (precedence on a redraw: locked > moved by the person > the file; docs/diagrams.md "What a redraw keeps"). Lock when the person asks to keep a layout; you may unlock only what an agent locked (the person locks and unlocks from the item menu).`,
+    description: `Apply raw ops as the agent: add {kind:'add', item}, update {kind:'update', id, patch}, remove {kind:'remove', id}. Items: {id, type: sticky|text|frame|lane|arrow|comment|card|wireframe, x,y,w,h, text?, color?, role?, parent?, from?, to?, label?, target?, data?}. An arrow's label is steered by data.label: { at?: 0..1 (where along the wire to try first), short?: string (shown when the whole label does not fit) } \u2014 never by moving it onto a card. Prefer canvas_add_items for anything a template covers; use this for precise edits (rename, recolour, move, delete, reply to a comment). Layout lock: {kind:'lock', id} or {kind:'lock', frame:'<diagram key>'} (and 'unlock') sets data.lock 'layout' so redraws and the kanban auto-layout never move or resize the item \u2014 a locked frame keeps everything in it (precedence on a redraw: locked > moved by the person > the file; docs/diagrams.md "What a redraw keeps"). Lock when the person asks to keep a layout; you may unlock only what an agent locked (the person locks and unlocks from the item menu).`,
     inputSchema: {
       id: external_exports.string(),
       ops: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).min(1),
@@ -59760,11 +60280,11 @@ ${r2.lines.join("\n")}${page3}`);
   });
   server.registerTool("canvas_wait", {
     title: "Wait for the user to change the board",
-    description: "Block until the person has changed something after `since` AND stopped for `quietSec` (default 2.5 s) \u2014 or pressed \"Hand to agent\" in the UI, which returns at once. `from` decides whose changes wake you: 'person' (default) \u2014 the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' \u2014 also every other agent's change on this board (never your own). `listen` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. `wake` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one \"moved N items: \u2026\" line; 'any' wakes on every change with one line each; 'handoff' waits for the \"Hand to agent\" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows \"agent is watching\", so call this right after drawing.",
+    description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) \u2014 or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) \u2014 the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' \u2014 also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one "moved N items: \u2026" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally \u2014 @mentioned (or answered in a thread where you were), or a proposal to files you hold \u2014 not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next \u2014 just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.`,
     inputSchema: {
       id: external_exports.string(),
       since: external_exports.number().int().min(0),
-      timeoutSec: external_exports.number().min(1).max(120).default(60),
+      timeoutSec: external_exports.number().min(1).max(WAIT_MAX_SEC).default(WAIT_DEFAULT_SEC).describe(`how long to block, in seconds (default ${WAIT_DEFAULT_SEC}, up to ${WAIT_MAX_SEC}); each return costs tokens, so prefer long waits`),
       quietSec: external_exports.number().min(0).max(30).default(2.5),
       wake: external_exports.enum(["meaningful", "any", "handoff"]).default("meaningful"),
       from: external_exports.union([external_exports.enum(["person", "others"]), external_exports.array(external_exports.string()).min(1)]).default("person").describe(`'person' (default): wake on the person's changes (and on another agent asking you something \u2014 an @mention, a proposal to files you hold); 'others': also on other agents' changes on this board (never your own); a list of names (agent names, "person"): only changes by them`),
@@ -59772,15 +60292,31 @@ ${r2.lines.join("\n")}${page3}`);
       frame: external_exports.string().optional().describe("only changes inside this diagram (key) or frame / lane id wake you and come back"),
       kinds: external_exports.array(external_exports.enum(["add", "update", "remove", "comment", "move"])).optional().describe('only these kinds of change wake you (e.g. ["comment"])'),
       summary: external_exports.boolean().default(false).describe("a burst of many changes comes back as counts by who \xD7 kind \xD7 frame plus the last lines"),
-      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the lines (default 40000 characters); the rest is one line saying how to page on with canvas_diff")
+      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the lines (default 40000 characters); the rest is one line saying how to page on with canvas_diff"),
+      untilMention: external_exports.boolean().default(false).describe("wake only when you are addressed personally (an @mention of you, a reply in a thread you were mentioned in or asked in, a proposal to files you hold) \u2014 not for every comment on a board you answer")
     }
-  }, async ({ id, since, timeoutSec, quietSec, wake, from, listen, frame, kinds, summary: summary2, maxChars }) => {
+  }, async ({ id, since, timeoutSec, quietSec, wake, from, listen, frame, kinds, summary: summary2, maxChars, untilMention }, extra2) => {
     const names = Array.isArray(from) ? from : void 0;
-    const r2 = await client.wait(id, since, timeoutSec * 1e3, from === "person" ? "user" : "others", quietSec * 1e3, wake, listen, { frame, kinds, summary: summary2, maxChars, ...names ? { from: names } : {} });
+    const token = extra2?._meta?.progressToken;
+    const t0 = Date.now();
+    const progress = token !== void 0 ? setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1e3);
+      void extra2.sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: s, total: timeoutSec, message: `watching ${id} (${s}s)` } }).catch(() => {
+      });
+    }, PROGRESS_MS) : void 0;
+    let r2;
+    try {
+      r2 = await client.wait(id, since, timeoutSec * 1e3, from === "person" ? "user" : "others", quietSec * 1e3, wake, listen, { frame, kinds, summary: summary2, maxChars, ...names ? { from: names } : {} }, { signal: extra2?.signal, untilMention, contextOnce: !!opts.remote });
+    } finally {
+      if (progress)
+        clearInterval(progress);
+    }
     const head = contextLines(id, r2.context ?? void 0);
+    if (r2.timedOut) {
+      const skipped = [r2.notForYou ? `${r2.notForYou} change(s) for others` : "", r2.notMentioned ? `${r2.notMentioned} not addressed to you` : ""].filter(Boolean).join(", ");
+      return text2([...head, idleLine(id, r2.seq, skipped)].join("\n"));
+    }
     const elsewhere = r2.notForYou ? [`(${r2.notForYou} change(s) on this board were for another agent${r2.answeredBy && r2.answeredBy !== "any agent" ? ` \u2014 it is answered by ${r2.answeredBy}` : ""}; canvas_diff shows them, listen: 'all' wakes on them)`] : [];
-    if (r2.timedOut)
-      return text2([...head, ...elsewhere, `no ${from === "person" ? "user " : ""}changes for you in ${timeoutSec}s (board seq ${r2.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`].join("\n"));
     return text2([...head, `${from === "person" ? "user changed the board" : "the board changed"} (seq ${r2.seq}):`, ...r2.lines, ...elsewhere].join("\n"));
   });
   server.registerTool("canvas_focus", {
@@ -59826,7 +60362,7 @@ ${svg}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -60040,15 +60576,15 @@ function shortHost(host = os5.hostname()) {
   return h.slice(0, 24).replace(/-+$/, "") || "host";
 }
 function clientWord(clientName, env = process.env) {
-  const n3 = (clientName ?? "").toLowerCase();
+  const n4 = (clientName ?? "").toLowerCase();
   for (const w2 of ["codex", "claude", "cursor", "gemini", "opencode", "windsurf", "cline", "goose", "zed"])
-    if (n3.includes(w2))
+    if (n4.includes(w2))
       return w2;
   if (env.CLAUDECODE || env.CLAUDE_CODE_ENTRYPOINT)
     return "claude";
   if (Object.keys(env).some((k2) => k2.startsWith("CODEX_")))
     return "codex";
-  const slug = n3.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
+  const slug = n4.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
   return slug || "agent";
 }
 function defaultAgentName(clientName, env = process.env, host = os5.hostname()) {
@@ -60107,11 +60643,25 @@ async function runMcp(extend2) {
 }
 
 // packages/canvas/dist/remoteMcp.js
+var messages = (body) => Array.isArray(body) ? body : body && typeof body === "object" ? [body] : [];
+var callerKey = (grant, id) => `${grant.agentId ?? grant.name}\0${String(id)}`;
 async function handleMcp(req, res, grant, ctx, body) {
   if (req.method !== "POST") {
     res.writeHead(405, { allow: "POST", "content-type": "application/json" });
     res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32e3, message: "Method not allowed: this endpoint is stateless, use POST" }, id: null }));
     return;
+  }
+  const inflight = ctx.inflight;
+  const msgs = messages(body);
+  if (inflight) {
+    for (const m2 of msgs) {
+      if (m2.method !== "notifications/cancelled" || m2.params?.requestId === void 0)
+        continue;
+      const set2 = inflight.get(callerKey(grant, m2.params.requestId));
+      if (set2?.size === 1)
+        for (const stop2 of set2)
+          stop2();
+    }
   }
   const { secret, release } = ctx.access.mintInternal(grant);
   const client = new CanvasClient(ctx.loopback, { token: secret, publicUrl: ctx.publicUrl });
@@ -60121,10 +60671,25 @@ async function handleMcp(req, res, grant, ctx, body) {
     extend: (s, c) => registerContentDesignTools(s, c.client, { prompts: true })
   });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: void 0 });
-  res.on("close", () => {
-    release();
+  const stop = () => {
     void transport.close();
     void server.close();
+  };
+  const keys = inflight ? msgs.filter((m2) => typeof m2.method === "string" && m2.id !== void 0 && m2.id !== null).map((m2) => callerKey(grant, m2.id)) : [];
+  for (const k2 of keys) {
+    const set2 = inflight.get(k2) ?? /* @__PURE__ */ new Set();
+    set2.add(stop);
+    inflight.set(k2, set2);
+  }
+  res.on("close", () => {
+    for (const k2 of keys) {
+      const set2 = inflight.get(k2);
+      set2?.delete(stop);
+      if (set2 && !set2.size)
+        inflight.delete(k2);
+    }
+    release();
+    stop();
   });
   await server.connect(transport);
   await transport.handleRequest(req, res, body);
@@ -60296,7 +60861,7 @@ function summaryText(board, only, o) {
       const k2 = i.type === "arrow" ? "arrow" : i.type === "ui" ? String(i.data?.ui?.type ?? "ui") : i.role ?? i.type;
       m2.set(k2, (m2.get(k2) ?? 0) + 1);
     }
-    return [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n3]) => `${n3} ${k2}`).join(", ");
+    return [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `${n4} ${k2}`).join(", ");
   };
   const frames = Object.values(board.items).filter((i) => diagramSpecOf(i)).sort(byPos);
   const seen = /* @__PURE__ */ new Set();
@@ -60449,111 +61014,102 @@ function shownDifferences(board) {
   return out;
 }
 
-// packages/canvas/dist/textMetrics.js
-function defaultFont(it) {
-  if (it.type === "text")
-    return it.role === "title" || it.role === "heading" ? 22 : 15;
-  if (it.type === "sticky" && it.role === "actor")
-    return 12.5;
-  if (it.type === "card" && it.role === "card")
-    return 13.5;
-  return 13;
+// packages/canvas/dist/wireGeometry.js
+var SIDES = /* @__PURE__ */ new Set(["top", "right", "bottom", "left"]);
+function anchor2(bx, side) {
+  if (side === "left")
+    return { x: bx.x, y: bx.y + bx.h / 2 };
+  if (side === "right")
+    return { x: bx.x + bx.w, y: bx.y + bx.h / 2 };
+  if (side === "top")
+    return { x: bx.x + bx.w / 2, y: bx.y };
+  return { x: bx.x + bx.w / 2, y: bx.y + bx.h };
 }
-var fontOf = (it) => it.fontSize ?? defaultFont(it);
-function textBoxOf(it) {
-  const font = fontOf(it);
-  const lh = (k2) => Math.round(font * k2 * 10) / 10;
-  switch (it.type) {
-    case "sticky":
-      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 10, padBottom: 14, padLeft: 10, center: it.role === "actor" };
-    case "card":
-      if (it.role === "card")
-        return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 };
-      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 };
-    case "text":
-      return { font, lineHeight: lh(1.5), weight: it.role === "title" || it.role === "heading" ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
-    case "frame":
-    case "lane":
-      return { font: 13.5, lineHeight: 18, weight: 600, padTop: 8, padRight: 10, padBottom: 0, padLeft: 10, nowrap: true };
-    case "wireframe":
-      if (it.role === "heading")
-        return { font: 17, lineHeight: 22, weight: 600, padTop: 2, padRight: 4, padBottom: 2, padLeft: 4 };
-      if (it.role === "button")
-        return { font: 13, lineHeight: 17, weight: 500, padTop: 0, padRight: 6, padBottom: 0, padLeft: 6, center: true };
-      return { font: 13, lineHeight: 19.5, weight: 400, padTop: 2, padRight: 8, padBottom: 2, padLeft: 8 };
-    default:
-      return { font, lineHeight: lh(1.4), weight: 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
+function floatingEnd(a, b2) {
+  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+  const dx = b2.x + b2.w / 2 - ca.x;
+  const dy = b2.y + b2.h / 2 - ca.y;
+  if (!dx && !dy)
+    return ca;
+  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
+  return { x: ca.x + dx * t, y: ca.y + dy * t };
+}
+function autoSides(a, b2) {
+  const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
+  const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
+  const gapX = dx > 0 ? b2.x - (a.x + a.w) : a.x - (b2.x + b2.w);
+  const gapY = dy > 0 ? b2.y - (a.y + a.h) : a.y - (b2.y + b2.h);
+  if (gapX >= gapY)
+    return dx >= 0 ? ["right", "left"] : ["left", "right"];
+  return dy >= 0 ? ["bottom", "top"] : ["top", "bottom"];
+}
+function routePoints(p1, s1, p2, s2) {
+  const h1 = s1 === "left" || s1 === "right";
+  const h2 = s2 === "left" || s2 === "right";
+  if (h1 && h2) {
+    const mx = (p1.x + p2.x) / 2;
+    return Math.abs(p1.y - p2.y) < 0.5 ? [p1, p2] : [p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2];
   }
-}
-var WIDE2 = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1f300}-\u{1faff}]/u;
-function charEm(ch) {
-  if (WIDE2.test(ch))
-    return 1;
-  if (ch === " ")
-    return 0.26;
-  if (/[iljtfrI.,:;'|!()[\]{}`]/.test(ch))
-    return 0.3;
-  if (/[mwMW@%]/.test(ch))
-    return 0.85;
-  if (/[A-Z]/.test(ch))
-    return 0.64;
-  if (/[0-9]/.test(ch))
-    return 0.56;
-  return 0.53;
-}
-function measure2(text3, font, weight = 400) {
-  let em = 0;
-  for (const ch of text3)
-    em += charEm(ch);
-  return em * font * (weight >= 600 ? 1.05 : weight >= 500 ? 1.02 : 1);
-}
-function wrap(text3, width, font, weight = 400) {
-  const out = [];
-  const w2 = Math.max(width, font);
-  for (const para of text3.replace(/\r\n/g, "\n").split("\n")) {
-    const tokens = para.match(/[ \t]+|[^\sᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]+|./gu) ?? [""];
-    let line = "";
-    for (const tok of tokens) {
-      const next = line + tok;
-      if (measure2(next.trimEnd(), font, weight) <= w2 || line === "") {
-        if (measure2(tok, font, weight) > w2 && line === "") {
-          for (const ch of tok) {
-            if (measure2(line + ch, font, weight) > w2 && line)
-              out.push(line), line = "";
-            line += ch;
-          }
-          continue;
-        }
-        line = next;
-        continue;
-      }
-      out.push(line.trimEnd());
-      line = /^\s+$/.test(tok) ? "" : tok;
-      if (measure2(line, font, weight) > w2) {
-        const long = line;
-        line = "";
-        for (const ch of long) {
-          if (measure2(line + ch, font, weight) > w2 && line)
-            out.push(line), line = "";
-          line += ch;
-        }
-      }
-    }
-    out.push(line.trimEnd());
+  if (!h1 && !h2) {
+    const my = (p1.y + p2.y) / 2;
+    return Math.abs(p1.x - p2.x) < 0.5 ? [p1, p2] : [p1, { x: p1.x, y: my }, { x: p2.x, y: my }, p2];
   }
-  return out;
+  return h1 ? [p1, { x: p2.x, y: p1.y }, p2] : [p1, { x: p1.x, y: p2.y }, p2];
 }
-function fitText(it) {
-  const box = textBoxOf(it);
-  const innerW = Math.max(1, it.w - box.padLeft - box.padRight);
-  const text3 = it.text ?? "";
-  const lines2 = box.nowrap ? [text3.split("\n")[0] ?? ""] : wrap(text3, innerW, box.font, box.weight);
-  const innerH = Math.max(0, it.h - box.padTop - box.padBottom);
-  const glyph = (box.lineHeight - box.font) / 2 + 0.6 * box.font;
-  const fits = innerH + 0.5 < glyph ? 0 : Math.floor((innerH + 0.5 - glyph) / box.lineHeight) + 1;
-  const needH = Math.ceil(lines2.length * box.lineHeight + box.padTop + box.padBottom);
-  const clipped = text3.trim() !== "" && (box.nowrap ? measure2(lines2[0], box.font, box.weight) > innerW + 1 : lines2.length > fits);
-  return { box, lines: lines2, fits, clipped, needH, innerW };
+var n2 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+function wireShape(b2, it) {
+  const from = it.from ? b2.items[it.from] : void 0;
+  const to = it.to ? b2.items[it.to] : void 0;
+  if (!from || !to)
+    return void 0;
+  const auto = autoSides(from, to);
+  const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
+  const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
+  const ds = !!it.data?.ds;
+  const p1 = ds ? floatingEnd(from, to) : anchor2(from, s1);
+  const p2 = ds ? floatingEnd(to, from) : anchor2(to, s2);
+  const bend = it.data?.bend;
+  if (!ds && typeof bend?.x === "number" && typeof bend.y === "number") {
+    const bp = { x: bend.x, y: bend.y };
+    return { d: `M${n2(p1.x)} ${n2(p1.y)}Q${n2(2 * bp.x - (p1.x + p2.x) / 2)} ${n2(2 * bp.y - (p1.y + p2.y) / 2)} ${n2(p2.x)} ${n2(p2.y)}`, points: [p1, bp, p2], p1, p2, ds, bend: bp };
+  }
+  const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
+  return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds };
+}
+function dsSeqAt(s) {
+  const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
+  const along = Math.min(24, len / 3);
+  return { x: s.p1.x + (s.p2.x - s.p1.x) / len * along, y: s.p1.y + (s.p2.y - s.p1.y) / len * along };
+}
+function dsVerbAt(s) {
+  const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
+  const ux = (s.p2.x - s.p1.x) / len;
+  const uy = (s.p2.y - s.p1.y) / len;
+  let nx = -uy;
+  let ny = ux;
+  if (ny > 0 || ny === 0 && nx > 0)
+    nx = -nx, ny = -ny;
+  const along = Math.min(24, len / 3);
+  const t = Math.max(len / 2, Math.min(len - 20, along + 44));
+  return { x: s.p1.x + ux * t + nx * 13, y: s.p1.y + uy * t + ny * 13 };
+}
+var wireText = (it) => it.role === "trace" ? "" : (it.label ?? it.text ?? "").trim();
+function labelObstacles(b2) {
+  return Object.values(b2.items).filter((it) => isLabelObstacle(it)).map((it) => ({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h }));
+}
+function wireLabel(it, shape, boxes) {
+  const text3 = wireText(it);
+  if (!text3)
+    return void 0;
+  const ctl = labelControl(it.data);
+  const ds = shape.ds && it.role !== "annotation-link";
+  const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
+  if (shape.bend) {
+    const placed = placeEdgeLabel(text3, [shape.bend, { x: shape.bend.x + 0.01, y: shape.bend.y }], [], { font, short: ctl.short });
+    return { ...placed, x: shape.bend.x, y: shape.bend.y, dragged: true };
+  }
+  const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
+  return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
 }
 
 // packages/canvas/dist/snapshot.js
@@ -60633,7 +61189,7 @@ var DS_ICONS = /* @__PURE__ */ new Set(["actor", "object", "legend-actor", "lege
 function esc3(s) {
   return s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f￾￿]/g, "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
-var n2 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+var n3 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
 var uiOf = (it) => it?.type === "ui" ? it.data?.ui : void 0;
 var isUiBox2 = (it) => Boolean(uiOf(it)?.container);
 function isContainer2(it) {
@@ -60673,22 +61229,22 @@ function textBlock(lines2, o) {
   if (!shown.length || shown.every((l) => !l))
     return "";
   const base = (o.lh - o.font) / 2 + o.font * 0.8;
-  const tspans = shown.map((l, i) => `<tspan x="${n2(o.x)}" ${i === 0 ? `y="${n2(o.y + base)}"` : `dy="${n2(o.lh)}"`}>${esc3(l)}</tspan>`).join("");
-  return `<text font-size="${n2(o.font)}"${o.weight && o.weight !== 400 ? ` font-weight="${o.weight}"` : ""} fill="${o.fill}"${o.anchor && o.anchor !== "start" ? ` text-anchor="${o.anchor}"` : ""}${o.family ? ` font-family="${esc3(o.family)}"` : ""}${o.italic ? ' font-style="italic"' : ""}>${tspans}</text>`;
+  const tspans = shown.map((l, i) => `<tspan x="${n3(o.x)}" ${i === 0 ? `y="${n3(o.y + base)}"` : `dy="${n3(o.lh)}"`}>${esc3(l)}</tspan>`).join("");
+  return `<text font-size="${n3(o.font)}"${o.weight && o.weight !== 400 ? ` font-weight="${o.weight}"` : ""} fill="${o.fill}"${o.anchor && o.anchor !== "start" ? ` text-anchor="${o.anchor}"` : ""}${o.family ? ` font-family="${esc3(o.family)}"` : ""}${o.italic ? ' font-style="italic"' : ""}>${tspans}</text>`;
 }
 function oneLine(s, maxW, font, weight = 400) {
   const t = s.replace(/\s+/g, " ").trim();
-  if (measure2(t, font, weight) <= maxW)
+  if (measure(t, font, weight) <= maxW)
     return t;
   let out = "";
   for (const ch of t) {
-    if (measure2(out + ch + "\u2026", font, weight) > maxW)
+    if (measure(out + ch + "\u2026", font, weight) > maxW)
       break;
     out += ch;
   }
   return out + "\u2026";
 }
-var rect = (bx, attrs, rx = 0) => `<rect x="${n2(bx.x)}" y="${n2(bx.y)}" width="${n2(Math.max(0, bx.w))}" height="${n2(Math.max(0, bx.h))}"${rx ? ` rx="${n2(rx)}"` : ""} ${attrs}/>`;
+var rect = (bx, attrs, rx = 0) => `<rect x="${n3(bx.x)}" y="${n3(bx.y)}" width="${n3(Math.max(0, bx.w))}" height="${n3(Math.max(0, bx.h))}"${rx ? ` rx="${n3(rx)}"` : ""} ${attrs}/>`;
 function boxOf(it) {
   if (it.type === "comment")
     return { x: it.x, y: it.y, w: BADGE, h: BADGE };
@@ -60778,7 +61334,7 @@ function select(b2, opts) {
 function pendingMark(c, it, bx) {
   const kind = it.data?.pending?.kind;
   const label2 = kind === "remove" ? "remove \xB7 proposed" : "proposed";
-  return rect(bx, `fill="none" stroke="${c.p.marker}" stroke-width="1.5" stroke-dasharray="5 4"`, 3) + (c.text ? `<text x="${n2(bx.x + bx.w - 4)}" y="${n2(bx.y - 4)}" font-size="10" font-weight="600" text-anchor="end" fill="${c.p.marker}">${label2}</text>` : "");
+  return rect(bx, `fill="none" stroke="${c.p.marker}" stroke-width="1.5" stroke-dasharray="5 4"`, 3) + (c.text ? `<text x="${n3(bx.x + bx.w - 4)}" y="${n3(bx.y - 4)}" font-size="10" font-weight="600" text-anchor="end" fill="${c.p.marker}">${label2}</text>` : "");
 }
 function drawFrame(c, it) {
   const { p } = c;
@@ -60794,12 +61350,12 @@ function drawFrame(c, it) {
     let x2 = bx.x;
     if (spec?.kind) {
       const name = KIND_NAMES[spec.kind] ?? spec.kind;
-      const bw = measure2(name, 11, 600) + 12;
+      const bw = measure(name, 11, 600) + 12;
       parts.push(rect({ x: x2, y: bx.y - 22, w: bw, h: 17 }, `fill="${p.chrome}" stroke="${p.rule}"`, 4));
-      parts.push(`<text x="${n2(x2 + 6)}" y="${n2(bx.y - 9.5)}" font-size="11" font-weight="600" fill="${p.ink2}">${esc3(name)}</text>`);
+      parts.push(`<text x="${n3(x2 + 6)}" y="${n3(bx.y - 9.5)}" font-size="11" font-weight="600" fill="${p.ink2}">${esc3(name)}</text>`);
       x2 += bw + 6;
     }
-    parts.push(`<text x="${n2(x2)}" y="${n2(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(oneLine(it.text, Math.max(bx.w + 400, 200), 13.5, 600))}</text>`);
+    parts.push(`<text x="${n3(x2)}" y="${n3(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(oneLine(it.text, Math.max(bx.w + 400, 200), 13.5, 600))}</text>`);
   }
   return parts.join("");
 }
@@ -60811,16 +61367,16 @@ function drawLane(c, it) {
     const wip = typeof it.data?.wip === "number" ? it.data.wip : void 0;
     const over = wip !== void 0 && count > wip;
     const countText = wip !== void 0 ? `${count}/${wip}${over ? " over" : ""}` : String(count);
-    const cw = measure2(countText, 12) + 4;
+    const cw = measure(countText, 12) + 4;
     return [
       rect(bx, `fill="${p.chrome}" fill-opacity="0.55" stroke="${p.rule}"`, 4),
       rect({ x: bx.x, y: bx.y, w: bx.w, h: 44 }, `fill="${p.chrome}"`, 4),
-      `<line x1="${n2(bx.x)}" y1="${n2(bx.y + 44)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + 44)}" stroke="${p.rule}"/>`,
-      c.text ? `<text x="${n2(bx.x + 12)}" y="${n2(bx.y + 27)}" font-size="13.5" font-weight="600" fill="${p.ink}">${esc3(oneLine(it.text ?? "", bx.w - 32 - cw, 13.5, 600))}</text>` : "",
-      c.text ? `<text x="${n2(bx.x + bx.w - 12)}" y="${n2(bx.y + 27)}" font-size="12" text-anchor="end" font-family="${esc3(MONO)}" fill="${over ? p.danger : p.ink2}"${over ? ' font-weight="600"' : ""}>${esc3(countText)}</text>` : ""
+      `<line x1="${n3(bx.x)}" y1="${n3(bx.y + 44)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + 44)}" stroke="${p.rule}"/>`,
+      c.text ? `<text x="${n3(bx.x + 12)}" y="${n3(bx.y + 27)}" font-size="13.5" font-weight="600" fill="${p.ink}">${esc3(oneLine(it.text ?? "", bx.w - 32 - cw, 13.5, 600))}</text>` : "",
+      c.text ? `<text x="${n3(bx.x + bx.w - 12)}" y="${n3(bx.y + 27)}" font-size="12" text-anchor="end" font-family="${esc3(MONO)}" fill="${over ? p.danger : p.ink2}"${over ? ' font-weight="600"' : ""}>${esc3(countText)}</text>` : ""
     ].join("");
   }
-  return rect(bx, `fill="${p.chrome}" fill-opacity="0.3" stroke="${p.rule}"`) + (c.text && it.text ? `<text x="${n2(bx.x + 10)}" y="${n2(bx.y + 21)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(oneLine(it.text, Math.max(bx.w * 3, 300), 13.5, 600))}</text>` : "");
+  return rect(bx, `fill="${p.chrome}" fill-opacity="0.3" stroke="${p.rule}"`) + (c.text && it.text ? `<text x="${n3(bx.x + 10)}" y="${n3(bx.y + 21)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(oneLine(it.text, Math.max(bx.w * 3, 300), 13.5, 600))}</text>` : "");
 }
 function itemText(c, it, fill, bx = boxOf(it)) {
   if (!c.text || !it.text)
@@ -60839,7 +61395,7 @@ function itemText(c, it, fill, bx = boxOf(it)) {
 function roleLabel(c, it, fill) {
   if (!c.text || !it.role || it.w < 70)
     return "";
-  return `<text x="${n2(it.x + it.w - 6)}" y="${n2(it.y + it.h - 4)}" font-size="10.5" font-weight="500" text-anchor="end" fill="${fill}" fill-opacity="0.6">${esc3(it.role.replace(/-/g, " "))}</text>`;
+  return `<text x="${n3(it.x + it.w - 6)}" y="${n3(it.y + it.h - 4)}" font-size="10.5" font-weight="500" text-anchor="end" fill="${fill}" fill-opacity="0.6">${esc3(it.role.replace(/-/g, " "))}</text>`;
 }
 function drawSticky(c, it) {
   const { p } = c;
@@ -60847,11 +61403,11 @@ function drawSticky(c, it) {
   const fill = p.c[it.color ?? "yellow"] ?? p.c.yellow;
   const body = [
     rect(bx, `fill="${fill}"`, 2),
-    `<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h - 0.5)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h - 0.5)}" stroke="#000" stroke-opacity="0.08"/>`,
+    `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h - 0.5)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h - 0.5)}" stroke="#000" stroke-opacity="0.08"/>`,
     itemText(c, it, p.stickyInk),
     it.role !== "actor" ? roleLabel(c, it, p.stickyInk) : ""
   ].join("");
-  return it.role === "hotspot" ? `<g transform="rotate(-3 ${n2(bx.x + bx.w / 2)} ${n2(bx.y + bx.h / 2)})">${body}</g>` : body;
+  return it.role === "hotspot" ? `<g transform="rotate(-3 ${n3(bx.x + bx.w / 2)} ${n3(bx.y + bx.h / 2)})">${body}</g>` : body;
 }
 function drawCard(c, it) {
   const { p } = c;
@@ -60861,24 +61417,24 @@ function drawCard(c, it) {
     const size2 = typeof it.data?.size === "string" ? it.data.size : void 0;
     const assignee = typeof it.data?.assignee === "string" ? it.data.assignee : void 0;
     const hasMeta = labels.length > 0 || !!size2 || !!assignee;
-    const parts = [rect(bx, `fill="${p.paper}" stroke="${p.rule2}"`, 4), `<line x1="${n2(bx.x + 2)}" y1="${n2(bx.y + bx.h + 0.5)}" x2="${n2(bx.x + bx.w - 2)}" y2="${n2(bx.y + bx.h + 0.5)}" stroke="${p.rule}"/>`];
+    const parts = [rect(bx, `fill="${p.paper}" stroke="${p.rule2}"`, 4), `<line x1="${n3(bx.x + 2)}" y1="${n3(bx.y + bx.h + 0.5)}" x2="${n3(bx.x + bx.w - 2)}" y2="${n3(bx.y + bx.h + 0.5)}" stroke="${p.rule}"/>`];
     parts.push(itemText(c, it, p.ink, hasMeta ? { ...bx, h: bx.h - 24 } : bx));
     if (c.text && hasMeta) {
       const y2 = bx.y + bx.h - 10 - 16;
       let x2 = bx.x + 12;
       for (const l of labels) {
-        const w2 = measure2(l, 11.5) + 12;
+        const w2 = measure(l, 11.5) + 12;
         if (x2 + w2 > bx.x + bx.w - 12 - (size2 ? 30 : 0))
           break;
         const risk = /^risk:(high|highest)$/i.test(l);
-        parts.push(rect({ x: x2, y: y2, w: w2, h: 16 }, `fill="${p.chrome}" stroke="${risk ? p.danger : p.rule2}"`, 3), `<text x="${n2(x2 + 6)}" y="${n2(y2 + 12)}" font-size="11.5" fill="${risk ? p.danger : p.ink2}">${esc3(l)}</text>`);
+        parts.push(rect({ x: x2, y: y2, w: w2, h: 16 }, `fill="${p.chrome}" stroke="${risk ? p.danger : p.rule2}"`, 3), `<text x="${n3(x2 + 6)}" y="${n3(y2 + 12)}" font-size="11.5" fill="${risk ? p.danger : p.ink2}">${esc3(l)}</text>`);
         x2 += w2 + 6;
       }
       if (assignee)
-        parts.push(`<text x="${n2(x2)}" y="${n2(y2 + 12)}" font-size="11.5" fill="${p.agent}">${esc3(oneLine(assignee, Math.max(20, bx.x + bx.w - x2 - 40), 11.5))}</text>`);
+        parts.push(`<text x="${n3(x2)}" y="${n3(y2 + 12)}" font-size="11.5" fill="${p.agent}">${esc3(oneLine(assignee, Math.max(20, bx.x + bx.w - x2 - 40), 11.5))}</text>`);
       if (size2) {
-        const w2 = measure2(size2, 11.5) + 10;
-        parts.push(rect({ x: bx.x + bx.w - 12 - w2, y: y2, w: w2, h: 16 }, `fill="none" stroke="${p.rule2}"`, 3), `<text x="${n2(bx.x + bx.w - 12 - w2 / 2)}" y="${n2(y2 + 12)}" font-size="11.5" text-anchor="middle" font-family="${esc3(MONO)}" fill="${p.ink}">${esc3(size2)}</text>`);
+        const w2 = measure(size2, 11.5) + 10;
+        parts.push(rect({ x: bx.x + bx.w - 12 - w2, y: y2, w: w2, h: 16 }, `fill="none" stroke="${p.rule2}"`, 3), `<text x="${n3(bx.x + bx.w - 12 - w2 / 2)}" y="${n3(y2 + 12)}" font-size="11.5" text-anchor="middle" font-family="${esc3(MONO)}" fill="${p.ink}">${esc3(size2)}</text>`);
       }
     }
     return parts.join("");
@@ -60897,12 +61453,12 @@ function drawText(c, it) {
   const { p } = c;
   const bx = boxOf(it);
   if (it.data?.ds === "annotation") {
-    const path14 = `M${n2(bx.x + bx.w)} ${n2(bx.y)}H${n2(bx.x)}V${n2(bx.y + bx.h)}H${n2(bx.x + bx.w)}`;
+    const path14 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
     const lines2 = c.text && it.text ? wrap(it.text, bx.w - 16, 12.5) : [];
     return `<path d="${path14}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + 8, y: bx.y + 4, font: 12.5, lh: 16, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 8) / 16)) });
   }
   if (it.role === "release-cut")
-    return `<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h / 2)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n2(bx.x + 4)}" y="${n2(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
+    return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n3(bx.x + 4)}" y="${n3(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
   return itemText(c, it, p.ink);
 }
 function drawWireframe(c, it) {
@@ -60910,33 +61466,33 @@ function drawWireframe(c, it) {
   const bx = boxOf(it);
   const role = it.role ?? "box";
   const t = it.text ?? "";
-  const mid = (s, fill, weight = 400) => c.text && s ? `<text x="${n2(bx.x + bx.w / 2)}" y="${n2(bx.y + bx.h / 2 + 4.5)}" font-size="13" text-anchor="middle" font-weight="${weight}" fill="${fill}">${esc3(oneLine(s, bx.w - 10, 13, weight))}</text>` : "";
+  const mid = (s, fill, weight = 400) => c.text && s ? `<text x="${n3(bx.x + bx.w / 2)}" y="${n3(bx.y + bx.h / 2 + 4.5)}" font-size="13" text-anchor="middle" font-weight="${weight}" fill="${fill}">${esc3(oneLine(s, bx.w - 10, 13, weight))}</text>` : "";
   switch (role) {
     case "screen":
-      return rect(bx, `fill="${p.chrome}" stroke="${p.ink2}" stroke-width="1.5"`, 4) + (c.text && t ? `<text x="${n2(bx.x)}" y="${n2(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(t)}</text>` : "");
+      return rect(bx, `fill="${p.chrome}" stroke="${p.ink2}" stroke-width="1.5"`, 4) + (c.text && t ? `<text x="${n3(bx.x)}" y="${n3(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(t)}</text>` : "");
     case "button":
       return rect(bx, `fill="${p.ink2}"`, 4) + mid(t, p.paper, 500);
     case "input":
-      return rect(bx, `fill="${p.paper}" stroke="${p.ink2}"`, 4) + (c.text ? `<text x="${n2(bx.x + 8)}" y="${n2(bx.y + bx.h / 2 + 4.5)}" font-size="13" fill="${p.ink3}">${esc3(oneLine(t || "Input", bx.w - 16, 13))}</text>` : "");
+      return rect(bx, `fill="${p.paper}" stroke="${p.ink2}"`, 4) + (c.text ? `<text x="${n3(bx.x + 8)}" y="${n3(bx.y + bx.h / 2 + 4.5)}" font-size="13" fill="${p.ink3}">${esc3(oneLine(t || "Input", bx.w - 16, 13))}</text>` : "");
     case "heading":
       return c.text ? textBlock(wrap(t, bx.w - 8, 17, 600), { x: bx.x + 4, y: bx.y + 2, font: 17, lh: 22, weight: 600, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 4) / 22)) }) : "";
     case "paragraph": {
       const lines2 = [];
       for (let y2 = bx.y + 4; y2 < bx.y + bx.h - 2; y2 += 9)
-        lines2.push(`<rect x="${n2(bx.x + 4)}" y="${n2(y2)}" width="${n2(bx.w - 8)}" height="2" fill="${p.rule2}"/>`);
+        lines2.push(`<rect x="${n3(bx.x + 4)}" y="${n3(y2)}" width="${n3(bx.w - 8)}" height="2" fill="${p.rule2}"/>`);
       return lines2.join("") + (c.text && t ? textBlock(wrap(t, bx.w - 8, 13), { x: bx.x + 4, y: bx.y + 2, font: 13, lh: 19.5, fill: p.ink2, maxLines: Math.max(1, Math.floor((bx.h - 4) / 19.5)) }) : "");
     }
     case "image":
-      return rect(bx, `fill="${p.chrome}" stroke="${p.ink2}"`) + `<path d="M${n2(bx.x)} ${n2(bx.y)}L${n2(bx.x + bx.w)} ${n2(bx.y + bx.h)}M${n2(bx.x + bx.w)} ${n2(bx.y)}L${n2(bx.x)} ${n2(bx.y + bx.h)}" stroke="${p.rule2}" stroke-width="1.5"/>` + mid(t || "Image", p.ink3);
+      return rect(bx, `fill="${p.chrome}" stroke="${p.ink2}"`) + `<path d="M${n3(bx.x)} ${n3(bx.y)}L${n3(bx.x + bx.w)} ${n3(bx.y + bx.h)}M${n3(bx.x + bx.w)} ${n3(bx.y)}L${n3(bx.x)} ${n3(bx.y + bx.h)}" stroke="${p.rule2}" stroke-width="1.5"/>` + mid(t || "Image", p.ink3);
     case "nav": {
       const items = (t || "Home, About").split(/\s*[·|,]\s*/);
       let x2 = bx.x + 12;
       const words = c.text ? items.map((s) => {
-        const out = `<text x="${n2(x2)}" y="${n2(bx.y + bx.h / 2 + 4.5)}" font-size="13" font-weight="500" fill="${p.ink}">${esc3(s)}</text>`;
-        x2 += measure2(s, 13, 500) + 14;
+        const out = `<text x="${n3(x2)}" y="${n3(bx.y + bx.h / 2 + 4.5)}" font-size="13" font-weight="500" fill="${p.ink}">${esc3(s)}</text>`;
+        x2 += measure(s, 13, 500) + 14;
         return out;
       }).join("") : "";
-      return rect(bx, `fill="${p.chrome}"`) + `<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h)}" stroke="${p.ink2}"/>` + words;
+      return rect(bx, `fill="${p.chrome}"`) + `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h)}" stroke="${p.ink2}"/>` + words;
     }
     default: {
       const dashed = role === "box" ? ' stroke-dasharray="5 4"' : "";
@@ -60953,7 +61509,7 @@ function drawDsIcon(c, it) {
   let top = bx.y + 2;
   if (ds === "legend-activity") {
     const x2 = bx.x + bx.w / 2 - 60;
-    parts.push(`<g transform="translate(${n2(x2)} ${n2(top)})"><line x1="4" y1="15" x2="108" y2="15" stroke="${p.ink}" stroke-width="1.6"/><path d="M108 10l9 5-9 5z" fill="${p.ink}"/><circle cx="26" cy="15" r="10" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="26" y="19.5" text-anchor="middle" font-size="12" fill="${p.ink}">1</text><text x="72" y="10" text-anchor="middle" font-size="11" fill="${p.ink}">verb</text></g>`);
+    parts.push(`<g transform="translate(${n3(x2)} ${n3(top)})"><line x1="4" y1="15" x2="108" y2="15" stroke="${p.ink}" stroke-width="1.6"/><path d="M108 10l9 5-9 5z" fill="${p.ink}"/><circle cx="26" cy="15" r="10" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="26" y="19.5" text-anchor="middle" font-size="12" fill="${p.ink}">1</text><text x="72" y="10" text-anchor="middle" font-size="11" fill="${p.ink}">verb</text></g>`);
     top += 34;
   } else {
     const size2 = legend2 ? 36 : 52;
@@ -60961,7 +61517,7 @@ function drawDsIcon(c, it) {
     const kind = typeof it.data?.kind === "string" ? it.data.kind : "";
     const glyph = DS_GLYPHS[kind] ?? DS_GLYPHS[isActor ? "person" : "document"];
     const s = size2 / 24;
-    parts.push(`<g transform="translate(${n2(bx.x + bx.w / 2 - size2 / 2)} ${n2(top)}) scale(${n2(s)})" fill="none" stroke="${p.ink}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`);
+    parts.push(`<g transform="translate(${n3(bx.x + bx.w / 2 - size2 / 2)} ${n3(top)}) scale(${n3(s)})" fill="none" stroke="${p.ink}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`);
     top += size2 + 4;
   }
   if (c.text && it.text) {
@@ -60997,28 +61553,28 @@ function drawUi(c, it) {
   const bx = boxOf(it);
   const t = it.text ?? "";
   const tx = c.text;
-  const word = (s, x2, y2, o = {}) => tx && s ? `<text x="${n2(x2)}" y="${n2(y2)}" font-size="${o.size ?? 14}"${o.weight ? ` font-weight="${o.weight}"` : ""}${o.anchor ? ` text-anchor="${o.anchor}"` : ""} fill="${o.fill ?? pal.ink}">${esc3(oneLine(s, o.maxW ?? bx.w - 16, o.size ?? 14, o.weight ?? 400))}</text>` : "";
+  const word = (s, x2, y2, o = {}) => tx && s ? `<text x="${n3(x2)}" y="${n3(y2)}" font-size="${o.size ?? 14}"${o.weight ? ` font-weight="${o.weight}"` : ""}${o.anchor ? ` text-anchor="${o.anchor}"` : ""} fill="${o.fill ?? pal.ink}">${esc3(oneLine(s, o.maxW ?? bx.w - 16, o.size ?? 14, o.weight ?? 400))}</text>` : "";
   const midY = bx.y + bx.h / 2 + 5;
   const items = Array.isArray(u3.items) ? u3.items.map((x2) => typeof x2 === "string" ? { text: x2 } : x2) : [];
   const tone2 = (k2) => k2 === "success" ? [pal.ok, pal.okSoft] : k2 === "warning" ? [pal.warn, pal.warnSoft] : k2 === "danger" ? [pal.bad, pal.badSoft] : k2 === "info" ? [pal.info, pal.infoSoft] : [pal.ink2, pal.muted];
   switch (type) {
     case "screen": {
       const phone = u3.device === "phone";
-      return (phone ? rect({ x: bx.x - 6, y: bx.y - 6, w: bx.w + 12, h: bx.h + 12 }, 'fill="#1c1f24"', 34) : "") + rect(bx, `fill="${pal.page}" stroke="${pal.line2}"`, phone ? 28 : u3.device === "tablet" ? 18 : 10) + (tx && t ? `<text x="${n2(bx.x)}" y="${n2(bx.y - (phone ? 15 : 9))}" font-size="13.5" font-weight="600" fill="${c.p.ink2}">${esc3(t)}</text>` : "");
+      return (phone ? rect({ x: bx.x - 6, y: bx.y - 6, w: bx.w + 12, h: bx.h + 12 }, 'fill="#1c1f24"', 34) : "") + rect(bx, `fill="${pal.page}" stroke="${pal.line2}"`, phone ? 28 : u3.device === "tablet" ? 18 : 10) + (tx && t ? `<text x="${n3(bx.x)}" y="${n3(bx.y - (phone ? 15 : 9))}" font-size="13.5" font-weight="600" fill="${c.p.ink2}">${esc3(t)}</text>` : "");
     }
     case "card":
       return rect(bx, `fill="${pal.surface}" stroke="${pal.line}"`, radius) + word(t, bx.x + 16, bx.y + 26, { size: 15, weight: 600 });
     case "section":
       return u3.bg === "muted" ? rect(bx, `fill="${pal.muted}"`) : u3.bg === "accent" ? rect(bx, `fill="${accent}" fill-opacity="0.11"`) : u3.bg === "surface" ? rect(bx, `fill="${pal.surface}"`) : "";
     case "navbar": {
-      let x2 = bx.x + 20 + measure2(t, 16, 700) + 28;
+      let x2 = bx.x + 20 + measure(t, 16, 700) + 28;
       const links = items.map((l) => {
         const on = l.text === u3.active || l.active;
         const s = word(l.text ?? "", x2, midY, { size: 14, weight: on ? 600 : 500, fill: on ? accent : pal.ink2 });
-        x2 += measure2(l.text ?? "", 14, 500) + 20;
+        x2 += measure(l.text ?? "", 14, 500) + 20;
         return s;
       }).join("");
-      return rect(bx, `fill="${pal.surface}"`) + `<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h)}" stroke="${pal.line}"/>` + word(t, bx.x + 20, midY, { size: 16, weight: 700 }) + links;
+      return rect(bx, `fill="${pal.surface}"`) + `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h)}" stroke="${pal.line}"/>` + word(t, bx.x + 20, midY, { size: 16, weight: 700 }) + links;
     }
     case "sidebar": {
       const rows = items.map((l, i) => {
@@ -61026,7 +61582,7 @@ function drawUi(c, it) {
         const on = l.text === u3.active || l.active;
         return (on ? rect({ x: bx.x + 8, y: y2, w: bx.w - 16, h: 32 }, `fill="${accent}" fill-opacity="0.11"`, radius) : "") + word(l.text ?? "", bx.x + 20, y2 + 21, { fill: on ? accent : pal.ink2, weight: on ? 600 : 500 });
       }).join("");
-      return rect(bx, `fill="${pal.surface}"`) + `<line x1="${n2(bx.x + bx.w)}" y1="${n2(bx.y)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h)}" stroke="${pal.line}"/>` + word(t, bx.x + 20, bx.y + 4, { size: 12, fill: pal.ink3 }) + rows;
+      return rect(bx, `fill="${pal.surface}"`) + `<line x1="${n3(bx.x + bx.w)}" y1="${n3(bx.y)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h)}" stroke="${pal.line}"/>` + word(t, bx.x + 20, bx.y + 4, { size: 12, fill: pal.ink3 }) + rows;
     }
     case "heading": {
       const size2 = [0, 28, 22, 18, 16][Number(u3.level) || 2] ?? 18;
@@ -61052,34 +61608,34 @@ function drawUi(c, it) {
       const field = labelled ? { x: bx.x, y: bx.y + 24, w: bx.w, h: Math.min(bx.h - 24, type === "textarea" ? bx.h - 24 : 40) } : bx;
       const val = u3.value !== void 0 && u3.value !== "" ? String(u3.value) : "";
       const shown = val || String(u3.placeholder ?? (type === "search" ? t || "Search" : ""));
-      return (labelled ? word(t, bx.x, bx.y + 15, { size: 13, weight: 500 }) : "") + rect(field, `fill="${pal.surface}" stroke="${pal.line2}"`, radius) + word(shown, field.x + 12, field.y + (type === "textarea" ? 24 : field.h / 2 + 5), { fill: val ? pal.ink : pal.ink3, maxW: field.w - 24 }) + (type === "select" ? `<path d="M${n2(field.x + field.w - 22)} ${n2(field.y + field.h / 2 - 2)}l5 5 5-5" fill="none" stroke="${pal.ink3}" stroke-width="1.6"/>` : "");
+      return (labelled ? word(t, bx.x, bx.y + 15, { size: 13, weight: 500 }) : "") + rect(field, `fill="${pal.surface}" stroke="${pal.line2}"`, radius) + word(shown, field.x + 12, field.y + (type === "textarea" ? 24 : field.h / 2 + 5), { fill: val ? pal.ink : pal.ink3, maxW: field.w - 24 }) + (type === "select" ? `<path d="M${n3(field.x + field.w - 22)} ${n3(field.y + field.h / 2 - 2)}l5 5 5-5" fill="none" stroke="${pal.ink3}" stroke-width="1.6"/>` : "");
     }
     case "checkbox":
     case "radio":
     case "toggle": {
       const on = !!u3.checked;
       const y2 = bx.y + bx.h / 2;
-      const ctl = type === "toggle" ? rect({ x: bx.x, y: y2 - 10, w: 36, h: 20 }, `fill="${on ? accent : pal.line2}"`, 10) + `<circle cx="${n2(bx.x + (on ? 26 : 10))}" cy="${n2(y2)}" r="7" fill="#ffffff"/>` : type === "radio" ? `<circle cx="${n2(bx.x + 8)}" cy="${n2(y2)}" r="8" fill="${pal.surface}" stroke="${on ? accent : pal.line2}" stroke-width="1.5"/>` + (on ? `<circle cx="${n2(bx.x + 8)}" cy="${n2(y2)}" r="4" fill="${accent}"/>` : "") : rect({ x: bx.x, y: y2 - 8, w: 16, h: 16 }, on ? `fill="${accent}"` : `fill="${pal.surface}" stroke="${pal.line2}" stroke-width="1.5"`, 4) + (on ? `<path d="M${n2(bx.x + 3.5)} ${n2(y2)}l3 3 6-6" fill="none" stroke="#fff" stroke-width="1.8"/>` : "");
+      const ctl = type === "toggle" ? rect({ x: bx.x, y: y2 - 10, w: 36, h: 20 }, `fill="${on ? accent : pal.line2}"`, 10) + `<circle cx="${n3(bx.x + (on ? 26 : 10))}" cy="${n3(y2)}" r="7" fill="#ffffff"/>` : type === "radio" ? `<circle cx="${n3(bx.x + 8)}" cy="${n3(y2)}" r="8" fill="${pal.surface}" stroke="${on ? accent : pal.line2}" stroke-width="1.5"/>` + (on ? `<circle cx="${n3(bx.x + 8)}" cy="${n3(y2)}" r="4" fill="${accent}"/>` : "") : rect({ x: bx.x, y: y2 - 8, w: 16, h: 16 }, on ? `fill="${accent}"` : `fill="${pal.surface}" stroke="${pal.line2}" stroke-width="1.5"`, 4) + (on ? `<path d="M${n3(bx.x + 3.5)} ${n3(y2)}l3 3 6-6" fill="none" stroke="#fff" stroke-width="1.8"/>` : "");
       return ctl + word(t, bx.x + (type === "toggle" ? 46 : 26), y2 + 5, { maxW: bx.w - 48 });
     }
     case "badge": {
       const [ink, soft] = tone2(u3.tone);
-      const w2 = Math.min(bx.w, measure2(t, 12, 600) + 16);
+      const w2 = Math.min(bx.w, measure(t, 12, 600) + 16);
       return rect({ x: bx.x, y: bx.y + bx.h / 2 - 10, w: w2, h: 20 }, `fill="${soft}"`, 10) + word(t, bx.x + w2 / 2, bx.y + bx.h / 2 + 4, { size: 12, weight: 600, fill: ink, anchor: "middle", maxW: w2 - 8 });
     }
     case "avatar": {
       const r2 = Math.min(bx.w, bx.h) / 2;
       const initials = t.split(/\s+/).filter(Boolean).slice(0, 2).map((w2) => [...w2][0]).join("").toUpperCase();
-      return `<circle cx="${n2(bx.x + r2)}" cy="${n2(bx.y + bx.h / 2)}" r="${n2(r2)}" fill="${accent}" fill-opacity="0.18"/>` + word(initials, bx.x + r2, bx.y + bx.h / 2 + 4.5, { size: Math.max(9, r2 * 0.8), weight: 600, fill: accent, anchor: "middle" });
+      return `<circle cx="${n3(bx.x + r2)}" cy="${n3(bx.y + bx.h / 2)}" r="${n3(r2)}" fill="${accent}" fill-opacity="0.18"/>` + word(initials, bx.x + r2, bx.y + bx.h / 2 + 4.5, { size: Math.max(9, r2 * 0.8), weight: 600, fill: accent, anchor: "middle" });
     }
     case "icon":
-      return `<circle cx="${n2(bx.x + bx.w / 2)}" cy="${n2(bx.y + bx.h / 2)}" r="${n2(Math.min(bx.w, bx.h) / 3)}" fill="none" stroke="${pal.ink2}" stroke-width="1.6"/>`;
+      return `<circle cx="${n3(bx.x + bx.w / 2)}" cy="${n3(bx.y + bx.h / 2)}" r="${n3(Math.min(bx.w, bx.h) / 3)}" fill="none" stroke="${pal.ink2}" stroke-width="1.6"/>`;
     case "divider":
-      return `<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h / 2)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h / 2)}" stroke="${pal.line}"/>`;
+      return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${pal.line}"/>`;
     case "spacer":
       return "";
     case "image":
-      return rect(bx, `fill="${pal.muted}"`, radius) + `<path d="M${n2(bx.x + bx.w * 0.3)} ${n2(bx.y + bx.h * 0.65)}l${n2(bx.w * 0.15)} -${n2(bx.h * 0.2)} ${n2(bx.w * 0.1)} ${n2(bx.h * 0.1)} ${n2(bx.w * 0.12)} -${n2(bx.h * 0.15)} ${n2(bx.w * 0.13)} ${n2(bx.h * 0.25)}z" fill="${pal.line2}"/>` + word(t, bx.x + bx.w / 2, bx.y + bx.h - 10, { size: 12, fill: pal.ink3, anchor: "middle" });
+      return rect(bx, `fill="${pal.muted}"`, radius) + `<path d="M${n3(bx.x + bx.w * 0.3)} ${n3(bx.y + bx.h * 0.65)}l${n3(bx.w * 0.15)} -${n3(bx.h * 0.2)} ${n3(bx.w * 0.1)} ${n3(bx.h * 0.1)} ${n3(bx.w * 0.12)} -${n3(bx.h * 0.15)} ${n3(bx.w * 0.13)} ${n3(bx.h * 0.25)}z" fill="${pal.line2}"/>` + word(t, bx.x + bx.w / 2, bx.y + bx.h - 10, { size: 12, fill: pal.ink3, anchor: "middle" });
     case "table": {
       const cols = Array.isArray(u3.columns) ? u3.columns.map(String) : [];
       const rows = Array.isArray(u3.rows) ? u3.rows : [];
@@ -61091,12 +61647,12 @@ function drawUi(c, it) {
         const y2 = bx.y + rh * (ri + 1);
         if (y2 + rh > bx.y + bx.h + 1)
           return;
-        out.push(`<line x1="${n2(bx.x)}" y1="${n2(y2)}" x2="${n2(bx.x + bx.w)}" y2="${n2(y2)}" stroke="${pal.line}"/>`);
+        out.push(`<line x1="${n3(bx.x)}" y1="${n3(y2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(y2)}" stroke="${pal.line}"/>`);
         (Array.isArray(r2) ? r2 : []).forEach((cell, ci) => {
           const s = String(cell ?? "");
           const status = /^\[(.+)\]$/.exec(s);
           if (status) {
-            const w2 = measure2(status[1], 12, 600) + 16;
+            const w2 = measure(status[1], 12, 600) + 16;
             out.push(rect({ x: bx.x + ci * cw + 12, y: y2 + rh / 2 - 10, w: w2, h: 20 }, `fill="${pal.muted}"`, 10), word(status[1], bx.x + ci * cw + 20, y2 + rh / 2 + 4, { size: 12, weight: 600, fill: pal.ink2 }));
           } else
             out.push(word(s, bx.x + ci * cw + 12, y2 + rh / 2 + 5, { size: 14, fill: ci === 0 ? pal.ink : pal.ink2, weight: ci === 0 ? 500 : 400, maxW: cw - 16 }));
@@ -61108,7 +61664,7 @@ function drawUi(c, it) {
       const rh = Math.min(56, bx.h / Math.max(1, items.length));
       return rect(bx, `fill="${pal.surface}" stroke="${pal.line}"`, radius) + items.map((l, i) => {
         const y2 = bx.y + i * rh;
-        return (i ? `<line x1="${n2(bx.x)}" y1="${n2(y2)}" x2="${n2(bx.x + bx.w)}" y2="${n2(y2)}" stroke="${pal.line}"/>` : "") + word(l.text ?? "", bx.x + 14, y2 + (l.meta ? rh / 2 - 1 : rh / 2 + 5), { weight: 500 }) + (l.meta ? word(l.meta, bx.x + 14, y2 + rh / 2 + 15, { size: 13, fill: pal.ink3 }) : "");
+        return (i ? `<line x1="${n3(bx.x)}" y1="${n3(y2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(y2)}" stroke="${pal.line}"/>` : "") + word(l.text ?? "", bx.x + 14, y2 + (l.meta ? rh / 2 - 1 : rh / 2 + 5), { weight: 500 }) + (l.meta ? word(l.meta, bx.x + 14, y2 + rh / 2 + 15, { size: 13, fill: pal.ink3 }) : "");
       }).join("");
     }
     case "stat": {
@@ -61129,13 +61685,13 @@ function drawUi(c, it) {
     case "pagination": {
       let x2 = bx.x + (type === "pagination" ? 0 : 4);
       const list2 = items.length ? items : t ? [{ text: t }] : [];
-      const out = type === "tabs" ? [`<line x1="${n2(bx.x)}" y1="${n2(bx.y + bx.h - 0.5)}" x2="${n2(bx.x + bx.w)}" y2="${n2(bx.y + bx.h - 0.5)}" stroke="${pal.line}"/>`] : [];
+      const out = type === "tabs" ? [`<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h - 0.5)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h - 0.5)}" stroke="${pal.line}"/>`] : [];
       list2.forEach((l, i) => {
         const on = !!l.active || type === "breadcrumb" && i === list2.length - 1 || l.text === u3.active;
         out.push(word(l.text ?? "", x2, midY, { size: 14, weight: on ? 600 : 500, fill: on ? type === "tabs" ? accent : pal.ink : pal.ink2 }));
         if (on && type === "tabs")
-          out.push(rect({ x: x2, y: bx.y + bx.h - 2, w: measure2(l.text ?? "", 14, 600), h: 2 }, `fill="${accent}"`));
-        x2 += measure2(l.text ?? "", 14, 500) + (type === "breadcrumb" ? 26 : 22);
+          out.push(rect({ x: x2, y: bx.y + bx.h - 2, w: measure(l.text ?? "", 14, 600), h: 2 }, `fill="${accent}"`));
+        x2 += measure(l.text ?? "", 14, 500) + (type === "breadcrumb" ? 26 : 22);
         if (type === "breadcrumb" && i < list2.length - 1)
           out.push(word("\u203A", x2 - 16, midY, { fill: pal.ink3 }));
       });
@@ -61161,12 +61717,12 @@ function drawComment(c, it) {
   const cx = it.x + BADGE / 2;
   const cy = it.y + BADGE / 2;
   const parts = [
-    `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="${BADGE / 2 - 1}" fill="${p.paper}" stroke="${ink}" stroke-width="1.5"/>`,
-    `<path d="M${n2(cx - 6)} ${n2(cy - 5)}h12v8h-7l-3.5 3v-3h-1.5z" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linejoin="round"/>`
+    `<circle cx="${n3(cx)}" cy="${n3(cy)}" r="${BADGE / 2 - 1}" fill="${p.paper}" stroke="${ink}" stroke-width="1.5"/>`,
+    `<path d="M${n3(cx - 6)} ${n3(cy - 5)}h12v8h-7l-3.5 3v-3h-1.5z" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linejoin="round"/>`
   ];
   if (msgs > 1 && c.text) {
-    const w2 = Math.max(14, measure2(String(msgs), 10, 600) + 6);
-    parts.push(rect({ x: it.x + BADGE - 7 - w2 / 2 + 5, y: it.y + BADGE - 9, w: w2, h: 14 }, `fill="${p.paper}" stroke="${ink}"`, 7), `<text x="${n2(it.x + BADGE - 2)}" y="${n2(it.y + BADGE + 1.5)}" font-size="10" font-weight="600" text-anchor="middle" fill="${ink}">${msgs}</text>`);
+    const w2 = Math.max(14, measure(String(msgs), 10, 600) + 6);
+    parts.push(rect({ x: it.x + BADGE - 7 - w2 / 2 + 5, y: it.y + BADGE - 9, w: w2, h: 14 }, `fill="${p.paper}" stroke="${ink}"`, 7), `<text x="${n3(it.x + BADGE - 2)}" y="${n3(it.y + BADGE + 1.5)}" font-size="10" font-weight="600" text-anchor="middle" fill="${ink}">${msgs}</text>`);
   }
   return parts.join("");
 }
@@ -61182,61 +61738,12 @@ function rootOf3(b2, it) {
   }
   return it.id;
 }
-var SIDES = /* @__PURE__ */ new Set(["top", "right", "bottom", "left"]);
-function anchor2(bx, side) {
-  if (side === "left")
-    return { x: bx.x, y: bx.y + bx.h / 2 };
-  if (side === "right")
-    return { x: bx.x + bx.w, y: bx.y + bx.h / 2 };
-  if (side === "top")
-    return { x: bx.x + bx.w / 2, y: bx.y };
-  return { x: bx.x + bx.w / 2, y: bx.y + bx.h };
-}
-function floatingEnd(a, b2) {
-  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
-  const dx = b2.x + b2.w / 2 - ca.x;
-  const dy = b2.y + b2.h / 2 - ca.y;
-  if (!dx && !dy)
-    return ca;
-  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
-  return { x: ca.x + dx * t, y: ca.y + dy * t };
-}
-function autoSides(a, b2) {
-  const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
-  const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
-  const gapX = dx > 0 ? b2.x - (a.x + a.w) : a.x - (b2.x + b2.w);
-  const gapY = dy > 0 ? b2.y - (a.y + a.h) : a.y - (b2.y + b2.h);
-  if (gapX >= gapY)
-    return dx >= 0 ? ["right", "left"] : ["left", "right"];
-  return dy >= 0 ? ["bottom", "top"] : ["top", "bottom"];
-}
-function route(p1, s1, p2, s2) {
-  const h1 = s1 === "left" || s1 === "right";
-  const h2 = s2 === "left" || s2 === "right";
-  if (h1 && h2) {
-    const mx = (p1.x + p2.x) / 2;
-    return { d: `M${n2(p1.x)} ${n2(p1.y)}H${n2(mx)}V${n2(p2.y)}H${n2(p2.x)}`, mid: { x: mx, y: (p1.y + p2.y) / 2 } };
-  }
-  if (!h1 && !h2) {
-    const my = (p1.y + p2.y) / 2;
-    return { d: `M${n2(p1.x)} ${n2(p1.y)}V${n2(my)}H${n2(p2.x)}V${n2(p2.y)}`, mid: { x: (p1.x + p2.x) / 2, y: my } };
-  }
-  return h1 ? { d: `M${n2(p1.x)} ${n2(p1.y)}H${n2(p2.x)}V${n2(p2.y)}`, mid: { x: p2.x, y: p1.y } } : { d: `M${n2(p1.x)} ${n2(p1.y)}V${n2(p2.y)}H${n2(p2.x)}`, mid: { x: p1.x, y: p2.y } };
-}
 function drawArrow(c, it) {
-  const { p, b: b2 } = c;
-  const from = b2.items[it.from];
-  const to = b2.items[it.to];
-  const a = boxOf(from);
-  const z3 = boxOf(to);
-  const auto = autoSides(a, z3);
-  const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
-  const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
-  const ds = !!it.data?.ds;
-  const p1 = ds ? floatingEnd(a, z3) : anchor2(a, s1);
-  const p2 = ds ? floatingEnd(z3, a) : anchor2(z3, s2);
-  const bend = it.data?.bend;
-  const r2 = ds ? { d: `M${n2(p1.x)} ${n2(p1.y)}L${n2(p2.x)} ${n2(p2.y)}`, mid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 } } : typeof bend?.x === "number" && typeof bend.y === "number" ? { d: `M${n2(p1.x)} ${n2(p1.y)}Q${n2(2 * bend.x - (p1.x + p2.x) / 2)} ${n2(2 * bend.y - (p1.y + p2.y) / 2)} ${n2(p2.x)} ${n2(p2.y)}`, mid: { x: bend.x, y: bend.y } } : route(p1, s1, p2, s2);
+  const { p } = c;
+  const shape = wireShape(c.b, it);
+  if (!shape)
+    return "";
+  const ds = shape.ds;
   const pending = !!it.data?.pending && it.role !== "trace";
   let stroke = p.ink2;
   let width = 1.4;
@@ -61252,31 +61759,18 @@ function drawArrow(c, it) {
     stroke = p.agent, dash = it.role === "owns" ? "3 5" : "6 4", marker = "agent";
   if (pending)
     stroke = p.marker, dash = "6 4", marker = "marker";
-  const parts = [`<path d="${r2.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ""}${marker ? ` marker-end="url(#ah-${marker})"` : ""}${it.role === "trace" || it.role === "owns" ? ' stroke-opacity="0.8"' : ""}/>`];
-  const label2 = it.role === "trace" ? void 0 : it.label ?? it.text;
-  const len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
-  const ux = (p2.x - p1.x) / len;
-  const uy = (p2.y - p1.y) / len;
-  const along = Math.min(24, len / 3);
-  let at2 = r2.mid;
-  if (ds && it.role === "activity") {
-    if (c.text && typeof it.data?.seq === "number") {
-      const cx = p1.x + ux * along;
-      const cy = p1.y + uy * along;
-      parts.push(`<circle cx="${n2(cx)}" cy="${n2(cy)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n2(cx)}" y="${n2(cy + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`);
-    }
-    let nx = -uy;
-    let ny = ux;
-    if (ny > 0 || ny === 0 && nx > 0)
-      nx = -nx, ny = -ny;
-    const t = Math.max(len / 2, Math.min(len - 20, along + 44));
-    at2 = { x: p1.x + ux * t + nx * 13, y: p1.y + uy * t + ny * 13 };
+  const parts = [`<path d="${shape.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ""}${marker ? ` marker-end="url(#ah-${marker})"` : ""}${it.role === "trace" || it.role === "owns" ? ' stroke-opacity="0.8"' : ""}/>`];
+  if (ds && it.role === "activity" && c.text && typeof it.data?.seq === "number") {
+    const at2 = dsSeqAt(shape);
+    parts.push(`<circle cx="${n3(at2.x)}" cy="${n3(at2.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n3(at2.x)}" y="${n3(at2.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`);
   }
-  if (c.text && label2) {
-    const font = ds ? 12.5 : 11.5;
-    const s = oneLine(label2, 220, font);
-    const w2 = measure2(s, font) + 8;
-    parts.push(rect({ x: at2.x - w2 / 2, y: at2.y - 9, w: w2, h: 17 }, `fill="${p.paper}" fill-opacity="0.88"`, 3), `<text x="${n2(at2.x)}" y="${n2(at2.y + 4)}" font-size="${font}" text-anchor="middle" fill="${ds ? p.ink : p.ink2}">${esc3(s)}</text>`);
+  const label2 = c.text ? wireLabel(it, shape, c.boxes ?? (c.boxes = labelObstacles(c.b))) : void 0;
+  if (label2?.mode === "dot") {
+    parts.push(`<circle cx="${n3(label2.x)}" cy="${n3(label2.y)}" r="${n3(EDGE_LABEL.dot / 2 - 1)}" fill="${p.paper}" stroke="${ds ? p.ink : p.ink2}" stroke-width="1.4"><title>${esc3(label2.text)}</title></circle>`);
+  } else if (label2) {
+    const lh = (label2.h - 2 * EDGE_LABEL.padY) / Math.max(1, label2.lines.length);
+    const top = label2.y - label2.h / 2;
+    parts.push(rect({ x: label2.x - label2.w / 2, y: top, w: label2.w, h: label2.h }, `fill="${p.paper}" fill-opacity="0.78"`, 3), textBlock(label2.lines, { x: label2.x, y: top + EDGE_LABEL.padY, font: label2.font, lh, fill: ds ? p.ink : p.ink2, anchor: "middle" }));
   }
   return parts.join("");
 }
@@ -61351,10 +61845,10 @@ function renderSnapshot(board, opts = {}) {
   const body = [...containers, ...plain, ...wires, ...comments].map((it) => drawItem(c, it)).join("\n");
   const head = (name, col) => `<marker id="ah-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker>`;
   const title = sel.root ? `${board.title} \u2014 ${sel.root.text ?? sel.root.id}` : board.title;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${n2(region.x - pad)} ${n2(region.y - pad)} ${n2(vw)} ${n2(vh)}" role="img" aria-label="${esc3(title)}">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${n3(region.x - pad)} ${n3(region.y - pad)} ${n3(vw)} ${n3(vh)}" role="img" aria-label="${esc3(title)}">
 <title>${esc3(title)}</title>
 <defs>${head("ink", p.ink)}${head("ink2", p.ink2)}${head("ink3", p.ink3)}${head("agent", p.agent)}${head("marker", p.marker)}</defs>
-<rect x="${n2(region.x - pad)}" y="${n2(region.y - pad)}" width="${n2(vw)}" height="${n2(vh)}" fill="${p.paper}"/>
+<rect x="${n3(region.x - pad)}" y="${n3(region.y - pad)}" width="${n3(vw)}" height="${n3(vh)}" fill="${p.paper}"/>
 <g font-family="${esc3(FONT)}" font-size="13">
 ${body}
 </g>
@@ -61372,7 +61866,7 @@ var LayoutError = class extends Error {
     this.status = status;
   }
 };
-var KINDS = ["clipped", "overlap", "off-lane", "outside-parent", "oversized", "moved-by-layout"];
+var KINDS = ["clipped", "overlap", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout"];
 var OVERLAP_TOL = 6;
 var CONTAINER_COVER = 25;
 var OUTSIDE_TOL = 6;
@@ -61383,9 +61877,9 @@ var DECOR_ROLES = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "l
 var SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
 var isContainer3 = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
 var isLane = (it) => !!it && it.type === "lane";
-var short3 = (s, n3 = 40) => {
+var short3 = (s, n4 = 40) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n3 ? t.slice(0, n3 - 1) + "\u2026" : t;
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
 };
 var nameOf2 = (it) => {
   const t = short3(it.text);
@@ -61461,7 +61955,7 @@ function checkLayout(board, opts = {}) {
       continue;
     if (it.type === "lane" && it.role === "column") {
       const room = it.w - 24 - 40;
-      const need = measure2(it.text.split("\n")[0], 13.5, 600);
+      const need = measure(it.text.split("\n")[0], 13.5, 600);
       if (need > room + 2)
         add(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need - room + 4)} px wider (w ${r(it.w + need - room + 4)}) or shorten the title` });
       continue;
@@ -61536,6 +62030,45 @@ function checkLayout(board, opts = {}) {
       });
     }
   }
+  const obstacles = labelObstacles(shown);
+  for (const w2 of Object.values(shown.items)) {
+    if (w2.type !== "arrow" || !w2.from || !w2.to || !inScope.has(w2.from) || !inScope.has(w2.to))
+      continue;
+    const text3 = wireText(w2);
+    const shape = text3 ? wireShape(shown, w2) : void 0;
+    const label2 = shape ? wireLabel(w2, shape, obstacles) : void 0;
+    if (!label2 || !shape)
+      continue;
+    const a = shown.items[w2.from];
+    const z3 = shown.items[w2.to];
+    const what = `label "${short3(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
+    if (label2.dragged) {
+      const covered = labelHits(label2.x, label2.y, label2.w, label2.h, obstacles, 0);
+      if (!covered.length)
+        continue;
+      const names = covered.slice(0, 3).map((b2) => nameOf2(shown.items[b2.id])).join(", ");
+      add(w2, { kind: "label", message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: "drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire", others: covered.map((b2) => b2.id) });
+      continue;
+    }
+    if (label2.mode !== "dot" && label2.mode !== "cut")
+      continue;
+    const gapX = Math.max(z3.x - (a.x + a.w), a.x - (z3.x + z3.w));
+    const gapY = Math.max(z3.y - (a.y + a.h), a.y - (z3.y + z3.h));
+    const whole = labelSize(labelLines(text3, EDGE_LABEL.maxW, label2.font).lines, label2.font);
+    const across = gapX >= gapY;
+    const gap = Math.max(0, across ? gapX : gapY);
+    const need = (across ? whole.w : whole.h) + EDGE_LABEL.gap * 2 + 4;
+    const move = across ? `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.x >= a.x ? "right" : "left"} (to x ${r(z3.x >= a.x ? z3.x + need - gap : z3.x - (need - gap))})` : `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.y >= a.y ? "down" : "up"} (to y ${r(z3.y >= a.y ? z3.y + need - gap : z3.y - (need - gap))})`;
+    const fit2 = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label2.font * 0.55)));
+    const shorter = labelControl(w2.data).short ? "a shorter data.label.short" : "a short form in data.label.short";
+    const instead = `${fit2 >= 3 ? `${shorter} (about ${fit2} characters fit)` : shorter}, or shorten the label`;
+    add(w2, {
+      kind: "label",
+      message: label2.mode === "dot" ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need)}): the page shows only a dot there, the text on hover` : `${what} is cut to "${label2.lines.join(" ")}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need)})`,
+      suggestion: need - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
+      others: [a.id, z3.id]
+    });
+  }
   for (const d of shownDifferences(board)) {
     if (!inScope.has(d.id))
       continue;
@@ -61564,7 +62097,7 @@ function byReading(a, b2) {
   return ra !== rb ? ra - rb : a.x - b2.x;
 }
 function layoutLines(report, _board, max = 60) {
-  const total = KINDS.reduce((n3, k2) => n3 + report.counts[k2], 0);
+  const total = KINDS.reduce((n4, k2) => n4 + report.counts[k2], 0);
   const where = report.frame ? ` in ${report.frame}` : "";
   if (!total)
     return [`Layout${where}: nothing overlaps, sticks out or is cut off (${report.checked} items checked).`];
@@ -61635,9 +62168,9 @@ function studioProjectOf(board, projects) {
     if (typeof c !== "string" || !path9.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path9.sep));
-    if (hit)
-      return hit;
+    const hit2 = projects.find((p) => want === p.root || want.startsWith(p.root + path9.sep));
+    if (hit2)
+      return hit2;
   }
   return void 0;
 }
@@ -61646,8 +62179,8 @@ function studioSessions(p) {
     const j2 = JSON.parse(fs8.readFileSync(path9.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
-    const n3 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
-    return { open: n3(j2.open), max: n3(j2.max), queued: n3(j2.queued), boards: n3(j2.boards) };
+    const n4 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
+    return { open: n4(j2.open), max: n4(j2.max), queued: n4(j2.queued), boards: n4(j2.boards) };
   } catch {
     return void 0;
   }
@@ -61743,16 +62276,16 @@ function startServer(opts = {}) {
   };
   const feedback = opts.feedback ?? new MemoryFeedbackStore();
   const seenNames = /* @__PURE__ */ new Set();
-  const remember = (n3) => {
-    if (n3 && seenNames.size < 500)
-      seenNames.add(n3);
+  const remember = (n4) => {
+    if (n4 && seenNames.size < 500)
+      seenNames.add(n4);
   };
   const knownAgents = (id, g2) => {
     const b2 = store.get(id);
     const onBoard = /* @__PURE__ */ new Set([LOCAL_AGENT]);
     if (b2) {
-      for (const n3 of [...store.watcherNames(id), ...Object.keys(store.watcherSeen(id))])
-        onBoard.add(n3);
+      for (const n4 of [...store.watcherNames(id), ...Object.keys(store.watcherSeen(id))])
+        onBoard.add(n4);
       for (const h of holdersOf(b2.meta))
         onBoard.add(h.holder.agent);
       const r2 = responderName(responderOf(b2.meta));
@@ -61764,8 +62297,8 @@ function startServer(opts = {}) {
     }
     if (g2 && g2.as === "agent")
       return [...onBoard];
-    for (const n3 of seenNames)
-      onBoard.add(n3);
+    for (const n4 of seenNames)
+      onBoard.add(n4);
     for (const a of access.list())
       if (!a.revokedAt && a.via !== "browser")
         onBoard.add(a.name);
@@ -61778,6 +62311,22 @@ function startServer(opts = {}) {
     return opts.agentTurns ?? (Number(process.env.UNPROSE_AGENT_TURNS) || DEFAULT_AGENT_TURNS);
   };
   const routed = (board, ops, author) => stampRouting(board, ops, knownAgents(board.id), (/* @__PURE__ */ new Date()).toISOString(), (b2, o) => applyOps(b2, o, author).board, maxTurns(board));
+  const mcpInflight = /* @__PURE__ */ new Map();
+  const contextSeen = /* @__PURE__ */ new Map();
+  const CONTEXT_SEEN_TTL_MS = 15 * 6e4;
+  const contextOnce = (agent, boardId, ctx) => {
+    const now = Date.now();
+    if (contextSeen.size > 1e3) {
+      for (const [k3, v2] of contextSeen)
+        if (now - v2.at > CONTEXT_SEEN_TTL_MS)
+          contextSeen.delete(k3);
+    }
+    const k2 = `${agent}\0${boardId}`;
+    const was = contextSeen.get(k2);
+    const key = ctx ? ctx.at ?? ctx.text : "";
+    contextSeen.set(k2, { key, at: now });
+    return was && now - was.at <= CONTEXT_SEEN_TTL_MS && was.key === key ? void 0 : ctx;
+  };
   const mentionLimit = opts.agentMentions ?? { max: Number(process.env.UNPROSE_AGENT_MENTIONS) || 20, windowMs: 10 * 6e4 };
   const mentionLog = /* @__PURE__ */ new Map();
   const checkMentionRate = (ops, author, by) => {
@@ -61989,7 +62538,7 @@ function startServer(opts = {}) {
       if (error62 || !grant)
         return unauthorized(req, res, true, error62);
       const body = method === "POST" ? await readBody(req) : void 0;
-      return handleMcp(req, res, grant, { access, loopback: `http://127.0.0.1:${listeningPort}`, publicUrl: publicOrigin(req) }, body);
+      return handleMcp(req, res, grant, { access, loopback: `http://127.0.0.1:${listeningPort}`, publicUrl: publicOrigin(req), inflight: mcpInflight }, body);
     }
     if (parts[0] === "api") {
       if (parts[1] === "kinds" && method === "GET")
@@ -62255,7 +62804,8 @@ function startServer(opts = {}) {
       }
       if (sub === "wait" && method === "GET") {
         const since = Number(url2.searchParams.get("since") ?? board.seq);
-        const timeout = Math.min(Number(url2.searchParams.get("timeout") ?? 3e4), 12e4);
+        const timeout = Math.max(0, Math.min(Number(url2.searchParams.get("timeout") ?? 3e4) || 0, WAIT_MAX_SEC * 1e3));
+        const untilMention = url2.searchParams.get("until") === "mention";
         const quietRaw = url2.searchParams.get("quiet");
         const quietMs = quietRaw === null ? void 0 : Math.max(0, Math.min(Number(quietRaw) || 0, 3e4));
         const wakeRaw = url2.searchParams.get("wake") ?? "meaningful";
@@ -62274,17 +62824,58 @@ function startServer(opts = {}) {
         if (cf?.frame)
           agentScale(() => filterChanges(board, [], cf));
         const passes = (c) => !cf || filterChanges(now(), [c], cf).length > 0;
-        const match = (c) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c) && passes(c);
-        const woke = await store.waitFor(id, since, timeout, void 0, { quietMs, wake, match, who: name });
-        const changes = cf ? filterChanges(store.get(id), woke, cf) : woke;
-        const allLines = summarize(store.get(id), changes, { collapseMoves: wake !== "any" });
-        const page3 = pageLines(allLines, { maxChars: numParam(url2, "maxChars"), seq: store.get(id).seq });
-        const lines2 = boolParam(url2, "summary") && allLines.length > 1 ? [diffSummary(store.get(id), changes, allLines, { since, last: numParam(url2, "last") ?? 10 })] : page3.left ? [...page3.lines, `\u2026 ${page3.left} more line(s) not shown (size cap) \u2014 canvas_diff({ since: ${since}, cursor: "${page3.nextCursor}" }) or summary: true`] : page3.lines;
-        const cur = readByAgent(id, changes, f.author, name);
-        const last = changes.length ? changes[changes.length - 1].seq : cur.seq;
-        const notForYou = all ? 0 : store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c) && !forMe(c)).length;
-        const r2 = responderOf(cur.meta);
-        return json4(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines: lines2, notForYou, answeredBy: responderLabel(r2), responder: r2 ?? null, context: contextOf(cur.meta) ?? null });
+        const personal = (c) => !untilMention || mentionsMe(now(), c, me);
+        const match = (c) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c) && passes(c) && personal(c);
+        const gone = new AbortController();
+        const onClose = () => {
+          if (!res.writableEnded)
+            gone.abort();
+        };
+        res.on("close", onClose);
+        const keepAliveMs = opts.waitKeepAliveMs ?? 2e4;
+        const keepAlive = timeout > keepAliveMs ? setInterval(() => {
+          if (res.writableEnded || gone.signal.aborted)
+            return;
+          if (!res.headersSent)
+            res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
+          res.write(" ");
+        }, keepAliveMs) : void 0;
+        const reply = (status, body) => {
+          if (!res.headersSent)
+            return json4(res, status, body);
+          res.end(JSON.stringify(body));
+        };
+        let woke;
+        try {
+          woke = await store.waitFor(id, since, timeout, void 0, { quietMs, wake, match, who: name, signal: gone.signal });
+        } finally {
+          if (keepAlive)
+            clearInterval(keepAlive);
+          res.off("close", onClose);
+        }
+        if (gone.signal.aborted)
+          return void (res.writableEnded || res.end());
+        try {
+          if (!store.get(id))
+            throw new NotFound(`board ${id} not found`);
+          const changes = cf ? filterChanges(store.get(id), woke, cf) : woke;
+          const allLines = summarize(store.get(id), changes, { collapseMoves: wake !== "any" });
+          const page3 = pageLines(allLines, { maxChars: numParam(url2, "maxChars"), seq: store.get(id).seq });
+          const lines2 = boolParam(url2, "summary") && allLines.length > 1 ? [diffSummary(store.get(id), changes, allLines, { since, last: numParam(url2, "last") ?? 10 })] : page3.left ? [...page3.lines, `\u2026 ${page3.left} more line(s) not shown (size cap) \u2014 canvas_diff({ since: ${since}, cursor: "${page3.nextCursor}" }) or summary: true`] : page3.lines;
+          const cur = readByAgent(id, changes, f.author, name);
+          const last = changes.length ? changes[changes.length - 1].seq : cur.seq;
+          const between = store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c));
+          const notForYou = all ? 0 : between.filter((c) => !forMe(c)).length;
+          const notMentioned = untilMention ? between.filter((c) => forMe(c) && passes(c) && !mentionsMe(cur, c, me) && c.ops.some((op) => !isLayoutOnly(op, c.before[op.kind === "add" ? op.item.id : op.id]))).length : 0;
+          const r2 = responderOf(cur.meta);
+          const ctx = contextOf(cur.meta);
+          const context = url2.searchParams.get("context") === "changed" ? contextOnce(me, id, ctx) : ctx;
+          return reply(200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines: lines2, notForYou, ...untilMention ? { notMentioned } : {}, answeredBy: responderLabel(r2), responder: r2 ?? null, context: context ?? null });
+        } catch (e) {
+          if (!res.headersSent)
+            throw e;
+          return reply(500, { error: e.message ?? "internal error" });
+        }
       }
       if (sub === "settings") {
         if (method === "GET")
@@ -62698,10 +63289,10 @@ function numParam(url2, k2) {
   const raw = url2.searchParams.get(k2);
   if (raw === null || raw === "")
     return void 0;
-  const n3 = Number(raw);
-  if (!Number.isFinite(n3))
+  const n4 = Number(raw);
+  if (!Number.isFinite(n4))
     throw new HttpError(400, `${k2} must be a number`);
-  return n3;
+  return n4;
 }
 var boolParam = (url2, k2) => ["1", "true", "yes"].includes(url2.searchParams.get(k2) ?? "");
 function readOptionsOf(url2) {

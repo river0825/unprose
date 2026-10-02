@@ -114,15 +114,17 @@ export class CanvasClient {
     return { 'user-agent': userAgent(this.component), ...(this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { 'x-unprose-agent': this.agentName } : {}) }
   }
 
-  private async req<T>(method: string, p: string, body?: unknown): Promise<T> {
+  private async req<T>(method: string, p: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     let res: Response
     try {
       res = await fetch(this.baseUrl + p, {
         method,
         headers: { ...this.headers(), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) },
         body: body !== undefined ? JSON.stringify(body) : undefined,
+        ...(signal ? { signal } : {}),
       })
     } catch (e) {
+      if (signal?.aborted) throw e
       throw new Error(`canvas server not reachable at ${this.baseUrl} — start it with \`awd-canvas serve\` (${(e as Error).message})`)
     }
     const text = await res.text()
@@ -208,14 +210,23 @@ export class CanvasClient {
     return this.req<{ since: number; seq: number; lines: string[]; count: number; total?: number; nextCursor?: string; more?: string; summary?: string }>('GET', `/api/boards/${encodeURIComponent(id)}/diff?${q}`)
   }
   /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
-  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake, listen?: 'mine' | 'all', extra?: AgentScaleQuery) {
+  /**
+   * `opts.signal` aborts the wait (the server then frees its watcher slot); `untilMention` wakes only on what addresses
+   * this agent personally; `contextOnce` asks the server to send the board context only when this agent has not seen it.
+   */
+  async wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake, listen?: 'mine' | 'all', extra?: AgentScaleQuery, opts: { signal?: AbortSignal; untilMention?: boolean; contextOnce?: boolean } = {}) {
     const q = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) })
     addQuery(q, extra)
     if (author) q.set('author', author)
     if (quietMs !== undefined) q.set('quiet', String(quietMs))
     if (wake) q.set('wake', wake)
     if (listen === 'all') q.set('to', 'all')
-    return this.req<{ since: number; seq: number; timedOut: boolean; changes: Change[]; lines: string[]; notForYou?: number; answeredBy?: string; responder?: Responder | null; context?: BoardContext | null }>('GET', `/api/boards/${encodeURIComponent(id)}/wait?${q}`)
+    if (opts.untilMention) q.set('until', 'mention')
+    if (opts.contextOnce) q.set('context', 'changed')
+    const r = await this.req<{ since: number; seq: number; timedOut: boolean; changes: Change[]; lines: string[]; notForYou?: number; notMentioned?: number; answeredBy?: string; responder?: Responder | null; context?: BoardContext | null; error?: string }>('GET', `/api/boards/${encodeURIComponent(id)}/wait?${q}`, undefined, opts.signal)
+    // a long wait answers 200 before it knows the outcome (keep-alive): a failure then comes as { error }
+    if (typeof r !== 'object' || r === null || typeof r.seq !== 'number') throw new Error((r as { error?: string } | null)?.error ?? 'the canvas gave no answer to the wait')
+    return r
   }
   /** Who answers the board, its context note, who holds the files, the agents it knows. */
   settings(id: string) {

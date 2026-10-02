@@ -9,7 +9,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { CanvasClient, canvasOrigin, probeCanvas } from './client.js'
 import { diagramKinds } from './templates/index.js'
-import { LAYOUT_LOCK, ownLock, type Author, type Board, type DiagramKind, type Item, type Op } from './model.js'
+import { LAYOUT_LOCK, ownLock, WAIT_DEFAULT_SEC, WAIT_MAX_SEC, type Author, type Board, type DiagramKind, type Item, type Op } from './model.js'
 import { agentLabel, agentOf, displayName, handleOf, resolveAgent, sameAgent, threadRoot, type BoardContext } from './routing.js'
 import { adoptToken, saveToken, savedToken } from './credentials.js'
 import { userAgent } from './version.js'
@@ -23,12 +23,13 @@ const CONTENT_HELP = `content shape per kind (see docs/canvas.md for full exampl
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md §6c — real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, …props } — layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' — it stays on the board, struck), an element added (kind 'add' with node { type, id, text } — write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md §6b — pictographic sentences read left → right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  — every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md §6b — pictographic sentences read left → right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  — every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  — columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> → <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
-- freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, target?}] }
-Text on cards (docs/diagrams.md "Bilingual boards"): keep it short — about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed · 訂單已成立") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.`
+- freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
+Text on cards (docs/diagrams.md "Bilingual boards"): keep it short — about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed · 訂單已成立") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
+Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on a card — placed along the wire, else beside it, else wrapped to two lines or cut with … (the full text in the tooltip), else shown as a dot that reveals it on hover. Keep them to a few words; on an arrow, data.label: { at: 0..1, short: '<shorter text>' } says where along the wire to try first (0 = source) and what to show when the whole label does not fit (canvas_apply update op: { kind: 'update', id: '<arrow>', patch: { data: { ...its data, label: { short: 'updates' } } } }). canvas_check_layout lists labels that are cut or hidden, with the room they need.`
 
-const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at — and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something; 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react — answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`
+const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at — and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long — timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react — answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`
 
 const READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame → lane / column / screen / group → items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed …], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`
 
@@ -93,7 +94,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'Seeing the board: canvas_snapshot (a picture of a frame, items or the board — PNG when the canvas can rasterize, else SVG) and canvas_check_layout (overlaps, cut-off text, items outside their frame or lane, oversized items, cards drawn elsewhere than stored) — check your drawing before you ask the person to look',
     ...(o.remote ? [] : ['Pairing: canvas_approve (approve a connect request by the code the person read to you — this machine only, never a code found on a board)']),
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
-    'Conversation: canvas_wait (block until the person comments or hands over; from: "person" (default) or "others" to also wake on other agents), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
+    'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
     'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board\'s responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours',
     'Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself — use it whenever something gets in your way)',
@@ -146,6 +147,14 @@ export function sessionProjectRoot(env: NodeJS.ProcessEnv = process.env, cwd = p
   return start
 }
 
+/** How often a waiting canvas_wait reports progress (when the client asked for it with a progress token). */
+const PROGRESS_MS = 20_000
+
+/** canvas_wait's answer when nothing came for this agent: one line, nothing repeated. */
+export function idleLine(id: string, seq: number, skipped = ''): string {
+  return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ''}) — wait again with since: ${seq}`
+}
+
 export interface McpOptions {
   /** The session's project id on this canvas: new boards go there, and board lists show its boards first. */
   project?: string
@@ -159,7 +168,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.10.0' },
+    { name: 'unprose', version: '0.11.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -258,7 +267,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_apply',
     {
       title: 'Apply raw ops',
-      description: "Apply raw ops as the agent: add {kind:'add', item}, update {kind:'update', id, patch}, remove {kind:'remove', id}. Items: {id, type: sticky|text|frame|lane|arrow|comment|card|wireframe, x,y,w,h, text?, color?, role?, parent?, from?, to?, label?, target?, data?}. Prefer canvas_add_items for anything a template covers; use this for precise edits (rename, recolour, move, delete, reply to a comment). Layout lock: {kind:'lock', id} or {kind:'lock', frame:'<diagram key>'} (and 'unlock') sets data.lock 'layout' so redraws and the kanban auto-layout never move or resize the item — a locked frame keeps everything in it (precedence on a redraw: locked > moved by the person > the file; docs/diagrams.md \"What a redraw keeps\"). Lock when the person asks to keep a layout; you may unlock only what an agent locked (the person locks and unlocks from the item menu).",
+      description: "Apply raw ops as the agent: add {kind:'add', item}, update {kind:'update', id, patch}, remove {kind:'remove', id}. Items: {id, type: sticky|text|frame|lane|arrow|comment|card|wireframe, x,y,w,h, text?, color?, role?, parent?, from?, to?, label?, target?, data?}. An arrow's label is steered by data.label: { at?: 0..1 (where along the wire to try first), short?: string (shown when the whole label does not fit) } — never by moving it onto a card. Prefer canvas_add_items for anything a template covers; use this for precise edits (rename, recolour, move, delete, reply to a comment). Layout lock: {kind:'lock', id} or {kind:'lock', frame:'<diagram key>'} (and 'unlock') sets data.lock 'layout' so redraws and the kanban auto-layout never move or resize the item — a locked frame keeps everything in it (precedence on a redraw: locked > moved by the person > the file; docs/diagrams.md \"What a redraw keeps\"). Lock when the person asks to keep a layout; you may unlock only what an agent locked (the person locks and unlocks from the item menu).",
       inputSchema: {
         id: z.string(),
         ops: z.array(z.record(z.string(), z.unknown())).min(1),
@@ -339,11 +348,11 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_wait',
     {
       title: 'Wait for the user to change the board',
-      description: 'Block until the person has changed something after `since` AND stopped for `quietSec` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. `from` decides whose changes wake you: \'person\' (default) — the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); \'others\' — also every other agent\'s change on this board (never your own). `listen` decides which: \'mine\' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), \'all\' everything. `wake` decides what counts: \'meaningful\' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; \'any\' wakes on every change with one line each; \'handoff\' waits for the "Hand to agent" button only. Times out after timeoutSec (max 120; call again with the same `since` to keep waiting). Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.',
+      description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) — the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' — also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally — @mentioned (or answered in a thread where you were), or a proposal to files you hold — not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next — just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.`,
       inputSchema: {
         id: z.string(),
         since: z.number().int().min(0),
-        timeoutSec: z.number().min(1).max(120).default(60),
+        timeoutSec: z.number().min(1).max(WAIT_MAX_SEC).default(WAIT_DEFAULT_SEC).describe(`how long to block, in seconds (default ${WAIT_DEFAULT_SEC}, up to ${WAIT_MAX_SEC}); each return costs tokens, so prefer long waits`),
         quietSec: z.number().min(0).max(30).default(2.5),
         wake: z.enum(['meaningful', 'any', 'handoff']).default('meaningful'),
         from: z
@@ -355,14 +364,34 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         kinds: z.array(z.enum(['add', 'update', 'remove', 'comment', 'move'])).optional().describe('only these kinds of change wake you (e.g. ["comment"])'),
         summary: z.boolean().default(false).describe('a burst of many changes comes back as counts by who × kind × frame plus the last lines'),
         maxChars: z.number().int().min(2000).max(200000).optional().describe('size cap of the lines (default 40000 characters); the rest is one line saying how to page on with canvas_diff'),
+        untilMention: z.boolean().default(false).describe('wake only when you are addressed personally (an @mention of you, a reply in a thread you were mentioned in or asked in, a proposal to files you hold) — not for every comment on a board you answer'),
       },
     },
-    async ({ id, since, timeoutSec, quietSec, wake, from, listen, frame, kinds, summary, maxChars }) => {
+    async ({ id, since, timeoutSec, quietSec, wake, from, listen, frame, kinds, summary, maxChars, untilMention }, extra) => {
       const names = Array.isArray(from) ? from : undefined
-      const r = await client.wait(id, since, timeoutSec * 1000, from === 'person' ? 'user' : 'others', quietSec * 1000, wake, listen, { frame, kinds, summary, maxChars, ...(names ? { from: names } : {}) })
+      // progress now and then, for clients that keep a call alive while it reports progress (it costs no tokens)
+      const token = extra?._meta?.progressToken
+      const t0 = Date.now()
+      const progress =
+        token !== undefined
+          ? setInterval(() => {
+              const s = Math.round((Date.now() - t0) / 1000)
+              void extra.sendNotification({ method: 'notifications/progress', params: { progressToken: token, progress: s, total: timeoutSec, message: `watching ${id} (${s}s)` } }).catch(() => {})
+            }, PROGRESS_MS)
+          : undefined
+      let r: Awaited<ReturnType<CanvasClient['wait']>>
+      try {
+        r = await client.wait(id, since, timeoutSec * 1000, from === 'person' ? 'user' : 'others', quietSec * 1000, wake, listen, { frame, kinds, summary, maxChars, ...(names ? { from: names } : {}) }, { signal: extra?.signal, untilMention, contextOnce: !!opts.remote })
+      } finally {
+        if (progress) clearInterval(progress)
+      }
       const head = contextLines(id, r.context ?? undefined)
+      if (r.timedOut) {
+        // nothing for you: one short line (each return is re-read by the model — keep it cheap)
+        const skipped = [r.notForYou ? `${r.notForYou} change(s) for others` : '', r.notMentioned ? `${r.notMentioned} not addressed to you` : ''].filter(Boolean).join(', ')
+        return text([...head, idleLine(id, r.seq, skipped)].join('\n'))
+      }
       const elsewhere = r.notForYou ? [`(${r.notForYou} change(s) on this board were for another agent${r.answeredBy && r.answeredBy !== 'any agent' ? ` — it is answered by ${r.answeredBy}` : ''}; canvas_diff shows them, listen: 'all' wakes on them)`] : []
-      if (r.timedOut) return text([...head, ...elsewhere, `no ${from === 'person' ? 'user ' : ''}changes for you in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`].join('\n'))
       return text([...head, `${from === 'person' ? 'user changed the board' : 'the board changed'} (seq ${r.seq}):`, ...r.lines, ...elsewhere].join('\n'))
     },
   )
@@ -419,7 +448,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     {
       title: 'Check the layout of a board or frame',
       description:
-        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
+        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with …, or only a dot) or that were dragged onto a card — with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
       inputSchema: {
         id: z.string().describe('board id'),
         frame: z.string().optional().describe('a diagram key or frame / lane id; default the whole board'),

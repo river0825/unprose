@@ -77,6 +77,7 @@ decides each item's fate like this:
 | Drawn from the file, **locked** (`data.lock: 'layout'` on it, or on its frame) | from the file | **kept** (lock wins) | yes — a lock keeps the place, not the item |
 | Drawn from the file, **moved or resized by the person** (any time, per the change log) | from the file | **kept** | yes |
 | Drawn from the file, neither | from the file | from the file | yes |
+| Drawn from the file, **deleted by the person** (a wire or an item — a policy → command wire, a sticky) | the file's, **marked deleted** (`data.pending: { kind: 'remove', deleted: 'wire' \| 'item', by: 'user' }`), drawn struck | kept | **yes — that is the point**: while the file still has it the redraw keeps it removed (never redrawn as it was) and lists it as "kept removed"; once the file drops it, it goes for good and the mark with it |
 | The **frame** itself | title from the file | kept if moved or locked; else grows to fit (never shrinks) | never |
 | A **proposal** of this drawing (`data.pending`: a dragged wire, edited words, a proposed story) | left exactly as it is | left as it is | removed once the file explains it (then the drawn element replaces it) |
 | **Comments** (any id) | kept | kept | never |
@@ -84,7 +85,14 @@ decides each item's fate like this:
 | An item with this file's id prefix that **the person added**, or **another agent added by hand** (a change that was not a redraw, by an agent that never redrew this frame) | kept | kept | **never** — treated as foreign |
 | Items of **other frames** on the board, and their proposals | untouched | untouched | never |
 
-Precedence for geometry: **locked > moved by the person > the file.** Presentation data (read receipts, wire sides and
+Precedence for geometry: **locked > moved by the person > the file**; for existence: **deleted by the person > the file.**
+Deleting a file-drawn wire or item on the page does not drop it (the next redraw would draw it again from the
+file): it stays, struck and faint, as a **proposal to remove it from the file** — the panel says so, with **Ask AI to
+remove it from the file** (a chat request carrying the proposal, as for wire proposals in docs/studio.md §7) and
+**Undo**; the outline and `canvas_wait` show it as `[deleted by the person — the file still has it: proposed remove
+from the file]`. A deletion made another way (over the API, or by an older page) is found in the change log and the
+redraw puts the mark back instead of the item. Whoever holds the file removes the subscription / element after the
+person agrees; the next redraw then removes the struck item. Presentation data (read receipts, wire sides and
 bends, the lock itself) survives every redraw. Nothing a redraw writes goes back into the file: layout lives on the
 board only.
 
@@ -116,12 +124,15 @@ Redraw preview — plan-kanban from design/plan.kanban.yaml on "Release plan" (h
     = plan-kanban.card.Checkout-page  "Checkout page" — you moved it: keeps x, y, order
   kept: locked (1):
     # plan-kanban.card.Payment-webhook  "Payment webhook" — locked: keeps x, y, order
+  kept removed (1):
+    x plan-kanban.arrow.payment-webhook-order-emails  "then" — you deleted it — the file still has it; propose the file change?
   not from this file (kept) (1):
     * codex-b.note.sizing  "Sizing: ask about webhooks" — added by codex-b, not from this file: kept
 ```
 
 Run it before redrawing a frame that other people or agents worked on; if something you expected to move is "kept",
-the person moved or locked it — ask before changing that.
+the person moved or locked it — ask before changing that. A "kept removed" line is a deletion waiting for the file:
+ask the person whether to remove it from the file, then edit the file and redraw.
 
 ### Bilingual boards (e.g. English + 繁體中文)
 
@@ -169,6 +180,22 @@ Source: *Introducing EventStorming* (Brandolini). Page numbers are the book's pr
   `systems`, `hotspots` (`on` element, `kind?`), `opportunities`, `values`, `votes`, `milestones`,
   `phases` (frames/labels for bounded contexts or chapters), `definitions`, `aggregates` (software level,
   **instead of** the timeline grouping — the book: the two are orthogonal, p.21).
+- Layout (detailed levels, `templates/esTimeline.ts`): **time reads left → right and no flow wire runs back
+  to the left** (`handles`, `produces`, `triggers`, `raises`, `updates`, `informs`).
+  - Sequential steps stay on **one row**. A read model that informs a command is a step of that row, between
+    the event that updates it and the command (read model → person → command, p.201): `compose →
+    cadences-created → cadence-library (read model) → configure → experiment-configured` is one straight row.
+    A read model that informs only people sits just after the last event that updates it, above the row.
+  - Branches get their own rows: a command's other outcomes (p.209), a variant (B) that forks from the same
+    event as the row, a separate flow coming in. Of several ways on, the one that runs on furthest keeps the row.
+  - **A retry or revision is a later occurrence, not a loop back.** A wire that would point back in time
+    (a policy after a later event re-running an earlier command, a read model updated late that informs an
+    earlier command) goes to the same sticky drawn again right after its source — id `<…>.again`
+    (`.again-2`, …), `data: { occurrence: true, repeats: <first occurrence's id> }`, a command's person above it
+    again. "Back in time" is decided from the file: events by their order, a command just before the first
+    event it produces, a policy just after the last event it reacts to, a read model just after its last update.
+  - A read model that informs a person points at an occurrence of that person at or after it; if there is none,
+    the person is drawn once more in the read model's column.
 - Grammar check (pure, shared by `awd design lint` and the web): command with no system; event → command
   with no policy; event with no source; read model nobody uses; open hotspots (count = the "not done yet"
   signal, p.199); pivotal events on a process board. Findings carry an element id and a page reference.
@@ -250,6 +277,7 @@ sentences:
   - { actor: clerk, verb: books, object: ticket, to: Ticket system, toLabel: in, traces: [{ from: box-es/book, rel: relates }] }
 groups: [{ text: Booking, members: [ticket] }]          # actors, work objects or sentences
 annotations: [{ on: clerk, text: Cash only }]
+layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or gapX / gapY in px
 ```
 
 - **Drawn as a pictographic story**, the way domainstorytelling.org and Egon.io draw one: actors and work
@@ -266,6 +294,14 @@ annotations: [{ on: clerk, text: Cash only }]
   that way; a sentence without a receiver puts its object in a free slot around its actor. A few placement
   preferences are tried and the one with the fewest crossing arrows is kept (deterministic). Positions are not
   part of the file, so Egon.io import/export is unaffected.
+- **Spacing** (`layout:` in the file, our addition — Egon.io ignores it): every activity arrow gets room for its
+  number circle and its verb, measured with the same text metrics as the snapshot and the layout check (the
+  verb at 12 px; a verb longer than ~220 px does not stretch the grid further — it is cut on the board), so labels
+  and numbers do not crowd. `spacing: normal` (the default) is about 1.25× the earlier fixed grid plus that
+  measured room; `roomy` is about 1.55× with more air after each verb; `compact` keeps the earlier fixed grid
+  (460 × 330 px actor pitch; long verbs may crowd). `gapX` / `gapY` (px, 240–2000 / 180–2000) set the actor
+  grid's pitch outright. Spacing only changes positions, never ids, so a redraw still keeps what the person
+  moved or locked ("What a redraw keeps").
 - A sentence **without a work object** is one numbered arrow from actor to actor; its element id rides on that
   arrow, traces into it resolve to its actor, and its own traces are drawn from its actor.
 - Each work object carries its sentence's element id and the sentence read out ("⑤ You approves proposal to

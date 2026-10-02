@@ -300,7 +300,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                   <DiagramElementPanel board={board} item={{ ...selected, data: { ...selected.data, pending: undefined } }} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} />
                 </>
               ) : (
-                <DiagramElementPanel board={board} item={selected} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} />
+                <DiagramElementPanel board={board} item={selected} onSelect={(id) => onSelect(id)} onProposalChat={onWireChat} onDismiss={onDismiss} onUndo={onUndoWire} />
               )
             }
             wirePanel={

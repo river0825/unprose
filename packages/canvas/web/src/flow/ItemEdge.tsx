@@ -4,7 +4,8 @@ import type { Item } from '../../../src/model'
 import { EditableText } from './EditableText'
 import { useEdit } from './EditContext'
 import { useWireFocus } from './wireFocus'
-import { bend, bestLoop, bestTurn, bestTurnY, freeLabelSpot, isHorizontal, type Box, type Side } from './route'
+import { bend, bestLoop, bestTurn, bestTurnY, isHorizontal, type Box, type Side } from './route'
+import { EDGE_LABEL, isLabelObstacle, labelControl, labelLines, placeEdgeLabel, pointAlong } from '../../../src/edgeLabel'
 import { isContainer } from './boardToFlow'
 import './wires.css'
 
@@ -35,7 +36,7 @@ const shift = (x: number, y: number, side: string | undefined, d = 0): [number, 
 const nodesOf = (s: ReactFlowState) => s.nodes
 const lookupOf = (s: ReactFlowState) => s.nodeLookup
 
-/** Every box a wire should not run through or put its label on: not containers, not comments. */
+/** Every box a wire should not run through or put its label on: not containers, comments or thin markers. */
 function useBoxes(): Array<Box & { id: string }> {
   const nodes = useStore(nodesOf) // re-route when any box moves
   const lookup = useStore(lookupOf)
@@ -43,7 +44,8 @@ function useBoxes(): Array<Box & { id: string }> {
     const out: Array<Box & { id: string }> = []
     for (const n of lookup.values()) {
       const it = (n.data as { item?: Item } | undefined)?.item
-      if (n.hidden || !it || it.type === 'comment' || isContainer(it)) continue
+      // not containers, comments, thin markers (a pivotal event's line, phase bars): edgeLabel.ts isLabelObstacle
+      if (n.hidden || !it || isContainer(it) || !isLabelObstacle(it)) continue
       out.push({ id: n.id, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? it.w, h: n.measured?.height ?? n.height ?? it.h })
     }
     return out
@@ -81,6 +83,8 @@ export function ItemEdge(props: EdgeProps) {
   const edit = useEdit()
   const flow = useReactFlow()
   const [drag, setDrag] = useState<Point | null>(null)
+  // a label shown only as a dot (no free spot beside the wire): hovering the dot shows the whole label
+  const [reveal, setReveal] = useState(false)
   const gesture = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const editing = edit.editingId === id
   const text = typeof label === 'string' ? label : ''
@@ -131,38 +135,30 @@ export function ItemEdge(props: EdgeProps) {
   const chosen = loop && !ds && !bendOf(data) && srcBox && tgtBox ? bestLoop(srcBox, tgtBox, routeBoxes, 22 + 9 * ((port.sn ?? 1) - 1 - (port.si ?? 0)), port.s, port.t) : undefined
   if (chosen) [sourceX, sourceY, targetX, targetY] = [chosen.sx, chosen.sy, chosen.tx, chosen.ty]
   const loopY = chosen?.y
-  const [stepPath, sx, sy] = ds
-    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+  // The wire's runs, as points: the path is drawn from them and the label is placed along them.
+  const S = { x: sourceX, y: sourceY }
+  const T = { x: targetX, y: targetY }
+  const runs: Point[] = ds
+    ? [S, T]
     : loopY !== undefined
-    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: sourceX, y: loopY }, { x: targetX, y: loopY }, { x: targetX, y: targetY }]), (sourceX + targetX) / 2, loopY]
-    : backward && turnAt !== undefined
-    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: turnAt, y: sourceY }, { x: turnAt, y: targetY }, { x: targetX, y: targetY }]), (sourceX + turnAt) / 2, sourceY]
-    : turnY !== undefined
-    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: sourceX, y: turnY }, { x: targetX, y: turnY }, { x: targetX, y: targetY }]), (sourceX + targetX) / 2, turnY]
-    : corner
-    ? [roundedPath(corner), corner[1].x, corner[1].y]
-    : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, centerX: turnAt, borderRadius: 8 })
-  // the label sits on the wire's own run out of its source (or into its target), never on a box
-  const labelText = typeof label === 'string' ? label : ''
-  const lw = Math.min(220, labelText.length * 7.6 + 14)
-  const lh = labelText.length * 7.6 + 14 > 220 ? 34 : 20
-  const spot = !labelText
-    ? undefined
+    ? [S, { x: sourceX, y: loopY }, { x: targetX, y: loopY }, T]
     : turnAt !== undefined
-    ? backward
-      ? freeLabelSpot(sourceX - 4, turnAt + 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt - 4, targetX + 4, targetY, lw, lh, allBoxes)
-      : freeLabelSpot(sourceX + 4, turnAt - 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt + 4, targetX - 4, targetY, lw, lh, allBoxes)
-    : loopY !== undefined
-    ? freeLabelSpot(targetX, sourceX, loopY, lw, lh, allBoxes)
+    ? [S, { x: turnAt, y: sourceY }, { x: turnAt, y: targetY }, T]
     : turnY !== undefined
-    ? freeLabelSpot(sourceX, targetX, turnY, lw, lh, allBoxes)
+    ? [S, { x: sourceX, y: turnY }, { x: targetX, y: turnY }, T]
     : corner
-    ? isHorizontal(sourcePosition)
-      ? freeLabelSpot(corner[0].x, corner[1].x, corner[0].y, lw, lh, allBoxes)
-      : freeLabelSpot(corner[1].x, corner[2].x, corner[2].y, lw, lh, allBoxes)
-    : undefined
-  const [lx, ly] = spot ? [spot.x, spot.y] : [sx, sy]
-  const path = point ? curveThrough({ x: sourceX, y: sourceY }, point, { x: targetX, y: targetY }) : stepPath
+    ? corner
+    : isHorizontal(sourcePosition) && isHorizontal(targetPosition)
+    ? [S, { x: (sourceX + targetX) / 2, y: sourceY }, { x: (sourceX + targetX) / 2, y: targetY }, T]
+    : !isHorizontal(sourcePosition) && !isHorizontal(targetPosition)
+    ? [S, { x: sourceX, y: (sourceY + targetY) / 2 }, { x: targetX, y: (sourceY + targetY) / 2 }, T]
+    : [S, { x: targetX, y: sourceY }, T]
+  const [stepPath] = ds
+    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+    : loopY !== undefined || (backward && turnAt !== undefined) || turnY !== undefined || corner
+    ? [roundedPath(runs)]
+    : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, centerX: turnAt, borderRadius: 8 })
+  const path = point ? curveThrough(S, point, T) : stepPath
   // the circle sits a little along the line, clear of the actor icon and its name
   const len = Math.hypot(targetX - sourceX, targetY - sourceY) || 1
   const along = Math.min(24, len / 3)
@@ -177,7 +173,19 @@ export function ItemEdge(props: EdgeProps) {
     const t = Math.max(len / 2, Math.min(len - 20, along + 44))
     return { x: sourceX + ux * t + nx * 13, y: sourceY + uy * t + ny * 13 }
   }
-  const at = point ?? (ds && own?.role === 'activity' ? dsVerbAt() : { x: lx, y: ly })
+  // The label (edgeLabel.ts, the same rule as the snapshot): smaller than card text, never on a card — along the
+  // runs, then beside the line, wrapped / cut with … (full text in the tooltip), else only a dot that shows it on
+  // hover or selection. `data.label: { at, short }` steers it; a label the person dragged (data.bend) stays put.
+  const labelText = typeof label === 'string' ? label : ''
+  const font = ds && own?.role !== 'annotation-link' ? EDGE_LABEL.dsFont : EDGE_LABEL.font
+  const ctl = labelControl(own?.data)
+  const placed = useMemo(
+    () => (labelText && !point ? placeEdgeLabel(labelText, runs, allBoxes, { font, at: ctl.at, short: ctl.short, prefer: ds && own?.role === 'activity' ? [dsVerbAt()] : undefined }) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [labelText, point?.x, point?.y, JSON.stringify(runs), allBoxes, font, ctl.at, ctl.short, ds],
+  )
+  const whole = useMemo(() => (labelText ? labelLines(labelText, EDGE_LABEL.maxW, font).lines : []), [labelText, font])
+  const at = point ?? (placed ? { x: placed.x, y: placed.y } : pointAlong(runs, 0.5))
   // a workflow wire changed on the board and not yet in the file (docs/studio.md §7)
   const pendingKind = ((data as { item?: Item } | undefined)?.item?.data?.pending as { kind?: string } | undefined)?.kind
   const tag = pendingKind ? (pendingKind === 'remove' ? 'remove?' : 'proposed') : ''
@@ -191,6 +199,12 @@ export function ItemEdge(props: EdgeProps) {
   // a domain story being replayed: the current sentence's number and verb stand out, what is still to come is faint (flow/replay.ts)
   const replayed = (data as { replay?: string } | undefined)?.replay
   const rc = replayed ? ` replay-${replayed}` : ''
+
+  // what the label shows: the placed lines, the whole label while it is selected or hovered from its dot
+  const shortened = !!placed && placed.mode !== 'full'
+  const revealed = shortened && !editing && (selected || reveal || !!drag)
+  const dotOnly = placed?.mode === 'dot' && !editing && !selected && !reveal && !drag && !tag
+  const shown = point || !placed ? whole.join('\n') || text : revealed ? whole.join('\n') : placed.lines.join('\n')
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || editing) return
@@ -226,12 +240,28 @@ export function ItemEdge(props: EdgeProps) {
       )}
       {!quiet && (text || editing || selected || tag) && (
         <EdgeLabelRenderer>
-          {text || editing || tag ? (
+          {dotOnly ? (
             <div
               data-edge-id={id}
-              className={`edge-label nodrag nopan${rc} ${ds ? 'ds-verb' : ''} ${(data as { item?: Item } | undefined)?.item?.role === 'trace' ? 'trace' : ''} ${selected ? 'selected' : ''} ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}
+              className={`edge-label-dot nodrag nopan${rc}`}
+              role="button"
+              aria-label={`Wire label: ${text}`}
+              title={`${text} — no room beside the wire; hover or select to read, double-click to edit`}
               style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
-              title="Drag to reroute, double-click to edit"
+              {...grip}
+              onPointerEnter={() => setReveal(true)}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                edit.startEdit(id)
+              }}
+            />
+          ) : text || editing || tag ? (
+            <div
+              data-edge-id={id}
+              className={`edge-label nodrag nopan${rc} ${ds ? 'ds-verb' : ''} ${(data as { item?: Item } | undefined)?.item?.role === 'trace' ? 'trace' : ''} ${selected ? 'selected' : ''} ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''} ${revealed ? 'revealed' : ''}`}
+              style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
+              title={shortened ? `${text}\n— drag to reroute, double-click to edit` : 'Drag to reroute, double-click to edit'}
+              onPointerLeave={() => setReveal(false)}
               {...grip}
               onDoubleClick={(e) => {
                 e.stopPropagation()
@@ -239,7 +269,7 @@ export function ItemEdge(props: EdgeProps) {
               }}
             >
               {tag && !editing ? <span className={`wire-tag ${pendingKind}`}>{tag}</span> : null}
-              <EditableText text={text} editing={editing} onCommit={(t) => edit.commitLabel(id, t.trim())} onCancel={edit.cancelEdit} placeholder="Label" />
+              <EditableText text={editing ? text : shown} editing={editing} onCommit={(t) => edit.commitLabel(id, t.trim())} onCancel={edit.cancelEdit} placeholder="Label" />
             </div>
           ) : (
             <div

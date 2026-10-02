@@ -8,6 +8,8 @@
 import type { Board, ColorToken, Item } from './model.js'
 import { shownBoard } from './shown.js'
 import { fitText, measure, wrap } from './textMetrics.js'
+import { EDGE_LABEL, type LabelBox } from './edgeLabel.js'
+import { dsSeqAt, labelObstacles, wireLabel, wireShape } from './wireGeometry.js'
 
 export interface SnapshotOptions {
   /** A diagram key (`studio-es`), a frame id (`diagram.studio-es`) or any container item id. */
@@ -126,6 +128,8 @@ interface Ctx {
   p: Palette
   text: boolean
   out: string[]
+  /** the boxes wire labels may not cover (computed once, on the first labelled wire) */
+  boxes?: LabelBox[]
 }
 
 const uiOf = (it: Item | undefined) => (it?.type === 'ui' ? (it.data?.ui as Record<string, unknown> | undefined) : undefined)
@@ -663,69 +667,11 @@ function rootOf(b: Board, it: Item): string {
   return it.id
 }
 
-type Side = 'top' | 'right' | 'bottom' | 'left'
-const SIDES = new Set(['top', 'right', 'bottom', 'left'])
-
-function anchor(bx: Box, side: Side): { x: number; y: number } {
-  if (side === 'left') return { x: bx.x, y: bx.y + bx.h / 2 }
-  if (side === 'right') return { x: bx.x + bx.w, y: bx.y + bx.h / 2 }
-  if (side === 'top') return { x: bx.x + bx.w / 2, y: bx.y }
-  return { x: bx.x + bx.w / 2, y: bx.y + bx.h }
-}
-
-/** Where the line from box a's centre towards box b's centre leaves box a (plus a small gap). */
-function floatingEnd(a: Box, b: Box): { x: number; y: number } {
-  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 }
-  const dx = b.x + b.w / 2 - ca.x
-  const dy = b.y + b.h / 2 - ca.y
-  if (!dx && !dy) return ca
-  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity)
-  return { x: ca.x + dx * t, y: ca.y + dy * t }
-}
-
-function autoSides(a: Box, b: Box): [Side, Side] {
-  const dx = b.x + b.w / 2 - (a.x + a.w / 2)
-  const dy = b.y + b.h / 2 - (a.y + a.h / 2)
-  const gapX = dx > 0 ? b.x - (a.x + a.w) : a.x - (b.x + b.w)
-  const gapY = dy > 0 ? b.y - (a.y + a.h) : a.y - (b.y + b.h)
-  if (gapX >= gapY) return dx >= 0 ? ['right', 'left'] : ['left', 'right']
-  return dy >= 0 ? ['bottom', 'top'] : ['top', 'bottom']
-}
-
-/** An orthogonal route between two sides, and the point halfway along it (where the label goes). */
-function route(p1: { x: number; y: number }, s1: Side, p2: { x: number; y: number }, s2: Side): { d: string; mid: { x: number; y: number } } {
-  const h1 = s1 === 'left' || s1 === 'right'
-  const h2 = s2 === 'left' || s2 === 'right'
-  if (h1 && h2) {
-    const mx = (p1.x + p2.x) / 2
-    return { d: `M${n(p1.x)} ${n(p1.y)}H${n(mx)}V${n(p2.y)}H${n(p2.x)}`, mid: { x: mx, y: (p1.y + p2.y) / 2 } }
-  }
-  if (!h1 && !h2) {
-    const my = (p1.y + p2.y) / 2
-    return { d: `M${n(p1.x)} ${n(p1.y)}V${n(my)}H${n(p2.x)}V${n(p2.y)}`, mid: { x: (p1.x + p2.x) / 2, y: my } }
-  }
-  return h1 ? { d: `M${n(p1.x)} ${n(p1.y)}H${n(p2.x)}V${n(p2.y)}`, mid: { x: p2.x, y: p1.y } } : { d: `M${n(p1.x)} ${n(p1.y)}V${n(p2.y)}H${n(p2.x)}`, mid: { x: p1.x, y: p2.y } }
-}
-
 function drawArrow(c: Ctx, it: Item): string {
-  const { p, b } = c
-  const from = b.items[it.from!]
-  const to = b.items[it.to!]
-  const a = boxOf(from)
-  const z = boxOf(to)
-  const auto = autoSides(a, z)
-  const s1 = (typeof it.data?.fromSide === 'string' && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0]) as Side
-  const s2 = (typeof it.data?.toSide === 'string' && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1]) as Side
-  const ds = !!it.data?.ds
-  // a domain-story activity floats: a straight line aimed centre to centre, cut at each pictogram's box (web ItemEdge)
-  const p1 = ds ? floatingEnd(a, z) : anchor(a, s1)
-  const p2 = ds ? floatingEnd(z, a) : anchor(z, s2)
-  const bend = it.data?.bend as { x?: unknown; y?: unknown } | undefined
-  const r = ds
-    ? { d: `M${n(p1.x)} ${n(p1.y)}L${n(p2.x)} ${n(p2.y)}`, mid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 } }
-    : typeof bend?.x === 'number' && typeof bend.y === 'number'
-      ? { d: `M${n(p1.x)} ${n(p1.y)}Q${n(2 * bend.x - (p1.x + p2.x) / 2)} ${n(2 * bend.y - (p1.y + p2.y) / 2)} ${n(p2.x)} ${n(p2.y)}`, mid: { x: bend.x, y: bend.y } }
-      : route(p1, s1, p2, s2)
+  const { p } = c
+  const shape = wireShape(c.b, it)
+  if (!shape) return ''
+  const ds = shape.ds
   const pending = !!it.data?.pending && it.role !== 'trace'
   let stroke = p.ink2
   let width = 1.4
@@ -736,33 +682,23 @@ function drawArrow(c: Ctx, it: Item): string {
   else if (it.role === 'trace') ((stroke = p.ink3), (dash = '2 4'), (marker = 'ink3'), (width = 1.2))
   else if (it.role === 'owns' || it.role === 'delegates') ((stroke = p.agent), (dash = it.role === 'owns' ? '3 5' : '6 4'), (marker = 'agent'))
   if (pending) ((stroke = p.marker), (dash = '6 4'), (marker = 'marker'))
-  const parts = [`<path d="${r.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ''}${marker ? ` marker-end="url(#ah-${marker})"` : ''}${it.role === 'trace' || it.role === 'owns' ? ' stroke-opacity="0.8"' : ''}/>`]
-  // a trace's label shows only while it is selected on the page: never in a snapshot
-  const label = it.role === 'trace' ? undefined : (it.label ?? it.text)
-  const len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
-  const ux = (p2.x - p1.x) / len
-  const uy = (p2.y - p1.y) / len
-  const along = Math.min(24, len / 3)
-  let at = r.mid
-  if (ds && it.role === 'activity') {
-    if (c.text && typeof it.data?.seq === 'number') {
-      // the sequence number sits a little along the line, clear of the actor
-      const cx = p1.x + ux * along
-      const cy = p1.y + uy * along
-      parts.push(`<circle cx="${n(cx)}" cy="${n(cy)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n(cx)}" y="${n(cy + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`)
-    }
-    // the verb beside its line, on the side facing up (or left), past the number
-    let nx = -uy
-    let ny = ux
-    if (ny > 0 || (ny === 0 && nx > 0)) ((nx = -nx), (ny = -ny))
-    const t = Math.max(len / 2, Math.min(len - 20, along + 44))
-    at = { x: p1.x + ux * t + nx * 13, y: p1.y + uy * t + ny * 13 }
+  const parts = [`<path d="${shape.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ''}${marker ? ` marker-end="url(#ah-${marker})"` : ''}${it.role === 'trace' || it.role === 'owns' ? ' stroke-opacity="0.8"' : ''}/>`]
+  if (ds && it.role === 'activity' && c.text && typeof it.data?.seq === 'number') {
+    // the sequence number sits a little along the line, clear of the actor
+    const at = dsSeqAt(shape)
+    parts.push(`<circle cx="${n(at.x)}" cy="${n(at.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n(at.x)}" y="${n(at.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`)
   }
-  if (c.text && label) {
-    const font = ds ? 12.5 : 11.5
-    const s = oneLine(label, 220, font)
-    const w = measure(s, font) + 8
-    parts.push(rect({ x: at.x - w / 2, y: at.y - 9, w, h: 17 }, `fill="${p.paper}" fill-opacity="0.88"`, 3), `<text x="${n(at.x)}" y="${n(at.y + 4)}" font-size="${font}" text-anchor="middle" fill="${ds ? p.ink : p.ink2}">${esc(s)}</text>`)
+  // the label: smaller than card text, on a light backing, never on a card (edgeLabel.ts); a dot when it fits nowhere
+  const label = c.text ? wireLabel(it, shape, c.boxes ?? (c.boxes = labelObstacles(c.b))) : undefined
+  if (label?.mode === 'dot') {
+    parts.push(`<circle cx="${n(label.x)}" cy="${n(label.y)}" r="${n(EDGE_LABEL.dot / 2 - 1)}" fill="${p.paper}" stroke="${ds ? p.ink : p.ink2}" stroke-width="1.4"><title>${esc(label.text)}</title></circle>`)
+  } else if (label) {
+    const lh = (label.h - 2 * EDGE_LABEL.padY) / Math.max(1, label.lines.length)
+    const top = label.y - label.h / 2
+    parts.push(
+      rect({ x: label.x - label.w / 2, y: top, w: label.w, h: label.h }, `fill="${p.paper}" fill-opacity="0.78"`, 3),
+      textBlock(label.lines, { x: label.x, y: top + EDGE_LABEL.padY, font: label.font, lh, fill: ds ? p.ink : p.ink2, anchor: 'middle' }),
+    )
   }
   return parts.join('')
 }
