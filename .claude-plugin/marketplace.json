@@ -8,7 +8,7 @@
       "name": "unprose",
       "source": "./",
       "description": "Visual design discussions between people and AI agents: EventStorming, story maps, kanban, wireframes, workflows.",
-      "version": "0.8.2"
+      "version": "0.9.0"
     }
   ],
   "description": "Unprose — visual boards for people and AI agents to talk designs through (EventStorming, story maps, kanban, wireframes, domain stories, workflows)."

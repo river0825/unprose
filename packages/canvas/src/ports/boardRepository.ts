@@ -49,6 +49,11 @@ export interface BoardRepository {
   apply(id: string, ops: Op[], author: Author, note?: string, by?: string): Change
   /** Update board-level fields (title, meta). Not logged as an item change. */
   updateBoard(id: string, patch: Partial<Pick<Board, 'title' | 'meta'>>): Board
+  /**
+   * Change board settings kept in `meta` (responder, context …) as a logged change: the change has no ops and
+   * carries `meta` (each key's new value, null = removed) and `note`, so the log, diffs and open pages see it.
+   */
+  setMeta(id: string, patch: Record<string, unknown>, author: Author, note: string, by?: string): Change
   changes(id: string, q?: ChangesQuery): Change[]
   subscribe(id: string, fn: ChangeListener): () => void
   /**
@@ -63,6 +68,8 @@ export interface BoardRepository {
   watchers(id: string): number
   /** The names of the agents waiting on this board right now (sorted, unique). */
   watcherNames(id: string): string[]
+  /** When each agent last started or stopped waiting on this board (ISO) — "<name> is away" on the page. */
+  watcherSeen(id: string): Record<string, string>
   onPresence(fn: PresenceListener): () => void
   /** Hear about saves that fail (and recover), so clients can say "changes are not being saved". */
   onStorage(fn: StorageListener): () => void

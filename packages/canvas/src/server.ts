@@ -19,7 +19,10 @@ import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
-import { diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { applyOps, diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, displayName, holdersOf, LOCAL_AGENT, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, sameAgent, soleHolder, stampHolders, stampRouting } from './routing.js'
+import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
+import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
 import { MemoryAccessStore } from './adapters/access/index.js'
 import { canSeeBoard, canSeeProject, canWrite, cleanName, projectForNewBoard, type Grant } from './accessPolicy.js'
@@ -67,7 +70,16 @@ export interface ServerOptions {
   access?: AccessService
   /** The address agents and people use from elsewhere (OAuth issuer, board links): UNPROSE_PUBLIC_URL; default from the request. */
   publicUrl?: string
+  /** What agents tell the owner about Unprose (`unprose_feedback`); default memory (`awd-canvas serve`: ~/.awd/feedback.ndjson). */
+  feedback?: FeedbackStore
+  /** The loop guard: agent messages in a row in one thread before agents pause there (default UNPROSE_AGENT_TURNS, else 6; a board's `agentTurns` wins). */
+  agentTurns?: number
+  /** Agent-to-agent @mentions one agent may post per window (default UNPROSE_AGENT_MENTIONS, else 20 per 10 minutes). */
+  agentMentions?: { max: number; windowMs: number }
 }
+
+/** Board settings kept in `meta`, changed only through /settings (logged), never by a PUT of the whole meta. */
+const SETTINGS_KEYS = ['responder', 'context', 'agentTurns'] as const
 
 /** One project the owner allowed studio for, resolved at startup — never taken from a board or a request. */
 export interface StudioProject {
@@ -217,6 +229,87 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     }
     return { author: isAuthor(raw) ? raw : undefined }
   }
+  // ---- Several agents on one board (docs/canvas.md "Several agents on one board") ----
+  const feedback = opts.feedback ?? new MemoryFeedbackStore()
+  /** Agent names this server has seen sign a change or wait (local named agents are not in the access list). */
+  const seenNames = new Set<string>()
+  const remember = (n: string | undefined) => {
+    if (n && seenNames.size < 500) seenNames.add(n)
+  }
+  /** Names an @mention can resolve to on this board: tokens / OAuth clients, agents seen here, holders, the responder, studio. */
+  const knownAgents = (id: string, g?: Grant): string[] => {
+    const b = store.get(id)
+    const onBoard = new Set<string>([LOCAL_AGENT])
+    if (b) {
+      for (const n of [...store.watcherNames(id), ...Object.keys(store.watcherSeen(id))]) onBoard.add(n)
+      for (const h of holdersOf(b.meta)) onBoard.add(h.holder.agent)
+      const r = responderName(responderOf(b.meta))
+      if (r) onBoard.add(r)
+      for (const it of Object.values(b.items)) if (it.type === 'comment' && it.createdBy === 'agent' && typeof it.data?.by === 'string') onBoard.add(it.data.by)
+    }
+    // an agent token learns only the names active on this board; the person (and this machine) every connected agent
+    if (g && g.as === 'agent') return [...onBoard]
+    for (const n of seenNames) onBoard.add(n)
+    for (const a of access.list()) if (!a.revokedAt && a.via !== 'browser') onBoard.add(a.name)
+    return [...onBoard]
+  }
+  const maxTurns = (b: Board): number => {
+    const v = Number(b.meta?.agentTurns)
+    if (Number.isInteger(v) && v >= 1 && v <= 100) return v
+    return opts.agentTurns ?? (Number(process.env.UNPROSE_AGENT_TURNS) || DEFAULT_AGENT_TURNS)
+  }
+  /** Stamp who each comment is for (data.to, data.route, mentions, the loop guard). */
+  const routed = (board: Board, ops: Op[], author: Author): Op[] => stampRouting(board, ops, knownAgents(board.id), new Date().toISOString(), (b, o) => applyOps(b, o, author).board, maxTurns(board))
+  const mentionLimit = opts.agentMentions ?? { max: Number(process.env.UNPROSE_AGENT_MENTIONS) || 20, windowMs: 10 * 60_000 }
+  const mentionLog = new Map<string, number[]>()
+  /** The rate limit on agent-to-agent @mentions (per agent): 429 past it. */
+  const checkMentionRate = (ops: Op[], author: Author, by: string | undefined) => {
+    if (author !== 'agent') return
+    const me = by ?? LOCAL_AGENT
+    const asks = ops.filter((op) => op.kind === 'add' && op.item.type === 'comment' && typeof op.item.data?.mention === 'string' && !sameAgent(op.item.data.mention as string, me)).length
+    if (!asks) return
+    const now = Date.now()
+    const key = me.toLowerCase()
+    const recent = (mentionLog.get(key) ?? []).filter((t) => now - t < mentionLimit.windowMs)
+    if (recent.length + asks > mentionLimit.max) {
+      const wait = Math.ceil((mentionLimit.windowMs - (now - (recent[0] ?? now))) / 1000)
+      throw new HttpError(429, `${displayName(me)} has asked other agents ${recent.length} times in the last ${Math.round(mentionLimit.windowMs / 60000)} minutes (the limit is ${mentionLimit.max}); wait ${wait}s, or ask the person to step in`)
+    }
+    mentionLog.set(key, [...recent, ...Array.from({ length: asks }, () => now)])
+  }
+  /** A board as this caller may see it: holders without this machine's name and paths for anyone not on this machine. */
+  const viewOf = (g: Grant, b: Board): Board => (g.kind === 'local' ? b : { ...b, meta: redactHolders(b.meta) })
+  /** The board's settings as /settings returns them. */
+  const settingsOf = (g: Grant, b: Board, req: http.IncomingMessage) => {
+    const meta = viewOf(g, b).meta
+    const r = responderOf(b.meta)
+    const watching = new Set(store.watcherNames(b.id))
+    const seen = store.watcherSeen(b.id)
+    const holders = holdersOf(meta)
+    return {
+      responder: r ?? null,
+      answeredBy: responderLabel(r),
+      context: contextOf(b.meta) ?? null,
+      agentTurns: maxTurns(b),
+      holders,
+      suggestion: !r && soleHolder(b.meta) && !sameAgent(soleHolder(b.meta), LOCAL_AGENT) ? soleHolder(b.meta) : undefined,
+      agents: knownAgents(b.id, g)
+        .sort((a, z) => (a === LOCAL_AGENT ? -1 : z === LOCAL_AGENT ? 1 : a.localeCompare(z)))
+        .map((name) => ({ name, label: displayName(name), watching: watching.has(name), ...(seen[name] ? { seen: seen[name] } : {}), holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
+      you: agentName(req, g) ?? (g.as === 'browser' ? g.name : undefined),
+    }
+  }
+  /** After a rename on the agents page: the boards naming that agent (responder, holders) follow. */
+  const renameOnBoards = (from: string, to: string) => {
+    for (const b of store.list()) {
+      const m = renameInMeta(b.meta, from, to)
+      if (!m) continue
+      const patch = Object.fromEntries(['responder', 'diagrams', 'workflow'].filter((k) => JSON.stringify(m[k]) !== JSON.stringify(b.meta?.[k])).map((k) => [k, m[k]]))
+      if (Object.keys(patch).length) store.setMeta(b.id, patch, 'user', `renamed agent ${from} → ${to}`)
+    }
+  }
+  const feedbackLog = new Map<string, number[]>()
+
   const webDist = opts.webDist ?? WEB_DIST
   // read once per server; the notes do not change while it runs
   let cachedRelease: Release | undefined
@@ -374,11 +467,11 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     // remote-agents routes set their own headers (OAuth endpoints are CORS-open, the page API is same-origin only)
     let authResult: Awaited<ReturnType<AccessService['authenticate']>> | undefined
     const auth = async () => (authResult ??= await access.authenticate(req))
-    if (await accessRoute(req, res, url, method, { access, publicOrigin, projects: () => (hasProjects(store) ? store.projects().map((p) => ({ id: p.id, name: p.name })) : []) }, auth)) return
+    if (await accessRoute(req, res, url, method, { access, publicOrigin, projects: () => (hasProjects(store) ? store.projects().map((p) => ({ id: p.id, name: p.name })) : []), onRename: renameOnBoards, feedback: () => feedback.list() }, auth)) return
 
     res.setHeader('access-control-allow-origin', '*')
     res.setHeader('access-control-allow-headers', 'content-type, authorization, mcp-protocol-version, mcp-session-id, x-unprose-agent')
-    res.setHeader('access-control-allow-methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    res.setHeader('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
     res.setHeader('access-control-expose-headers', 'www-authenticate, mcp-session-id')
     if (method === 'OPTIONS') return void res.writeHead(204).end()
 
@@ -409,6 +502,31 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         })
       }
       if (parts[1] === 'update') return updateRoute(req, res, method, parts[2], url)
+      // ---- Feedback about Unprose itself (docs/canvas.md "Feedback") ----
+      if (parts[1] === 'feedback' && !parts[2]) {
+        if (method === 'POST') {
+          const body = (await readBody(req)) as { text?: unknown; board?: unknown; about?: unknown }
+          const text = typeof body.text === 'string' ? body.text.trim() : ''
+          if (!text) throw new HttpError(400, 'text is required: what was hard, what should change, what you missed')
+          if (text.length > 4000) throw new HttpError(400, 'text is longer than 4000 characters')
+          const board = typeof body.board === 'string' && body.board ? body.board : undefined
+          if (board && (!store.get(board) || !visible(grant, board))) throw new HttpError(404, `board ${board} not found`)
+          const about = Array.isArray(body.about) ? body.about.filter((a): a is string => typeof a === 'string').slice(0, 20) : undefined
+          const by = grant.as ? grant.name : (agentName(req, grant) ?? LOCAL_AGENT)
+          const now = Date.now()
+          const recent = (feedbackLog.get(by) ?? []).filter((t) => now - t < 10 * 60_000)
+          if (recent.length >= 30) throw new HttpError(429, 'thanks — that is a lot of feedback for ten minutes; send the rest later')
+          feedbackLog.set(by, [...recent, now])
+          const rec: FeedbackRecord = { id: newId('fb'), at: new Date(now).toISOString(), by, via: grant.kind, text, ...(board ? { board } : {}), ...(about?.length ? { about } : {}) }
+          feedback.append(rec)
+          return json(res, 201, { ok: true, id: rec.id })
+        }
+        if (method === 'GET') {
+          if (grant.kind !== 'local' && !grant.manage) throw new HttpError(403, 'feedback is read on the canvas machine (a local agent or page) or by a page allowed to manage agents')
+          return json(res, 200, { feedback: feedback.list() })
+        }
+        throw new HttpError(405, 'method not allowed')
+      }
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]
@@ -417,11 +535,11 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (method === 'GET') {
           const only = projectOrError(res, () => resolveProject(store, req, url.searchParams.get('project') ?? undefined))
           if (only === null) return
-          return json(res, 200, { boards: store.list().filter((b) => (!only || projectOf(b.id) === only) && visible(grant, b.id)).map((b) => ({ ...summary(b), project: projectOf(b.id) })) })
+          return json(res, 200, { boards: store.list().filter((b) => (!only || projectOf(b.id) === only) && visible(grant, b.id)).map((b) => ({ ...summary(viewOf(grant, b)), project: projectOf(b.id) })) })
         }
         if (method === 'POST') {
           needWrite(grant)
-          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string }
+          const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string; answeredBy?: unknown }
           const placed = projectForNewBoard(grant, body.project)
           if (placed.error) throw new HttpError(403, placed.error)
           const project = projectOrError(res, () => resolveProject(store, req, placed.project, body.projectRoot))
@@ -435,8 +553,12 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
             items = render(body.kind, parsed.data)
           }
           const who = actor(req, grant, body.author, 'agent')
-          const board = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...(project ? { project } : {}), ...(who.by ? { by: who.by } : {}) }, who.author)
-          return json(res, 201, { board, project: hasProjects(store) ? store.projectOf(board.id) : 'personal' })
+          // a board an agent draws from its files is answered by that agent (docs/canvas.md "Several agents on one board")
+          const answeredBy = body.answeredBy === 'me' && who.author === 'agent' && who.by ? { responder: { mode: 'agent', agent: who.by, by: who.by, at: new Date().toISOString() } } : {}
+          const meta = body.meta || Object.keys(answeredBy).length ? { ...(body.meta ?? {}), ...answeredBy } : undefined
+          const board = store.create({ title: body.title, kind: body.kind, meta, items, ...(project ? { project } : {}), ...(who.by ? { by: who.by } : {}) }, who.author)
+          remember(who.author === 'agent' ? who.by : undefined)
+          return json(res, 201, { board: viewOf(grant, board), project: hasProjects(store) ? store.projectOf(board.id) : 'personal' })
         }
         throw new HttpError(405, 'method not allowed')
       }
@@ -448,10 +570,23 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       if (method !== 'GET' && sub !== 'template') needWrite(grant)
 
       if (!sub) {
-        if (method === 'GET') return json(res, 200, { board })
+        if (method === 'GET') return json(res, 200, { board: viewOf(grant, board) })
         if (method === 'PUT' || method === 'PATCH') {
           const body = (await readBody(req)) as { title?: string; meta?: Record<string, unknown> }
-          return json(res, 200, { board: store.updateBoard(id, body) })
+          const patch: { title?: string; meta?: Record<string, unknown> } = {}
+          if (typeof body.title === 'string') patch.title = body.title
+          if (body.meta && typeof body.meta === 'object') {
+            // the file holders are stamped from the caller; the board settings change only through /settings
+            const w = actor(req, grant, 'agent', 'agent')
+            const meta = stampHolders(board.meta, body.meta, w.by ?? LOCAL_AGENT, new Date().toISOString())
+            for (const k of SETTINGS_KEYS) {
+              if (board.meta?.[k] !== undefined) meta[k] = board.meta[k]
+              else delete meta[k]
+            }
+            patch.meta = meta
+            remember(w.by)
+          }
+          return json(res, 200, { board: viewOf(grant, store.updateBoard(id, patch)) })
         }
         if (method === 'DELETE') return json(res, 200, { deleted: store.delete(id) })
         throw new HttpError(405, 'method not allowed')
@@ -464,7 +599,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (!isAuthor(body.author) && grant.as !== 'agent') throw new HttpError(400, "author must be 'agent' or 'user'")
         const who = actor(req, grant, body.author, 'agent')
         // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity")
-        const ops = stampAttribution(board, assertOps(body.ops), who.by)
+        const ops = routed(board, stampAttribution(board, assertOps(body.ops), who.by), who.author)
+        checkMentionRate(ops, who.author, who.by)
+        if (who.author === 'agent') remember(who.by)
         const change = store.apply(id, ops, who.author, body.note, who.by)
         return json(res, 200, { seq: change.seq, change })
       }
@@ -490,7 +627,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           if (e instanceof ProposalError) throw new HttpError(e.status, e.message)
           throw e
         }
-        const change = store.apply(id, p.ops, who.author, `proposed an edit to ${p.file} (+${p.added} −${p.removed})`, who.by)
+        const change = store.apply(id, routed(store.get(id)!, p.ops, who.author), who.author, `proposed an edit to ${p.file} (+${p.added} −${p.removed})`, who.by)
         return json(res, 201, { seq: change.seq, comment: p.commentId, file: p.file, diff: p.diff, about: p.about, added: p.added, removed: p.removed, offsets: p.offsets })
       }
       if (sub === 'focus' && method === 'POST') {
@@ -540,10 +677,65 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const wake = wakeRaw as Wake
         const f = authorFilter(req, grant, url.searchParams.get('author'))
         const name = agentName(req, grant)
-        const changes = await store.waitFor(id, since, timeout, f.author, { quietMs, wake, match: f.match, who: name })
+        remember(name)
+        // only what is for this agent wakes it and comes back (docs/canvas.md "Several agents on one board"):
+        // the board's responder, @mentions, proposals to the files it holds; `to=all` listens to everything
+        const me = name ?? LOCAL_AGENT
+        const all = url.searchParams.get('to') === 'all'
+        const fromAuthor = (c: Change) => (!f.author || c.author === f.author) && (!f.match || f.match(c))
+        const now = () => store.get(id)!
+        const forMe = (c: Change) => all || addressedTo(now(), c, me)
+        const match = (c: Change) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c)
+        const changes = await store.waitFor(id, since, timeout, undefined, { quietMs, wake, match, who: name })
         const lines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
         const cur = readByAgent(id, changes, f.author, name)
-        return json(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines })
+        const last = changes.length ? changes[changes.length - 1].seq : cur.seq
+        const notForYou = all ? 0 : store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c) && !forMe(c)).length
+        const r = responderOf(cur.meta)
+        return json(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines, notForYou, answeredBy: responderLabel(r), responder: r ?? null, context: contextOf(cur.meta) ?? null })
+      }
+      // ---- Board settings: who answers, the context note, the loop guard (docs/canvas.md "Several agents on one board") ----
+      if (sub === 'settings') {
+        if (method === 'GET') return json(res, 200, settingsOf(grant, board, req))
+        if (method !== 'PUT' && method !== 'PATCH' && method !== 'POST') throw new HttpError(405, 'method not allowed')
+        const body = (await readBody(req)) as { responder?: unknown; answeredBy?: unknown; context?: unknown; agentTurns?: unknown; author?: unknown }
+        if (body.author !== undefined && !isAuthor(body.author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        const w = actor(req, grant, body.author, 'user')
+        const at = new Date().toISOString()
+        const by = w.by ?? (w.author === 'agent' ? LOCAL_AGENT : undefined)
+        const patch: Record<string, unknown> = {}
+        const notes: string[] = []
+        const asked = 'responder' in body ? body.responder : 'answeredBy' in body ? body.answeredBy : undefined
+        if (asked !== undefined) {
+          const r = parseResponder(asked, w.author === 'agent' ? (w.by ?? LOCAL_AGENT) : undefined, by, at)
+          if (r === undefined) throw new HttpError(400, "answeredBy must be 'any', 'studio', 'me' (an agent) or an agent's name")
+          const cur = responderOf(board.meta)
+          if ((r?.mode ?? 'default') !== (cur?.mode ?? 'default') || !sameAgent(r?.agent ?? '', cur?.agent ?? '') || (r?.agent ?? '') !== (cur?.agent ?? '')) {
+            patch.responder = r ? Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined)) : null
+            notes.push(r ? `set "Answered by" to ${responderLabel(r)}` : 'set "Answered by" back to the default (studio and any agent)')
+          }
+        }
+        if ('context' in body) {
+          const raw = body.context && typeof body.context === 'object' ? (body.context as { text?: unknown }).text : body.context
+          if (raw !== null && raw !== undefined && typeof raw !== 'string') throw new HttpError(400, 'context must be a text (markdown), or null to clear it')
+          const text = (raw ?? '').replace(/\r\n/g, '\n').trim()
+          if (text.length > CONTEXT_MAX) throw new HttpError(400, `the context is longer than ${CONTEXT_MAX} characters — keep it short and link to the notes (docs/meetings/…md)`)
+          if (text !== (contextOf(board.meta)?.text ?? '')) {
+            patch.context = text ? { text, ...(by ? { by } : {}), at } : null
+            notes.push(text ? 'updated the board context' : 'cleared the board context')
+          }
+        }
+        if ('agentTurns' in body) {
+          const v = body.agentTurns === null ? null : Number(body.agentTurns)
+          if (v !== null && !(Number.isInteger(v) && v >= 1 && v <= 100)) throw new HttpError(400, 'agentTurns must be a whole number from 1 to 100, or null for the default')
+          if (v !== (typeof board.meta?.agentTurns === 'number' ? board.meta.agentTurns : null)) {
+            patch.agentTurns = v
+            notes.push(v ? `agents may now post ${v} messages in a row in a thread` : 'the loop guard is back to its default')
+          }
+        }
+        if (!Object.keys(patch).length) return json(res, 200, { seq: board.seq, ...settingsOf(grant, board, req) })
+        const change = store.setMeta(id, patch, w.author, notes.join('; '), w.by)
+        return json(res, 200, { seq: change.seq, ...settingsOf(grant, store.get(id)!, req) })
       }
       // ---- Kanban: cards as an event source (see docs/canvas.md) ----
       if (sub === 'cards') {
@@ -759,16 +951,16 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     const msg = JSON.stringify(e satisfies WsMessage)
     for (const ws of e.type === 'access-changed' ? serverSockets : approvers) if (ws.readyState === WebSocket.OPEN) ws.send(msg)
   })
-  const presence = (id: string): WsMessage => ({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id) })
+  const presence = (id: string): WsMessage => ({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id), seen: store.watcherSeen(id) })
   const onBoardSocket = (ws: WebSocket, grant: Grant, boardId: string) => {
     const board = { id: boardId }
     {
       if (grant.kind === 'local') localSockets.add(ws)
       const send = (msg: WsMessage) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg))
-      send({ type: 'hello', board: store.get(board.id)! })
+      send({ type: 'hello', board: viewOf(grant, store.get(board.id)!) })
       // Tell the person whether an agent (which ones) is currently waiting on this board.
       send(presence(board.id))
-      const offChange = store.subscribe(board.id, (change) => send({ type: 'change', change }))
+      const offChange = store.subscribe(board.id, (change) => send({ type: 'change', change: change.meta && grant.kind !== 'local' ? { ...change, meta: redactHolders(change.meta) } : change }))
       const offPresence = store.onPresence((id) => {
         if (id === board.id) send(presence(board.id))
       })

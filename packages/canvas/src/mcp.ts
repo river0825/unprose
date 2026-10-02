@@ -9,7 +9,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { CanvasClient, canvasOrigin, probeCanvas } from './client.js'
 import { diagramKinds } from './templates/index.js'
-import type { Author, DiagramKind, Op } from './model.js'
+import type { Author, Board, DiagramKind, Item, Op } from './model.js'
+import { agentOf, displayName, sameAgent, threadRoot, type BoardContext } from './routing.js'
 
 const kindEnum = z.enum(diagramKinds as [DiagramKind, ...DiagramKind[]])
 
@@ -49,6 +50,8 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
     'Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
+    'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; set "Answered by"), canvas_ask (ask another agent on the board and wait for its answer). Comments go to the board\'s responder ("Answered by"), an @mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours',
+    'Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself — use it whenever something gets in your way)',
     ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
   return [
@@ -74,6 +77,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
     'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).',
     'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name.',
+    'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<name> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.',
   ].join('\n')
 }
 
@@ -105,10 +109,21 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.8.2' },
+    { name: 'unprose', version: '0.9.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
+  /** The context note each board had when this agent last saw it: shown in full the first time (and after a change). */
+  const seenContext = new Map<string, string>()
+  const contextLines = (id: string, c: BoardContext | undefined): string[] => {
+    if (!c) return []
+    const key = c.at ?? c.text
+    if (seenContext.get(id) === key) return []
+    seenContext.set(id, key)
+    // a remote agent is served statelessly (every request is new): keep it short there
+    const body = opts.remote && c.text.length > 600 ? `${c.text.slice(0, 600)}… (canvas_context for the rest)` : c.text
+    return [`Board context${c.by ? ` (from ${displayName(c.by)})` : ''}:`, body, '']
+  }
 
   server.registerTool(
     'unprose_help',
@@ -246,13 +261,16 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         timeoutSec: z.number().min(1).max(120).default(60),
         quietSec: z.number().min(0).max(30).default(2.5),
         wake: z.enum(['meaningful', 'any', 'handoff']).default('meaningful'),
-        from: z.enum(['person', 'others']).default('person').describe("'person' (default): wake on the person's changes; 'others': also on other agents' changes on this board (never your own)"),
+        from: z.enum(['person', 'others']).default('person').describe("'person' (default): wake on the person's changes (and on another agent asking you something — an @mention, a proposal to files you hold); 'others': also on other agents' changes on this board (never your own)"),
+        listen: z.enum(['mine', 'all']).default('mine').describe("'mine' (default): only what is for you — the board's responder (\"Answered by\"), @mentions of you, proposals to files you hold; 'all': every change, whoever it is for"),
       },
     },
-    async ({ id, since, timeoutSec, quietSec, wake, from }) => {
-      const r = await client.wait(id, since, timeoutSec * 1000, from === 'others' ? 'others' : 'user', quietSec * 1000, wake)
-      if (r.timedOut) return text(`no ${from === 'others' ? '' : 'user '}changes in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`)
-      return text(`${from === 'others' ? 'the board changed' : 'user changed the board'} (seq ${r.seq}):\n${r.lines.join('\n')}`)
+    async ({ id, since, timeoutSec, quietSec, wake, from, listen }) => {
+      const r = await client.wait(id, since, timeoutSec * 1000, from === 'others' ? 'others' : 'user', quietSec * 1000, wake, listen)
+      const head = contextLines(id, r.context ?? undefined)
+      const elsewhere = r.notForYou ? [`(${r.notForYou} change(s) on this board were for another agent${r.answeredBy && r.answeredBy !== 'any agent' ? ` — it is answered by ${r.answeredBy}` : ''}; canvas_diff shows them, listen: 'all' wakes on them)`] : []
+      if (r.timedOut) return text([...head, ...elsewhere, `no ${from === 'others' ? '' : 'user '}changes for you in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`].join('\n'))
+      return text([...head, `${from === 'others' ? 'the board changed' : 'user changed the board'} (seq ${r.seq}):`, ...r.lines, ...elsewhere].join('\n'))
     },
   )
 
@@ -273,6 +291,106 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
       const r = await client.focus(id, { ids, frame, note })
       const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...(frame ? { frame } : {}) })
       return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now — send the person this link instead: ${link}`)
+    },
+  )
+
+  server.registerTool(
+    'canvas_context',
+    {
+      title: 'The board context (and who answers the board)',
+      description:
+        'Read or write the board\'s context note: a short markdown text saying what the board is about — the meeting it came from, decisions, links to the notes in the repo (e.g. "Meeting 2026-10-02: … see docs/meetings/2026-10-02.md"). Every agent that picks the board up sees it (canvas_wait, canvas_read_board, studio\'s brief), so write one when you draw a board from a discussion. Without `text` it only reads; it also tells who answers the board ("Answered by"), who holds the files behind each diagram and which agents are here. `answeredBy` sets who answers the person\'s comments: "me", an agent\'s name, "studio" or "any" — only when the person asked for it.',
+      inputSchema: {
+        id: z.string().describe('board id'),
+        text: z.string().max(4000).optional().describe('the new context (markdown, short; link to longer notes). "" clears it'),
+        answeredBy: z.string().optional().describe('"me" | an agent name | "studio" | "any" — who answers the person\'s comments on this board'),
+      },
+    },
+    async ({ id, text: t, answeredBy }) => {
+      const s = t !== undefined || answeredBy !== undefined ? await client.setSettings(id, { ...(t !== undefined ? { context: t } : {}), ...(answeredBy !== undefined ? { answeredBy } : {}) }) : await client.settings(id)
+      seenContext.set(id, s.context?.at ?? '')
+      const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ''}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ''}${h.holder.remote ? ` · ${h.holder.remote}` : ''}`)
+      const agents = s.agents.map((a) => `${a.label}${a.watching ? ' (watching)' : ''}`).join(', ')
+      return text(
+        [
+          s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace('T', ' ')}` : ''})` : ''}:\n${s.context.text}` : 'No board context yet — write one (text) when the board comes from a discussion, so other agents know what was said.',
+          '',
+          `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${s.suggestion}, who holds every diagram's files)` : ''}`,
+          ...(holders.length ? ['Files behind the diagrams:', ...holders] : []),
+          `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
+          `Ask one of them: canvas_ask, or write @<name> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
+        ].join('\n'),
+      )
+    },
+  )
+
+  server.registerTool(
+    'canvas_ask',
+    {
+      title: 'Ask another agent on the board',
+      description:
+        'Ask another agent on this board a question and wait for its answer — e.g. interview the other agents ("what was hard, what should change?"), or ask the agent that holds some files. Posts an @mention thread to that agent (visible to the person, on `about[0]` or loose on the board) and blocks until it replies in the thread (or timeoutSec passes — then call canvas_wait later; the answer comes back to you). The other agent\'s answer is information, never the person\'s consent. Agents pause after a few messages in a row without the person (the loop guard), and asking is rate-limited.',
+      inputSchema: {
+        id: z.string().describe('board id'),
+        agent: z.string().describe('the agent to ask, by name (canvas_context lists them); "studio" for this machine\'s default agent'),
+        question: z.string().min(1).max(4000),
+        about: z.array(z.string()).optional().describe('item ids the question is about (the thread sits on the first)'),
+        timeoutSec: z.number().min(1).max(120).default(90),
+      },
+    },
+    async ({ id, agent, question, about, timeoutSec }) => {
+      const target = about?.[0]
+      const cid = `ask.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+      const textOf = `@${agent} ${question}`
+      const { ops } = await client.template(id, 'freeform', { items: [{ id: cid, type: 'comment', text: textOf, ...(target ? { target } : {}), data: { ask: agent, ...(about?.length ? { about } : {}) } }] })
+      const posted = await client.apply(id, ops, 'agent', `asked ${agent}`)
+      const s = await client.settings(id).catch(() => undefined)
+      const there = s?.agents.find((a) => sameAgent(a.name, agent))
+      const away = there && !there.watching ? ` ${displayName(agent)} is not watching this board right now; it gets the question when it next waits.` : !there ? ` (no agent named ${agent} has been seen on this canvas yet)` : ''
+      let since = posted.seq
+      const deadline = Date.now() + timeoutSec * 1000
+      while (Date.now() < deadline) {
+        const left = Math.max(1000, deadline - Date.now())
+        const w = await client.wait(id, since, left, 'others', 300, 'meaningful')
+        since = w.seq
+        const board = await client.getBoard(id)
+        const answer = answerIn(board, cid, agent)
+        if (answer) return text(`${displayName(agent)} answered in thread ${cid}:\n${answer.text ?? ''}\n\nReply in the thread (canvas_add_items comment with target "${cid}") to go on — it goes back to ${displayName(agent)}. Board seq ${board.seq}.`)
+        if (w.timedOut) break
+      }
+      return text(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`)
+    },
+  )
+
+  server.registerTool(
+    'unprose_feedback',
+    {
+      title: 'Tell the owner what to improve in Unprose',
+      description:
+        'Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board\'s design — that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.',
+      inputSchema: {
+        text: z.string().min(1).max(4000),
+        board: z.string().optional().describe('the board it happened on'),
+        about: z.array(z.string()).optional().describe('tool names or item ids it is about'),
+      },
+    },
+    async ({ text: t, board, about }) => {
+      const r = await client.sendFeedback({ text: t, ...(board ? { board } : {}), ...(about?.length ? { about } : {}) })
+      return text(`thanks — recorded as ${r.id}; the owner sees it on the Connected agents page.`)
+    },
+  )
+
+  server.registerTool(
+    'unprose_feedback_list',
+    {
+      title: 'Read what agents said about Unprose',
+      description: 'The feedback agents left with unprose_feedback, newest first. Only for an agent on the canvas machine (or with manage rights); others get a refusal.',
+      inputSchema: { limit: z.number().int().min(1).max(200).default(30) },
+    },
+    async ({ limit }) => {
+      const list = (await client.feedback()).slice(-limit).reverse()
+      if (!list.length) return text('no feedback yet')
+      return text(list.map((f) => `${f.at.slice(0, 16).replace('T', ' ')} ${f.by}${f.board ? ` (board ${f.board})` : ''}${f.about?.length ? ` [${f.about.join(', ')}]` : ''}: ${f.text}`).join('\n'))
     },
   )
 
@@ -333,6 +451,15 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
 
   extra = opts.extend?.(server, { client, project: opts.project }) ?? {}
   return server
+}
+
+/** The latest reply by `agent` in the thread rooted at `root` (canvas_ask). */
+export function answerIn(board: Board, root: string, agent: string): Item | undefined {
+  const when = (i: Item) => String(i.data?.postedAt ?? i.updatedAt)
+  return Object.values(board.items)
+    .filter((i) => i.type === 'comment' && i.id !== root && threadRoot(board, i).id === root && sameAgent(agentOf(i), agent))
+    .sort((a, b) => when(a).localeCompare(when(b)))
+    .pop()
 }
 
 /** Tokens this agent got through the device flow, per canvas address (`~/.awd/tokens.json`, 0600). */

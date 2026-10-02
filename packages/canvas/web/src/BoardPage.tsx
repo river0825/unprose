@@ -43,6 +43,7 @@ import { PanelResizer, usePanelWidth } from './components/PanelResizer'
 import { isUiElement, uiRemoveOps, uiRemovedIds, uiTextOp, uiUndoOps } from './diagrams/uiProposal'
 import { addWire, isFlowWire, pendingOf, pickEventOp, relabelOp, removeOps, rewireOp, undoOps } from './inspector/pending'
 import { StudioControl } from './components/StudioControl'
+import { ResponderControl } from './components/BoardAgents'
 import { isWorkflowScope } from './diagrams/frame'
 import { FrozenHeaders } from './flow/FrozenHeaders'
 import { captureIds, copySelectionAsImage, imageFileName } from './flow/copyImage'
@@ -1155,6 +1156,7 @@ function Header({
         <span className={`dot ${store.agentWatching ? 'watching' : ''}`} aria-hidden="true" />
         <span className="label">{watchingLabel(store.agentWatching, store.agentNames)}</span>
       </span>
+      {store.board && <ResponderControl board={store.board} watching={store.agentNames} seen={store.agentSeen} onToast={store.toast} />}
       {store.board && <StudioControl boardId={store.board.id} />}
       {handed ? (
         <span className="handed" role="status">

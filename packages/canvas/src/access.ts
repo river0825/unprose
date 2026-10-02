@@ -292,9 +292,12 @@ export class AccessService {
       .sort((a, b) => (a.revokedAt ? 1 : 0) - (b.revokedAt ? 1 : 0) || b.createdAt.localeCompare(a.createdAt))
   }
 
-  /** A unique name among live records: `name`, else `name-2`, `name-3` … ('agent' and 'user' are taken by the roles). */
-  private uniqueName(name: string): string {
-    const taken = new Set(['agent', 'user', ...this.data.agents.filter((r) => !r.revokedAt).map((r) => r.name.toLowerCase())])
+  /**
+   * A unique name among live records: `name`, else `name-2`, `name-3` … ('agent' and 'user' are taken by the roles;
+   * 'studio', 'any' and 'me' mean something in "Answered by" and @mentions).
+   */
+  private uniqueName(name: string, except?: string): string {
+    const taken = new Set(['agent', 'user', 'studio', 'any', 'me', ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => r.name.toLowerCase())])
     if (!taken.has(name.toLowerCase())) return name
     for (let i = 2; ; i++) if (!taken.has(`${name}-${i}`.toLowerCase())) return `${name}-${i}`
   }
@@ -316,6 +319,22 @@ export class AccessService {
     const token = newSecret('unp')
     const rec = this.addRecord({ name: cleanName(input.name, 'agent'), via: 'token', scope: input.scope === 'read' ? 'read' : 'write', ...limits(input), tokenHash: hashSecret(token), createdBy })
     return { agent: this.view_(rec.id), token }
+  }
+
+  /**
+   * Rename an agent (or a browser session): the name its changes are signed with from now on, and the one people
+   * @mention. Earlier changes keep the name they were made with. Returns the old and the new (unique) name.
+   */
+  rename(id: string, raw: unknown): { from: string; to: string } | undefined {
+    const r = this.data.agents.find((a) => a.id === id && !a.revokedAt)
+    if (!r) return undefined
+    const from = r.name
+    const to = this.uniqueName(cleanName(raw, r.name), r.id)
+    if (to === from) return { from, to }
+    r.name = to
+    this.save()
+    this.emit({ type: 'access-changed', at: this.iso() })
+    return { from, to }
   }
 
   revoke(id: string): boolean {

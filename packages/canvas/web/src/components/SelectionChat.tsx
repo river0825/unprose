@@ -13,6 +13,7 @@ import { AgentStatus, SignLine } from './AgentStatus'
 import '../inspector.css'
 import { StudioHint } from './StudioControl'
 import { EditProposal, editOf, signedBy } from './EditProposal'
+import { MentionText, MentionTextarea, isAgentTalk, routeLabel } from './Mention'
 
 interface Props {
   board: Board
@@ -107,6 +108,8 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
     setDraft('')
   }
   const bodyId = `chat-body-${chat.root.id}`
+  // the loop guard tripped: the last message says agents paused here (docs/canvas.md "Several agents on one board")
+  const paused = Boolean(chat.messages[chat.messages.length - 1]?.data?.paused)
   const sign = signFor(chat.root, chat.messages)
   return (
     <li className={`chat-item${open ? ' open' : ''}`}>
@@ -141,6 +144,11 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
             ))}
           </ol>
           <AgentStatus root={chat.root} messages={chat.messages} />
+          {paused && (
+            <p className="agents-paused" role="status">
+              Agents paused — {chat.messages.filter(isAgentTalk).length} agent messages in a row. Reply to let them continue.
+            </p>
+          )}
           <form
             className="chat-reply"
             onSubmit={(e) => {
@@ -151,12 +159,13 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
             <label className="visually-hidden" htmlFor={`reply-${chat.root.id}`}>
               Reply in this chat
             </label>
-            <textarea
+            <MentionTextarea
+              boardId={board.id}
               id={`reply-${chat.root.id}`}
               rows={2}
               value={draft}
-              placeholder="Reply…"
-              onChange={(e) => setDraft(e.target.value)}
+              placeholder={paused ? 'Reply to let the agents continue…' : 'Reply… (@ to bring in another agent)'}
+              onValue={setDraft}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault()
@@ -185,18 +194,30 @@ function Bubble({ m, tag }: { m: Item; tag?: string }) {
   const anchor = anchorOf(m)
   // agents are named when the canvas knows the name (a token, UNPROSE_AGENT_NAME): "codex-laptop", else "Agent"
   const who = mine ? 'You' : (signedBy(m) ?? 'Agent')
+  // a message routed by an @mention says who talks to whom: "codex-b → claude-a"
+  const route = routeLabel(m)
   return (
-    <li className={`chat-msg ${mine ? 'mine' : 'theirs'}`}>
+    <li className={`chat-msg ${mine ? 'mine' : 'theirs'}${isAgentTalk(m) ? ' agent-talk' : ''}`}>
       <div className="chat-who">
-        {who} · {timeAgo(m.updatedAt)}
+        {route ? (
+          <span className="chat-route">
+            {route.from} → {route.to.join(', ') || 'you'}
+          </span>
+        ) : (
+          who
+        )}{' '}
+        · {timeAgo(m.updatedAt)}
         {tag && <span className="insp-tag">{tag}</span>}
+        {m.data?.paused ? <span className="insp-tag">paused</span> : null}
       </div>
       {anchor && (
         <div className="chat-anchor mono" title={anchor.quote}>
           {anchorLabel(anchor)}
         </div>
       )}
-      <div className="chat-bubble">{m.text}</div>
+      <div className="chat-bubble">
+        <MentionText text={m.text ?? ''} mention={typeof m.data?.mention === 'string' ? m.data.mention : undefined} />
+      </div>
     </li>
   )
 }
@@ -228,11 +249,12 @@ function NewChat({ boardId, asks, count, onSend }: { boardId: string; asks: stri
         }}
       >
         <label htmlFor="chat-new-draft">What do you want changed or explained?</label>
-        <textarea
+        <MentionTextarea
+          boardId={boardId}
           id="chat-new-draft"
           value={draft}
-          placeholder="Say what should change, or ask why it is this way."
-          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Say what should change, or ask why it is this way. @ asks one agent."
+          onValue={setDraft}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault()

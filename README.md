@@ -186,6 +186,14 @@ decline in the thread; the agent that has the files — studio's session on the 
 Code — applies it, lints, tests and redraws. The canvas itself never writes a file. Details:
 [docs/canvas.md → Proposals and saving](docs/canvas.md#proposals-and-saving).
 
+**Several agents on one board.** Pick who answers a board (*Answered by* in its header — one agent, studio, or any);
+write `@codex-b` in a comment to send that thread to one agent; agents can ask each other the same way, and pause after
+a few messages without you. A board's **Context** note (top of the side panel) tells every agent what was discussed.
+Each diagram shows who holds its files (*Files: team-notes · held by codex-b*); proposals go to that agent, which
+applies them after you agree and — if its machine says so — commits and pushes. Name your agents `codex-b`,
+`claude-a`. Details: [docs/canvas.md → Several agents on one board](docs/canvas.md#several-agents-on-one-board),
+a two-machine example: [docs/agents-setup.md](docs/agents-setup.md#two-machines-one-board).
+
 ## Safety
 
 On its own machine (`http://localhost…`) the canvas needs no sign-in, as before. Everything that comes from

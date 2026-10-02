@@ -11,12 +11,14 @@ import { pushGraphToCanvas } from './graphCanvas.js'
 const HELP = `awd — small event-driven agent workflows
 
   awd lint    <workflow.yaml>
-  awd graph   <workflow.yaml> [--mermaid | --json | --canvas [http://localhost:4400] [--runtime http://localhost:4311]]
+  awd graph   <workflow.yaml> [--mermaid | --json | --canvas [http://localhost:4400] [--runtime http://localhost:4311] [--applied <proposal thread id>]]
               --canvas draws (or updates) the workflow board and tells it where the runtime is, so the board shows runs live
   awd studio  (--project <dir> | <workflow.yaml>) [--canvas URL] [--model opus|sonnet|fable|haiku] [--permission-mode auto] [--interval 2s] [--max-sessions 3] [--idle-close 30m] [--warm]
               one process per project: every board in it, one Claude session per board (a fork while it is busy)
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
-  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL]
+  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--applied <proposal thread id>]
+              --applied: you applied that proposal (after the person agreed): answers "Applied to <file>" in its thread;
+              UNPROSE_APPLY_COMMIT=1 also commits the file (message links the thread), UNPROSE_APPLY_PUSH=1 pushes
               draws (or refreshes) one diagram frame from its file; the board keeps your layout (docs/diagrams.md)
   awd design  lint <file>                # schema + the EventStorming / Domain Storytelling grammar
   awd design  propose-stories <es | domain-story file> --into <story-map file> --board <…>   # story candidates as pending cards
@@ -83,9 +85,12 @@ function cmdLint(file: string): boolean {
 async function cmdGraph(file: string, flags: Flags) {
   const { def } = loadWorkflow(file)
   if (flags.canvas !== undefined) {
-    const r = await pushGraphToCanvas(def, { canvas: str(flags.canvas), runtime: str(flags.runtime), file })
+    const applied = str(flags.applied)
+    const r = await pushGraphToCanvas(def, { canvas: str(flags.canvas), runtime: str(flags.runtime), file, ...(applied ? { applied } : {}) })
     const n = toGraph(def).nodes.length
-    return console.log(`${c.green('✔')} ${def.name} — workflow.yaml → ${r.base}/b/${r.boardId}  (seq ${r.seq}, ${n} nodes, with block details)`)
+    console.log(`${c.green('✔')} ${def.name} — workflow.yaml → ${r.base}/b/${r.boardId}  (seq ${r.seq}, ${n} nodes, with block details)`)
+    if (r.applied) console.log(`${c.green('✔')} answered "Applied to ${r.applied.file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`)
+    return
   }
   if (flags.json) console.log(JSON.stringify(toGraph(def), null, 2))
   else console.log(toMermaid(def))

@@ -39,7 +39,8 @@ async function resolveBoard(client: CanvasClient, ref: string): Promise<string> 
   const title = ref.slice(6).trim()
   const hit = (await client.listBoards()).find((b) => b.title === title)
   if (hit) return hit.id
-  return (await client.createBoard({ title, kind: 'freeform', author: 'agent' })).id
+  // a board an agent draws from its own files is answered by that agent (docs/canvas.md "Several agents on one board")
+  return (await client.createBoard({ title, kind: 'freeform', author: 'agent', answeredBy: 'me' })).id
 }
 
 export async function drawDesignContent(client: CanvasClient, name: string, content: string, board: string, at?: { x: number; y: number }) {
@@ -61,7 +62,8 @@ export async function drawDesignContent(client: CanvasClient, name: string, cont
   if (grow) ops.push(grow)
   const { seq } = await client.apply(boardId, ops as unknown as Op[], 'agent', `design_draw: ${name}`)
   // meta is replaced whole: keep every other key and every other diagram's entry
-  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source: name, files: { [name]: content } } }
+  // the caller holds this file (the canvas stamps its name; there is no path to record from here)
+  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } }
   await client.updateBoard(boardId, { meta: { ...current.meta, diagrams } })
   return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== 'error'), unresolved: r.unresolvedTraces ?? [] }
 }

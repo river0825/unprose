@@ -127,6 +127,8 @@ export function AgentsPage() {
         )}
       </section>
 
+      {canManage && <FeedbackSection />}
+
       <section className="agents-section" aria-labelledby="new-h">
         <h2 id="new-h">New token</h2>
         {canManage ? (
@@ -145,8 +147,55 @@ export function AgentsPage() {
   )
 }
 
+/** What agents told the owner about Unprose itself (`unprose_feedback`), newest first. */
+function FeedbackSection() {
+  const [items, setItems] = useState<Awaited<ReturnType<typeof accessApi.feedback>>['feedback'] | null>(null)
+  useEffect(() => {
+    accessApi.feedback().then((r) => setItems(r.feedback.slice().reverse())).catch(() => setItems([]))
+  }, [])
+  return (
+    <section className="agents-section" aria-labelledby="feedback-h">
+      <h2 id="feedback-h">Feedback from agents</h2>
+      <p className="muted">
+        What agents found hard or missing in Unprose (they send it with <span className="mono">unprose_feedback</span>). Kept on this machine only.
+      </p>
+      {items === null ? (
+        <p className="muted">Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="muted">Nothing yet.</p>
+      ) : (
+        <ul className="feedback-list">
+          {items.slice(0, 50).map((f) => (
+            <li key={f.id}>
+              <div className="muted">
+                <strong>{f.by}</strong> · {timeAgo(f.at)}
+                {f.board ? <> · board <span className="mono">{f.board}</span></> : null}
+                {f.about?.length ? <> · {f.about.join(', ')}</> : null}
+              </div>
+              <div>{f.text}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function AgentRow({ a, canManage, onChange }: { a: AgentView; canManage: boolean; onChange: () => void }) {
   const [err, setErr] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [name, setName] = useState(a.name)
+  const rename = async () => {
+    const n = name.trim()
+    if (!n || n === a.name) return setRenaming(false)
+    try {
+      await accessApi.rename(a.id, n)
+      setRenaming(false)
+      onChange()
+    } catch (e) {
+      setErr((e as Error).message)
+    }
+  }
   const act = async (forget: boolean) => {
     if (!forget && !confirm(`Revoke ${a.name}? It loses access at once.`)) return
     try {
@@ -160,7 +209,32 @@ function AgentRow({ a, canManage, onChange }: { a: AgentView; canManage: boolean
   return (
     <tr className={a.revokedAt ? 'revoked' : undefined}>
       <td>
-        <strong>{a.name}</strong>
+        {renaming ? (
+          <form
+            className="agent-rename"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void rename()
+            }}
+          >
+            <label className="visually-hidden" htmlFor={`rename-${a.id}`}>
+              New name for {a.name}
+            </label>
+            <input id={`rename-${a.id}`} value={name} autoFocus maxLength={60} placeholder="codex-b" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setRenaming(false)} />
+            <button type="submit" className="small primary">
+              Save
+            </button>
+          </form>
+        ) : (
+          <>
+            <strong>{a.name}</strong>
+            {canManage && !a.revokedAt && (
+              <button type="button" className="link agent-rename-btn" onClick={() => (setName(a.name), setRenaming(true))} aria-label={`Rename ${a.name}`}>
+                Rename
+              </button>
+            )}
+          </>
+        )}
         {a.revokedAt && <span className="badge-revoked"> revoked {timeAgo(a.revokedAt)}</span>}
         {a.manage && <span className="muted"> · manages agents</span>}
       </td>

@@ -57,24 +57,26 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: 'Draw (or refresh) one diagram frame from its file. The board keeps the person\'s layout: items they moved stay put, pending proposals stay, items no longer in the file go. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus).',
+      description: 'Draw (or refresh) one diagram frame from its file. The board keeps the person\'s layout: items they moved stay put, pending proposals stay, items no longer in the file go. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates is answered by you.',
       inputSchema: {
         file: z.string().describe('Path to the diagram file, relative to the project'),
         board: z.string().describe('A board id, or "title:<title>" (found or created in this project)'),
         at: z.object({ x: z.number(), y: z.number() }).optional().describe('Where a NEW frame goes (board coordinates); an existing frame stays where it is'),
+        applied: z.string().optional().describe('The proposal thread (comment id) this redraw applies, after the person agreed: answers "Applied to <file>" there, and commits the file if this machine set UNPROSE_APPLY_COMMIT=1 (pushes with UNPROSE_APPLY_PUSH=1)'),
       },
     },
-    async ({ file, board, at }) =>
+    async ({ file, board, at, applied }) =>
       guard(async () => {
         const f = abs(file)
         const { findings } = lintFile(f)
         const errors = findings.filter((x) => x.severity === 'error')
         if (errors.length) return fail([`not drawn: ${errors.length} lint error(s) in ${file}`, ...errors.map(findingLine)].join('\n'))
-        const r = await drawDesign(f, { board, ...(at ? { at } : {}) })
+        const r = await drawDesign(f, { board, ...(at ? { at } : {}), ...(applied ? { applied } : {}) })
         const notes = findings.filter((x) => x.severity !== 'error')
         return text(
           [
             `✔ ${path.basename(f)} → frame ${r.key} on ${r.base}/b/${r.boardId}?frame=${encodeURIComponent(r.key)} (seq ${r.seq})`,
+            ...(r.applied ? [`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`] : []),
             ...notes.map(findingLine),
             ...unresolvedReport(r.unresolvedTraces),
           ].join('\n'),

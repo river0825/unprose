@@ -102,6 +102,11 @@ export interface Change {
    * person. Absent for the default local agent and the person on this machine.
    */
   by?: string
+  /**
+   * Board settings this change set (docs/canvas.md "Several agents on one board"): the new value of each
+   * `meta` key it changed (`responder`, `context`, `agentTurns`); null = removed. Such a change has no ops.
+   */
+  meta?: Record<string, unknown>
 }
 
 /** Wire messages on the board websocket. */
@@ -109,7 +114,7 @@ export type WsMessage =
   | { type: 'hello'; board: Board }
   | { type: 'change'; change: Change }
   /** `agents`: the names of the agents waiting on this board right now ('agent' for the default local one). */
-  | { type: 'presence'; author: Author; at: string; watching: boolean; agents?: string[] }
+  | { type: 'presence'; author: Author; at: string; watching: boolean; agents?: string[]; /** when each agent last watched this board (ISO), for "<name> is away" */ seen?: Record<string, string> }
   /** Saving this board failed (`ok: false`, keep showing it) or works again (`ok: true`). */
   | { type: 'storage'; ok: boolean; message: string; at: string }
   /**
@@ -295,7 +300,8 @@ const RECEIPTS = new Set(['seenBy', 'seenByAgents', 'agentState'])
 const withoutSeen = (data: Record<string, unknown> | undefined) =>
   JSON.stringify(Object.fromEntries(Object.entries(data ?? {}).filter(([k]) => !RECEIPTS.has(k))))
 
-const PRESENTATION_DATA = new Set(['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend'])
+// routing stamps (docs/canvas.md "Several agents on one board") are the canvas's bookkeeping too
+const PRESENTATION_DATA = new Set(['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend', 'to', 'route', 'mention', 'mentionAt', 'paused', 'postedAt'])
 const GEOMETRY = new Set(['x', 'y', 'w', 'h', 'parent', 'fontSize'])
 
 /** `data` without the keys that are presentation, not meaning: read receipts and how a wire is drawn. */

@@ -177,6 +177,66 @@ the canvas machine, or the person's own Claude Code) applies it after the person
 `409` means the file was redrawn since you read it — read it again and redo the edit. Proposals need a token with the
 *read and draw* scope. Details: [canvas.md → Proposals and saving](canvas.md#proposals-and-saving).
 
+## Two machines, one board
+
+A worked example of several agents on one board ([canvas.md → Several agents on one board](canvas.md#several-agents-on-one-board)).
+
+- **Machine A** runs the canvas (`http://localhost:4400`, reachable from B as `https://canvas.example.com` through a
+  tunnel) and Claude Code with the unprose plugin — maybe studio too.
+- **Machine B** has Codex and the files: `~/src/team-notes` (a git repo with `design/*.yaml` and the meeting
+  notes). Codex took the notes of a meeting and should draw the diagrams and discuss them with you — machine A's
+  Claude has neither the meeting nor the files.
+
+**1. Give Codex a name (machine B).** Pick a short one: `codex-b`.
+
+```toml
+# ~/.codex/config.toml — the stdio server, which pairs with a code by itself
+[mcp_servers.unprose]
+command = "node"
+args = ["/path/to/unprose/scripts/mcp.mjs"]
+env = { AWD_CANVAS_URL = "https://canvas.example.com", UNPROSE_AGENT_NAME = "codex-b", UNPROSE_APPLY_COMMIT = "1", UNPROSE_APPLY_PUSH = "1" }
+```
+
+The first canvas tool call says *"Ask the person to type the code ABCD-EFGH on the canvas"*; type it on any canvas
+page (or **Connected agents → Enter a code**). The token is called `codex-b` (without `UNPROSE_AGENT_NAME` it would be
+`agent on <hostname>` — rename it on **Connected agents → Rename**). The `awd` CLI on machine B uses the same saved
+token for that canvas, so `awd design draw` is signed `codex-b` too. (Or make a token named `codex-b` on Connected
+agents at machine A and set `UNPROSE_TOKEN` on B.)
+
+**2. Codex draws from its repo (machine B).**
+
+```bash
+cd ~/src/team-notes
+awd design lint design/signup.es.yaml
+awd design draw design/signup.es.yaml   --board "title:Meeting 2026-10-02" --canvas https://canvas.example.com
+awd design draw design/scope.story-map.yaml --board "title:Meeting 2026-10-02" --canvas https://canvas.example.com
+```
+
+The board is new, so it is **answered by codex-b**, and every frame records its **holder**: *Files: team-notes ·
+held by codex-b · drawn just now*, with the git remote (machine A's own pages also see *on mbp-b (…/src/team-notes)*).
+
+**3. Codex writes the context** — what the meeting decided and where the notes are — so any agent that picks the
+board up knows: `canvas_context { id, text: "Meeting 2026-10-02 (River, Codex): signup flow. Decided: no e-mail
+confirmation in release 1. Notes: docs/meetings/2026-10-02.md in team-notes" }`. It shows at the top of the
+board's side panel, in `canvas_read_board`, at the top of `canvas_wait` and of studio's briefs.
+
+**4. Discuss.** Codex waits: `canvas_wait { id, since }`. Your comments go to codex-b (the header says *Answered by:
+codex-b*; when Codex is not waiting, *"codex-b is away — your comments wait for it"*). Machine A's Claude (and studio)
+are not woken by them: its `canvas_wait` says *"N change(s) on this board were for another agent"*.
+Want Claude's view on one thing? Write **`@claude-a`** (or `@studio`) in that comment: that thread goes to Claude,
+replies included. Agents can ask each other the same way — `canvas_ask { id, agent: "claude-a", question }` — and
+pause after 6 messages in a row without you.
+
+**5. Saving.** You edit a frame's text in the source dialog (or another agent proposes with `canvas_propose_edit`):
+the proposal goes to **codex-b**, the holder. It explains it in the thread; after **you** agree, Codex applies it to
+`~/src/team-notes/design/signup.es.yaml`, lints and redraws with `--applied <thread id>` — the thread gets
+*"Applied to design/signup.es.yaml — committed 3e81cda and pushed"* (because machine B set `UNPROSE_APPLY_COMMIT=1`
+and `UNPROSE_APPLY_PUSH=1`). Machine A runs `git pull` in its clone of team-notes when it wants the files.
+
+Notes: a person on machine A may change *Answered by* back to studio at any time (logged). A read-only token can read
+the board and the context but not change them. Names are how routing works — rename an agent rather than making a
+second token for it.
+
 ## Codex
 
 Add to `~/.codex/config.toml`:

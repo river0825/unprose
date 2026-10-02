@@ -71,6 +71,11 @@ export const accessApi = {
   agents: () => fetch('/api/access/agents').then((r) => body<{ agents: AgentView[]; requests: AccessRequestView[]; canManage: boolean; oneClick: boolean; store?: string }>(r)),
   create: (input: { name: string; scope: 'read' | 'write'; projects?: string[]; boards?: string[]; publicUrl?: string }) =>
     post('/api/access/agents', input).then((r) => body<{ agent: AgentView; token: string; setup: Setup }>(r)),
+  /** Rename an agent: the name its changes are signed with from now on, and the one people @mention. */
+  rename: (id: string, name: string) =>
+    fetch(`/api/access/agents/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then((r) => body<{ ok: true; from: string; name: string }>(r)),
+  /** What agents said about Unprose (unprose_feedback) — on this machine or a page that manages agents. */
+  feedback: () => fetch('/api/access/feedback').then((r) => body<{ feedback: Array<{ id: string; at: string; by: string; via: string; text: string; board?: string; about?: string[] }> }>(r)),
   revoke: (id: string, forget = false) => fetch(`/api/access/agents/${encodeURIComponent(id)}${forget ? '?forget=1' : ''}`, { method: 'DELETE' }).then((r) => body<{ ok: true }>(r)),
   decide: (id: string, d: { allow: boolean; scope?: 'read' | 'write'; code?: string; manage?: boolean }) => post(`/api/access/requests/${encodeURIComponent(id)}`, d).then((r) => body<{ status: string }>(r)),
   approveCode: (code: string, scope: 'read' | 'write') => post('/api/access/approve', { code, scope }).then((r) => body<{ status: string }>(r)),

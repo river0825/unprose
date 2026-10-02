@@ -187,7 +187,7 @@ export class Studio {
       return
     }
     for (const req of discussRequests(board, changes, c.seq, this.o.model)) await this.enqueueNew(board.id, req)
-    for (const { seq: at, comment } of newUserComments(board, changes, c.seq)) {
+    for (const { seq: at, comment, by } of newUserComments(board, changes, c.seq)) {
       if (!comment.target || board.items[comment.target]?.type !== 'comment') continue // a root: a new chat, above
       const root = rootOf(board, comment.id)
       const text = (comment.text ?? '').trim()
@@ -197,7 +197,8 @@ export class Studio {
       if (chat || queuedNew) {
         // per chat, in order: delivered when its session is idle (never a fork for a follow-up)
         const base = (chat?.req ?? queuedNew!.req) as unknown as DiscussRequest
-        const req: DiscussRequest = { ...base, text, seq: at, followUp: true }
+        const { askedBy: _was, ...rest } = base
+        const req: DiscussRequest = { ...rest, text, seq: at, followUp: true, ...(by ? { askedBy: by } : {}) }
         this.queue.push({ board: board.id, kind: 'followup', session: chat?.session, req: req as unknown as Record<string, unknown> })
         const s = chat && this.sessions[chat.session]
         if (s && !s.pane) await this.receipt(board.id, root, 'starting', chat.session)

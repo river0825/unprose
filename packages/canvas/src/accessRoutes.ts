@@ -16,6 +16,10 @@ export interface AccessRouteContext {
   publicOrigin(req: http.IncomingMessage): string
   /** Projects a local approver can limit a grant to. */
   projects(): Array<{ id: string; name: string }>
+  /** An agent was renamed: boards that name it (responder, file holders) follow (docs/canvas.md "Several agents on one board"). */
+  onRename?(from: string, to: string): void
+  /** What agents said about Unprose (`unprose_feedback`), for the agents page. */
+  feedback?(): unknown[]
 }
 
 type Res = http.ServerResponse
@@ -332,7 +336,21 @@ export async function accessRoute(req: http.IncomingMessage, res: Res, url: URL,
     json(res, 201, { agent: r.agent, token: r.token, setup: setupFor(o, r.token, r.agent.name) })
     return true
   }
+  if (p === '/api/access/feedback' && method === 'GET') {
+    if (!mayManage(req, grant)) return json(res, 403, { error: 'feedback is shown on a page opened on the canvas machine (or one allowed to manage agents)' }), true
+    json(res, 200, { feedback: ctx.feedback?.() ?? [] })
+    return true
+  }
   const one = /^\/api\/access\/agents\/([A-Za-z0-9_-]+)$/.exec(p)
+  if (one && (method === 'PATCH' || method === 'PUT')) {
+    if (!mayManage(req, grant)) return json(res, 403, { error: 'agents can only be renamed on a page opened on the canvas machine (http://localhost…)' }), true
+    const b = await readForm(req)
+    const r = access.rename(one[1], b.name)
+    if (!r) return json(res, 404, { error: 'no such agent (or revoked)' }), true
+    if (r.from !== r.to) ctx.onRename?.(r.from, r.to)
+    json(res, 200, { ok: true, from: r.from, name: r.to })
+    return true
+  }
   if (one && method === 'DELETE') {
     if (!mayManage(req, grant)) return json(res, 403, { error: 'tokens can only be revoked on a page opened on the canvas machine (http://localhost…)' }), true
     const ok = url.searchParams.get('forget') === '1' ? access.remove(one[1]) : access.revoke(one[1])

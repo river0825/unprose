@@ -10,7 +10,8 @@ import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, prop
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
-import { boardByTitle, canvasHeaders, registerProject } from './projects.js'
+import { boardByTitle, canvasHeaders, holderInfo, registerProject } from './projects.js'
+import { afterApplied, type AppliedResult } from './applied.js'
 
 type Flags = Record<string, string | boolean>
 const str = (v: string | boolean | undefined) => (typeof v === 'string' ? v : undefined)
@@ -65,7 +66,7 @@ type Board = { id: string; title: string; kind: string; items: Record<string, Bo
 
 function canvasApi(base: string) {
   return async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders(process.env, base) }, body: body === undefined ? undefined : JSON.stringify(body) })
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${(await res.text()).slice(0, 300)}`)
     return res.json() as Promise<T>
   }
@@ -88,12 +89,19 @@ async function resolveBoard(api: Api, ref: string, projectRoot?: string): Promis
 
 export { frameOf, growFrame, proposalOps }
 
-export interface DrawOptions { board: string; canvas?: string; /** where a NEW frame goes (board coordinates); an existing frame stays where it is */ at?: { x: number; y: number } }
+export interface DrawOptions {
+  board: string
+  canvas?: string
+  /** where a NEW frame goes (board coordinates); an existing frame stays where it is */
+  at?: { x: number; y: number }
+  /** the proposal thread this redraw applies: answers "Applied …" there, and commits if UNPROSE_APPLY_COMMIT=1 (docs/canvas.md) */
+  applied?: string
+}
 
 /** Draw or refresh one diagram frame from its file (docs/diagrams.md §2). */
 export interface UnresolvedTrace { item: string; trace: { from: string; rel: string }; reason: string }
 
-export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[] }> {
+export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult }> {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
   const api = canvasApi(base)
   const abs = path.resolve(file)
@@ -121,9 +129,12 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   if (grow) ops.push(grow)
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design draw: ${source}` })
   // PUT replaces meta whole: keep every other key, and every other diagram's entry.
-  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text } } }
+  // the holder: this agent has the files (the canvas stamps the name and the time; docs/canvas.md "Several agents on one board")
+  const holder = { ...holderInfo(root), ...(opts.applied ? { applied: opts.applied } : {}) }
+  const diagrams = { ...((current.meta?.diagrams as Record<string, unknown> | undefined) ?? {}), [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text }, holder } }
   await api('PUT', `/api/boards/${board.id}`, { meta: { ...current.meta, project: { root }, diagrams } })
-  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces }
+  const applied = opts.applied ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: source }) : undefined
+  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, ...(applied ? { applied } : {}) }
 }
 
 /** "N trace(s) not drawn" lines for a draw, so a link to a missing target is not lost silently (river0825/unprose#6). */
@@ -163,7 +174,7 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     return cmdDesignLint(file)
   }
   if (sub === 'draw') {
-    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y]')
+    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y] [--applied <proposal thread id>]')
     const findings = lintDesign(parseDesignFile(file, fs.readFileSync(file, 'utf8')), file)
     const errors = findings.filter((f) => f.severity === 'error')
     if (errors.length) {
@@ -172,8 +183,10 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     }
     for (const w of findings.filter((f) => f.severity === 'warning' && f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.message}`)
     const at = str(flags.at)?.split(',').map(Number)
-    const r = await drawDesign(file, { board: boardRef, canvas, ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
+    const applied = str(flags.applied)
+    const r = await drawDesign(file, { board: boardRef, canvas, ...(applied ? { applied } : {}), ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
     console.log(`✔ ${path.basename(file)} → frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== 'error').length} note(s) — awd design lint ${file})`)
+    if (r.applied) console.log(`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`)
     for (const line of unresolvedReport(r.unresolvedTraces)) console.warn(line)
     return true
   }

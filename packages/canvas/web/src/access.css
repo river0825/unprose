@@ -307,3 +307,11 @@ button.danger {
     max-height: calc(100vh - var(--access-top, 8px) - 8px);
   }
 }
+
+/* rename an agent; feedback from agents (docs/canvas.md "Several agents on one board", "Feedback") */
+.agent-rename { display: inline-flex; gap: 6px; align-items: center; }
+.agent-rename input { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); color: var(--ink); width: 12em; }
+.agent-rename-btn { margin-left: 8px; font-size: 12px; }
+.feedback-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.feedback-list li { border: 1px solid var(--rule); border-radius: var(--radius); padding: 8px 10px; background: var(--paper); }
+.feedback-list li > div + div { margin-top: 4px; color: var(--ink); }

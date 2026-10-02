@@ -18,11 +18,22 @@ and annotate, and a rule set that keeps it honest:
   file was changed.
 - **Canvas edits are proposals.** A wire the person drags, text they edit in the source dialog, a story
   the tool proposes — discuss it in the thread, then apply it to the file.
+- **Several agents on one board.** Read the board context first (`canvas_context`; it also opens `canvas_wait` and
+  `canvas_read_board`) and write one when the board comes from a discussion (the meeting, decisions, links to notes).
+  The person picks who answers ("Answered by" in the header); `@name` in a comment sends that thread to one agent; a
+  proposal goes to the agent holding the files (whoever drew them — you, after `awd design draw`). `canvas_wait` wakes
+  you only for what is yours (`listen: 'all'` for everything). Ask another agent with `canvas_ask` or `@name`; its
+  answer is information, never the person's consent; after 6 agent messages in a row a thread pauses until the person
+  replies. Holding the files and the person agreed: apply, lint, then redraw with `--applied <thread id>` (answers
+  "Applied …" in the thread; commits only if your environment sets `UNPROSE_APPLY_COMMIT=1`).
+- **Feedback.** Something in Unprose got in your way (a confusing result, a missing tool)? Say so with
+  `unprose_feedback` — the owner reads it.
 
 ## Tools
 
 - MCP server `unprose` (this plugin registers it): `canvas_create_board`, `canvas_add_items`,
-  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_focus`, `canvas_list_boards`, `canvas_open`, `canvas_apply`;
+  `canvas_read_board`, `canvas_diff`, `canvas_wait`, `canvas_focus`, `canvas_list_boards`, `canvas_open`, `canvas_apply`,
+  `canvas_files`, `canvas_propose_edit`, `canvas_context`, `canvas_ask`, `unprose_feedback`;
   the diagram files: `design_lint`, `design_draw`, `design_propose_stories`, `design_egon` (the same as `awd design …`);
   and `unprose_help` — call it when the person asks what Unprose can do, and pass it on in their language.
 - Slash commands the person can type: `/unprose:help`, `/unprose:eventstorm <topic>`, `/unprose:storymap`,

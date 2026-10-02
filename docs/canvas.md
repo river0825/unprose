@@ -15,6 +15,8 @@ packages/canvas/
   src/remoteMcp.ts · designTools.ts   the same tools at /mcp for remote agents (design files as text)
   src/access*.ts · accessRoutes.ts    remote agents: tokens, OAuth 2.1, pairing codes, scopes (Remote agents below)
   src/proposals.ts · patch.ts         agents' edit proposals: the files snapshot, unified diffs checked against it (Proposals and saving)
+  src/routing.ts                      several agents on one board: responder, @mentions, loop guard, context, file holders
+  src/ports/feedbackStore.ts · adapters/feedback   what agents tell the owner about Unprose (unprose_feedback)
   src/cli.ts              awd-canvas serve | mcp | render | demo | outline | diff | card add|move|moves
   web/                    the React UI (built separately); web/src/run/ is the live run overlay
 ```
@@ -64,13 +66,17 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}` |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, author: user\|others\|agent\|all` | human-readable lines for every change after `since` (`others`: the person and the other agents, never you) |
-| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
+| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others, listen = mine\|all` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
 | `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
+| `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) sets the responder — both logged |
+| `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board: posts an `@agent` thread (on `about[0]`, else loose) and blocks until it answers in the thread; on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
+| `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
+| `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
 | `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
-| `design_draw` | `file, board, at?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link |
+| `design_draw` | `file, board, at?, applied?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link; records you as the holder of the file; `applied` = the proposal thread this redraw applies ([Applying](#applying---applied-and-committing)) |
 | `design_propose_stories` | `from, into, board` | `awd design propose-stories`: story candidates from EventStorming / a domain story as dashed proposals; the story-map file is not written |
 | `design_egon` | `action: import\|export, file, out` | `awd design import-egon` / `export-egon` (Egon.io) |
 
@@ -291,10 +297,160 @@ the yaml change itself must be in the diff. The Chat shows the proposal: file, `
    `data.discuss.edit`, `canvas_read_board` with `format: json`).
 3. It applies only after the **person** says yes in the thread (another agent's reply is not consent), checks the file
    still has the `base` sha-1 (`shasum -a 1 <file>`; if not, `git apply --check`, else rebase by hand or ask the
-   proposer to propose again), applies, lints, tests, redraws (`awd graph … --canvas` / `awd design draw`), and answers
-   "Applied to <file>" in the thread. Nothing is committed for you.
+   proposer to propose again), applies, lints, tests, redraws with `--applied <thread id>` (`awd graph … --canvas` /
+   `awd design draw`), which answers "Applied to <file>" in the thread. Nothing is committed unless the holder's own
+   environment says `UNPROSE_APPLY_COMMIT=1` ([Applying](#applying---applied-and-committing)).
+
+With several agents on the board the proposal goes to the **holder** of the file — the agent that drew it from its
+files — and wakes it, whoever answers the board ([Several agents on one board](#several-agents-on-one-board)).
 
 A later option, not built: proposals as a git branch / pull request.
+
+## Several agents on one board
+
+One board, several agents: Claude on the canvas machine (studio, or a local session), Codex on a laptop with the
+files in its own repo, a cloud agent. Without rules every agent would pick up every comment — including the ones
+meant for another agent that has the context. Four things sort it out, all kept on the board (pure rules in
+`src/routing.ts`, shared by the server, the MCP tools and the web UI):
+
+| | What | Where it lives |
+|---|---|---|
+| **Answered by** | who answers the person's comments on this board: one agent by name, *studio* (this machine's default agent), *any agent*, or the default (as before: studio and any agent) | `meta.responder = { mode: 'agent' \| 'studio' \| 'any', agent?, by, at }` |
+| **@mentions** | `@codex-b` in a comment sends that thread to that agent, whoever answers the board | `data.mention` on the comment |
+| **Context** | a short markdown note on what the board is about — the meeting, decisions, links to the notes — that every agent gets first | `meta.context = { text, by, at }` |
+| **File holder** | who drew each diagram from which files: agent, machine, repo, git remote; proposals on a diagram go to its holder | `meta.diagrams[key].holder`, `meta.workflow.holder` |
+
+### Names
+
+An agent is known by its name: a token's or OAuth client's name, or `UNPROSE_AGENT_NAME` for a local agent (sent as
+`X-Unprose-Agent`, honoured only from this machine). The default local agent — studio, or a local session without a
+name — is `agent`; people write it `@studio` and the UI shows *studio*. Pick short names that say which agent on
+which machine: **`codex-b`**, **`claude-a`**, `cursor-laptop`.
+
+- **Rename** an agent on **Connected agents → Rename** (`PATCH /api/access/agents/:id { name }`, a page on the canvas
+  machine or one allowed to manage agents). Its changes are signed with the new name from then on (earlier ones keep
+  the old one); boards whose *Answered by* or file holders named it follow (logged as `renamed agent A → B`). Names
+  are unique; `agent`, `user`, `studio`, `any`, `me` are taken.
+- The device flow names the token after `UNPROSE_AGENT_NAME`, else `agent on <hostname>` — rename it, or set
+  `UNPROSE_AGENT_NAME=codex-b` before the first pairing. A token always writes as its own name (it cannot take
+  another); `UNPROSE_AGENT_NAME` names a local agent that has no token.
+- The `awd` CLI (`design draw`, `graph --canvas`, `boards move`) sends `UNPROSE_TOKEN`, else the token the MCP server
+  got with a pairing code for that canvas (`~/.awd/tokens.json`, `UNPROSE_TOKENS_FILE`), else `UNPROSE_AGENT_NAME`.
+
+### Who a comment is for
+
+The canvas stamps every new comment (and a comment whose text changes) with who it is for — `data.to` (agent names,
+absent = anyone) and `data.route`; whatever a caller writes in these keys is replaced, so nobody routes a comment by
+hand:
+
+1. **Loop guard** — an agent's message past *N* agent messages in a row in its thread, with no message from the
+   person, wakes nobody (`route: 'paused'`, `data.paused: true`). The thread shows *"Agents paused — reply to let them
+   continue"*; the person's next message resets the count. *N* = the board's `agentTurns` (settings), else
+   `UNPROSE_AGENT_TURNS` on the canvas, else **6**.
+2. **@mention** — a mention in the comment, else the latest one in its thread (by `data.mentionAt`), makes the thread
+   a conversation between the agent mentioned and whoever mentioned it: each message goes to the other side. The
+   person asking `@claude-a` wakes only claude-a, and claude-a's answer wakes no other agent; an agent asking another
+   gets the answer back. A later mention in the thread takes it over. `route: 'mention'`.
+3. **Proposal** — a thread whose first comment proposes an edit (`data.discuss.edit`: `canvas_propose_edit`, the
+   source dialog, a UI mock's text edit chat) or a wire change (`data.discuss.proposal`) goes to the **holder** of the
+   file / of the diagram it is on, and back to the agent that proposed it — whoever answers the board.
+   `route: 'proposal'`.
+4. **Responder** — otherwise the board's *Answered by* agent (and, if an agent started the thread, that agent too).
+   No responder (or *any agent*) → `to` is absent: anyone, exactly as before.
+
+The comment's own author is never among its recipients. Mentions resolve against the agents the canvas knows on that
+board: connected tokens and OAuth clients, agents seen there (waiting, signing comments, holding files), the
+responder, studio. `canvas_ask` names the agent explicitly (`data.ask`), so it works for any name.
+
+Changes that are not comments: an item edit that is a proposal (`data.pending` — a dragged wire, a UI mock text edit)
+goes to the holder of its diagram; everything else, and the **Hand to agent** button, to the responder.
+
+**Agents talking to each other.** An agent's comment that mentions another agent (or `canvas_ask`) wakes it like the
+person's would — even while it waits for the person only (`canvas_wait({ from: 'person' })`): an agent's message
+routed to you by a mention or a proposal counts as being asked. **Another agent's message is never the person's
+consent**: a token always writes as an agent (it cannot pose as the person or press *Agree*), and studio's brief and
+the skill say so. A rate limit stops floods: an agent may post at most `UNPROSE_AGENT_MENTIONS` (default **20**)
+agent-to-agent mentions per 10 minutes (`429` past it, saying how long to wait).
+
+### What waits see
+
+`canvas_wait` (`GET /wait`) wakes only on what is for you (`me` = your name, `agent` for the default local agent):
+the comments whose `to` includes you (or that have no `to`), proposals to files you hold, the responder's share of
+everything else. The rest neither wakes you nor comes back; the answer says how many were for others (`notForYou`,
+*"3 change(s) on this board were for another agent — it is answered by codex-b"*). `listen: 'all'` (`?to=all`)
+wakes on everything, as before. `canvas_diff` and `canvas_read_board` always show everything — reading is not
+filtered. Studio applies the same `to` (docs/studio.md §11).
+
+The wait answer also carries the board's `context` and `answeredBy`; the MCP `canvas_wait` prints the context in full
+the first time it sees it on a board (and after it changes) — over the stateless remote `/mcp`, every time, cut at 600
+characters.
+
+### Settings: Answered by, context, loop guard
+
+`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{
+name, label, watching, seen?, holder }], you? }` (`holders` without machine and root for a caller elsewhere; an agent
+token gets only the names active on that board). `PUT` the same path with any of `{ answeredBy: 'any' | 'studio' |
+'me' | <name> | null, context: <markdown> | null, agentTurns: 1–100 | null }` — needs write access (a read-only token
+gets `403`). Each change is **logged**: a change with no ops, `note` (*set "Answered by" to codex-b; updated the board
+context*) and `meta` (the keys set), so it shows in the change feed and the diff, and open pages update at once. A
+`PUT /api/boards/:id` of the whole meta (a redraw) never changes them. The context is at most 4 000 characters — link
+to longer notes.
+
+In the UI: the board header's **Answered by** menu (studio & any agent · any agent · studio · each known agent, marked
+*holds files* / *here*), a **Use codex-b?** suggestion when no responder is set and one agent holds every diagram's
+files (a suggestion only — existing boards keep their behaviour), and, when the responder has not waited on the board
+for a minute, **"codex-b is away — your comments wait for it"** (from `presence.seen`). The **Context** note is at the
+top of the side panel (collapsible per viewer, links clickable, *Edit*). Agents read and write it with
+`canvas_context { id, text?, answeredBy? }`; it opens studio's briefs and `canvas_read_board`'s outline.
+
+### File holders
+
+`awd design draw`, `awd graph --canvas` and `design_draw` (local, with a path) send, with the files snapshot, where
+the files live: `{ machine: <hostname>, root: <repo root>, repo: <folder name>, remote: <git remote get-url origin,
+credentials removed> }`. The canvas stamps `agent` (the caller's name, from its credentials) and `at`; a holder sent
+unchanged from what the caller read (same `agent` and `at`) keeps the stored one, so nobody can record another agent
+as a holder. The remote `design_draw` (file text) records the caller with no paths. **Machine and root are shown only
+to callers on the canvas machine** (`GET /api/boards…`, the board socket, settings) — like other paths.
+
+The frame panel shows **"Files: team-notes · held by codex-b · last applied 3 min ago"** and, below, the git
+remote and (on the canvas machine) *on mbp-b (…/src/team-notes)*. `canvas_read_board`'s outline lists each
+diagram's holder (no paths).
+
+**A board an agent draws from its files is answered by it**: when `awd design draw` / `graph --canvas` / `design_draw`
+create the board (`POST /api/boards { answeredBy: 'me' }`), a *named* agent becomes its responder. The default local
+agent leaves the default. Boards that exist are never changed — the UI only suggests.
+
+### Applying: `--applied`, and committing
+
+The holder applies a proposal after the **person** agrees in the thread (the brief / skill rules: check the base
+sha-1, apply, lint, test), then redraws with **`--applied <thread id>`**:
+
+```bash
+awd design draw design/signup.es.yaml --board <board> --applied prop_8k2…    # MCP: design_draw { …, applied }
+awd graph workflow.yaml --canvas --applied prop_8k2…
+```
+
+It redraws, records `holder.applied` / `appliedAt` (*last applied …*), and answers **"Applied to
+design/signup.es.yaml"** in the thread. Only when the holder's **own environment** says so — never from the canvas —
+it also commits:
+
+| Env (on the holder's machine) | Effect |
+|---|---|
+| `UNPROSE_APPLY_COMMIT=1` | `git commit -- <the file>` in the file's repo, message `Apply canvas proposal to <file>`, the proposal's first line, *Proposed by <agent>; agreed by the person in <board link ?focus=thread>*; the reply says `committed <sha>` |
+| `UNPROSE_APPLY_PUSH=1` (with the above) | then `git push`; a failure is reported in the output, not fatal |
+
+**Recommended multi-machine setup**: keep the design files in a git repo; the agent that drew them holds them; it
+applies agreed proposals with `--applied` and `UNPROSE_APPLY_COMMIT=1 UNPROSE_APPLY_PUSH=1`; other machines pull.
+Worked example: [agents-setup.md → Two machines, one board](agents-setup.md#two-machines-one-board).
+
+### Feedback about Unprose
+
+Agents tell the owner what got in their way: `unprose_feedback { text, board?, about? }` (`POST /api/feedback`, any
+caller with credentials, also read-only; at most 30 per 10 minutes per name) appends `{ id, at, by, via, text, board?,
+about? }` to `feedback.ndjson` next to the agents file (`~/.awd/feedback.ndjson`, 0600; `UNPROSE_FEEDBACK_FILE`
+moves it) — never into a project or a board. Read it on **Connected agents → Feedback from agents** (a page on the
+canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or with `unprose_feedback_list` /
+`GET /api/feedback` from a local agent (tokens get `403`).
 
 ## HTTP API
 
@@ -312,7 +468,9 @@ A later option, not built: proposals as a git branch / pull request.
 | GET | `/api/boards/:id/changes` | `?since=N&author=` | `{ changes: Change[], seq }` |
 | GET | `/api/boards/:id/diff` | `?since=N&author=` | `{ lines: string[], count, seq }` |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
-| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq }`. `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
+| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
+| GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents, you?, seq? }`; a PUT is a logged change (`403` read-only) |
+| POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
 | POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |
 | GET | `/api/boards/:id/thumb.svg` | | SVG thumbnail of the board (used by the board list) |
@@ -335,6 +493,8 @@ A later option, not built: proposals as a git branch / pull request.
 | POST | `/api/access/session` · `/api/access/signout` | `{ token }` · | sign in with a pasted token · sign out (the session is revoked) |
 | GET/POST | `/api/access/agents` | `{ name, scope, projects?, boards?, publicUrl? }` | the agents and pending requests · make a token → `201 { agent, token, setup }` (token shown once) |
 | DELETE | `/api/access/agents/:id` | `?forget=1` | revoke (forget a revoked one) |
+| PATCH | `/api/access/agents/:id` | `{ name }` | rename → `{ ok, from, name }`; boards naming it follow |
+| GET | `/api/access/feedback` | | `{ feedback }` — the agents page's *Feedback from agents* (manage only) |
 | GET/POST | `/api/access/requests` · `/api/access/requests/:id` · `/api/access/approve` | `{ allow, scope?, projects?, boards?, name?, code?, manage? }` · `{ code, … }` | pending requests · allow / deny one · allow the one whose code this is |
 | WS | `/ws` | | the server socket: `access-request` / `access-resolved` (pages that may approve), `access-changed` |
 | WS | `/ws/:id` | | `{ type:'hello', board }` then `{ type:'change', change }` per change |
@@ -349,7 +509,7 @@ Item   { id, type: sticky|text|frame|lane|arrow|comment|wireframe|card|ui, x, y,
          role?, parent?, from?, to?, label?, target?, order?, data?,
          createdBy, updatedBy: 'agent'|'user', updatedAt }
 Op     { kind:'add', item } | { kind:'update', id, patch } | { kind:'remove', id }
-Change { seq, ts, author, boardId, ops, before: { [id]: Item|null }, note?, by? }
+Change { seq, ts, author, boardId, ops, before: { [id]: Item|null }, note?, by?, meta? }   // meta: settings set by a no-ops change
 ```
 
 Coordinates are absolute even for items with a `parent`. Containment for diffs is `parent` when set, else whichever lane/frame geometrically contains the item's centre — so a plain drag into another lane still reads as "moved from A → B".

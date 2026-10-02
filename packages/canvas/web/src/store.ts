@@ -25,6 +25,8 @@ export interface BoardStore {
   agentWatching: boolean
   /** The names of the agents waiting on this board (docs/canvas.md "Remote agents"); 'agent' is the default local one. */
   agentNames: string[]
+  /** When each agent last started or stopped waiting here (ISO) — "<name> is away" (docs/canvas.md "Several agents on one board"). */
+  agentSeen: Record<string, string>
   /** Set while the server cannot save this board (disk gone, permissions…); cleared when saving works again. */
   storageError: string | null
   /** The latest "look here" request (canvas_focus / POST /focus); null once gone to or dismissed. */
@@ -90,6 +92,7 @@ export function useBoard(id: string): BoardStore {
   const [connected, setConnected] = useState(false)
   const [agentWatching, setAgentWatching] = useState(false)
   const [agentNames, setAgentNames] = useState<string[]>([])
+  const [agentSeen, setAgentSeen] = useState<Record<string, string>>({})
   const [storageError, setStorageError] = useState<string | null>(null)
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null)
   const [changes, setChanges] = useState<Change[]>([])
@@ -129,7 +132,9 @@ export function useBoard(id: string): BoardStore {
       setBoard((b) => {
         if (!b) return b
         const { board: next } = applyOps(b, change.ops, change.author, change.ts)
-        return { ...next, seq: change.seq }
+        // a settings change (Answered by, the context) carries the meta keys it set; null removes one
+        const meta = change.meta ? Object.fromEntries(Object.entries({ ...(b.meta ?? {}), ...change.meta }).filter(([, v]) => v !== null && v !== undefined)) : b.meta
+        return { ...next, seq: change.seq, meta }
       })
       if (isBookkeeping(change)) return
       setChanges((cs) => [change, ...cs].slice(0, 300))
@@ -187,6 +192,7 @@ export function useBoard(id: string): BoardStore {
           if (m.author === 'agent') {
             setAgentWatching(Boolean(m.watching))
             setAgentNames(m.watching ? (m.agents ?? []) : [])
+            if (m.seen) setAgentSeen(m.seen)
           }
         } else if (m.type === 'focus') {
           setFocusRequest(m) // only the latest one is kept
@@ -287,6 +293,7 @@ export function useBoard(id: string): BoardStore {
     connected,
     agentWatching,
     agentNames,
+    agentSeen,
     storageError,
     focusRequest,
     clearFocus: () => setFocusRequest(null),

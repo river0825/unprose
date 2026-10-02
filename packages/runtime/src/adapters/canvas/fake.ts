@@ -40,6 +40,16 @@ export class FakeCanvasBoard implements CanvasBoard {
     return id
   }
 
+  /**
+   * Test hook: a named agent writes a comment (an @mention of studio, a reply). `data` stands for what the canvas
+   * stamps (docs/canvas.md "Several agents on one board"): `to`, `route`, `mention`.
+   */
+  agentComment(target: string | undefined, text: string, by: string, data: Record<string, unknown> = {}): string {
+    const id = `${this.snapshot.id}.a${++this.n}`
+    this.push('agent', [{ id, type: 'comment', ...(target ? { target } : {}), text, data: { by, ...data }, createdBy: 'agent' }], by)
+    return id
+  }
+
   private push(author: 'agent' | 'user', items: BoardItem[], by?: string): number {
     const seq = ++this.snapshot.seq
     for (const it of items) this.snapshot.items[it.id] = it

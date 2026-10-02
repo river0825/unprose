@@ -1,6 +1,21 @@
 // Tiny HTTP client for the canvas API — used by the MCP server and the CLI.
 import type { Author, Board, Change, DiagramKind, Item, Op, Wake } from './model.js'
 import type { CardMove } from './diff.js'
+import type { BoardContext, FileHolder, Responder } from './routing.js'
+import type { FeedbackRecord } from './ports/feedbackStore.js'
+
+/** A board's settings (`GET /api/boards/:id/settings`, docs/canvas.md "Several agents on one board"). */
+export interface BoardSettings {
+  responder: Responder | null
+  answeredBy: string
+  context: BoardContext | null
+  agentTurns: number
+  holders: Array<{ key: string; source?: string; holder: FileHolder }>
+  suggestion?: string
+  agents: Array<{ name: string; label: string; watching: boolean; seen?: string; holder: boolean }>
+  you?: string
+  seq?: number
+}
 
 /**
  * The canvas origin from what a person pastes: `http://localhost:4400`, `https://canvas.example.com/`,
@@ -113,7 +128,7 @@ export class CanvasClient {
     const q = project ? `?project=${encodeURIComponent(project)}` : ''
     return this.req<{ boards: Array<Pick<Board, 'id' | 'title' | 'kind' | 'seq' | 'createdAt' | 'updatedAt' | 'meta'> & { items: number; project?: string }> }>('GET', `/api/boards${q}`).then((r) => r.boards)
   }
-  createBoard(input: { title: string; kind: DiagramKind; content?: unknown; items?: Item[]; meta?: Record<string, unknown>; author?: Author; project?: string }) {
+  createBoard(input: { title: string; kind: DiagramKind; content?: unknown; items?: Item[]; meta?: Record<string, unknown>; author?: Author; project?: string; answeredBy?: 'me' }) {
     return this.req<{ board: Board }>('POST', '/api/boards', input).then((r) => r.board)
   }
   projects() {
@@ -153,12 +168,30 @@ export class CanvasClient {
     if (author) q.set('author', author)
     return this.req<{ since: number; seq: number; lines: string[]; count: number }>('GET', `/api/boards/${encodeURIComponent(id)}/diff?${q}`)
   }
-  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake) {
+  /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
+  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake, listen?: 'mine' | 'all') {
     const q = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) })
     if (author) q.set('author', author)
     if (quietMs !== undefined) q.set('quiet', String(quietMs))
     if (wake) q.set('wake', wake)
-    return this.req<{ since: number; seq: number; timedOut: boolean; changes: Change[]; lines: string[] }>('GET', `/api/boards/${encodeURIComponent(id)}/wait?${q}`)
+    if (listen === 'all') q.set('to', 'all')
+    return this.req<{ since: number; seq: number; timedOut: boolean; changes: Change[]; lines: string[]; notForYou?: number; answeredBy?: string; responder?: Responder | null; context?: BoardContext | null }>('GET', `/api/boards/${encodeURIComponent(id)}/wait?${q}`)
+  }
+  /** Who answers the board, its context note, who holds the files, the agents it knows. */
+  settings(id: string) {
+    return this.req<BoardSettings>('GET', `/api/boards/${encodeURIComponent(id)}/settings`)
+  }
+  /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
+  setSettings(id: string, patch: { answeredBy?: string | null; context?: string | null; agentTurns?: number | null }, author: Author = 'agent') {
+    return this.req<BoardSettings>('PUT', `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author })
+  }
+  /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
+  sendFeedback(input: { text: string; board?: string; about?: string[] }) {
+    return this.req<{ ok: true; id: string }>('POST', '/api/feedback', input)
+  }
+  /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
+  feedback() {
+    return this.req<{ feedback: FeedbackRecord[] }>('GET', '/api/feedback').then((r) => r.feedback)
   }
   /** Kanban: column moves since `since` (structured; see cardMoves). */
   cardMoves(id: string, since: number) {

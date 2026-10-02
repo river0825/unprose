@@ -3811,14 +3811,14 @@ var require_content_type = __commonJS({
       return header;
     }
     function qstring(val) {
-      var str = String(val);
-      if (TOKEN_REGEXP.test(str)) {
-        return str;
+      var str2 = String(val);
+      if (TOKEN_REGEXP.test(str2)) {
+        return str2;
       }
-      if (str.length > 0 && !TEXT_REGEXP.test(str)) {
+      if (str2.length > 0 && !TEXT_REGEXP.test(str2)) {
         throw new TypeError("invalid parameter value");
       }
-      return '"' + str.replace(QUOTE_REGEXP, "\\$1") + '"';
+      return '"' + str2.replace(QUOTE_REGEXP, "\\$1") + '"';
     }
     function ContentType(type) {
       this.parameters = /* @__PURE__ */ Object.create(null);
@@ -3904,17 +3904,17 @@ var require_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node4, visitor, path12) {
-      const ctrl = callVisitor(key, node4, visitor, path12);
+    function visit_(key, node4, visitor, path13) {
+      const ctrl = callVisitor(key, node4, visitor, path13);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path12, ctrl);
-        return visit_(key, ctrl, visitor, path12);
+        replaceNode(key, path13, ctrl);
+        return visit_(key, ctrl, visitor, path13);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path12 = Object.freeze(path12.concat(node4));
+          path13 = Object.freeze(path13.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = visit_(i, node4.items[i], visitor, path12);
+            const ci = visit_(i, node4.items[i], visitor, path13);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3925,13 +3925,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path12 = Object.freeze(path12.concat(node4));
-          const ck = visit_("key", node4.key, visitor, path12);
+          path13 = Object.freeze(path13.concat(node4));
+          const ck = visit_("key", node4.key, visitor, path13);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = visit_("value", node4.value, visitor, path12);
+          const cv = visit_("value", node4.value, visitor, path13);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -3952,17 +3952,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node4, visitor, path12) {
-      const ctrl = await callVisitor(key, node4, visitor, path12);
+    async function visitAsync_(key, node4, visitor, path13) {
+      const ctrl = await callVisitor(key, node4, visitor, path13);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path12, ctrl);
-        return visitAsync_(key, ctrl, visitor, path12);
+        replaceNode(key, path13, ctrl);
+        return visitAsync_(key, ctrl, visitor, path13);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path12 = Object.freeze(path12.concat(node4));
+          path13 = Object.freeze(path13.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = await visitAsync_(i, node4.items[i], visitor, path12);
+            const ci = await visitAsync_(i, node4.items[i], visitor, path13);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3973,13 +3973,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path12 = Object.freeze(path12.concat(node4));
-          const ck = await visitAsync_("key", node4.key, visitor, path12);
+          path13 = Object.freeze(path13.concat(node4));
+          const ck = await visitAsync_("key", node4.key, visitor, path13);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = await visitAsync_("value", node4.value, visitor, path12);
+          const cv = await visitAsync_("value", node4.value, visitor, path13);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -4006,23 +4006,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node4, visitor, path12) {
+    function callVisitor(key, node4, visitor, path13) {
       if (typeof visitor === "function")
-        return visitor(key, node4, path12);
+        return visitor(key, node4, path13);
       if (identity.isMap(node4))
-        return visitor.Map?.(key, node4, path12);
+        return visitor.Map?.(key, node4, path13);
       if (identity.isSeq(node4))
-        return visitor.Seq?.(key, node4, path12);
+        return visitor.Seq?.(key, node4, path13);
       if (identity.isPair(node4))
-        return visitor.Pair?.(key, node4, path12);
+        return visitor.Pair?.(key, node4, path13);
       if (identity.isScalar(node4))
-        return visitor.Scalar?.(key, node4, path12);
+        return visitor.Scalar?.(key, node4, path13);
       if (identity.isAlias(node4))
-        return visitor.Alias?.(key, node4, path12);
+        return visitor.Alias?.(key, node4, path13);
       return void 0;
     }
-    function replaceNode(key, path12, node4) {
-      const parent = path12[path12.length - 1];
+    function replaceNode(key, path13, node4) {
+      const parent = path13[path13.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node4;
       } else if (identity.isPair(parent)) {
@@ -4634,10 +4634,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path12, value) {
+    function collectionFromPath(schema, path13, value) {
       let v2 = value;
-      for (let i = path12.length - 1; i >= 0; --i) {
-        const k2 = path12[i];
+      for (let i = path13.length - 1; i >= 0; --i) {
+        const k2 = path13[i];
         if (typeof k2 === "number" && Number.isInteger(k2) && k2 >= 0) {
           const a = [];
           a[k2] = v2;
@@ -4656,7 +4656,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path12) => path12 == null || typeof path12 === "object" && !!path12[Symbol.iterator]().next().done;
+    var isEmptyPath = (path13) => path13 == null || typeof path13 === "object" && !!path13[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -4686,11 +4686,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path12, value) {
-        if (isEmptyPath(path12))
+      addIn(path13, value) {
+        if (isEmptyPath(path13))
           this.add(value);
         else {
-          const [key, ...rest] = path12;
+          const [key, ...rest] = path13;
           const node4 = this.get(key, true);
           if (identity.isCollection(node4))
             node4.addIn(rest, value);
@@ -4704,8 +4704,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path12) {
-        const [key, ...rest] = path12;
+      deleteIn(path13) {
+        const [key, ...rest] = path13;
         if (rest.length === 0)
           return this.delete(key);
         const node4 = this.get(key, true);
@@ -4719,8 +4719,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path12, keepScalar) {
-        const [key, ...rest] = path12;
+      getIn(path13, keepScalar) {
+        const [key, ...rest] = path13;
         const node4 = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node4) ? node4.value : node4;
@@ -4738,8 +4738,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path12) {
-        const [key, ...rest] = path12;
+      hasIn(path13) {
+        const [key, ...rest] = path13;
         if (rest.length === 0)
           return this.has(key);
         const node4 = this.get(key, true);
@@ -4749,8 +4749,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path12, value) {
-        const [key, ...rest] = path12;
+      setIn(path13, value) {
+        const [key, ...rest] = path13;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -4774,13 +4774,13 @@ var require_Collection = __commonJS({
 var require_stringifyComment = __commonJS({
   "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
-    var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
+    var stringifyComment = (str2) => str2.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
       if (/^\n+$/.test(comment))
         return comment.substring(1);
       return indent ? comment.replace(/^(?! *$)/gm, indent) : comment;
     }
-    var lineComment = (str, indent, comment) => str.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str.endsWith(" ") ? "" : " ") + comment;
+    var lineComment = (str2, indent, comment) => str2.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str2.endsWith(" ") ? "" : " ") + comment;
     exports.indentComment = indentComment;
     exports.lineComment = lineComment;
     exports.stringifyComment = stringifyComment;
@@ -4934,16 +4934,16 @@ var require_stringifyString = __commonJS({
       lineWidth: ctx.options.lineWidth,
       minContentWidth: ctx.options.minContentWidth
     });
-    var containsDocumentMarker = (str) => /^(%|---|\.\.\.)/m.test(str);
-    function lineLengthOverLimit(str, lineWidth, indentLength) {
+    var containsDocumentMarker = (str2) => /^(%|---|\.\.\.)/m.test(str2);
+    function lineLengthOverLimit(str2, lineWidth, indentLength) {
       if (!lineWidth || lineWidth < 0)
         return false;
       const limit = lineWidth - indentLength;
-      const strLen = str.length;
+      const strLen = str2.length;
       if (strLen <= limit)
         return false;
       for (let i = 0, start = 0; i < strLen; ++i) {
-        if (str[i] === "\n") {
+        if (str2[i] === "\n") {
           if (i - start > limit)
             return true;
           start = i + 1;
@@ -4960,11 +4960,11 @@ var require_stringifyString = __commonJS({
       const { implicitKey } = ctx;
       const minMultiLineLength = ctx.options.doubleQuotedMinMultiLineLength;
       const indent = ctx.indent || (containsDocumentMarker(value) ? "  " : "");
-      let str = "";
+      let str2 = "";
       let start = 0;
       for (let i = 0, ch = json4[i]; ch; ch = json4[++i]) {
         if (ch === " " && json4[i + 1] === "\\" && json4[i + 2] === "n") {
-          str += json4.slice(start, i) + "\\ ";
+          str2 += json4.slice(start, i) + "\\ ";
           i += 1;
           start = i;
           ch = "\\";
@@ -4973,38 +4973,38 @@ var require_stringifyString = __commonJS({
           switch (json4[i + 1]) {
             case "u":
               {
-                str += json4.slice(start, i);
+                str2 += json4.slice(start, i);
                 const code = json4.substr(i + 2, 4);
                 switch (code) {
                   case "0000":
-                    str += "\\0";
+                    str2 += "\\0";
                     break;
                   case "0007":
-                    str += "\\a";
+                    str2 += "\\a";
                     break;
                   case "000b":
-                    str += "\\v";
+                    str2 += "\\v";
                     break;
                   case "001b":
-                    str += "\\e";
+                    str2 += "\\e";
                     break;
                   case "0085":
-                    str += "\\N";
+                    str2 += "\\N";
                     break;
                   case "00a0":
-                    str += "\\_";
+                    str2 += "\\_";
                     break;
                   case "2028":
-                    str += "\\L";
+                    str2 += "\\L";
                     break;
                   case "2029":
-                    str += "\\P";
+                    str2 += "\\P";
                     break;
                   default:
                     if (code.substr(0, 2) === "00")
-                      str += "\\x" + code.substr(2);
+                      str2 += "\\x" + code.substr(2);
                     else
-                      str += json4.substr(i, 6);
+                      str2 += json4.substr(i, 6);
                 }
                 i += 5;
                 start = i + 1;
@@ -5014,14 +5014,14 @@ var require_stringifyString = __commonJS({
               if (implicitKey || json4[i + 2] === '"' || json4.length < minMultiLineLength) {
                 i += 1;
               } else {
-                str += json4.slice(start, i) + "\n\n";
+                str2 += json4.slice(start, i) + "\n\n";
                 while (json4[i + 2] === "\\" && json4[i + 3] === "n" && json4[i + 4] !== '"') {
-                  str += "\n";
+                  str2 += "\n";
                   i += 2;
                 }
-                str += indent;
+                str2 += indent;
                 if (json4[i + 2] === " ")
-                  str += "\\";
+                  str2 += "\\";
                 i += 1;
                 start = i + 1;
               }
@@ -5030,8 +5030,8 @@ var require_stringifyString = __commonJS({
               i += 1;
           }
       }
-      str = start ? str + json4.slice(start) : json4;
-      return implicitKey ? str : foldFlowLines.foldFlowLines(str, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
+      str2 = start ? str2 + json4.slice(start) : json4;
+      return implicitKey ? str2 : foldFlowLines.foldFlowLines(str2, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
     }
     function singleQuotedString(value, ctx) {
       if (ctx.options.singleQuote === false || ctx.implicitKey && value.includes("\n") || /[ \t]\n|\n[ \t]/.test(value))
@@ -5159,15 +5159,15 @@ ${indent}${start}${value}${end}`;
           return quotedString(value, ctx);
         }
       }
-      const str = value.replace(/\n+/g, `$&
+      const str2 = value.replace(/\n+/g, `$&
 ${indent}`);
       if (actualString) {
-        const test = (tag) => tag.default && tag.tag !== "tag:yaml.org,2002:str" && tag.test?.test(str);
+        const test = (tag) => tag.default && tag.tag !== "tag:yaml.org,2002:str" && tag.test?.test(str2);
         const { compat, tags } = ctx.doc.schema;
         if (tags.some(test) || compat?.some(test))
           return quotedString(value, ctx);
       }
-      return implicitKey ? str : foldFlowLines.foldFlowLines(str, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
+      return implicitKey ? str2 : foldFlowLines.foldFlowLines(str2, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
     }
     function stringifyString(item, ctx, onComment, onChompKeep) {
       const { implicitKey, inFlow } = ctx;
@@ -5319,11 +5319,11 @@ var require_stringify = __commonJS({
       const props = stringifyProps(node4, tagObj, ctx);
       if (props.length > 0)
         ctx.indentAtStart = (ctx.indentAtStart ?? 0) + props.length + 1;
-      const str = typeof tagObj.stringify === "function" ? tagObj.stringify(node4, ctx, onComment, onChompKeep) : identity.isScalar(node4) ? stringifyString.stringifyString(node4, ctx, onComment, onChompKeep) : node4.toString(ctx, onComment, onChompKeep);
+      const str2 = typeof tagObj.stringify === "function" ? tagObj.stringify(node4, ctx, onComment, onChompKeep) : identity.isScalar(node4) ? stringifyString.stringifyString(node4, ctx, onComment, onChompKeep) : node4.toString(ctx, onComment, onChompKeep);
       if (!props)
-        return str;
-      return identity.isScalar(node4) || str[0] === "{" || str[0] === "[" ? `${props} ${str}` : `${props}
-${ctx.indent}${str}`;
+        return str2;
+      return identity.isScalar(node4) || str2[0] === "{" || str2[0] === "[" ? `${props} ${str2}` : `${props}
+${ctx.indent}${str2}`;
     }
     exports.createStringifyContext = createStringifyContext;
     exports.stringify = stringify;
@@ -5358,8 +5358,8 @@ var require_stringifyPair = __commonJS({
       });
       let keyCommentDone = false;
       let chompKeep = false;
-      let str = stringify.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
-      if (!explicitKey && !ctx.inFlow && str.length > 1024) {
+      let str2 = stringify.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+      if (!explicitKey && !ctx.inFlow && str2.length > 1024) {
         if (simpleKeys)
           throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
         explicitKey = true;
@@ -5368,27 +5368,27 @@ var require_stringifyPair = __commonJS({
         if (allNullValues || value == null) {
           if (keyCommentDone && onComment)
             onComment();
-          return str === "" ? "?" : explicitKey ? `? ${str}` : str;
+          return str2 === "" ? "?" : explicitKey ? `? ${str2}` : str2;
         }
       } else if (allNullValues && !simpleKeys || value == null && explicitKey) {
-        str = `? ${str}`;
+        str2 = `? ${str2}`;
         if (keyComment && !keyCommentDone) {
-          str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
+          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
         } else if (chompKeep && onChompKeep)
           onChompKeep();
-        return str;
+        return str2;
       }
       if (keyCommentDone)
         keyComment = null;
       if (explicitKey) {
         if (keyComment)
-          str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
-        str = `? ${str}
+          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
+        str2 = `? ${str2}
 ${indent}:`;
       } else {
-        str = `${str}:`;
+        str2 = `${str2}:`;
         if (keyComment)
-          str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
+          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
       }
       let vsb, vcb, valueComment;
       if (identity.isNode(value)) {
@@ -5404,7 +5404,7 @@ ${indent}:`;
       }
       ctx.implicitKey = false;
       if (!explicitKey && !keyComment && identity.isScalar(value))
-        ctx.indentAtStart = str.length + 1;
+        ctx.indentAtStart = str2.length + 1;
       chompKeep = false;
       if (!indentSeq && indentStep.length >= 2 && !ctx.inFlow && !explicitKey && identity.isSeq(value) && !value.flow && !value.tag && !value.anchor) {
         ctx.indent = ctx.indent.substring(2);
@@ -5448,16 +5448,16 @@ ${ctx.indent}`;
       } else if (valueStr === "" || valueStr[0] === "\n") {
         ws = "";
       }
-      str += ws + valueStr;
+      str2 += ws + valueStr;
       if (ctx.inFlow) {
         if (valueCommentDone && onComment)
           onComment();
       } else if (valueComment && !valueCommentDone) {
-        str += stringifyComment.lineComment(str, ctx.indent, commentString(valueComment));
+        str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(valueComment));
       } else if (chompKeep && onChompKeep) {
         onChompKeep();
       }
-      return str;
+      return str2;
     }
     exports.stringifyPair = stringifyPair;
   }
@@ -5684,31 +5684,31 @@ var require_stringifyCollection = __commonJS({
           }
         }
         chompKeep = false;
-        let str2 = stringify.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+        let str3 = stringify.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
         if (comment2)
-          str2 += stringifyComment.lineComment(str2, itemIndent, commentString(comment2));
+          str3 += stringifyComment.lineComment(str3, itemIndent, commentString(comment2));
         if (chompKeep && comment2)
           chompKeep = false;
-        lines2.push(blockItemPrefix + str2);
+        lines2.push(blockItemPrefix + str3);
       }
-      let str;
+      let str2;
       if (lines2.length === 0) {
-        str = flowChars.start + flowChars.end;
+        str2 = flowChars.start + flowChars.end;
       } else {
-        str = lines2[0];
+        str2 = lines2[0];
         for (let i = 1; i < lines2.length; ++i) {
           const line = lines2[i];
-          str += line ? `
+          str2 += line ? `
 ${indent}${line}` : "\n";
         }
       }
       if (comment) {
-        str += "\n" + stringifyComment.indentComment(commentString(comment), indent);
+        str2 += "\n" + stringifyComment.indentComment(commentString(comment), indent);
         if (onComment)
           onComment();
       } else if (chompKeep && onChompKeep)
         onChompKeep();
-      return str;
+      return str2;
     }
     function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
       const { indent, indentStep, flowCollectionPadding: fcPadding, options: { commentString } } = ctx;
@@ -5751,21 +5751,21 @@ ${indent}${line}` : "\n";
         }
         if (comment)
           reqNewline = true;
-        let str = stringify.stringify(item, itemCtx, () => comment = null);
-        reqNewline || (reqNewline = lines2.length > linesAtValue || str.includes("\n"));
+        let str2 = stringify.stringify(item, itemCtx, () => comment = null);
+        reqNewline || (reqNewline = lines2.length > linesAtValue || str2.includes("\n"));
         if (i < items.length - 1) {
-          str += ",";
+          str2 += ",";
         } else if (ctx.options.trailingComma) {
           if (ctx.options.lineWidth > 0) {
-            reqNewline || (reqNewline = lines2.reduce((sum, line) => sum + line.length + 2, 2) + (str.length + 2) > ctx.options.lineWidth);
+            reqNewline || (reqNewline = lines2.reduce((sum, line) => sum + line.length + 2, 2) + (str2.length + 2) > ctx.options.lineWidth);
           }
           if (reqNewline) {
-            str += ",";
+            str2 += ",";
           }
         }
         if (comment)
-          str += stringifyComment.lineComment(str, itemIndent, commentString(comment));
-        lines2.push(str);
+          str2 += stringifyComment.lineComment(str2, itemIndent, commentString(comment));
+        lines2.push(str2);
         linesAtValue = lines2.length;
       }
       const { start, end } = flowChars;
@@ -5777,11 +5777,11 @@ ${indent}${line}` : "\n";
           reqNewline = ctx.options.lineWidth > 0 && len > ctx.options.lineWidth;
         }
         if (reqNewline) {
-          let str = start;
+          let str2 = start;
           for (const line of lines2)
-            str += line ? `
+            str2 += line ? `
 ${indentStep}${indent}${line}` : "\n";
-          return `${str}
+          return `${str2}
 ${indent}${end}`;
         } else {
           return `${start}${fcPadding}${lines2.join(" ")}${fcPadding}${end}`;
@@ -6113,7 +6113,7 @@ var require_string = __commonJS({
       identify: (value) => typeof value === "string",
       default: true,
       tag: "tag:yaml.org,2002:str",
-      resolve: (str) => str,
+      resolve: (str2) => str2,
       stringify(item, ctx, onComment, onChompKeep) {
         ctx = Object.assign({ actualString: true }, ctx);
         return stringifyString.stringifyString(item, ctx, onComment, onChompKeep);
@@ -6151,7 +6151,7 @@ var require_bool = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:bool",
       test: /^(?:[Tt]rue|TRUE|[Ff]alse|FALSE)$/,
-      resolve: (str) => new Scalar.Scalar(str[0] === "t" || str[0] === "T"),
+      resolve: (str2) => new Scalar.Scalar(str2[0] === "t" || str2[0] === "T"),
       stringify({ source, value }, ctx) {
         if (source && boolTag.test.test(source)) {
           const sv = source[0] === "t" || source[0] === "T";
@@ -6203,7 +6203,7 @@ var require_float = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
-      resolve: (str) => str.slice(-3).toLowerCase() === "nan" ? NaN : str[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
+      resolve: (str2) => str2.slice(-3).toLowerCase() === "nan" ? NaN : str2[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
       stringify: stringifyNumber.stringifyNumber
     };
     var floatExp = {
@@ -6212,7 +6212,7 @@ var require_float = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "EXP",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
-      resolve: (str) => parseFloat(str),
+      resolve: (str2) => parseFloat(str2),
       stringify(node4) {
         const num = Number(node4.value);
         return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node4);
@@ -6223,11 +6223,11 @@ var require_float = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+\.[0-9]*)$/,
-      resolve(str) {
-        const node4 = new Scalar.Scalar(parseFloat(str));
-        const dot = str.indexOf(".");
-        if (dot !== -1 && str[str.length - 1] === "0")
-          node4.minFractionDigits = str.length - dot - 1;
+      resolve(str2) {
+        const node4 = new Scalar.Scalar(parseFloat(str2));
+        const dot = str2.indexOf(".");
+        if (dot !== -1 && str2[str2.length - 1] === "0")
+          node4.minFractionDigits = str2.length - dot - 1;
         return node4;
       },
       stringify: stringifyNumber.stringifyNumber
@@ -6244,7 +6244,7 @@ var require_int = __commonJS({
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
-    var intResolve = (str, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix);
+    var intResolve = (str2, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str2) : parseInt(str2.substring(offset), radix);
     function intStringify(node4, radix, prefix) {
       const { value } = node4;
       if (intIdentify(value) && value >= 0)
@@ -6257,7 +6257,7 @@ var require_int = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "OCT",
       test: /^0o[0-7]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 2, 8, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 2, 8, opt),
       stringify: (node4) => intStringify(node4, 8, "0o")
     };
     var int2 = {
@@ -6265,7 +6265,7 @@ var require_int = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:int",
       test: /^[-+]?[0-9]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 0, 10, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 0, 10, opt),
       stringify: stringifyNumber.stringifyNumber
     };
     var intHex = {
@@ -6274,7 +6274,7 @@ var require_int = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "HEX",
       test: /^0x[0-9a-fA-F]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 2, 16, opt),
       stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
@@ -6327,7 +6327,7 @@ var require_schema2 = __commonJS({
         identify: (value) => typeof value === "string",
         default: true,
         tag: "tag:yaml.org,2002:str",
-        resolve: (str) => str,
+        resolve: (str2) => str2,
         stringify: stringifyJSON
       },
       {
@@ -6344,7 +6344,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:bool",
         test: /^true$|^false$/,
-        resolve: (str) => str === "true",
+        resolve: (str2) => str2 === "true",
         stringify: stringifyJSON
       },
       {
@@ -6352,7 +6352,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:int",
         test: /^-?(?:0|[1-9][0-9]*)$/,
-        resolve: (str, _onError, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str, 10),
+        resolve: (str2, _onError, { intAsBigInt }) => intAsBigInt ? BigInt(str2) : parseInt(str2, 10),
         stringify: ({ value }) => intIdentify(value) ? value.toString() : JSON.stringify(value)
       },
       {
@@ -6360,7 +6360,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:float",
         test: /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$/,
-        resolve: (str) => parseFloat(str),
+        resolve: (str2) => parseFloat(str2),
         stringify: stringifyJSON
       }
     ];
@@ -6368,9 +6368,9 @@ var require_schema2 = __commonJS({
       default: true,
       tag: "",
       test: /^/,
-      resolve(str, onError) {
-        onError(`Unresolved plain scalar ${JSON.stringify(str)}`);
-        return str;
+      resolve(str2, onError) {
+        onError(`Unresolved plain scalar ${JSON.stringify(str2)}`);
+        return str2;
       }
     };
     var schema = [map2.map, seq.seq].concat(jsonScalars, jsonError);
@@ -6402,10 +6402,10 @@ var require_binary = __commonJS({
         if (typeof node_buffer.Buffer === "function") {
           return node_buffer.Buffer.from(src, "base64");
         } else if (typeof atob === "function") {
-          const str = atob(src.replace(/[\n\r]/g, ""));
-          const buffer = new Uint8Array(str.length);
-          for (let i = 0; i < str.length; ++i)
-            buffer[i] = str.charCodeAt(i);
+          const str2 = atob(src.replace(/[\n\r]/g, ""));
+          const buffer = new Uint8Array(str2.length);
+          for (let i = 0; i < str2.length; ++i)
+            buffer[i] = str2.charCodeAt(i);
           return buffer;
         } else {
           onError("This environment does not support reading binary tags; either Buffer or atob is required");
@@ -6416,28 +6416,28 @@ var require_binary = __commonJS({
         if (!value)
           return "";
         const buf = value;
-        let str;
+        let str2;
         if (typeof node_buffer.Buffer === "function") {
-          str = buf instanceof node_buffer.Buffer ? buf.toString("base64") : node_buffer.Buffer.from(buf.buffer).toString("base64");
+          str2 = buf instanceof node_buffer.Buffer ? buf.toString("base64") : node_buffer.Buffer.from(buf.buffer).toString("base64");
         } else if (typeof btoa === "function") {
           let s = "";
           for (let i = 0; i < buf.length; ++i)
             s += String.fromCharCode(buf[i]);
-          str = btoa(s);
+          str2 = btoa(s);
         } else {
           throw new Error("This environment does not support writing binary tags; either Buffer or btoa is required");
         }
         type ?? (type = Scalar.Scalar.BLOCK_LITERAL);
         if (type !== Scalar.Scalar.QUOTE_DOUBLE) {
           const lineWidth = Math.max(ctx.options.lineWidth - ctx.indent.length, ctx.options.minContentWidth);
-          const n2 = Math.ceil(str.length / lineWidth);
+          const n2 = Math.ceil(str2.length / lineWidth);
           const lines2 = new Array(n2);
           for (let i = 0, o = 0; i < n2; ++i, o += lineWidth) {
-            lines2[i] = str.substr(o, lineWidth);
+            lines2[i] = str2.substr(o, lineWidth);
           }
-          str = lines2.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
+          str2 = lines2.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
         }
-        return stringifyString.stringifyString({ comment, type, value: str }, ctx, onComment, onChompKeep);
+        return stringifyString.stringifyString({ comment, type, value: str2 }, ctx, onComment, onChompKeep);
       }
     };
     exports.binary = binary;
@@ -6643,7 +6643,7 @@ var require_float2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
-      resolve: (str) => str.slice(-3).toLowerCase() === "nan" ? NaN : str[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
+      resolve: (str2) => str2.slice(-3).toLowerCase() === "nan" ? NaN : str2[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
       stringify: stringifyNumber.stringifyNumber
     };
     var floatExp = {
@@ -6652,7 +6652,7 @@ var require_float2 = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "EXP",
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
-      resolve: (str) => parseFloat(str.replace(/_/g, "")),
+      resolve: (str2) => parseFloat(str2.replace(/_/g, "")),
       stringify(node4) {
         const num = Number(node4.value);
         return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node4);
@@ -6663,11 +6663,11 @@ var require_float2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:[0-9][0-9_]*)?\.[0-9_]*$/,
-      resolve(str) {
-        const node4 = new Scalar.Scalar(parseFloat(str.replace(/_/g, "")));
-        const dot = str.indexOf(".");
+      resolve(str2) {
+        const node4 = new Scalar.Scalar(parseFloat(str2.replace(/_/g, "")));
+        const dot = str2.indexOf(".");
         if (dot !== -1) {
-          const f = str.substring(dot + 1).replace(/_/g, "");
+          const f = str2.substring(dot + 1).replace(/_/g, "");
           if (f[f.length - 1] === "0")
             node4.minFractionDigits = f.length;
         }
@@ -6687,34 +6687,34 @@ var require_int2 = __commonJS({
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
-    function intResolve(str, offset, radix, { intAsBigInt }) {
-      const sign = str[0];
+    function intResolve(str2, offset, radix, { intAsBigInt }) {
+      const sign = str2[0];
       if (sign === "-" || sign === "+")
         offset += 1;
-      str = str.substring(offset).replace(/_/g, "");
+      str2 = str2.substring(offset).replace(/_/g, "");
       if (intAsBigInt) {
         switch (radix) {
           case 2:
-            str = `0b${str}`;
+            str2 = `0b${str2}`;
             break;
           case 8:
-            str = `0o${str}`;
+            str2 = `0o${str2}`;
             break;
           case 16:
-            str = `0x${str}`;
+            str2 = `0x${str2}`;
             break;
         }
-        const n3 = BigInt(str);
+        const n3 = BigInt(str2);
         return sign === "-" ? BigInt(-1) * n3 : n3;
       }
-      const n2 = parseInt(str, radix);
+      const n2 = parseInt(str2, radix);
       return sign === "-" ? -1 * n2 : n2;
     }
     function intStringify(node4, radix, prefix) {
       const { value } = node4;
       if (intIdentify(value)) {
-        const str = value.toString(radix);
-        return value < 0 ? "-" + prefix + str.substr(1) : prefix + str;
+        const str2 = value.toString(radix);
+        return value < 0 ? "-" + prefix + str2.substr(1) : prefix + str2;
       }
       return stringifyNumber.stringifyNumber(node4);
     }
@@ -6724,7 +6724,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "BIN",
       test: /^[-+]?0b[0-1_]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 2, 2, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 2, 2, opt),
       stringify: (node4) => intStringify(node4, 2, "0b")
     };
     var intOct = {
@@ -6733,7 +6733,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "OCT",
       test: /^[-+]?0[0-7_]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 1, 8, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 1, 8, opt),
       stringify: (node4) => intStringify(node4, 8, "0")
     };
     var int2 = {
@@ -6741,7 +6741,7 @@ var require_int2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:int",
       test: /^[-+]?[0-9][0-9_]*$/,
-      resolve: (str, _onError, opt) => intResolve(str, 0, 10, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 0, 10, opt),
       stringify: stringifyNumber.stringifyNumber
     };
     var intHex = {
@@ -6750,7 +6750,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "HEX",
       test: /^[-+]?0x[0-9a-fA-F_]+$/,
-      resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
+      resolve: (str2, _onError, opt) => intResolve(str2, 2, 16, opt),
       stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
@@ -6854,9 +6854,9 @@ var require_timestamp = __commonJS({
   "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
-    function parseSexagesimal(str, asBigInt) {
-      const sign = str[0];
-      const parts = sign === "-" || sign === "+" ? str.substring(1) : str;
+    function parseSexagesimal(str2, asBigInt) {
+      const sign = str2[0];
+      const parts = sign === "-" || sign === "+" ? str2.substring(1) : str2;
       const num = (n2) => asBigInt ? BigInt(n2) : Number(n2);
       const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num(60) + num(p), num(0));
       return sign === "-" ? num(-1) * res : res;
@@ -6893,7 +6893,7 @@ var require_timestamp = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "TIME",
       test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+$/,
-      resolve: (str, _onError, { intAsBigInt }) => parseSexagesimal(str, intAsBigInt),
+      resolve: (str2, _onError, { intAsBigInt }) => parseSexagesimal(str2, intAsBigInt),
       stringify: stringifySexagesimal
     };
     var floatTime = {
@@ -6902,7 +6902,7 @@ var require_timestamp = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "TIME",
       test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*$/,
-      resolve: (str) => parseSexagesimal(str, false),
+      resolve: (str2) => parseSexagesimal(str2, false),
       stringify: stringifySexagesimal
     };
     var timestamp = {
@@ -6913,8 +6913,8 @@ var require_timestamp = __commonJS({
       // may be omitted altogether, resulting in a date format. In such a case, the time part is
       // assumed to be 00:00:00Z (start of day, UTC).
       test: RegExp("^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})(?:(?:t|T|[ \\t]+)([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}(\\.[0-9]+)?)(?:[ \\t]*(Z|[-+][012]?[0-9](?::[0-9]{2})?))?)?$"),
-      resolve(str) {
-        const match = str.match(timestamp.test);
+      resolve(str2) {
+        const match = str2.match(timestamp.test);
         if (!match)
           throw new Error("!!timestamp expects a date, starting with yyyy-mm-dd");
         const [, year, month, day, hour, minute, second] = match.map(Number);
@@ -7265,9 +7265,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path12, value) {
+      addIn(path13, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path12, value);
+          this.contents.addIn(path13, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -7342,14 +7342,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path12) {
-        if (Collection.isEmptyPath(path12)) {
+      deleteIn(path13) {
+        if (Collection.isEmptyPath(path13)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path12) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path13) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -7364,10 +7364,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path12, keepScalar) {
-        if (Collection.isEmptyPath(path12))
+      getIn(path13, keepScalar) {
+        if (Collection.isEmptyPath(path13))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path12, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path13, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -7378,10 +7378,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path12) {
-        if (Collection.isEmptyPath(path12))
+      hasIn(path13) {
+        if (Collection.isEmptyPath(path13))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path12) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path13) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -7398,13 +7398,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path12, value) {
-        if (Collection.isEmptyPath(path12)) {
+      setIn(path13, value) {
+        if (Collection.isEmptyPath(path13)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path12), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path13), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path12, value);
+          this.contents.setIn(path13, value);
         }
       }
       /**
@@ -9365,9 +9365,9 @@ var require_cst_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path12) => {
+    visit2.itemAtPath = (cst, path13) => {
       let item = cst;
-      for (const [field, index] of path12) {
+      for (const [field, index] of path13) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -9376,23 +9376,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path12) => {
-      const parent = visit2.itemAtPath(cst, path12.slice(0, -1));
-      const field = path12[path12.length - 1][0];
+    visit2.parentCollection = (cst, path13) => {
+      const parent = visit2.itemAtPath(cst, path13.slice(0, -1));
+      const field = path13[path13.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path12, item, visitor) {
-      let ctrl = visitor(item, path12);
+    function _visit(path13, item, visitor) {
+      let ctrl = visitor(item, path13);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path12.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path13.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -9403,10 +9403,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path12);
+            ctrl = ctrl(item, path13);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path12) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path13) : ctrl;
     }
     exports.visit = visit2;
   }
@@ -10708,14 +10708,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs11 = this.flowScalar(this.type);
+              const fs12 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map2.items.push({ start, key: fs11, sep: [] });
+                map2.items.push({ start, key: fs12, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs11);
+                this.stack.push(fs12);
               } else {
-                Object.assign(it, { key: fs11, sep: [] });
+                Object.assign(it, { key: fs12, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -10843,13 +10843,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs11 = this.flowScalar(this.type);
+              const fs12 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs11, sep: [] });
+                fc.items.push({ start: [], key: fs12, sep: [] });
               else if (it.sep)
-                this.stack.push(fs11);
+                this.stack.push(fs12);
               else
-                Object.assign(it, { key: fs11, sep: [] });
+                Object.assign(it, { key: fs12, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -11225,7 +11225,7 @@ var require_code = __commonJS({
     }
     exports._ = _2;
     var plus = new _Code("+");
-    function str(strs, ...args) {
+    function str2(strs, ...args) {
       const expr = [safeStringify(strs[0])];
       let i = 0;
       while (i < args.length) {
@@ -11236,7 +11236,7 @@ var require_code = __commonJS({
       optimize(expr);
       return new _Code(expr);
     }
-    exports.str = str;
+    exports.str = str2;
     function addCodeArg(code, arg) {
       if (arg instanceof _Code)
         code.push(...arg._items);
@@ -11279,7 +11279,7 @@ var require_code = __commonJS({
       return;
     }
     function strConcat(c1, c2) {
-      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str`${c1}${c2}`;
+      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str2`${c1}${c2}`;
     }
     exports.strConcat = strConcat;
     function interpolate(x2) {
@@ -12241,22 +12241,22 @@ var require_util = __commonJS({
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
     exports.schemaRefOrVal = schemaRefOrVal;
-    function unescapeFragment(str) {
-      return unescapeJsonPointer(decodeURIComponent(str));
+    function unescapeFragment(str2) {
+      return unescapeJsonPointer(decodeURIComponent(str2));
     }
     exports.unescapeFragment = unescapeFragment;
-    function escapeFragment(str) {
-      return encodeURIComponent(escapeJsonPointer(str));
+    function escapeFragment(str2) {
+      return encodeURIComponent(escapeJsonPointer(str2));
     }
     exports.escapeFragment = escapeFragment;
-    function escapeJsonPointer(str) {
-      if (typeof str == "number")
-        return `${str}`;
-      return str.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPointer(str2) {
+      if (typeof str2 == "number")
+        return `${str2}`;
+      return str2.replace(/~/g, "~0").replace(/\//g, "~1");
     }
     exports.escapeJsonPointer = escapeJsonPointer;
-    function unescapeJsonPointer(str) {
-      return str.replace(/~1/g, "/").replace(/~0/g, "~");
+    function unescapeJsonPointer(str2) {
+      return str2.replace(/~1/g, "/").replace(/~0/g, "~");
     }
     exports.unescapeJsonPointer = unescapeJsonPointer;
     function eachItem(xs, f) {
@@ -13281,8 +13281,8 @@ var require_json_schema_traverse = __commonJS({
         post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
-    function escapeJsonPtr(str) {
-      return str.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPtr(str2) {
+      return str2.replace(/~/g, "~0").replace(/\//g, "~1");
     }
   }
 });
@@ -14379,15 +14379,15 @@ var require_utils = __commonJS({
         isIPV6: true
       };
     }
-    function findToken(str, token) {
+    function findToken(str2, token) {
       let ind = 0;
-      for (let i = 0; i < str.length; i++) {
-        if (str[i] === token) ind++;
+      for (let i = 0; i < str2.length; i++) {
+        if (str2[i] === token) ind++;
       }
       return ind;
     }
-    function removeDotSegments(path12) {
-      let input2 = path12;
+    function removeDotSegments(path13) {
+      let input2 = path13;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -14796,8 +14796,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path12 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path12 && path12 !== "/" ? path12 : void 0;
+        const path13 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path13 && path13 !== "/" ? path13 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -15396,7 +15396,7 @@ var require_core = __commonJS({
     var util_1 = require_util();
     var $dataRefSchema = require_data();
     var uri_1 = require_uri();
-    var defaultRegExp = (str, flags2) => new RegExp(str, flags2);
+    var defaultRegExp = (str2, flags2) => new RegExp(str2, flags2);
     defaultRegExp.code = "new RegExp";
     var META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
     var EXT_SCOPE_NAMES = /* @__PURE__ */ new Set([
@@ -16191,16 +16191,16 @@ var require_ucs2length = __commonJS({
   "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function ucs2length(str) {
-      const len = str.length;
+    function ucs2length(str2) {
+      const len = str2.length;
       let length = 0;
       let pos = 0;
       let value;
       while (pos < len) {
         length++;
-        value = str.charCodeAt(pos++);
+        value = str2.charCodeAt(pos++);
         if (value >= 55296 && value <= 56319 && pos < len) {
-          value = str.charCodeAt(pos);
+          value = str2.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
         }
@@ -18083,8 +18083,8 @@ var require_formats = __commonJS({
     }
     var DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    function date5(str) {
-      const matches = DATE.exec(str);
+    function date5(str2) {
+      const matches = DATE.exec(str2);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -18103,8 +18103,8 @@ var require_formats = __commonJS({
     }
     var TIME = /^(\d\d):(\d\d):(\d\d(?:\.\d+)?)(z|([+-])(\d\d)(?::?(\d\d))?)?$/i;
     function getTime(strictTimeZone) {
-      return function time3(str) {
-        const matches = TIME.exec(str);
+      return function time3(str2) {
+        const matches = TIME.exec(str2);
         if (!matches)
           return false;
         const hr = +matches[1];
@@ -18150,8 +18150,8 @@ var require_formats = __commonJS({
     var DATE_TIME_SEPARATOR = /t|\s/i;
     function getDateTime(strictTimeZone) {
       const time3 = getTime(strictTimeZone);
-      return function date_time(str) {
-        const dateTime = str.split(DATE_TIME_SEPARATOR);
+      return function date_time(str2) {
+        const dateTime = str2.split(DATE_TIME_SEPARATOR);
         return dateTime.length === 2 && date5(dateTime[0]) && time3(dateTime[1]);
       };
     }
@@ -18176,13 +18176,13 @@ var require_formats = __commonJS({
     }
     var NOT_URI_FRAGMENT = /\/|:/;
     var URI = /^(?:[a-z][a-z0-9+\-.]*:)(?:\/?\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:]|%[0-9a-f]{2})*@)?(?:\[(?:(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|[Vv][0-9a-f]+\.[a-z0-9\-._~!$&'()*+,;=:]+)\]|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[a-z0-9\-._~!$&'()*+,;=]|%[0-9a-f]{2})*)(?::\d*)?(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*|\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)?|(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)(?:\?(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?(?:#(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?$/i;
-    function uri(str) {
-      return NOT_URI_FRAGMENT.test(str) && URI.test(str);
+    function uri(str2) {
+      return NOT_URI_FRAGMENT.test(str2) && URI.test(str2);
     }
     var BYTE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gm;
-    function byte(str) {
+    function byte(str2) {
       BYTE.lastIndex = 0;
-      return BYTE.test(str);
+      return BYTE.test(str2);
     }
     var MIN_INT32 = -(2 ** 31);
     var MAX_INT32 = 2 ** 31 - 1;
@@ -18196,11 +18196,11 @@ var require_formats = __commonJS({
       return true;
     }
     var Z_ANCHOR = /[^\\]\\Z/;
-    function regex(str) {
-      if (Z_ANCHOR.test(str))
+    function regex(str2) {
+      if (Z_ANCHOR.test(str2))
         return false;
       try {
-        new RegExp(str);
+        new RegExp(str2);
         return true;
       } catch (e) {
         return false;
@@ -18310,12 +18310,12 @@ var require_dist2 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs11, exportName) {
+    function addFormats(ajv, list2, fs12, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs11[f]);
+        ajv.addFormat(f, fs12[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -18324,16 +18324,16 @@ var require_dist2 = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs10 from "node:fs";
-import os5 from "node:os";
-import path11 from "node:path";
+import fs11 from "node:fs";
+import os6 from "node:os";
+import path12 from "node:path";
 import { execFile as execFile4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
 import http from "node:http";
-import fs6 from "node:fs";
-import path7 from "node:path";
+import fs7 from "node:fs";
+import path8 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/ws/wrapper.mjs
@@ -18357,6 +18357,22 @@ function hasProjects(r) {
 
 // packages/canvas/dist/model.js
 var diagramFrameId = (key) => `diagram.${key}`;
+function diagramSpecOf(item) {
+  const d = item?.type === "frame" ? item.data?.diagram : void 0;
+  return d && typeof d.kind === "string" && typeof d.key === "string" ? d : void 0;
+}
+function diagramOf(board, item) {
+  let cur = item?.type === "arrow" && item.from ? board.items[item.from] : item;
+  const seen = /* @__PURE__ */ new Set();
+  while (cur && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    const spec = diagramSpecOf(cur);
+    if (spec)
+      return { ...spec, frameId: cur.id };
+    cur = cur.parent ? board.items[cur.parent] : void 0;
+  }
+  return board.kind !== "freeform" ? { kind: board.kind, key: board.kind } : void 0;
+}
 function applyOps(board, ops, author, now = (/* @__PURE__ */ new Date()).toISOString()) {
   const items = { ...board.items };
   const before = {};
@@ -18407,7 +18423,7 @@ function markSeen(item, who, agent) {
 }
 var RECEIPTS = /* @__PURE__ */ new Set(["seenBy", "seenByAgents", "agentState"]);
 var withoutSeen = (data) => JSON.stringify(Object.fromEntries(Object.entries(data ?? {}).filter(([k2]) => !RECEIPTS.has(k2))));
-var PRESENTATION_DATA = /* @__PURE__ */ new Set(["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend"]);
+var PRESENTATION_DATA = /* @__PURE__ */ new Set(["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "to", "route", "mention", "mentionAt", "paused", "postedAt"]);
 var GEOMETRY = /* @__PURE__ */ new Set(["x", "y", "w", "h", "parent", "fontSize"]);
 function meaningOf(data) {
   return Object.fromEntries(Object.entries(data ?? {}).filter(([k2]) => !PRESENTATION_DATA.has(k2)));
@@ -18441,11 +18457,23 @@ function wakes(c, wake) {
     return false;
   return wake === "any" || c.ops.some((op) => !isLayoutOnly(op, c.before[op.kind === "add" ? op.item.id : op.id]));
 }
+function mergeMeta(meta3, patch) {
+  const out = { ...meta3 ?? {} };
+  for (const [k2, v2] of Object.entries(patch)) {
+    if (v2 === null || v2 === void 0)
+      delete out[k2];
+    else
+      out[k2] = v2;
+  }
+  return out;
+}
 var BoardRepositoryBase = class {
   boards = /* @__PURE__ */ new Map();
   subs = /* @__PURE__ */ new Map();
   /** Pending waits per board, counted per agent name. */
   watching = /* @__PURE__ */ new Map();
+  /** When each agent last started or stopped waiting, per board. */
+  lastSeen = /* @__PURE__ */ new Map();
   presenceSubs = /* @__PURE__ */ new Set();
   storageSubs = /* @__PURE__ */ new Set();
   /** Boards whose last save failed: the next good save announces the recovery. */
@@ -18505,7 +18533,7 @@ var BoardRepositoryBase = class {
     const first = changes[0];
     let board = { id, title: (first.note ?? id).replace(/^create: /, ""), kind: "freeform", seq: 0, createdAt: first.ts, updatedAt: first.ts, items: {} };
     for (const c of changes)
-      board = { ...applyOps(board, c.ops, c.author, c.ts).board, seq: c.seq };
+      board = { ...applyOps(board, c.ops, c.author, c.ts).board, seq: c.seq, ...c.meta ? { meta: mergeMeta(board.meta, c.meta) } : {} };
     return board;
   }
   list() {
@@ -18557,6 +18585,26 @@ var BoardRepositoryBase = class {
     this.save(id, () => this.persist(updated));
     this.boards.set(id, updated);
     return updated;
+  }
+  setMeta(id, patch, author, note, by) {
+    const board = this.boards.get(id);
+    if (!board)
+      throw new NotFound(`board ${id} not found`);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const change = { seq: board.seq + 1, ts: now, author, boardId: id, ops: [], before: {}, note, meta: patch, ...by ? { by } : {} };
+    const updated = { ...board, seq: change.seq, updatedAt: now, meta: mergeMeta(board.meta, patch) };
+    this.save(id, () => {
+      this.appendLog(change);
+      this.persist(updated);
+    });
+    this.boards.set(id, updated);
+    for (const fn of this.subs.get(id) ?? []) {
+      try {
+        fn(change);
+      } catch {
+      }
+    }
+    return change;
   }
   changes(id, q2 = {}) {
     if (!this.boards.has(id))
@@ -18618,6 +18666,9 @@ var BoardRepositoryBase = class {
   watcherNames(id) {
     return [...this.watching.get(id)?.entries() ?? []].filter(([, c]) => c > 0).map(([name]) => name).sort();
   }
+  watcherSeen(id) {
+    return Object.fromEntries(this.lastSeen.get(id) ?? []);
+  }
   onPresence(fn) {
     this.presenceSubs.add(fn);
     return () => void this.presenceSubs.delete(fn);
@@ -18631,6 +18682,10 @@ var BoardRepositoryBase = class {
       per.set(who, c);
     else
       per.delete(who);
+    let seen = this.lastSeen.get(id);
+    if (!seen)
+      this.lastSeen.set(id, seen = /* @__PURE__ */ new Map());
+    seen.set(who, (/* @__PURE__ */ new Date()).toISOString());
     const n2 = this.watchers(id);
     const names = this.watcherNames(id);
     for (const fn of this.presenceSubs) {
@@ -19150,12 +19205,12 @@ function joinLines(lines2) {
   return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
 `).join("");
 }
-function unifiedDiff(before, after, path12 = "file", context = 3) {
+function unifiedDiff(before, after, path13 = "file", context = 3) {
   if (before === after)
     return "";
   const ops = lineOps(splitLines(before), splitLines(after));
   const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
-  const out = [`--- a/${path12}`, `+++ b/${path12}`];
+  const out = [`--- a/${path13}`, `+++ b/${path13}`];
   let k2 = 0;
   while (k2 < changed.length) {
     const lo = Math.max(0, changed[k2] - context);
@@ -19312,6 +19367,440 @@ function applyUnifiedDiff(text3, diff) {
   out.push(...lines2.slice(cursor));
   const fixed = out.map((l, i) => i < out.length - 1 && l.endsWith(NO_EOL) ? l.slice(0, -1) : l);
   return { ok: true, text: joinLines(fixed), offsets };
+}
+
+// packages/canvas/dist/routing.js
+var LOCAL_AGENT = "agent";
+var CONTEXT_MAX = 4e3;
+var str = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
+function responderOf(meta3) {
+  const r = meta3?.responder;
+  if (!r || typeof r !== "object")
+    return void 0;
+  if (r.mode === "agent")
+    return str(r.agent) ? r : void 0;
+  return r.mode === "any" || r.mode === "studio" ? r : void 0;
+}
+function responderName(r) {
+  if (!r || r.mode === "any")
+    return void 0;
+  return r.mode === "studio" ? LOCAL_AGENT : r.agent;
+}
+function responderLabel(r) {
+  const n2 = responderName(r);
+  return n2 ? displayName(n2) : "any agent";
+}
+function displayName(name) {
+  return name === LOCAL_AGENT ? "studio" : name;
+}
+function contextOf(meta3) {
+  const c = meta3?.context;
+  return c && typeof c === "object" && str(c.text) ? c : void 0;
+}
+function sameAgent(a, b2) {
+  if (!a || !b2)
+    return false;
+  const n2 = (s) => s.toLowerCase() === "studio" ? LOCAL_AGENT : s.toLowerCase();
+  return n2(a) === n2(b2);
+}
+function parseResponder(raw, caller, by, at2) {
+  if (raw === null || raw === "" || raw === "default")
+    return null;
+  if (typeof raw === "object" && raw) {
+    const r = raw;
+    return parseResponder(r.mode === "agent" ? r.agent : r.mode, caller, by, at2);
+  }
+  if (typeof raw !== "string")
+    return void 0;
+  const v2 = raw.trim();
+  if (v2 === "any")
+    return { mode: "any", by, at: at2 };
+  if (v2 === "studio" || v2 === LOCAL_AGENT)
+    return { mode: "studio", by, at: at2 };
+  const name = v2 === "me" ? caller : v2;
+  if (!name)
+    return void 0;
+  if (sameAgent(name, LOCAL_AGENT))
+    return { mode: "studio", by, at: at2 };
+  return { mode: "agent", agent: name.slice(0, 60), by, at: at2 };
+}
+var holderIn = (v2) => {
+  const h = v2?.holder;
+  return h && typeof h === "object" && str(h.agent) ? h : void 0;
+};
+function holdersOf(meta3) {
+  const out = [];
+  const diagrams = meta3?.diagrams;
+  for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+    const holder = holderIn(d);
+    if (holder)
+      out.push({ key, ...str(d?.source) ? { source: d.source } : {}, holder });
+  }
+  const wf = meta3?.workflow;
+  const h = holderIn(wf);
+  if (h)
+    out.push({ key: "workflow", ...str(wf?.file) ? { source: wf.file } : {}, holder: h });
+  return out;
+}
+function holderOfFile(meta3, file2) {
+  if (!file2)
+    return void 0;
+  const diagrams = meta3?.diagrams;
+  for (const d of Object.values(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+    const files = d?.files && typeof d.files === "object" ? Object.keys(d.files) : [];
+    if (d?.source === file2 || files.includes(file2)) {
+      const h = holderIn(d);
+      if (h)
+        return h;
+    }
+  }
+  const wf = meta3?.workflow;
+  const wfFiles = wf?.files && typeof wf.files === "object" ? Object.keys(wf.files) : [];
+  return wfFiles.includes(file2) ? holderIn(wf) : void 0;
+}
+function holderOfItem(board, item) {
+  if (!item)
+    return void 0;
+  const d = diagramOf(board, item);
+  if (!d)
+    return void 0;
+  const diagrams = board.meta?.diagrams;
+  if (d.frameId)
+    return holderIn(diagrams?.[d.key]);
+  return holderIn(diagrams?.[d.key]) ?? (d.kind === "workflow" ? holderIn(board.meta?.workflow) : void 0);
+}
+function soleHolder(meta3) {
+  const names = [...new Set(holdersOf(meta3).map((h) => h.holder.agent))];
+  return names.length === 1 ? names[0] : void 0;
+}
+function stampHolders(current, next, caller, now) {
+  const out = { ...next };
+  const stamp = (cur, sent) => {
+    if (!sent || typeof sent !== "object")
+      return void 0;
+    const s = sent;
+    if (cur && s.at && s.at === cur.at && s.agent === cur.agent)
+      return cur;
+    const h = { agent: caller, at: now };
+    for (const k2 of ["machine", "root", "repo", "remote"])
+      if (str(s[k2]))
+        h[k2] = s[k2].slice(0, 300);
+    if (h.remote)
+      h.remote = withoutCredentials(h.remote);
+    if (str(s.applied)) {
+      h.applied = s.applied.slice(0, 80);
+      h.appliedAt = cur?.applied === h.applied && cur.appliedAt ? cur.appliedAt : now;
+    } else if (cur && sameAgent(cur.agent, caller) && cur.applied) {
+      h.applied = cur.applied;
+      h.appliedAt = cur.appliedAt;
+    }
+    return h;
+  };
+  const diagrams = next.diagrams;
+  if (diagrams && typeof diagrams === "object") {
+    const curD = current?.diagrams ?? {};
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([key, d]) => {
+      if (!d || typeof d !== "object")
+        return [key, d];
+      const { holder: sent, ...rest } = d;
+      const h = stamp(holderIn(curD[key]), sent);
+      return [key, h ? { ...rest, holder: h } : rest];
+    }));
+  }
+  const wf = next.workflow;
+  if (wf && typeof wf === "object") {
+    const { holder: sent, ...rest } = wf;
+    const h = stamp(holderIn(current?.workflow), sent);
+    out.workflow = h ? { ...rest, holder: h } : rest;
+  }
+  return out;
+}
+function withoutCredentials(url2) {
+  return url2.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1");
+}
+function redactHolders(meta3) {
+  if (!meta3)
+    return meta3;
+  const strip2 = (v2) => {
+    const h = holderIn(v2);
+    if (!h)
+      return v2;
+    const { machine: _m, root: _r, ...rest } = h;
+    return { ...v2, holder: rest };
+  };
+  const out = { ...meta3 };
+  const diagrams = meta3.diagrams;
+  if (diagrams && typeof diagrams === "object")
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, strip2(d)]));
+  if (meta3.workflow)
+    out.workflow = strip2(meta3.workflow);
+  return out;
+}
+function renameInMeta(meta3, from, to) {
+  if (!meta3)
+    return void 0;
+  let changed = false;
+  const out = { ...meta3 };
+  const r = responderOf(meta3);
+  if (r?.mode === "agent" && sameAgent(r.agent, from)) {
+    out.responder = { ...r, agent: to };
+    changed = true;
+  }
+  const fix = (v2) => {
+    const h = holderIn(v2);
+    if (!h || !sameAgent(h.agent, from))
+      return v2;
+    changed = true;
+    return { ...v2, holder: { ...h, agent: to } };
+  };
+  const diagrams = meta3.diagrams;
+  if (diagrams && typeof diagrams === "object")
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, fix(d)]));
+  if (meta3.workflow)
+    out.workflow = fix(meta3.workflow);
+  return changed ? out : void 0;
+}
+function mentionIn(text3, known) {
+  if (!text3 || !text3.includes("@"))
+    return void 0;
+  const names = [.../* @__PURE__ */ new Set([...known, "studio"])].filter((n2) => n2 && n2.length <= 60).sort((a, b2) => b2.length - a.length);
+  const re2 = /(^|[^\p{L}\p{N}_.@-])@/gu;
+  let m2;
+  while (m2 = re2.exec(text3)) {
+    const at2 = m2.index + m2[0].length;
+    const rest = text3.slice(at2).toLowerCase();
+    for (const n2 of names) {
+      if (!rest.startsWith(n2.toLowerCase()))
+        continue;
+      const next = rest.charAt(n2.length);
+      if (next && /[\p{L}\p{N}_-]/u.test(next))
+        continue;
+      return sameAgent(n2, LOCAL_AGENT) ? LOCAL_AGENT : n2;
+    }
+  }
+  return void 0;
+}
+function threadRoot(board, it) {
+  let cur = it;
+  const seen = /* @__PURE__ */ new Set();
+  while (!seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur;
+    cur = next;
+  }
+  return it;
+}
+var editOf = (it) => it.data?.discuss?.edit;
+var wireProposalOf = (it) => it.data?.discuss;
+function proposalHolder(board, root) {
+  const edit = editOf(root);
+  if (edit && typeof edit.file === "string")
+    return holderOfFile(board.meta, edit.file) ?? holderOfItem(board, board.items[root.target ?? ""]);
+  const d = wireProposalOf(root);
+  if (d?.proposal) {
+    const ids = [...Array.isArray(d.about) ? d.about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
+    for (const id of ids) {
+      const h = holderOfItem(board, board.items[id]);
+      if (h)
+        return h;
+    }
+  }
+  return void 0;
+}
+var isProposal = (it) => Boolean(editOf(it) || wireProposalOf(it)?.proposal);
+var agentOf = (it) => it.createdBy === "agent" ? str(it.data?.by) ?? LOCAL_AGENT : void 0;
+var DEFAULT_AGENT_TURNS = 6;
+function threadOf(board, root) {
+  const when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
+  return Object.values(board.items).filter((i) => i.type === "comment" && (i.id === root.id || threadRoot(board, i).id === root.id)).sort((a, b2) => a.id === root.id ? -1 : b2.id === root.id ? 1 : when(a).localeCompare(when(b2)));
+}
+function trailingAgentTurns(thread) {
+  let n2 = 0;
+  for (let i = thread.length - 1; i >= 0 && thread[i].createdBy === "agent"; i--)
+    n2++;
+  return n2;
+}
+function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
+  const root = threadRoot(board, comment);
+  const thread = threadOf(board, root);
+  const author = agentOf(comment);
+  const out = [];
+  const add = (n2) => {
+    if (n2 && !sameAgent(n2, author) && !out.some((o) => sameAgent(o, n2)))
+      out.push(n2);
+  };
+  if (author) {
+    const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length);
+    if (trailingAgentTurns(upTo) > maxTurns)
+      return { to: [], route: "paused" };
+  }
+  const asked = str(comment.data?.mention) ? comment : thread.filter((i) => str(i.data?.mention)).sort((a, b2) => String(b2.data?.mentionAt ?? "").localeCompare(String(a.data?.mentionAt ?? "")))[0];
+  const proposal = isProposal(root);
+  const holder = proposal ? proposalHolder(board, root) : void 0;
+  const proposer = proposal ? agentOf(root) : void 0;
+  if (asked) {
+    add(str(asked.data?.mention));
+    add(agentOf(asked));
+    add(holder?.agent);
+    add(proposer);
+    return { to: out, route: "mention" };
+  }
+  if (holder) {
+    add(holder.agent);
+    add(proposer);
+    return { to: out, route: "proposal" };
+  }
+  const r = responderName(responderOf(board.meta));
+  if (!r)
+    return {};
+  add(r);
+  add(agentOf(root));
+  return { to: out, route: "responder" };
+}
+var ROUTING_KEYS = ["to", "route", "mention", "mentionAt", "paused", "postedAt"];
+function stampRouting(board, ops, known, now, apply, maxTurns = DEFAULT_AGENT_TURNS) {
+  const touched = /* @__PURE__ */ new Set();
+  const pre = ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment") {
+      touched.add(op.item.id);
+      const was = board.items[op.item.id]?.data;
+      const data = withMention(clean(op.item.data), op.item.text, known, was, now, op.item.data?.ask);
+      data.postedAt = typeof was?.postedAt === "string" ? was.postedAt : now;
+      return { ...op, item: { ...op.item, data } };
+    }
+    if (op.kind === "update") {
+      const cur = board.items[op.id];
+      if (cur?.type !== "comment")
+        return op;
+      const textChanged = op.patch.text !== void 0 && op.patch.text !== cur.text;
+      if (!textChanged && !op.patch.data)
+        return op;
+      const base = { ...cur.data ?? {}, ...op.patch.data ?? {} };
+      for (const k2 of ROUTING_KEYS) {
+        if (cur.data?.[k2] !== void 0)
+          base[k2] = cur.data[k2];
+        else
+          delete base[k2];
+      }
+      if (!textChanged)
+        return { ...op, patch: { ...op.patch, data: base } };
+      touched.add(op.id);
+      return { ...op, patch: { ...op.patch, data: withMention(base, op.patch.text, known, cur.data, now, cur.data?.ask) } };
+    }
+    return op;
+  });
+  if (!touched.size)
+    return pre;
+  const next = apply(board, pre);
+  return pre.map((op) => {
+    const id = op.kind === "add" ? op.item.id : op.kind === "update" ? op.id : void 0;
+    if (!id || !touched.has(id))
+      return op;
+    const it = next.items[id];
+    if (!it)
+      return op;
+    const r = routeOf(next, it, maxTurns);
+    const set2 = (data) => {
+      const d = { ...data };
+      delete d.to;
+      delete d.route;
+      delete d.paused;
+      if (r.to)
+        d.to = r.to;
+      if (r.route)
+        d.route = r.route;
+      if (r.route === "paused")
+        d.paused = true;
+      return d;
+    };
+    if (op.kind === "add")
+      return { ...op, item: { ...op.item, data: set2(op.item.data ?? {}) } };
+    if (op.kind === "update")
+      return { ...op, patch: { ...op.patch, data: set2(op.patch.data ?? { ...board.items[id]?.data ?? {} }) } };
+    return op;
+  });
+}
+var clean = (data) => {
+  const d = { ...data ?? {} };
+  for (const k2 of ROUTING_KEYS)
+    delete d[k2];
+  return d;
+};
+function withMention(data, text3, known, was, now, ask) {
+  const d = { ...data };
+  const m2 = mentionIn(text3, known) ?? (str(ask) ? sameAgent(ask, LOCAL_AGENT) ? LOCAL_AGENT : ask.slice(0, 60) : void 0);
+  if (m2) {
+    d.mention = m2;
+    d.mentionAt = was && sameAgent(str(was.mention), m2) && str(was.mentionAt) ? was.mentionAt : now;
+  } else {
+    delete d.mention;
+    delete d.mentionAt;
+  }
+  delete d.to;
+  return d;
+}
+function asksMe(board, change, me) {
+  if (change.author !== "agent" || sameAgent(change.by ?? LOCAL_AGENT, me))
+    return false;
+  return change.ops.some((op) => {
+    const id = op.kind === "add" ? op.item.id : op.id;
+    const it = board.items[id] ?? (op.kind === "add" ? op.item : void 0);
+    if (it?.type !== "comment")
+      return false;
+    const route = it.data?.route;
+    const to = it.data?.to;
+    return (route === "mention" || route === "proposal") && Array.isArray(to) && to.some((n2) => typeof n2 === "string" && sameAgent(n2, me));
+  });
+}
+var hasPendingNow = (op, before) => {
+  if (op.kind === "add")
+    return Boolean(op.item.data?.pending);
+  if (op.kind !== "update" || !op.patch.data)
+    return false;
+  const p = op.patch.data.pending;
+  return p !== void 0 && JSON.stringify(p) !== JSON.stringify(before?.data?.pending);
+};
+function addressedTo(board, change, me) {
+  const responder = responderName(responderOf(board.meta));
+  const toResponder = () => !responder || sameAgent(responder, me);
+  if (change.ops.length === 0)
+    return toResponder();
+  for (const op of change.ops) {
+    const id = op.kind === "add" ? op.item.id : op.id;
+    const item = board.items[id] ?? (op.kind === "add" ? op.item : void 0) ?? change.before[id] ?? void 0;
+    if (item?.type === "comment") {
+      const to = item.data?.to;
+      if (!Array.isArray(to) || to.some((n2) => typeof n2 === "string" && sameAgent(n2, me)))
+        return true;
+      continue;
+    }
+    if (item && hasPendingNow(op, change.before[id])) {
+      const h = holderOfItem(board, item);
+      if (h) {
+        if (sameAgent(h.agent, me))
+          return true;
+        continue;
+      }
+    }
+    if (toResponder())
+      return true;
+  }
+  return false;
+}
+function settingsLines(meta3) {
+  const out = [];
+  const c = contextOf(meta3);
+  if (c)
+    out.push(`Board context${c.by ? ` (from ${displayName(c.by)})` : ""}:`, ...c.text.split("\n").map((l) => `  ${l}`));
+  const r = responderOf(meta3);
+  if (r && r.mode !== "any")
+    out.push(`Answered by: ${responderLabel(r)} \u2014 the person's comments here go to it; an @mention sends a thread to another agent`);
+  for (const { key, source, holder } of holdersOf(meta3)) {
+    out.push(`Files of ${key}${source ? ` (${source})` : ""}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ""}${holder.remote ? ` \xB7 ${holder.remote}` : ""} \u2014 proposals on it go to that agent`);
+  }
+  return out;
 }
 
 // packages/canvas/dist/diff.js
@@ -19604,12 +20093,20 @@ function outline(board) {
     commentsFor.get(k2).push(c);
   }
   const out = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`];
+  const settings = settingsLines(board.meta);
+  if (settings.length)
+    out.push(...settings, "");
   const printed = /* @__PURE__ */ new Set();
+  const said = (c) => {
+    const by = c.createdBy === "agent" && typeof c.data?.by === "string" ? c.data.by : c.createdBy;
+    const to = Array.isArray(c.data?.to) && c.data.route === "mention" && c.data.to.length ? ` \u2192 ${c.data.to.join(", ")}` : "";
+    return `(${by}${to})${c.data?.paused ? " [agents paused here \u2014 waits for the person]" : ""}`;
+  };
   const comment = (c, indent) => {
-    out.push(`${indent}\u{1F4AC} (${c.createdBy}) ${short(c.text, 200)}  #${c.id}`);
+    out.push(`${indent}\u{1F4AC} ${said(c)} ${short(c.text, 200)}  #${c.id}`);
     printed.add(c.id);
     for (const r of replies.get(c.id) ?? [])
-      out.push(`${indent}  \u21B3 (${r.createdBy}) ${short(r.text, 200)}  #${r.id}`);
+      out.push(`${indent}  \u21B3 ${said(r)} ${short(r.text, 200)}  #${r.id}`);
   };
   const line = (i, indent) => {
     const role = i.role ?? i.type;
@@ -20489,10 +20986,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path12) {
-  if (!path12)
+function getElementAtPath(obj, path13) {
+  if (!path13)
     return obj;
-  return path12.reduce((acc, key) => acc?.[key], obj);
+  return path13.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -20507,14 +21004,14 @@ function promiseAllObject(promisesObj) {
 }
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
-  let str = "";
+  let str2 = "";
   for (let i = 0; i < length; i++) {
-    str += chars[Math.floor(Math.random() * chars.length)];
+    str2 += chars[Math.floor(Math.random() * chars.length)];
   }
-  return str;
+  return str2;
 }
-function esc(str) {
-  return JSON.stringify(str);
+function esc(str2) {
+  return JSON.stringify(str2);
 }
 function slugify(input2) {
   return input2.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
@@ -20628,8 +21125,8 @@ var primitiveTypes = /* @__PURE__ */ new Set([
   "symbol",
   "undefined"
 ]);
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(str2) {
+  return str2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def2, params) {
   const cl = new inst._zod.constr(def2 ?? inst._zod.def);
@@ -20832,11 +21329,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path12, issues) {
+function prefixIssues(path13, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path12);
+    iss.path.unshift(path13);
     return iss;
   });
 }
@@ -20883,13 +21380,13 @@ function getSizableOrigin(input2) {
   return "unknown";
 }
 var highSurrogate = /[\uD800-\uDBFF]/;
-function codePointLength(str) {
-  const units = str.length;
-  if (!highSurrogate.test(str))
+function codePointLength(str2) {
+  const units = str2.length;
+  if (!highSurrogate.test(str2))
     return units;
   let count = units;
   for (let i = 0; i < units - 1; i++) {
-    if ((str.charCodeAt(i) & 64512) === 55296 && (str.charCodeAt(i + 1) & 64512) === 56320) {
+    if ((str2.charCodeAt(i) & 64512) === 55296 && (str2.charCodeAt(i + 1) & 64512) === 56320) {
       count--;
       i++;
     }
@@ -21286,16 +21783,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path12 = []) => {
+  const processError = (error63, path13 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else {
-        const fullpath = [...path12, ...issue2.path];
+        const fullpath = [...path13, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -21334,17 +21831,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path12 = []) => {
+  const processError = (error63, path13 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else {
-        const fullpath = [...path12, ...issue2.path];
+        const fullpath = [...path13, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -21383,8 +21880,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path12 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path12) {
+  const path13 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path13) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -38486,13 +38983,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path12 = ref2.slice(1).split("/").filter(Boolean);
-  if (path12.length === 0) {
+  const path13 = ref2.slice(1).split("/").filter(Boolean);
+  if (path13.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path12[0] === defsKey) {
-    const key = path12[1] === void 0 ? void 0 : decodeJSONPointerSegment(path12[1]);
+  if (path13[0] === defsKey) {
+    const key = path13[1] === void 0 ? void 0 : decodeJSONPointerSegment(path13[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -41250,8 +41747,8 @@ function unwrap(s) {
   return s;
 }
 var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at = (path12, key) => typeof key === "number" ? `${path12}[${key}]` : path12 ? `${path12}.${key}` : key;
-function unknownFields(schema, value, path12 = "") {
+var at = (path13, key) => typeof key === "number" ? `${path13}[${key}]` : path13 ? `${path13}.${key}` : key;
+function unknownFields(schema, value, path13 = "") {
   const s = unwrap(schema);
   const d = def(s);
   if (d.type === "object" && isPlainObject2(value)) {
@@ -41260,16 +41757,16 @@ function unknownFields(schema, value, path12 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at(path12, k2)));
+        out.push(...unknownFields(shape[k2], v2, at(path13, k2)));
       else if (!open2)
-        out.push({ path: path12 || "(root)", field: k2 });
+        out.push({ path: path13 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path12, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path13, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path12, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path13, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -41277,7 +41774,7 @@ function unknownFields(schema, value, path12 = "") {
     });
     if (!fits.length)
       return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path12) })).sort((a, b2) => a.extra.length - b2.extra.length);
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path13) })).sort((a, b2) => a.extra.length - b2.extra.length);
     return ranked[0].extra;
   }
   return [];
@@ -41465,7 +41962,7 @@ function normalizeUiMock(raw) {
       used.add(id);
       return id;
     };
-    const el = (n2, path12) => {
+    const el = (n2, path13) => {
       const { type, id: _id, text: text3, label, children, note, goto, traces: traces2, items, ...props } = n2;
       const words = text3 ?? label;
       const id = alloc(n2.id, words, type);
@@ -41475,8 +41972,8 @@ function normalizeUiMock(raw) {
         type,
         ...words !== void 0 ? { text: words } : {},
         textKey: text3 === void 0 && label !== void 0 ? "label" : "text",
-        path: path12,
-        children: (children ?? []).map((ch, i) => el(ch, [...path12, "children", i])),
+        path: path13,
+        children: (children ?? []).map((ch, i) => el(ch, [...path13, "children", i])),
         props: { ...props, ...items ? { items: itemsOf(items, n2.active) } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
@@ -41796,8 +42293,8 @@ function lintUiMock(raw) {
     for (const e of walkUi(s.body))
       where.set(uiPathText(e.path), e.ref);
   }
-  const owner = (path12) => {
-    for (let p = path12; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+  const owner = (path13) => {
+    for (let p = path13; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
       const hit = where.get(p);
       if (hit)
         return hit;
@@ -43995,10 +44492,10 @@ function boardFiles(board) {
   const add = (files, from) => {
     if (!files || typeof files !== "object")
       return;
-    for (const [path12, text3] of Object.entries(files)) {
-      if (typeof text3 !== "string" || out.has(path12))
+    for (const [path13, text3] of Object.entries(files)) {
+      if (typeof text3 !== "string" || out.has(path13))
         continue;
-      out.set(path12, { path: path12, text: text3, sha: sha1(text3), truncated: truncated.has(path12), from });
+      out.set(path13, { path: path13, text: text3, sha: sha1(text3), truncated: truncated.has(path13), from });
     }
   };
   add(wf?.files, { workflow: true });
@@ -44221,6 +44718,53 @@ function stampAttribution(board, ops, by) {
   });
 }
 
+// packages/canvas/dist/adapters/feedback/index.js
+import fs4 from "node:fs";
+import os2 from "node:os";
+import path5 from "node:path";
+var MemoryFeedbackStore = class {
+  where = "memory";
+  records = [];
+  append(record2) {
+    this.records.push(structuredClone(record2));
+  }
+  list() {
+    return structuredClone(this.records);
+  }
+};
+var FileFeedbackStore = class {
+  where;
+  constructor(where) {
+    this.where = where;
+  }
+  append(record2) {
+    fs4.mkdirSync(path5.dirname(this.where), { recursive: true, mode: 448 });
+    fs4.appendFileSync(this.where, JSON.stringify(record2) + "\n", { mode: 384 });
+  }
+  list() {
+    let raw = "";
+    try {
+      raw = fs4.readFileSync(this.where, "utf8");
+    } catch (e) {
+      if (e.code === "ENOENT")
+        return [];
+      throw e;
+    }
+    return raw.split("\n").filter((l) => l.trim()).flatMap((l) => {
+      try {
+        return [JSON.parse(l)];
+      } catch {
+        return [];
+      }
+    });
+  }
+};
+function defaultFeedbackFile(agentsFile, env = process.env, home = os2.homedir()) {
+  if (env.UNPROSE_FEEDBACK_FILE)
+    return path5.resolve(env.UNPROSE_FEEDBACK_FILE);
+  return path5.join(agentsFile ? path5.dirname(agentsFile) : path5.join(home, ".awd"), "feedback.ndjson");
+}
+
 // packages/canvas/dist/access.js
 import crypto3 from "node:crypto";
 
@@ -44346,8 +44890,8 @@ var shortUa = (ua) => {
   if (!ua)
     return "A browser";
   const b2 = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
-  const os6 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
-  return `${b2}${os6 ? ` on ${os6}` : ""}`;
+  const os7 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  return `${b2}${os7 ? ` on ${os7}` : ""}`;
 };
 var AccessService = class {
   opts;
@@ -44483,9 +45027,12 @@ var AccessService = class {
       ...r.clientId ? { clientId: r.clientId, clientName: clientName(r.clientId) } : {}
     })).sort((a, b2) => (a.revokedAt ? 1 : 0) - (b2.revokedAt ? 1 : 0) || b2.createdAt.localeCompare(a.createdAt));
   }
-  /** A unique name among live records: `name`, else `name-2`, `name-3` … ('agent' and 'user' are taken by the roles). */
-  uniqueName(name) {
-    const taken = /* @__PURE__ */ new Set(["agent", "user", ...this.data.agents.filter((r) => !r.revokedAt).map((r) => r.name.toLowerCase())]);
+  /**
+   * A unique name among live records: `name`, else `name-2`, `name-3` … ('agent' and 'user' are taken by the roles;
+   * 'studio', 'any' and 'me' mean something in "Answered by" and @mentions).
+   */
+  uniqueName(name, except) {
+    const taken = /* @__PURE__ */ new Set(["agent", "user", "studio", "any", "me", ...this.data.agents.filter((r) => !r.revokedAt && r.id !== except).map((r) => r.name.toLowerCase())]);
     if (!taken.has(name.toLowerCase()))
       return name;
     for (let i = 2; ; i++)
@@ -44507,6 +45054,23 @@ var AccessService = class {
     const token = newSecret("unp");
     const rec = this.addRecord({ name: cleanName(input2.name, "agent"), via: "token", scope: input2.scope === "read" ? "read" : "write", ...limits(input2), tokenHash: hashSecret(token), createdBy });
     return { agent: this.view_(rec.id), token };
+  }
+  /**
+   * Rename an agent (or a browser session): the name its changes are signed with from now on, and the one people
+   * @mention. Earlier changes keep the name they were made with. Returns the old and the new (unique) name.
+   */
+  rename(id, raw) {
+    const r = this.data.agents.find((a) => a.id === id && !a.revokedAt);
+    if (!r)
+      return void 0;
+    const from = r.name;
+    const to = this.uniqueName(cleanName(raw, r.name), r.id);
+    if (to === from)
+      return { from, to };
+    r.name = to;
+    this.save();
+    this.emit({ type: "access-changed", at: this.iso() });
+    return { from, to };
   }
   revoke(id) {
     const r = this.data.agents.find((a) => a.id === id);
@@ -44859,9 +45423,9 @@ function withParams(uri, params) {
 }
 
 // packages/canvas/dist/adapters/access/index.js
-import fs4 from "node:fs";
-import os2 from "node:os";
-import path5 from "node:path";
+import fs5 from "node:fs";
+import os3 from "node:os";
+import path6 from "node:path";
 var empty = () => ({ agents: [], clients: [] });
 var MemoryAccessStore = class {
   where = "memory";
@@ -44883,7 +45447,7 @@ var FileAccessStore = class {
   }
   read() {
     try {
-      const j2 = JSON.parse(fs4.readFileSync(this.where, "utf8"));
+      const j2 = JSON.parse(fs5.readFileSync(this.where, "utf8"));
       return { agents: Array.isArray(j2.agents) ? j2.agents : [], clients: Array.isArray(j2.clients) ? j2.clients : [] };
     } catch (e) {
       if (e.code === "ENOENT")
@@ -44892,22 +45456,22 @@ var FileAccessStore = class {
     }
   }
   write(data) {
-    fs4.mkdirSync(path5.dirname(this.where), { recursive: true, mode: 448 });
+    fs5.mkdirSync(path6.dirname(this.where), { recursive: true, mode: 448 });
     const tmp = `${this.where}.${process.pid}.tmp`;
-    fs4.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 384 });
-    fs4.renameSync(tmp, this.where);
+    fs5.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 384 });
+    fs5.renameSync(tmp, this.where);
     try {
-      fs4.chmodSync(this.where, 384);
+      fs5.chmodSync(this.where, 384);
     } catch {
     }
   }
 };
-function defaultAgentsFile(env = process.env, home = os2.homedir()) {
+function defaultAgentsFile(env = process.env, home = os3.homedir()) {
   if (env.UNPROSE_AGENTS_FILE)
-    return path5.resolve(env.UNPROSE_AGENTS_FILE);
+    return path6.resolve(env.UNPROSE_AGENTS_FILE);
   if (env.XDG_DATA_HOME)
-    return path5.join(env.XDG_DATA_HOME, "awd", "agents.json");
-  return path5.join(home, ".awd", "agents.json");
+    return path6.join(env.XDG_DATA_HOME, "awd", "agents.json");
+  return path6.join(home, ".awd", "agents.json");
 }
 
 // packages/canvas/dist/accessRoutes.js
@@ -45223,7 +45787,25 @@ async function accessRoute(req, res, url2, method, ctx, auth) {
     json2(res, 201, { agent: r.agent, token: r.token, setup: setupFor(o, r.token, r.agent.name) });
     return true;
   }
+  if (p === "/api/access/feedback" && method === "GET") {
+    if (!mayManage(req, grant))
+      return json2(res, 403, { error: "feedback is shown on a page opened on the canvas machine (or one allowed to manage agents)" }), true;
+    json2(res, 200, { feedback: ctx.feedback?.() ?? [] });
+    return true;
+  }
   const one = /^\/api\/access\/agents\/([A-Za-z0-9_-]+)$/.exec(p);
+  if (one && (method === "PATCH" || method === "PUT")) {
+    if (!mayManage(req, grant))
+      return json2(res, 403, { error: "agents can only be renamed on a page opened on the canvas machine (http://localhost\u2026)" }), true;
+    const b2 = await readForm(req);
+    const r = access.rename(one[1], b2.name);
+    if (!r)
+      return json2(res, 404, { error: "no such agent (or revoked)" }), true;
+    if (r.from !== r.to)
+      ctx.onRename?.(r.from, r.to);
+    json2(res, 200, { ok: true, from: r.from, name: r.to });
+    return true;
+  }
   if (one && method === "DELETE") {
     if (!mayManage(req, grant))
       return json2(res, 403, { error: "tokens can only be revoked on a page opened on the canvas machine (http://localhost\u2026)" }), true;
@@ -49070,7 +49652,8 @@ var CanvasClient = class {
       q2.set("author", author);
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/diff?${q2}`);
   }
-  wait(id, since, timeoutMs, author, quietMs, wake) {
+  /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
+  wait(id, since, timeoutMs, author, quietMs, wake, listen) {
     const q2 = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) });
     if (author)
       q2.set("author", author);
@@ -49078,7 +49661,25 @@ var CanvasClient = class {
       q2.set("quiet", String(quietMs));
     if (wake)
       q2.set("wake", wake);
+    if (listen === "all")
+      q2.set("to", "all");
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`);
+  }
+  /** Who answers the board, its context note, who holds the files, the agents it knows. */
+  settings(id) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/settings`);
+  }
+  /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
+  setSettings(id, patch, author = "agent") {
+    return this.req("PUT", `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author });
+  }
+  /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
+  sendFeedback(input2) {
+    return this.req("POST", "/api/feedback", input2);
+  }
+  /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
+  feedback() {
+    return this.req("GET", "/api/feedback").then((r) => r.feedback);
   }
   /** Kanban: column moves since `since` (structured; see cardMoves). */
   cardMoves(id, since) {
@@ -49098,8 +49699,8 @@ var CanvasClient = class {
   files(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
   }
-  file(id, path12) {
-    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path12)}`).then((r) => r.file);
+  file(id, path13) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path13)}`).then((r) => r.file);
   }
   /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
   propose(id, input2) {
@@ -49674,7 +50275,7 @@ async function resolveBoard(client, ref2) {
   const hit = (await client.listBoards()).find((b2) => b2.title === title);
   if (hit)
     return hit.id;
-  return (await client.createBoard({ title, kind: "freeform", author: "agent" })).id;
+  return (await client.createBoard({ title, kind: "freeform", author: "agent", answeredBy: "me" })).id;
 }
 async function drawDesignContent(client, name, content, board, at2) {
   const d = parseDesignText(name, content);
@@ -49695,7 +50296,7 @@ async function drawDesignContent(client, name, content, board, at2) {
   if (grow)
     ops.push(grow);
   const { seq } = await client.apply(boardId, ops, "agent", `design_draw: ${name}`);
-  const diagrams = { ...current.meta?.diagrams ?? {}, [d.key]: { kind: d.kind, source: name, files: { [name]: content } } };
+  const diagrams = { ...current.meta?.diagrams ?? {}, [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } };
   await client.updateBoard(boardId, { meta: { ...current.meta, diagrams } });
   return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== "error"), unresolved: r.unresolvedTraces ?? [] };
 }
@@ -49776,9 +50377,9 @@ function registerContentDesignTools(server, client, o = {}) {
 
 // packages/canvas/dist/mcp.js
 import { execFile } from "node:child_process";
-import fs5 from "node:fs";
-import os3 from "node:os";
-import path6 from "node:path";
+import fs6 from "node:fs";
+import os4 from "node:os";
+import path7 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -50154,8 +50755,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path12, errorMaps, issueData } = params;
-  const fullPath = [...path12, ...issueData.path || []];
+  const { data, path: path13, errorMaps, issueData } = params;
+  const fullPath = [...path13, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -50270,11 +50871,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path12, key) {
+  constructor(parent, value, path13, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path12;
+    this._path = path13;
     this._key = key;
   }
   get path() {
@@ -53825,11 +54426,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path12) {
-  if (path12.length === 0) {
+function getDotPath(path13) {
+  if (path13.length === 0) {
     return "object root";
   }
-  return path12.reduce((acc, seg, index) => {
+  return path13.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -57890,6 +58491,8 @@ function helpText(o) {
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
     "Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person's page to an item or frame)",
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
+    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; set "Answered by"), canvas_ask (ask another agent on the board and wait for its answer). Comments go to the board's responder ("Answered by"), an @mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
+    "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
   return [
@@ -57914,24 +58517,36 @@ function helpText(o) {
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
     `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
-    "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name."
+    "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name.",
+    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). The person picks who answers ("Answered by" in the board header); @<name> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.`
   ].join("\n");
 }
-function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.homedir()) {
-  const start = path6.resolve(env.CLAUDE_PROJECT_DIR || cwd);
-  for (let d = start; ; d = path6.dirname(d)) {
-    if (fs5.existsSync(path6.join(d, ".git")))
+function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os4.homedir()) {
+  const start = path7.resolve(env.CLAUDE_PROJECT_DIR || cwd);
+  for (let d = start; ; d = path7.dirname(d)) {
+    if (fs6.existsSync(path7.join(d, ".git")))
       return d;
-    if (path6.dirname(d) === d)
+    if (path7.dirname(d) === d)
       break;
   }
-  if (start === path6.resolve(home) || path6.dirname(start) === start)
+  if (start === path7.resolve(home) || path7.dirname(start) === start)
     return void 0;
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.8.2" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.9.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
+  const seenContext = /* @__PURE__ */ new Map();
+  const contextLines = (id, c) => {
+    if (!c)
+      return [];
+    const key = c.at ?? c.text;
+    if (seenContext.get(id) === key)
+      return [];
+    seenContext.set(id, key);
+    const body = opts.remote && c.text.length > 600 ? `${c.text.slice(0, 600)}\u2026 (canvas_context for the rest)` : c.text;
+    return [`Board context${c.by ? ` (from ${displayName(c.by)})` : ""}:`, body, ""];
+  };
   server.registerTool("unprose_help", {
     title: "What Unprose can do",
     description: "What Unprose can do \u2014 the diagrams, the tools, the comment loop and the ways to start (slash commands / prompts). Call it when the person asks what Unprose is, what it can do, or how to begin; pass the answer on in their language.",
@@ -58040,14 +58655,16 @@ ${r.lines.join("\n")}`);
       timeoutSec: external_exports.number().min(1).max(120).default(60),
       quietSec: external_exports.number().min(0).max(30).default(2.5),
       wake: external_exports.enum(["meaningful", "any", "handoff"]).default("meaningful"),
-      from: external_exports.enum(["person", "others"]).default("person").describe("'person' (default): wake on the person's changes; 'others': also on other agents' changes on this board (never your own)")
+      from: external_exports.enum(["person", "others"]).default("person").describe("'person' (default): wake on the person's changes (and on another agent asking you something \u2014 an @mention, a proposal to files you hold); 'others': also on other agents' changes on this board (never your own)"),
+      listen: external_exports.enum(["mine", "all"]).default("mine").describe(`'mine' (default): only what is for you \u2014 the board's responder ("Answered by"), @mentions of you, proposals to files you hold; 'all': every change, whoever it is for`)
     }
-  }, async ({ id, since, timeoutSec, quietSec, wake, from }) => {
-    const r = await client.wait(id, since, timeoutSec * 1e3, from === "others" ? "others" : "user", quietSec * 1e3, wake);
+  }, async ({ id, since, timeoutSec, quietSec, wake, from, listen }) => {
+    const r = await client.wait(id, since, timeoutSec * 1e3, from === "others" ? "others" : "user", quietSec * 1e3, wake, listen);
+    const head = contextLines(id, r.context ?? void 0);
+    const elsewhere = r.notForYou ? [`(${r.notForYou} change(s) on this board were for another agent${r.answeredBy && r.answeredBy !== "any agent" ? ` \u2014 it is answered by ${r.answeredBy}` : ""}; canvas_diff shows them, listen: 'all' wakes on them)`] : [];
     if (r.timedOut)
-      return text2(`no ${from === "others" ? "" : "user "}changes in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`);
-    return text2(`${from === "others" ? "the board changed" : "user changed the board"} (seq ${r.seq}):
-${r.lines.join("\n")}`);
+      return text2([...head, ...elsewhere, `no ${from === "others" ? "" : "user "}changes for you in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`].join("\n"));
+    return text2([...head, `${from === "others" ? "the board changed" : "user changed the board"} (seq ${r.seq}):`, ...r.lines, ...elsewhere].join("\n"));
   });
   server.registerTool("canvas_focus", {
     title: "Show the person something on the board",
@@ -58062,6 +58679,88 @@ ${r.lines.join("\n")}`);
     const r = await client.focus(id, { ids, frame, note });
     const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
     return text2(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+  });
+  server.registerTool("canvas_context", {
+    title: "The board context (and who answers the board)",
+    description: 'Read or write the board\'s context note: a short markdown text saying what the board is about \u2014 the meeting it came from, decisions, links to the notes in the repo (e.g. "Meeting 2026-10-02: \u2026 see docs/meetings/2026-10-02.md"). Every agent that picks the board up sees it (canvas_wait, canvas_read_board, studio\'s brief), so write one when you draw a board from a discussion. Without `text` it only reads; it also tells who answers the board ("Answered by"), who holds the files behind each diagram and which agents are here. `answeredBy` sets who answers the person\'s comments: "me", an agent\'s name, "studio" or "any" \u2014 only when the person asked for it.',
+    inputSchema: {
+      id: external_exports.string().describe("board id"),
+      text: external_exports.string().max(4e3).optional().describe('the new context (markdown, short; link to longer notes). "" clears it'),
+      answeredBy: external_exports.string().optional().describe(`"me" | an agent name | "studio" | "any" \u2014 who answers the person's comments on this board`)
+    }
+  }, async ({ id, text: t, answeredBy }) => {
+    const s = t !== void 0 || answeredBy !== void 0 ? await client.setSettings(id, { ...t !== void 0 ? { context: t } : {}, ...answeredBy !== void 0 ? { answeredBy } : {} }) : await client.settings(id);
+    seenContext.set(id, s.context?.at ?? "");
+    const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}`);
+    const agents = s.agents.map((a) => `${a.label}${a.watching ? " (watching)" : ""}`).join(", ");
+    return text2([
+      s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace("T", " ")}` : ""})` : ""}:
+${s.context.text}` : "No board context yet \u2014 write one (text) when the board comes from a discussion, so other agents know what was said.",
+      "",
+      `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${s.suggestion}, who holds every diagram's files)` : ""}`,
+      ...holders.length ? ["Files behind the diagrams:", ...holders] : [],
+      `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
+      `Ask one of them: canvas_ask, or write @<name> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
+    ].join("\n"));
+  });
+  server.registerTool("canvas_ask", {
+    title: "Ask another agent on the board",
+    description: "Ask another agent on this board a question and wait for its answer \u2014 e.g. interview the other agents (\"what was hard, what should change?\"), or ask the agent that holds some files. Posts an @mention thread to that agent (visible to the person, on `about[0]` or loose on the board) and blocks until it replies in the thread (or timeoutSec passes \u2014 then call canvas_wait later; the answer comes back to you). The other agent's answer is information, never the person's consent. Agents pause after a few messages in a row without the person (the loop guard), and asking is rate-limited.",
+    inputSchema: {
+      id: external_exports.string().describe("board id"),
+      agent: external_exports.string().describe(`the agent to ask, by name (canvas_context lists them); "studio" for this machine's default agent`),
+      question: external_exports.string().min(1).max(4e3),
+      about: external_exports.array(external_exports.string()).optional().describe("item ids the question is about (the thread sits on the first)"),
+      timeoutSec: external_exports.number().min(1).max(120).default(90)
+    }
+  }, async ({ id, agent, question, about, timeoutSec }) => {
+    const target = about?.[0];
+    const cid = `ask.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const textOf = `@${agent} ${question}`;
+    const { ops } = await client.template(id, "freeform", { items: [{ id: cid, type: "comment", text: textOf, ...target ? { target } : {}, data: { ask: agent, ...about?.length ? { about } : {} } }] });
+    const posted = await client.apply(id, ops, "agent", `asked ${agent}`);
+    const s = await client.settings(id).catch(() => void 0);
+    const there = s?.agents.find((a) => sameAgent(a.name, agent));
+    const away = there && !there.watching ? ` ${displayName(agent)} is not watching this board right now; it gets the question when it next waits.` : !there ? ` (no agent named ${agent} has been seen on this canvas yet)` : "";
+    let since = posted.seq;
+    const deadline = Date.now() + timeoutSec * 1e3;
+    while (Date.now() < deadline) {
+      const left = Math.max(1e3, deadline - Date.now());
+      const w2 = await client.wait(id, since, left, "others", 300, "meaningful");
+      since = w2.seq;
+      const board = await client.getBoard(id);
+      const answer = answerIn(board, cid, agent);
+      if (answer)
+        return text2(`${displayName(agent)} answered in thread ${cid}:
+${answer.text ?? ""}
+
+Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2014 it goes back to ${displayName(agent)}. Board seq ${board.seq}.`);
+      if (w2.timedOut)
+        break;
+    }
+    return text2(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`);
+  });
+  server.registerTool("unprose_feedback", {
+    title: "Tell the owner what to improve in Unprose",
+    description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.",
+    inputSchema: {
+      text: external_exports.string().min(1).max(4e3),
+      board: external_exports.string().optional().describe("the board it happened on"),
+      about: external_exports.array(external_exports.string()).optional().describe("tool names or item ids it is about")
+    }
+  }, async ({ text: t, board, about }) => {
+    const r = await client.sendFeedback({ text: t, ...board ? { board } : {}, ...about?.length ? { about } : {} });
+    return text2(`thanks \u2014 recorded as ${r.id}; the owner sees it on the Connected agents page.`);
+  });
+  server.registerTool("unprose_feedback_list", {
+    title: "Read what agents said about Unprose",
+    description: "The feedback agents left with unprose_feedback, newest first. Only for an agent on the canvas machine (or with manage rights); others get a refusal.",
+    inputSchema: { limit: external_exports.number().int().min(1).max(200).default(30) }
+  }, async ({ limit }) => {
+    const list2 = (await client.feedback()).slice(-limit).reverse();
+    if (!list2.length)
+      return text2("no feedback yet");
+    return text2(list2.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
   });
   server.registerTool("canvas_files", {
     title: "Read the files behind a board",
@@ -58110,12 +58809,16 @@ The file is unchanged until whoever has it applies the edit after the person agr
   extra = opts.extend?.(server, { client, project: opts.project }) ?? {};
   return server;
 }
+function answerIn(board, root, agent) {
+  const when = (i) => String(i.data?.postedAt ?? i.updatedAt);
+  return Object.values(board.items).filter((i) => i.type === "comment" && i.id !== root && threadRoot(board, i).id === root && sameAgent(agentOf(i), agent)).sort((a, b2) => when(a).localeCompare(when(b2))).pop();
+}
 function tokenFile() {
-  return process.env.UNPROSE_TOKENS_FILE || path6.join(os3.homedir(), ".awd", "tokens.json");
+  return process.env.UNPROSE_TOKENS_FILE || path7.join(os4.homedir(), ".awd", "tokens.json");
 }
 function savedToken(base) {
   try {
-    const j2 = JSON.parse(fs5.readFileSync(tokenFile(), "utf8"));
+    const j2 = JSON.parse(fs6.readFileSync(tokenFile(), "utf8"));
     return typeof j2[base] === "string" ? j2[base] : void 0;
   } catch {
     return void 0;
@@ -58125,15 +58828,15 @@ function saveToken(base, token) {
   const f = tokenFile();
   let j2 = {};
   try {
-    j2 = JSON.parse(fs5.readFileSync(f, "utf8"));
+    j2 = JSON.parse(fs6.readFileSync(f, "utf8"));
   } catch {
   }
   if (token)
     j2[base] = token;
   else
     delete j2[base];
-  fs5.mkdirSync(path6.dirname(f), { recursive: true, mode: 448 });
-  fs5.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
+  fs6.mkdirSync(path7.dirname(f), { recursive: true, mode: 448 });
+  fs6.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
 }
 async function connectWithCode(base, client, name) {
   const res = await fetch(`${base}/device_authorization`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_name: name, scope: "write" }) });
@@ -58198,7 +58901,7 @@ async function runMcp(extend2) {
     process.exit(1);
   }
   process.env.AWD_CANVAS_URL = base;
-  const name = process.env.UNPROSE_AGENT_NAME || `agent on ${os3.hostname().replace(/\.local$/, "")}`;
+  const name = process.env.UNPROSE_AGENT_NAME || `agent on ${os4.hostname().replace(/\.local$/, "")}`;
   const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME });
   if (needsPairing)
     void connectWithCode(base, client, name);
@@ -58241,8 +58944,8 @@ async function handleMcp(req, res, grant, ctx, body) {
 }
 
 // packages/canvas/dist/server.js
-var __dirname3 = path7.dirname(fileURLToPath3(import.meta.url));
-var WEB_DIST = [path7.join(__dirname3, "web"), path7.resolve(__dirname3, "../web/dist")].find((d) => fs6.existsSync(path7.join(d, "index.html"))) ?? path7.resolve(__dirname3, "../web/dist");
+var __dirname3 = path8.dirname(fileURLToPath3(import.meta.url));
+var WEB_DIST = [path8.join(__dirname3, "web"), path8.resolve(__dirname3, "../web/dist")].find((d) => fs7.existsSync(path8.join(d, "index.html"))) ?? path8.resolve(__dirname3, "../web/dist");
 var MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -58256,6 +58959,7 @@ var MIME = {
   ".woff": "font/woff",
   ".map": "application/json"
 };
+var SETTINGS_KEYS = ["responder", "context", "agentTurns"];
 function studioArgv(template, project) {
   const [command, ...args] = template.trim().split(/\s+/).map((t) => t.split("{project}").join(project).split("{file}").join(project));
   if (!command)
@@ -58264,18 +58968,18 @@ function studioArgv(template, project) {
 }
 var realOf = (p) => {
   try {
-    return fs6.realpathSync(p);
+    return fs7.realpathSync(p);
   } catch {
-    return path7.resolve(p);
+    return path8.resolve(p);
   }
 };
 function studioProjectOf(board, projects) {
   const claims = [board.meta?.project?.root, board.meta?.workflow?.file];
   for (const c of claims) {
-    if (typeof c !== "string" || !path7.isAbsolute(c))
+    if (typeof c !== "string" || !path8.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path7.sep));
+    const hit = projects.find((p) => want === p.root || want.startsWith(p.root + path8.sep));
     if (hit)
       return hit;
   }
@@ -58283,7 +58987,7 @@ function studioProjectOf(board, projects) {
 }
 function studioSessions(p) {
   try {
-    const j2 = JSON.parse(fs6.readFileSync(path7.join(p.root, ".awd", "studio", "status.json"), "utf8"));
+    const j2 = JSON.parse(fs7.readFileSync(path8.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
     const n2 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
@@ -58374,6 +59078,90 @@ function startServer(opts = {}) {
     }
     return { author: isAuthor(raw) ? raw : void 0 };
   };
+  const feedback = opts.feedback ?? new MemoryFeedbackStore();
+  const seenNames = /* @__PURE__ */ new Set();
+  const remember = (n2) => {
+    if (n2 && seenNames.size < 500)
+      seenNames.add(n2);
+  };
+  const knownAgents = (id, g2) => {
+    const b2 = store.get(id);
+    const onBoard = /* @__PURE__ */ new Set([LOCAL_AGENT]);
+    if (b2) {
+      for (const n2 of [...store.watcherNames(id), ...Object.keys(store.watcherSeen(id))])
+        onBoard.add(n2);
+      for (const h of holdersOf(b2.meta))
+        onBoard.add(h.holder.agent);
+      const r = responderName(responderOf(b2.meta));
+      if (r)
+        onBoard.add(r);
+      for (const it of Object.values(b2.items))
+        if (it.type === "comment" && it.createdBy === "agent" && typeof it.data?.by === "string")
+          onBoard.add(it.data.by);
+    }
+    if (g2 && g2.as === "agent")
+      return [...onBoard];
+    for (const n2 of seenNames)
+      onBoard.add(n2);
+    for (const a of access.list())
+      if (!a.revokedAt && a.via !== "browser")
+        onBoard.add(a.name);
+    return [...onBoard];
+  };
+  const maxTurns = (b2) => {
+    const v2 = Number(b2.meta?.agentTurns);
+    if (Number.isInteger(v2) && v2 >= 1 && v2 <= 100)
+      return v2;
+    return opts.agentTurns ?? (Number(process.env.UNPROSE_AGENT_TURNS) || DEFAULT_AGENT_TURNS);
+  };
+  const routed = (board, ops, author) => stampRouting(board, ops, knownAgents(board.id), (/* @__PURE__ */ new Date()).toISOString(), (b2, o) => applyOps(b2, o, author).board, maxTurns(board));
+  const mentionLimit = opts.agentMentions ?? { max: Number(process.env.UNPROSE_AGENT_MENTIONS) || 20, windowMs: 10 * 6e4 };
+  const mentionLog = /* @__PURE__ */ new Map();
+  const checkMentionRate = (ops, author, by) => {
+    if (author !== "agent")
+      return;
+    const me = by ?? LOCAL_AGENT;
+    const asks = ops.filter((op) => op.kind === "add" && op.item.type === "comment" && typeof op.item.data?.mention === "string" && !sameAgent(op.item.data.mention, me)).length;
+    if (!asks)
+      return;
+    const now = Date.now();
+    const key = me.toLowerCase();
+    const recent = (mentionLog.get(key) ?? []).filter((t) => now - t < mentionLimit.windowMs);
+    if (recent.length + asks > mentionLimit.max) {
+      const wait = Math.ceil((mentionLimit.windowMs - (now - (recent[0] ?? now))) / 1e3);
+      throw new HttpError(429, `${displayName(me)} has asked other agents ${recent.length} times in the last ${Math.round(mentionLimit.windowMs / 6e4)} minutes (the limit is ${mentionLimit.max}); wait ${wait}s, or ask the person to step in`);
+    }
+    mentionLog.set(key, [...recent, ...Array.from({ length: asks }, () => now)]);
+  };
+  const viewOf = (g2, b2) => g2.kind === "local" ? b2 : { ...b2, meta: redactHolders(b2.meta) };
+  const settingsOf = (g2, b2, req) => {
+    const meta3 = viewOf(g2, b2).meta;
+    const r = responderOf(b2.meta);
+    const watching = new Set(store.watcherNames(b2.id));
+    const seen = store.watcherSeen(b2.id);
+    const holders = holdersOf(meta3);
+    return {
+      responder: r ?? null,
+      answeredBy: responderLabel(r),
+      context: contextOf(b2.meta) ?? null,
+      agentTurns: maxTurns(b2),
+      holders,
+      suggestion: !r && soleHolder(b2.meta) && !sameAgent(soleHolder(b2.meta), LOCAL_AGENT) ? soleHolder(b2.meta) : void 0,
+      agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), watching: watching.has(name), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
+      you: agentName(req, g2) ?? (g2.as === "browser" ? g2.name : void 0)
+    };
+  };
+  const renameOnBoards = (from, to) => {
+    for (const b2 of store.list()) {
+      const m2 = renameInMeta(b2.meta, from, to);
+      if (!m2)
+        continue;
+      const patch = Object.fromEntries(["responder", "diagrams", "workflow"].filter((k2) => JSON.stringify(m2[k2]) !== JSON.stringify(b2.meta?.[k2])).map((k2) => [k2, m2[k2]]));
+      if (Object.keys(patch).length)
+        store.setMeta(b2.id, patch, "user", `renamed agent ${from} \u2192 ${to}`);
+    }
+  };
+  const feedbackLog = /* @__PURE__ */ new Map();
   const webDist = opts.webDist ?? WEB_DIST;
   let cachedRelease;
   const release = () => cachedRelease ??= findRelease(opts.releaseDir);
@@ -58438,12 +59226,12 @@ function startServer(opts = {}) {
     return store.get(id);
   };
   const serveStatic = (res, rel) => {
-    const safe = path7.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-    const file2 = path7.join(webDist, safe);
-    if (!file2.startsWith(webDist) || !fs6.existsSync(file2) || fs6.statSync(file2).isDirectory())
+    const safe = path8.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+    const file2 = path8.join(webDist, safe);
+    if (!file2.startsWith(webDist) || !fs7.existsSync(file2) || fs7.statSync(file2).isDirectory())
       return false;
-    res.writeHead(200, { "content-type": MIME[path7.extname(file2)] ?? "application/octet-stream" });
-    fs6.createReadStream(file2).pipe(res);
+    res.writeHead(200, { "content-type": MIME[path8.extname(file2)] ?? "application/octet-stream" });
+    fs7.createReadStream(file2).pipe(res);
     return true;
   };
   const fallbackPage = (boards) => `<!doctype html><meta charset="utf-8"><title>awd-canvas</title>
@@ -58519,11 +59307,11 @@ function startServer(opts = {}) {
     const method = req.method ?? "GET";
     let authResult;
     const auth = async () => authResult ??= await access.authenticate(req);
-    if (await accessRoute(req, res, url2, method, { access, publicOrigin, projects: () => hasProjects(store) ? store.projects().map((p) => ({ id: p.id, name: p.name })) : [] }, auth))
+    if (await accessRoute(req, res, url2, method, { access, publicOrigin, projects: () => hasProjects(store) ? store.projects().map((p) => ({ id: p.id, name: p.name })) : [], onRename: renameOnBoards, feedback: () => feedback.list() }, auth))
       return;
     res.setHeader("access-control-allow-origin", "*");
     res.setHeader("access-control-allow-headers", "content-type, authorization, mcp-protocol-version, mcp-session-id, x-unprose-agent");
-    res.setHeader("access-control-allow-methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     res.setHeader("access-control-expose-headers", "www-authenticate, mcp-session-id");
     if (method === "OPTIONS")
       return void res.writeHead(204).end();
@@ -58555,6 +59343,35 @@ function startServer(opts = {}) {
       }
       if (parts[1] === "update")
         return updateRoute(req, res, method, parts[2], url2);
+      if (parts[1] === "feedback" && !parts[2]) {
+        if (method === "POST") {
+          const body = await readBody(req);
+          const text3 = typeof body.text === "string" ? body.text.trim() : "";
+          if (!text3)
+            throw new HttpError(400, "text is required: what was hard, what should change, what you missed");
+          if (text3.length > 4e3)
+            throw new HttpError(400, "text is longer than 4000 characters");
+          const board2 = typeof body.board === "string" && body.board ? body.board : void 0;
+          if (board2 && (!store.get(board2) || !visible(grant, board2)))
+            throw new HttpError(404, `board ${board2} not found`);
+          const about = Array.isArray(body.about) ? body.about.filter((a) => typeof a === "string").slice(0, 20) : void 0;
+          const by = grant.as ? grant.name : agentName(req, grant) ?? LOCAL_AGENT;
+          const now = Date.now();
+          const recent = (feedbackLog.get(by) ?? []).filter((t) => now - t < 10 * 6e4);
+          if (recent.length >= 30)
+            throw new HttpError(429, "thanks \u2014 that is a lot of feedback for ten minutes; send the rest later");
+          feedbackLog.set(by, [...recent, now]);
+          const rec = { id: newId("fb"), at: new Date(now).toISOString(), by, via: grant.kind, text: text3, ...board2 ? { board: board2 } : {}, ...about?.length ? { about } : {} };
+          feedback.append(rec);
+          return json4(res, 201, { ok: true, id: rec.id });
+        }
+        if (method === "GET") {
+          if (grant.kind !== "local" && !grant.manage)
+            throw new HttpError(403, "feedback is read on the canvas machine (a local agent or page) or by a page allowed to manage agents");
+          return json4(res, 200, { feedback: feedback.list() });
+        }
+        throw new HttpError(405, "method not allowed");
+      }
       if (parts[1] !== "boards")
         throw new HttpError(404, "not found");
       const id = parts[2];
@@ -58564,7 +59381,7 @@ function startServer(opts = {}) {
           const only = projectOrError(res, () => resolveProject(store, req, url2.searchParams.get("project") ?? void 0));
           if (only === null)
             return;
-          return json4(res, 200, { boards: store.list().filter((b2) => (!only || projectOf(b2.id) === only) && visible(grant, b2.id)).map((b2) => ({ ...summary(b2), project: projectOf(b2.id) })) });
+          return json4(res, 200, { boards: store.list().filter((b2) => (!only || projectOf(b2.id) === only) && visible(grant, b2.id)).map((b2) => ({ ...summary(viewOf(grant, b2)), project: projectOf(b2.id) })) });
         }
         if (method === "POST") {
           needWrite(grant);
@@ -58587,8 +59404,11 @@ function startServer(opts = {}) {
             items = render(body.kind, parsed.data);
           }
           const who = actor(req, grant, body.author, "agent");
-          const board2 = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...project ? { project } : {}, ...who.by ? { by: who.by } : {} }, who.author);
-          return json4(res, 201, { board: board2, project: hasProjects(store) ? store.projectOf(board2.id) : "personal" });
+          const answeredBy = body.answeredBy === "me" && who.author === "agent" && who.by ? { responder: { mode: "agent", agent: who.by, by: who.by, at: (/* @__PURE__ */ new Date()).toISOString() } } : {};
+          const meta3 = body.meta || Object.keys(answeredBy).length ? { ...body.meta ?? {}, ...answeredBy } : void 0;
+          const board2 = store.create({ title: body.title, kind: body.kind, meta: meta3, items, ...project ? { project } : {}, ...who.by ? { by: who.by } : {} }, who.author);
+          remember(who.author === "agent" ? who.by : void 0);
+          return json4(res, 201, { board: viewOf(grant, board2), project: hasProjects(store) ? store.projectOf(board2.id) : "personal" });
         }
         throw new HttpError(405, "method not allowed");
       }
@@ -58601,10 +59421,25 @@ function startServer(opts = {}) {
         needWrite(grant);
       if (!sub) {
         if (method === "GET")
-          return json4(res, 200, { board });
+          return json4(res, 200, { board: viewOf(grant, board) });
         if (method === "PUT" || method === "PATCH") {
           const body = await readBody(req);
-          return json4(res, 200, { board: store.updateBoard(id, body) });
+          const patch = {};
+          if (typeof body.title === "string")
+            patch.title = body.title;
+          if (body.meta && typeof body.meta === "object") {
+            const w2 = actor(req, grant, "agent", "agent");
+            const meta3 = stampHolders(board.meta, body.meta, w2.by ?? LOCAL_AGENT, (/* @__PURE__ */ new Date()).toISOString());
+            for (const k2 of SETTINGS_KEYS) {
+              if (board.meta?.[k2] !== void 0)
+                meta3[k2] = board.meta[k2];
+              else
+                delete meta3[k2];
+            }
+            patch.meta = meta3;
+            remember(w2.by);
+          }
+          return json4(res, 200, { board: viewOf(grant, store.updateBoard(id, patch)) });
         }
         if (method === "DELETE")
           return json4(res, 200, { deleted: store.delete(id) });
@@ -58617,7 +59452,10 @@ function startServer(opts = {}) {
         if (!isAuthor(body.author) && grant.as !== "agent")
           throw new HttpError(400, "author must be 'agent' or 'user'");
         const who = actor(req, grant, body.author, "agent");
-        const ops = stampAttribution(board, assertOps(body.ops), who.by);
+        const ops = routed(board, stampAttribution(board, assertOps(body.ops), who.by), who.author);
+        checkMentionRate(ops, who.author, who.by);
+        if (who.author === "agent")
+          remember(who.by);
         const change = store.apply(id, ops, who.author, body.note, who.by);
         return json4(res, 200, { seq: change.seq, change });
       }
@@ -58645,7 +59483,7 @@ function startServer(opts = {}) {
             throw new HttpError(e.status, e.message);
           throw e;
         }
-        const change = store.apply(id, p.ops, who.author, `proposed an edit to ${p.file} (+${p.added} \u2212${p.removed})`, who.by);
+        const change = store.apply(id, routed(store.get(id), p.ops, who.author), who.author, `proposed an edit to ${p.file} (+${p.added} \u2212${p.removed})`, who.by);
         return json4(res, 201, { seq: change.seq, comment: p.commentId, file: p.file, diff: p.diff, about: p.about, added: p.added, removed: p.removed, offsets: p.offsets });
       }
       if (sub === "focus" && method === "POST") {
@@ -58704,10 +59542,70 @@ function startServer(opts = {}) {
         const wake = wakeRaw;
         const f = authorFilter(req, grant, url2.searchParams.get("author"));
         const name = agentName(req, grant);
-        const changes = await store.waitFor(id, since, timeout, f.author, { quietMs, wake, match: f.match, who: name });
+        remember(name);
+        const me = name ?? LOCAL_AGENT;
+        const all = url2.searchParams.get("to") === "all";
+        const fromAuthor = (c) => (!f.author || c.author === f.author) && (!f.match || f.match(c));
+        const now = () => store.get(id);
+        const forMe = (c) => all || addressedTo(now(), c, me);
+        const match = (c) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c);
+        const changes = await store.waitFor(id, since, timeout, void 0, { quietMs, wake, match, who: name });
         const lines2 = summarize(store.get(id), changes, { collapseMoves: wake !== "any" });
         const cur = readByAgent(id, changes, f.author, name);
-        return json4(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines: lines2 });
+        const last = changes.length ? changes[changes.length - 1].seq : cur.seq;
+        const notForYou = all ? 0 : store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c) && !forMe(c)).length;
+        const r = responderOf(cur.meta);
+        return json4(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines: lines2, notForYou, answeredBy: responderLabel(r), responder: r ?? null, context: contextOf(cur.meta) ?? null });
+      }
+      if (sub === "settings") {
+        if (method === "GET")
+          return json4(res, 200, settingsOf(grant, board, req));
+        if (method !== "PUT" && method !== "PATCH" && method !== "POST")
+          throw new HttpError(405, "method not allowed");
+        const body = await readBody(req);
+        if (body.author !== void 0 && !isAuthor(body.author))
+          throw new HttpError(400, "author must be 'agent' or 'user'");
+        const w2 = actor(req, grant, body.author, "user");
+        const at2 = (/* @__PURE__ */ new Date()).toISOString();
+        const by = w2.by ?? (w2.author === "agent" ? LOCAL_AGENT : void 0);
+        const patch = {};
+        const notes = [];
+        const asked = "responder" in body ? body.responder : "answeredBy" in body ? body.answeredBy : void 0;
+        if (asked !== void 0) {
+          const r = parseResponder(asked, w2.author === "agent" ? w2.by ?? LOCAL_AGENT : void 0, by, at2);
+          if (r === void 0)
+            throw new HttpError(400, "answeredBy must be 'any', 'studio', 'me' (an agent) or an agent's name");
+          const cur = responderOf(board.meta);
+          if ((r?.mode ?? "default") !== (cur?.mode ?? "default") || !sameAgent(r?.agent ?? "", cur?.agent ?? "") || (r?.agent ?? "") !== (cur?.agent ?? "")) {
+            patch.responder = r ? Object.fromEntries(Object.entries(r).filter(([, v2]) => v2 !== void 0)) : null;
+            notes.push(r ? `set "Answered by" to ${responderLabel(r)}` : 'set "Answered by" back to the default (studio and any agent)');
+          }
+        }
+        if ("context" in body) {
+          const raw = body.context && typeof body.context === "object" ? body.context.text : body.context;
+          if (raw !== null && raw !== void 0 && typeof raw !== "string")
+            throw new HttpError(400, "context must be a text (markdown), or null to clear it");
+          const text3 = (raw ?? "").replace(/\r\n/g, "\n").trim();
+          if (text3.length > CONTEXT_MAX)
+            throw new HttpError(400, `the context is longer than ${CONTEXT_MAX} characters \u2014 keep it short and link to the notes (docs/meetings/\u2026md)`);
+          if (text3 !== (contextOf(board.meta)?.text ?? "")) {
+            patch.context = text3 ? { text: text3, ...by ? { by } : {}, at: at2 } : null;
+            notes.push(text3 ? "updated the board context" : "cleared the board context");
+          }
+        }
+        if ("agentTurns" in body) {
+          const v2 = body.agentTurns === null ? null : Number(body.agentTurns);
+          if (v2 !== null && !(Number.isInteger(v2) && v2 >= 1 && v2 <= 100))
+            throw new HttpError(400, "agentTurns must be a whole number from 1 to 100, or null for the default");
+          if (v2 !== (typeof board.meta?.agentTurns === "number" ? board.meta.agentTurns : null)) {
+            patch.agentTurns = v2;
+            notes.push(v2 ? `agents may now post ${v2} messages in a row in a thread` : "the loop guard is back to its default");
+          }
+        }
+        if (!Object.keys(patch).length)
+          return json4(res, 200, { seq: board.seq, ...settingsOf(grant, board, req) });
+        const change = store.setMeta(id, patch, w2.author, notes.join("; "), w2.by);
+        return json4(res, 200, { seq: change.seq, ...settingsOf(grant, store.get(id), req) });
       }
       if (sub === "cards") {
         const cardIdParam = parts[4];
@@ -58828,7 +59726,7 @@ function startServer(opts = {}) {
               args,
               cwd: project.root,
               env: { AWD_CANVAS_URL: `http://localhost:${port()}` },
-              logFile: studio.logDir ? path7.join(studio.logDir, `studio-${project.name}.log`) : void 0
+              logFile: studio.logDir ? path8.join(studio.logDir, `studio-${project.name}.log`) : void 0
             });
             return json4(res, 200, view(info));
           }
@@ -58861,8 +59759,8 @@ function startServer(opts = {}) {
         const file2 = resolveDocAsset(docsDir, decodeURIComponent(parts.slice(2).join("/")));
         if (!file2)
           throw new HttpError(404, "asset not found");
-        res.writeHead(200, { "content-type": MIME[path7.extname(file2)] ?? "application/octet-stream" });
-        return void fs6.createReadStream(file2).pipe(res);
+        res.writeHead(200, { "content-type": MIME[path8.extname(file2)] ?? "application/octet-stream" });
+        return void fs7.createReadStream(file2).pipe(res);
       }
       const rendered = renderDoc(docsDir, decodeURIComponent(parts[1]).replace(/\.md$/, ""));
       if (!rendered)
@@ -58871,7 +59769,7 @@ function startServer(opts = {}) {
     }
     if (method !== "GET")
       throw new HttpError(405, "method not allowed");
-    const hasUi = fs6.existsSync(path7.join(webDist, "index.html"));
+    const hasUi = fs7.existsSync(path8.join(webDist, "index.html"));
     if (parts[0] === "b" || parts.length === 0 || parts[0] === "agents" && parts.length === 1) {
       if (hasUi)
         return void serveStatic(res, "index.html");
@@ -58948,16 +59846,16 @@ function startServer(opts = {}) {
       if (ws.readyState === import_websocket.default.OPEN)
         ws.send(msg);
   });
-  const presence = (id) => ({ type: "presence", author: "agent", at: (/* @__PURE__ */ new Date()).toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id) });
+  const presence = (id) => ({ type: "presence", author: "agent", at: (/* @__PURE__ */ new Date()).toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id), seen: store.watcherSeen(id) });
   const onBoardSocket = (ws, grant, boardId) => {
     const board = { id: boardId };
     {
       if (grant.kind === "local")
         localSockets.add(ws);
       const send = (msg) => ws.readyState === import_websocket.default.OPEN && ws.send(JSON.stringify(msg));
-      send({ type: "hello", board: store.get(board.id) });
+      send({ type: "hello", board: viewOf(grant, store.get(board.id)) });
       send(presence(board.id));
-      const offChange = store.subscribe(board.id, (change) => send({ type: "change", change }));
+      const offChange = store.subscribe(board.id, (change) => send({ type: "change", change: change.meta && grant.kind !== "local" ? { ...change, meta: redactHolders(change.meta) } : change }));
       const offPresence = store.onPresence((id) => {
         if (id === board.id)
           send(presence(board.id));
@@ -59018,8 +59916,8 @@ function escapeHtml2(s) {
 
 // packages/canvas/dist/adapters/process/spawn.js
 import { spawn } from "node:child_process";
-import fs7 from "node:fs";
-import path8 from "node:path";
+import fs8 from "node:fs";
+import path9 from "node:path";
 
 // packages/canvas/dist/ports/processSupervisor.js
 var LOG_LINES = 50;
@@ -59037,8 +59935,8 @@ var SpawnSupervisor = class {
       return this.info(key);
     const e = { running: true, since: (/* @__PURE__ */ new Date()).toISOString(), log: cur?.log ?? [] };
     if (spec.logFile) {
-      fs7.mkdirSync(path8.dirname(spec.logFile), { recursive: true });
-      e.file = fs7.createWriteStream(spec.logFile, { flags: "a" });
+      fs8.mkdirSync(path9.dirname(spec.logFile), { recursive: true });
+      e.file = fs8.createWriteStream(spec.logFile, { flags: "a" });
     }
     this.entries.set(key, e);
     const push = (line) => {
@@ -59160,9 +60058,9 @@ var GitHubReleaseSource = class {
 // packages/canvas/dist/adapters/update/installer.js
 import { createHash as createHash3 } from "node:crypto";
 import { execFile as execFile3, spawn as spawn2 } from "node:child_process";
-import fs8 from "node:fs";
-import os4 from "node:os";
-import path9 from "node:path";
+import fs9 from "node:fs";
+import os5 from "node:os";
+import path10 from "node:path";
 var lines = (onLine) => {
   let rest = "";
   return (chunk) => {
@@ -59196,48 +60094,48 @@ var ChildInstaller = class {
   async downloadRuntime(version2, dir, onLine) {
     const name = `unprose-runtime-v${version2}.tgz`;
     const base = (process.env.AWD_RUNTIME_URL || this.o.base || `https://github.com/${this.o.repo}/releases/download`).replace(/\/$/, "");
-    const tmp = fs8.mkdtempSync(path9.join(os4.tmpdir(), "unprose-upgrade-"));
+    const tmp = fs9.mkdtempSync(path10.join(os5.tmpdir(), "unprose-upgrade-"));
     try {
-      const tgz = path9.join(tmp, name);
-      const sum = path9.join(tmp, `${name}.sha256`);
+      const tgz = path10.join(tmp, name);
+      const sum = path10.join(tmp, `${name}.sha256`);
       try {
         for (const [file2, url2] of [[tgz, `${base}/v${version2}/${name}`], [sum, `${base}/v${version2}/${name}.sha256`]]) {
           onLine(`downloading ${url2}`);
           const r = await fetch(url2);
           if (!r.ok)
             throw new Error(`HTTP ${r.status} for ${url2}`);
-          fs8.writeFileSync(file2, Buffer.from(await r.arrayBuffer()));
+          fs9.writeFileSync(file2, Buffer.from(await r.arrayBuffer()));
         }
       } catch (e) {
         onLine(`direct download failed (${e.message}); trying gh release download`);
         await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
       }
-      const want = fs8.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
-      const got = createHash3("sha256").update(fs8.readFileSync(tgz)).digest("hex");
+      const want = fs9.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
+      const got = createHash3("sha256").update(fs9.readFileSync(tgz)).digest("hex");
       if (!want || want !== got)
         throw new Error(`checksum mismatch for ${name}`);
-      const out = path9.join(tmp, "x");
-      fs8.mkdirSync(out);
+      const out = path10.join(tmp, "x");
+      fs9.mkdirSync(out);
       await execText("tar", ["-xzf", tgz, "-C", out]);
-      fs8.mkdirSync(path9.dirname(dir), { recursive: true });
-      fs8.rmSync(dir, { recursive: true, force: true });
-      fs8.renameSync(out, dir);
+      fs9.mkdirSync(path10.dirname(dir), { recursive: true });
+      fs9.rmSync(dir, { recursive: true, force: true });
+      fs9.renameSync(out, dir);
       onLine(`unpacked into ${dir}`);
     } finally {
-      fs8.rmSync(tmp, { recursive: true, force: true });
+      fs9.rmSync(tmp, { recursive: true, force: true });
     }
   }
   exists(p) {
-    return fs8.existsSync(p);
+    return fs9.existsSync(p);
   }
 };
 var ProcessLauncher = class {
   spawnDetached(entry, args, env, logFile) {
-    fs8.mkdirSync(path9.dirname(logFile), { recursive: true });
-    const fd = fs8.openSync(logFile, "a");
+    fs9.mkdirSync(path10.dirname(logFile), { recursive: true });
+    const fd = fs9.openSync(logFile, "a");
     const child = spawn2(process.execPath, [entry, ...args], { detached: true, stdio: ["ignore", fd, fd], env });
     child.unref();
-    fs8.closeSync(fd);
+    fs9.closeSync(fd);
     return child.pid ?? -1;
   }
   async probeVersion(port) {
@@ -59287,8 +60185,8 @@ var FakeUpdateSource = class {
 };
 
 // packages/canvas/dist/updater.js
-import fs9 from "node:fs";
-import path10 from "node:path";
+import fs10 from "node:fs";
+import path11 from "node:path";
 var SIX_HOURS = 6 * 60 * 60 * 1e3;
 var ERROR_TTL = 30 * 60 * 1e3;
 var LOG_LINES2 = 200;
@@ -59301,7 +60199,7 @@ var UpdateService = class {
     this.o = o;
     try {
       if (o.cacheFile) {
-        const c = JSON.parse(fs9.readFileSync(o.cacheFile, "utf8"));
+        const c = JSON.parse(fs10.readFileSync(o.cacheFile, "utf8"));
         if (c.current === o.current)
           this.cache = c;
       }
@@ -59336,8 +60234,8 @@ var UpdateService = class {
       this.cache = c;
       try {
         if (this.o.cacheFile) {
-          fs9.mkdirSync(path10.dirname(this.o.cacheFile), { recursive: true });
-          fs9.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
+          fs10.mkdirSync(path11.dirname(this.o.cacheFile), { recursive: true });
+          fs10.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
         }
       } catch {
       }
@@ -59449,12 +60347,12 @@ var UpdateService = class {
       return void 0;
     let json4;
     try {
-      json4 = JSON.parse(fs9.readFileSync(installedFile, "utf8"));
+      json4 = JSON.parse(fs10.readFileSync(installedFile, "utf8"));
     } catch {
       return void 0;
     }
     const found = installedUpdate(json4, install.root, this.o.current, (p) => this.o.installer.exists(p));
-    return found && { version: found.version, entry: path10.join(found.root, "scripts", "canvas.mjs") };
+    return found && { version: found.version, entry: path11.join(found.root, "scripts", "canvas.mjs") };
   }
   /**
    * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
@@ -59496,12 +60394,12 @@ var UpdateService = class {
     if (!f)
       return;
     try {
-      const s = JSON.parse(fs9.readFileSync(f, "utf8"));
+      const s = JSON.parse(fs10.readFileSync(f, "utf8"));
       if (s.pid !== (this.o.pid ?? process.pid))
         return;
-      const root = this.o.install.kind === "plugin" ? path10.dirname(path10.dirname(entry)) : s.root;
-      const runtime = this.o.install.kind === "plugin" ? path10.join(String(root), "dist") : path10.dirname(entry);
-      fs9.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
+      const root = this.o.install.kind === "plugin" ? path11.dirname(path11.dirname(entry)) : s.root;
+      const runtime = this.o.install.kind === "plugin" ? path11.join(String(root), "dist") : path11.dirname(entry);
+      fs10.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
     } catch {
     }
   }
@@ -59767,43 +60665,43 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path11.dirname(d)) {
-    if (fs10.existsSync(path11.join(d, ".git")))
+  for (let d = dir; ; d = path12.dirname(d)) {
+    if (fs11.existsSync(path12.join(d, ".git")))
       return d;
-    if (path11.dirname(d) === d)
+    if (path12.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path11.dirname(path11.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path12.dirname(path12.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs10.realpathSync(path11.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path11.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs11.realpathSync(path12.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path12.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs10.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs11.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path11.join(os5.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path12.join(os6.homedir(), "Library", "Logs", "awd") };
 }
 function updateService(env) {
   const repo = env.UNPROSE_UPDATE_REPO || "river0825/unprose";
   const entry = (() => {
     try {
-      return fs10.realpathSync(process.argv[1] ?? "");
+      return fs11.realpathSync(process.argv[1] ?? "");
     } catch {
       return process.argv[1] ?? "";
     }
   })();
-  const install = detectInstall(entry, env, (p) => fs10.existsSync(p));
+  const install = detectInstall(entry, env, (p) => fs11.existsSync(p));
   const current = findRelease().version;
   const off = env.UNPROSE_UPDATE_CHECK === "0";
   const fake = env.UNPROSE_UPDATE_FAKE_LATEST;
   const source = off ? void 0 : fake ? new FakeUpdateSource({ version: fake, source: "fake (UNPROSE_UPDATE_FAKE_LATEST)", notes: `### Added
 - A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env });
-  const home = os5.homedir();
-  const stateFile = env.CLAUDE_PLUGIN_DATA ? path11.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path11.join(home, ".awd", "plugin", "canvas.json");
+  const home = os6.homedir();
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path12.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path12.join(home, ".awd", "plugin", "canvas.json");
   return new UpdateService({
     current,
     install,
@@ -59813,10 +60711,10 @@ function updateService(env) {
     entry,
     argv: process.argv.slice(2),
     env: Object.fromEntries(Object.entries(env).filter((e) => typeof e[1] === "string")),
-    cacheFile: fake ? void 0 : path11.join(home, ".awd", "update-check.json"),
-    logFile: path11.join(home, ".awd", "canvas-upgrade.log"),
+    cacheFile: fake ? void 0 : path12.join(home, ".awd", "update-check.json"),
+    logFile: path12.join(home, ".awd", "canvas-upgrade.log"),
     stateFile,
-    installedFile: path11.join(env.CLAUDE_CONFIG_DIR || path11.join(home, ".claude"), "plugins", "installed_plugins.json"),
+    installedFile: path12.join(env.CLAUDE_CONFIG_DIR || path12.join(home, ".claude"), "plugins", "installed_plugins.json"),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
   });
 }
@@ -59831,7 +60729,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path11.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path12.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -59843,10 +60741,11 @@ async function main() {
         const p = store.registerProject(root);
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
       }
-      const agentsFile = path11.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
+      const agentsFile = path12.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
       const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== "off";
       const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth });
-      const s = await startServer({ port, store, studio, update: updateService(process.env), access });
+      const feedback = new FileFeedbackStore(defaultFeedbackFile(agentsFile));
+      const s = await startServer({ port, store, studio, update: updateService(process.env), access, feedback });
       const where = storeKind === "memory" ? "in memory" : `in ${s.store.dir ?? dir}`;
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`);
       console.log(remoteAuth ? `  remote agents: ${s.url}/mcp \u2014 requests from elsewhere need a token or approval (tokens in ${agentsFile})` : "  remote auth is OFF (UNPROSE_REMOTE_AUTH=off): anyone who reaches this server can read and write");
@@ -59867,7 +60766,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs10.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs11.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

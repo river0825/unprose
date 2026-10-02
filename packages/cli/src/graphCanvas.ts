@@ -5,7 +5,8 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { boardByTitle, canvasHeaders, registerProject } from './projects.js'
+import { boardByTitle, canvasHeaders, holderInfo, registerProject } from './projects.js'
+import { afterApplied, type AppliedResult } from './applied.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
 import { planRedraw, placedByUser } from '@awd/canvas/diagrams'
@@ -17,14 +18,16 @@ export interface PushGraphOptions {
   runtime?: string
   /** The workflow file — needed for block details (agent files, scripts, line numbers). */
   file?: string
+  /** The proposal thread this redraw applies: answers "Applied …" there; commits if UNPROSE_APPLY_COMMIT=1. */
+  applied?: string
 }
 
-export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraphOptions = {}): Promise<{ base: string; boardId: string; seq: number }> {
+export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraphOptions = {}): Promise<{ base: string; boardId: string; seq: number; applied?: AppliedResult }> {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
   const { graph, files } = withDetails(toGraph(def), opts.file)
   const title = `${def.name} — workflow.yaml`
   const api = async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders(process.env, base) }, body: body === undefined ? undefined : JSON.stringify(body) })
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${await res.text()}`)
     return res.json() as Promise<T>
   }
@@ -39,9 +42,13 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   // A redraw without --runtime keeps the runtime the board already points at (studio redraws without one).
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || 'http://localhost:4311').replace(/\/$/, '')
   // PUT replaces meta whole: keep the other keys, replace only `workflow`.
-  const meta = { ...current.meta, workflow: { statusUrl, name: def.name, file: opts.file ? path.resolve(opts.file) : undefined, ...files } }
+  // the holder: this agent has the workflow's files (docs/canvas.md "Several agents on one board")
+  const root = opts.file ? repoRoot(path.dirname(path.resolve(opts.file))) : undefined
+  const holder = root ? { ...holderInfo(root), ...(opts.applied ? { applied: opts.applied } : {}) } : undefined
+  const meta = { ...current.meta, workflow: { statusUrl, name: def.name, file: opts.file ? path.resolve(opts.file) : undefined, ...files, ...(holder ? { holder } : {}) } }
   await api('PUT', `/api/boards/${board.id}`, { meta })
-  return { base, boardId: board.id, seq }
+  const applied = opts.applied && root && opts.file ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: path.relative(root, path.resolve(opts.file)) }) : undefined
+  return { base, boardId: board.id, seq, ...(applied ? { applied } : {}) }
 }
 
 /**

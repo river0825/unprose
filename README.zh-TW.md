@@ -177,6 +177,13 @@ runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只
 或你自己的 Claude Code——套用、lint、測試、重畫。canvas 本身從不寫檔。細節見
 [docs/canvas.md → Proposals and saving](docs/canvas.md#proposals-and-saving)。
 
+**一塊 board、好幾個 agent。** 在 board 標頭的「Answered by」選誰來回答（某個 agent、studio，或任何 agent）；在留言裡寫
+`@codex-b`，那串討論就只交給那個 agent；agent 之間也能用同樣方式互問，連續幾則都沒有你的回覆時會自動暫停。
+側欄最上面的 **Context** 寫下這塊 board 在談什麼（會議、決定、筆記連結），每個接手的 agent 都會先讀到。每張圖都標出檔案在誰手上
+（*Files: team-notes · held by codex-b*）；提案會交給那個 agent，你同意後由它套用，若它的機器有設定，還會自動 commit、push。
+agent 名字建議取 `codex-b`、`claude-a` 這種。細節見 [docs/canvas.md → Several agents on one board](docs/canvas.md#several-agents-on-one-board)，
+兩台機器的完整例子見 [docs/agents-setup.md](docs/agents-setup.md#two-machines-one-board)。
+
 ## 安全
 
 在 canvas 自己那台機器上（`http://localhost…`）和以前一樣不用登入。從其他地方來的請求——tunnel、區網——都需要 token，

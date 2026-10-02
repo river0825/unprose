@@ -1,6 +1,7 @@
 // Human-readable diffs and outlines — what the agent reads instead of raw JSON.
 import { diffStat } from './patch.js'
 import { isBookkeeping, isLayoutOnly, isSeenOnly, markSeen, meaningOf, type Author, type Board, type Change, type Item, type Op } from './model.js'
+import { settingsLines } from './routing.js'
 
 const short = (s: string | undefined, n = 60) => {
   const t = (s ?? '').replace(/\s+/g, ' ').trim()
@@ -295,11 +296,20 @@ export function outline(board: Board): string {
     commentsFor.get(k)!.push(c)
   }
   const out: string[] = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`]
+  // what the board is about, who answers it, who holds the files (docs/canvas.md "Several agents on one board")
+  const settings = settingsLines(board.meta)
+  if (settings.length) out.push(...settings, '')
   const printed = new Set<string>()
+  // who wrote it, and who it is for when the canvas routed it ("codex-b → claude-a"); paused = the loop guard tripped
+  const said = (c: Item) => {
+    const by = c.createdBy === 'agent' && typeof c.data?.by === 'string' ? c.data.by : c.createdBy
+    const to = Array.isArray(c.data?.to) && c.data.route === 'mention' && (c.data.to as unknown[]).length ? ` → ${(c.data.to as string[]).join(', ')}` : ''
+    return `(${by}${to})${c.data?.paused ? ' [agents paused here — waits for the person]' : ''}`
+  }
   const comment = (c: Item, indent: string) => {
-    out.push(`${indent}💬 (${c.createdBy}) ${short(c.text, 200)}  #${c.id}`)
+    out.push(`${indent}💬 ${said(c)} ${short(c.text, 200)}  #${c.id}`)
     printed.add(c.id)
-    for (const r of replies.get(c.id) ?? []) out.push(`${indent}  ↳ (${r.createdBy}) ${short(r.text, 200)}  #${r.id}`)
+    for (const r of replies.get(c.id) ?? []) out.push(`${indent}  ↳ ${said(r)} ${short(r.text, 200)}  #${r.id}`)
   }
   const line = (i: Item, indent: string) => {
     const role = i.role ?? i.type

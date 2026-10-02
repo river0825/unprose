@@ -11,11 +11,23 @@ function wakes(c: Change, wake: Wake): boolean {
   return wake === 'any' || c.ops.some((op) => !isLayoutOnly(op, c.before[op.kind === 'add' ? op.item.id : op.id]))
 }
 
+/** `meta` with these keys set (null removes one). */
+export function mergeMeta(meta: Record<string, unknown> | undefined, patch: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(meta ?? {}) }
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null || v === undefined) delete out[k]
+    else out[k] = v
+  }
+  return out
+}
+
 export abstract class BoardRepositoryBase implements BoardRepository {
   protected boards = new Map<string, Board>()
   private subs = new Map<string, Set<ChangeListener>>()
   /** Pending waits per board, counted per agent name. */
   private watching = new Map<string, Map<string, number>>()
+  /** When each agent last started or stopped waiting, per board. */
+  private lastSeen = new Map<string, Map<string, string>>()
   private presenceSubs = new Set<PresenceListener>()
   private storageSubs = new Set<StorageListener>()
   /** Boards whose last save failed: the next good save announces the recovery. */
@@ -88,7 +100,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     if (changes.length === 0) return null
     const first = changes[0]
     let board: Board = { id, title: (first.note ?? id).replace(/^create: /, ''), kind: 'freeform', seq: 0, createdAt: first.ts, updatedAt: first.ts, items: {} }
-    for (const c of changes) board = { ...applyOps(board, c.ops, c.author, c.ts).board, seq: c.seq }
+    for (const c of changes) board = { ...applyOps(board, c.ops, c.author, c.ts).board, seq: c.seq, ...(c.meta ? { meta: mergeMeta(board.meta, c.meta) } : {}) }
     return board
   }
 
@@ -143,6 +155,27 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     this.save(id, () => this.persist(updated))
     this.boards.set(id, updated)
     return updated
+  }
+
+  setMeta(id: string, patch: Record<string, unknown>, author: Author, note: string, by?: string): Change {
+    const board = this.boards.get(id)
+    if (!board) throw new NotFound(`board ${id} not found`)
+    const now = new Date().toISOString()
+    const change: Change = { seq: board.seq + 1, ts: now, author, boardId: id, ops: [], before: {}, note, meta: patch, ...(by ? { by } : {}) }
+    const updated: Board = { ...board, seq: change.seq, updatedAt: now, meta: mergeMeta(board.meta, patch) }
+    this.save(id, () => {
+      this.appendLog(change)
+      this.persist(updated)
+    })
+    this.boards.set(id, updated)
+    for (const fn of this.subs.get(id) ?? []) {
+      try {
+        fn(change)
+      } catch {
+        // a broken subscriber never blocks the writer
+      }
+    }
+    return change
   }
 
   changes(id: string, q: ChangesQuery = {}): Change[] {
@@ -200,6 +233,10 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     return [...(this.watching.get(id)?.entries() ?? [])].filter(([, c]) => c > 0).map(([name]) => name).sort()
   }
 
+  watcherSeen(id: string): Record<string, string> {
+    return Object.fromEntries(this.lastSeen.get(id) ?? [])
+  }
+
   onPresence(fn: PresenceListener): () => void {
     this.presenceSubs.add(fn)
     return () => void this.presenceSubs.delete(fn)
@@ -211,6 +248,9 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     const c = Math.max(0, (per.get(who) ?? 0) + delta)
     if (c) per.set(who, c)
     else per.delete(who)
+    let seen = this.lastSeen.get(id)
+    if (!seen) this.lastSeen.set(id, (seen = new Map()))
+    seen.set(who, new Date().toISOString())
     const n = this.watchers(id)
     const names = this.watcherNames(id)
     for (const fn of this.presenceSubs) {

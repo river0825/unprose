@@ -20,6 +20,8 @@ import type { EditRequest } from '../inspector/diff'
 import { diagramData, diagramOf } from '../diagrams/frame'
 import { Linkified } from '../flow/Linkified'
 import { PanelNavContext, type PanelNav } from '../inspector/panelNav'
+import { BoardContextPanel } from './BoardAgents'
+import { MentionText, MentionTextarea } from './Mention'
 
 interface Props {
   board: Board
@@ -146,6 +148,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
       onFocus={(e) => onHoverItems?.(linkIds(e.target))}
       onBlur={() => onHoverItems?.([])}
     >
+      <BoardContextPanel board={board} onToast={onToast} />
       <div className="panel-tabs" role="tablist">
         <button role="tab" aria-selected={activeTab === 'feed'} onClick={() => setTab('feed')}>
           Changes
@@ -437,7 +440,9 @@ function ItemDetail({
               <div className="who">
                 {who(c.createdBy)}, {timeAgo(c.updatedAt)}
               </div>
-              <div>{c.text}</div>
+              <div>
+                <MentionText text={c.text ?? ''} mention={typeof c.data?.mention === 'string' ? c.data.mention : undefined} />
+              </div>
             </li>
           ))}
         </ul>
@@ -450,11 +455,12 @@ function ItemDetail({
         }}
       >
         <label htmlFor="comment-draft">Add a comment for the agent</label>
-        <textarea
+        <MentionTextarea
+          boardId={board.id}
           id="comment-draft"
           value={draft}
-          placeholder="What should change here?"
-          onChange={(e) => setDraft(e.target.value)}
+          placeholder="What should change here? (@ to ask one agent)"
+          onValue={setDraft}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onSubmit()
           }}

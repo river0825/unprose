@@ -6,6 +6,38 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-02
+
+### Added
+- **Several agents on one board.** A board on one machine, Claude there, Codex on another machine with the files:
+  now each comment reaches the agent it is for.
+  - **Answered by** (board header): one agent by name, studio, any agent, or the default (as before). Comments wake
+    only that agent's `canvas_wait` and studio; the others can still read them, and their wait says how many changes
+    were for someone else. When the responder is not watching the page says *"codex-b is away — your comments wait
+    for it"*. Changes are logged; read-only tokens cannot change it.
+  - **@mentions**: `@codex-b` in a comment (autocomplete in the comment boxes; a chip in the thread) sends that thread
+    to that agent, replies included, whoever answers the board.
+  - **Agents talk to each other**: an agent's `@mention` wakes the other agent and its answer comes back (`canvas_ask`
+    asks and waits for the answer). Threads show who talks to whom (*codex-b → claude-a*); the Chats tab filters
+    *Agents talking*. A loop guard pauses a thread after 6 agent messages in a row without the person (*"Agents
+    paused — reply to let them continue"*; board setting / `UNPROSE_AGENT_TURNS`), and agent-to-agent mentions are
+    rate-limited. Another agent's reply is never the person's consent.
+  - **Board context**: a short note on what the board is about (meeting, decisions, links to notes) at the top of the
+    side panel, editable by the person and by agents (`canvas_context`), and given first to every agent — studio's
+    brief, the first `canvas_wait` on a board, `canvas_read_board`.
+  - **File holders**: `awd design draw`, `awd graph --canvas` and `design_draw` record who drew each diagram from
+    which repo (machine and path shown only on the canvas machine; git remote for everyone). The frame panel says
+    *Files: team-notes · held by codex-b · last applied …*. Proposals on a diagram go to its holder. A new board an
+    agent draws from its files is answered by that agent; existing boards only get a suggestion.
+  - **`--applied <thread>`** on `awd design draw` / `awd graph --canvas` / `design_draw`: answers "Applied to <file>"
+    in the proposal's thread; with `UNPROSE_APPLY_COMMIT=1` in the holder's environment it commits the file (message
+    links the thread), with `UNPROSE_APPLY_PUSH=1` it pushes. The recommended multi-machine setup: files in git, the
+    holder commits and pushes, other machines pull.
+  - **Naming agents**: rename on **Connected agents**; the `awd` CLI uses the token the MCP server paired for that
+    canvas; docs suggest `codex-b`-style names.
+  - **Feedback**: `unprose_feedback` lets any agent tell the owner what got in its way; kept in
+    `~/.awd/feedback.ndjson`, shown on Connected agents, readable with `unprose_feedback_list` by a local agent.
+
 ## [0.8.2] — 2026-10-02
 
 ### Fixed
@@ -385,7 +417,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/river0825/unprose/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/river0825/unprose/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/river0825/unprose/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/river0825/unprose/compare/v0.7.1...v0.8.0

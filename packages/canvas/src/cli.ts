@@ -16,6 +16,7 @@ import { findRelease } from './release.js'
 import { runMcp } from './mcp.js'
 import { AccessService } from './access.js'
 import { defaultAgentsFile, FileAccessStore } from './adapters/access/index.js'
+import { defaultFeedbackFile, FileFeedbackStore } from './adapters/feedback/index.js'
 import { CanvasClient } from './client.js'
 import { render, diagramKinds, contentSchemas } from './templates/index.js'
 import { demoBoards } from './demo.js'
@@ -134,7 +135,8 @@ async function main() {
       const agentsFile = path.resolve(flag(args, '--agents-file') ?? defaultAgentsFile())
       const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== 'off'
       const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth })
-      const s = await startServer({ port, store, studio, update: updateService(process.env), access })
+      const feedback = new FileFeedbackStore(defaultFeedbackFile(agentsFile))
+      const s = await startServer({ port, store, studio, update: updateService(process.env), access, feedback })
       const where = storeKind === 'memory' ? 'in memory' : `in ${(s.store as { dir?: string }).dir ?? dir}`
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`)
       console.log(remoteAuth ? `  remote agents: ${s.url}/mcp — requests from elsewhere need a token or approval (tokens in ${agentsFile})` : '  remote auth is OFF (UNPROSE_REMOTE_AUTH=off): anyone who reaches this server can read and write')

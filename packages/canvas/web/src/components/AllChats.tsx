@@ -5,15 +5,21 @@ import { isUnread, type Board } from '../../../src/model'
 import { allChats, itemName, type Chat } from '../inspector/chat'
 import { isBusy, signFor } from '../inspector/status'
 import { ChatThread } from './SelectionChat'
+import { isAgentTalk } from './Mention'
 import '../inspector.css'
 
-type Filter = 'all' | 'ai' | 'waiting' | 'unread'
+type Filter = 'all' | 'ai' | 'waiting' | 'unread' | 'agents'
 const FILTERS: Array<[Filter, string]> = [
   ['all', 'All'],
   ['ai', 'Asked AI'],
   ['waiting', 'Agent busy'],
   ['unread', 'Unread'],
+  ['agents', 'Agents talking'],
 ]
+
+/** Agents asking each other (docs/canvas.md "Several agents on one board"): an agent-to-agent @mention in the thread. */
+const agentsTalking = (c: Chat) => c.messages.some(isAgentTalk)
+const pass = (f: Filter, c: Chat) => (f === 'ai' ? c.ai : f === 'waiting' ? agentBusy(c) : f === 'unread' ? hasUnread(c) : f === 'agents' ? agentsTalking(c) : true)
 
 /** An agent reply the person has not opened yet. */
 const hasUnread = (c: Chat) => c.messages.some((m) => isUnread(m, 'user'))
@@ -32,8 +38,8 @@ export function AllChats({ board, onLocate, onReply }: { board: Board; onLocate:
   const chats = useMemo(() => allChats(board), [board])
   const [filter, setFilter] = useState<Filter>('all')
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const shown = chats.filter((c) => (filter === 'ai' ? c.ai : filter === 'waiting' ? agentBusy(c) : filter === 'unread' ? hasUnread(c) : true))
-  const count = (f: Filter) => chats.filter((c) => (f === 'ai' ? c.ai : f === 'waiting' ? agentBusy(c) : f === 'unread' ? hasUnread(c) : true)).length
+  const shown = chats.filter((c) => pass(filter, c))
+  const count = (f: Filter) => chats.filter((c) => pass(f, c)).length
   const toggle = (id: string) =>
     setOpen((s) => {
       const n = new Set(s)

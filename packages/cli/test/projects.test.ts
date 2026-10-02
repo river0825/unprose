@@ -33,7 +33,7 @@ test('a title is found in the project first, else anywhere (older boards), else 
   assert.equal((await boardByTitle(f.api, 'Plan', 'freeform', 'shop')).id, 'b_proj')
   assert.equal((await boardByTitle(f.api, 'Plan', 'freeform', 'other')).id, 'b_old', 'a board made before projects keeps being used')
   assert.equal((await boardByTitle(f.api, 'New', 'freeform', 'shop')).id, 'b_new')
-  assert.deepEqual(f.created, [{ title: 'New', kind: 'freeform', project: 'shop' }])
+  assert.deepEqual(f.created, [{ title: 'New', kind: 'freeform', project: 'shop', answeredBy: 'me' }])
   assert.equal(await registerProject(f.api, '/x'), undefined, 'a canvas that refuses (remote) leaves boards personal')
 })
 

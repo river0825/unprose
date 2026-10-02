@@ -14,6 +14,8 @@ import { useModelChoice } from '../inspector/useModel'
 import { useFrozen } from '../flow/freeze'
 import { headerGroups } from '../flow/headerStrips'
 import { PanelLink } from '../inspector/panelNav'
+import { holderOfItem } from '../../../src/routing'
+import { HolderLine } from './BoardAgents'
 import { PlayStoryButton } from './ReplayBar'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
@@ -59,6 +61,7 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         <dt>Elements</dt>
         <dd>{count}</dd>
       </dl>
+      <HolderLine holder={holderOfItem(board, diagram.frame)} />
       {diagram.kind === 'domain-story' ? (
         <p className="dg-replay">
           <PlayStoryButton frameId={diagram.frame.id} /> <span className="muted">sentence by sentence, as in Egon.io</span>
