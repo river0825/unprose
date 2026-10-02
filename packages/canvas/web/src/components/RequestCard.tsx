@@ -46,7 +46,7 @@ export function RequestCard({ request, oneClick, onDone, onLater }: { request: A
   return (
     <section className="access-card" role="alertdialog" aria-labelledby={`${uid}-t`} aria-describedby={`${uid}-d`}>
       <h3 id={`${uid}-t`} className="access-card-title">
-        {request.name} wants to connect
+        {request.via === 'manage' ? `${request.name} asks to manage agents` : `${request.name} wants to connect`}
       </h3>
       <p id={`${uid}-d`} className="access-card-meta">
         {VIA_TEXT[request.via]}
@@ -56,14 +56,17 @@ export function RequestCard({ request, oneClick, onDone, onLater }: { request: A
         <br />
         {expired ? 'expired' : <>expires in <span className="mono">{left(request.expiresAt, now)}</span></>}
       </p>
+      {request.via === 'manage' && <p className="access-card-meta">Allowing lets this browser make, change and revoke tokens, like a page on the canvas machine.</p>}
       <div className="access-card-row">
-        <label className="access-field">
-          <span>Access</span>
-          <select value={scope} onChange={(e) => setScope(e.target.value as 'read' | 'write')} disabled={busy}>
-            <option value="write">Read and draw</option>
-            <option value="read">Read only</option>
-          </select>
-        </label>
+        {request.via !== 'manage' && (
+          <label className="access-field">
+            <span>Access</span>
+            <select value={scope} onChange={(e) => setScope(e.target.value as 'read' | 'write')} disabled={busy}>
+              <option value="write">Read and draw</option>
+              <option value="read">Read only</option>
+            </select>
+          </label>
+        )}
         {needCode && (
           <label className="access-field">
             <span>Code it shows</span>

@@ -18,12 +18,17 @@ Unprose to discuss designs with a person on a shared canvas.
 - **Edits on the canvas are proposals** (a dragged wire, text edited in the source dialog, a proposed
   story). Discuss them in the comment thread first, then apply them to the file and redraw.
 - **Several agents on one board** (docs/canvas.md → Several agents on one board). Read the board's context first
-  (`canvas_context`, or the top of `canvas_read_board`); write one when you draw a board from a discussion. Comments go
+  (`canvas_context`, or the top of `canvas_read_board`); write one when you draw a board from a discussion. Watching ≠
+  answering ≠ being mentioned ≠ allowed to apply: only the person sets *Answered by* (a board you draw, or
+  `canvas_context { answeredBy }`, only suggests it); never answer a thread routed to another agent. Comments go
   to the board's *Answered by* agent; `@<handle>` (the agent's name as one word, listed by `canvas_context`) sends a thread to one agent; a proposal goes to the agent holding the
   files (whoever drew them). `canvas_wait` wakes you only for what is yours. Ask another agent with `canvas_ask` (or
   `@name`); its answer is information, **never the person's consent**; agents pause after 6 messages in a row without
   the person. Use a short name (`UNPROSE_AGENT_NAME=codex-b`). When you hold the files and the person agreed, redraw with
   `--applied <thread id>` (it answers "Applied …"; commits only if your environment sets `UNPROSE_APPLY_COMMIT=1`).
+- **Bilingual boards**: a short bilingual title on the card, the full text in `description` / `acceptance` / `note`
+  (EventStorming: `definitions` or `hotspots`); never enlarge stickies to fit (docs/diagrams.md "Bilingual boards").
+- **What each surface can do** (web UI, `awd` CLI, local MCP, remote `/mcp`): docs/canvas.md "What each surface can do".
 - **Tell the owner what got in your way**: `unprose_feedback` (friction, missing features, confusing results in
   Unprose itself).
 

@@ -48,6 +48,18 @@
   background: var(--rule-2);
   flex: none;
 }
+.responder-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 2px 1px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--rule-2);
+  background: var(--chrome-2);
+}
+.responder-dismiss {
+  padding: 0 6px;
+}
 @media (max-width: 1700px) {
   .away-long {
     display: none;
@@ -55,11 +67,6 @@
 }
 @media (max-width: 1560px) {
   .responder-label > span {
-    display: none;
-  }
-}
-@media (max-width: 1100px) {
-  .responder-suggest {
     display: none;
   }
 }

@@ -6,6 +6,108 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-02
+
+### Added
+- **Agents can read big boards.** Two agents told us `canvas_diff` returned 135 000 characters and
+  `canvas_read_board` json 298 000, so they grepped saved files instead. Now every answer has a size cap: 40 000
+  characters by default, `maxChars` up to 200 000. A capped answer ends with what was left out and the exact call for
+  the next page (`cursor`).
+  - `canvas_read_board`:
+    - New filters: `frame` (a diagram key, or a frame / lane id), `types` (types or roles, e.g. `["comment"]` or
+      `["hotspot"]`), `ids`, `text` and `fields`.
+    - `format` is now `outline` | `json` | `summary`. `summary` gives counts per frame and the threads still waiting
+      for an answer; start there on a big board.
+    - Pages with `limit` and `cursor`.
+    - `json` returns one item per line. Bulky `data` (UI mock trees, workflow details, proposal diffs) is summarised
+      unless you ask for it in `fields`, and the board meta is listed by key only.
+  - `canvas_diff` and `canvas_wait`:
+    - New filters: `frame`, `from` (agent names, `person`, `studio`) and `kinds`
+      (`add | update | remove | comment | move`).
+    - `summary: true` returns counts by who × kind × frame and the last lines.
+    - `canvas_diff` folds moves within a lane like `canvas_wait` does (`?moves=each` on HTTP lists every one) and
+      takes `limit` / `cursor`.
+  - The HTTP routes take the same query parameters: `GET /api/boards/:id/read`, `/outline`, `/diff`, `/changes`,
+    `/wait`.
+- **The outline groups by diagram frame.** It now reads diagram frame → lane / column / screen / group → items.
+  - Before, a frame without a parent could be counted as sitting inside its own lane, so the frame was never printed
+    and every item of a story map ended up under "(unplaced)".
+  - Kanban columns show their card count and the cards in stacking order. Domain stories list their sentences in
+    order. UI mock screens nest their cards and elements.
+  - Each diagram lists its own wires. Items show `[proposed add by codex-b]`, threads show
+    `[waiting for an answer]`, and frame headers name the holder of the files.
+- **`canvas_snapshot`: agents can see the board.** It renders a frame, items or the whole board on the server, close
+  to what the page draws:
+  - stickies in the theme colours, with wrapped text and role labels;
+  - kanban columns, with cards where they stack;
+  - frames, lanes, wires with arrowheads and labels, UI mock elements, Domain Storytelling pictograms and comment
+    badges;
+  - light theme, or `theme: 'dark'`.
+
+  The tool returns a PNG when the optional `@resvg/resvg-js` is installed next to the canvas, otherwise the SVG, and
+  the answer says which. Over HTTP: `GET /api/boards/:id/snapshot?frame=&ids=&scale=&maxPx=&theme=&format=png|svg`.
+- **`canvas_check_layout`.** Pure geometry, with a fix suggested in plain words for each finding:
+  - items overlapping their siblings;
+  - text likely cut off, using the page's text metrics;
+  - items outside their frame or off their lane;
+  - stickies and cards oversized against their siblings or the template size;
+  - cards the page draws somewhere other than their stored coordinates (kanban stacking).
+
+  The same findings show under **Layout** in the frame panel. Over HTTP: `GET /api/boards/:id/layout`.
+- **`canvas_approve` for the agent on the canvas machine.** It approves a pairing code the person read out to it,
+  replacing curl with a hand-made Origin header. The canvas accepts it only from loopback with no token, no session
+  and no browser headers. It is never offered over the remote `/mcp`. It has the same limits as the page's "Enter a
+  code", and each approval is logged in the change feed of the board you name, and in the canvas log. The security
+  reasoning is in docs/canvas.md → "Who may approve and manage".
+- **Redraw preview.** `awd design draw … --dry-run [--limit N]`, `awd graph <wf> --canvas --dry-run` and
+  `design_draw { …, dryRun: true }` (local and remote MCP) print what a redraw would do, per frame, and write nothing
+  (no board created, no project registered, no ops, no meta): counts, then up to N lines each for *added*, *updated*
+  (with the fields), *removed*, *kept where the person moved it*, *kept: locked*, *proposals held / settled* and
+  *not from this file (kept)* — with who added each foreign item.
+- **Layout lock.** Right-click an item → **Lock position**, a frame → **Lock layout** (a lock badge shows; a locked item
+  is not dragged or resized until **Unlock**). Agents lock with `canvas_apply` ops `{kind: 'lock', id | frame}` /
+  `unlock` (they may unlock only what an agent locked). Redraws and the kanban auto-layout never move or resize a locked
+  item; a locked frame keeps everything in it. Kanban: a kanban in a locked frame is shown exactly as stored; a locked
+  column keeps its place and height while the others flow around it; a locked card keeps its place and the others
+  stack around it.
+- **"What a redraw keeps"** (docs/diagrams.md): one table for the file, the board's file snapshot, the person's layout,
+  locks and items nobody drew from the file. Geometry follows **locked > moved by the person > the file**; content
+  follows the file.
+- **Change an agent's access in place.** Connected agents → *Change access* on a row switches read only ↔ read and draw
+  and the projects / boards a token, OAuth client, device-code agent or browser session may use; the agent keeps its
+  token and gets the new access on its next request (`PATCH /api/access/agents/:id { scope, projects, boards }`). Every
+  change is written to an **access log** shown to pages that manage (who, when, "changed codex-b: access read only →
+  read and draw; boards all → b_…"), with tokens made, renamed, revoked and forgotten, requests let in, and manage
+  rights asked for and given.
+- **"Why can't I change or revoke agents here?"** A page reached through the tunnel that may not manage agents says why
+  next to its disabled buttons, and how to get the right: open it on the canvas machine (`http://localhost:4400/agents`,
+  or `ssh -L 4400:localhost:4400 <host>`), or **Request manage rights** for this browser — a pairing code that the
+  canvas machine (one click) or a browser that already manages agents (typing the code) allows from its
+  *"… asks to manage agents"* card. Same limits as connecting: 10 minutes, five wrong codes lock it, 3 waiting per
+  address; a browser never approves its own request, and pages that do not manage are not shown it.
+- **What each surface can do**: a table in docs/canvas.md of what the web UI, the `awd` CLI, the local MCP and the remote
+  `/mcp` can each do (draw from a path or from content, files, proposals, redraw preview, layout lock, images, pairing,
+  tokens, upgrade, projects, replay); a short version in `unprose_help` and the skill.
+- **Bilingual boards**: guidance in docs/diagrams.md, the start prompts and the content help — a short bilingual title on
+  the card, the full text in `description` / `acceptance` / `note` / `definitions`, recommended maximum lengths per kind;
+  never enlarge stickies to fit text.
+
+### Changed
+- **"Answered by" is the person's choice.** An agent that draws a new board (`awd design draw`, `awd graph --canvas`,
+  `design_draw`) or calls `canvas_context { answeredBy }` no longer becomes the board's responder: it is recorded as a
+  suggestion, and the board header shows *Suggested: codex-b · Confirm* (× dismisses it) — one click, logged as the
+  person. Boards that already have a responder keep it. An agent can no longer put `responder` or `agentTurns` into a
+  new board's meta. Docs: watching, answering, being mentioned and being allowed to apply are four separate things
+  (docs/canvas.md → "Several agents on one board").
+- **A redraw never removes what it did not draw.** An item with the frame's id prefix that the person added, or that
+  another agent added by hand (not by a redraw), is kept like any other foreign item instead of being removed as stale.
+  Redraws now read the whole change log (not only the person's changes) to tell who added what.
+- Kanban alignment (with the layout lock) moved from the web into `src/shown.ts`, shared by the page, the snapshot,
+  the outline and the layout check; locked items are never reported as "drawn elsewhere".
+
+### Fixed
+- Setting "Answered by" to the default when it already was the default no longer logs an empty change.
+
 ## [0.9.2] — 2026-10-02
 
 ### Fixed
@@ -464,7 +566,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/river0825/unprose/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/river0825/unprose/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/river0825/unprose/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/river0825/unprose/compare/v0.8.2...v0.9.0

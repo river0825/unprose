@@ -21,6 +21,8 @@ export interface AgentRow {
 export interface BoardSettings {
   answeredBy: string
   suggestion?: string
+  suggestionBy?: string | null
+  suggestionWhy?: 'asked' | 'holder'
   agents: AgentRow[]
   holders: Array<{ key: string; source?: string; holder: FileHolder }>
   you?: string
@@ -86,7 +88,7 @@ export function isHere(name: string, watching: string[], seen: Record<string, st
 export function ResponderControl({ board, watching, seen, onToast }: { board: Board; watching: string[]; seen: Record<string, string>; onToast: (t: string, kind?: 'error' | 'info') => void }) {
   useTick(15_000)
   const r = responderOf(board.meta)
-  const settings = useBoardSettings(board.id, `${JSON.stringify(r ?? null)}|${watching.join(',')}`)
+  const settings = useBoardSettings(board.id, `${JSON.stringify(r ?? null)}|${JSON.stringify(board.meta?.responderSuggestion ?? null)}|${watching.join(',')}`)
   const [busy, setBusy] = useState(false)
   const value = !r ? 'default' : r.mode === 'agent' ? `agent:${r.agent}` : r.mode
   const names = (settings?.agents ?? []).filter((a) => a.name !== LOCAL_AGENT).map((a) => a.name)
@@ -127,9 +129,29 @@ export function ResponderControl({ board, watching, seen, onToast }: { board: Bo
         </select>
       </label>
       {!r && settings?.suggestion ? (
-        <button type="button" className="ghost small responder-suggest" disabled={busy} onClick={() => void set(`agent:${settings.suggestion}`)} title={`${settings.suggestion} drew every diagram on this board from its own files`}>
-          Use {settings.suggestion}?
-        </button>
+        <span className="responder-suggestion" role="status">
+          <span className="muted">
+            Suggested: <strong>{displayName(settings.suggestion)}</strong>
+          </span>
+          <button
+            type="button"
+            className="ghost small responder-suggest"
+            disabled={busy}
+            onClick={() => void set(settings.suggestion === 'any' || settings.suggestion === 'studio' ? settings.suggestion : `agent:${settings.suggestion}`)}
+            title={
+              settings.suggestionWhy === 'asked'
+                ? `${settings.suggestionBy ? displayName(settings.suggestionBy) : 'An agent'} suggested it (for example by drawing this board). Agents never set "Answered by" themselves — confirm to let ${displayName(settings.suggestion)} answer your comments here.`
+                : `${displayName(settings.suggestion)} drew every diagram on this board from its own files`
+            }
+          >
+            Confirm
+          </button>
+          {settings.suggestionWhy === 'asked' ? (
+            <button type="button" className="ghost small responder-dismiss" disabled={busy} onClick={() => void set('default')} aria-label="Dismiss the suggestion" title="Keep the default (studio and any agent)">
+              ×
+            </button>
+          ) : null}
+        </span>
       ) : null}
       {away ? (
         <span id="responder-away" className="away-note" role="status" title={`${displayName(who!)} is not waiting on this board — your comments wait for it`}>

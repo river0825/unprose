@@ -38,9 +38,22 @@ export interface OAuthClientRecord {
   createdAt: string
 }
 
+/** One line of the access log: who changed which access, when (shown on the Connected agents page). */
+export interface AccessAuditEntry {
+  at: string
+  /** 'this machine', or the name of the browser session that did it */
+  by: string
+  /** e.g. "changed codex-b: access read only → read and draw; projects all → shop" */
+  what: string
+  /** the agent record it is about */
+  agentId?: string
+}
+
 export interface AccessData {
   agents: AgentRecord[]
   clients: OAuthClientRecord[]
+  /** The last changes to access (oldest first, at most 200). */
+  audit?: AccessAuditEntry[]
 }
 
 export interface AccessStore {

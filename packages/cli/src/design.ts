@@ -9,7 +9,8 @@ import YAML from 'yaml'
 import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
-import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
+import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
+import { repoRoot, withDetails } from './graphCanvas.js'
 import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 
@@ -81,7 +82,35 @@ async function resolveBoard(api: Api, ref: string, projectRoot?: string): Promis
   return (await api<{ board: Board }>('GET', `/api/boards/${encodeURIComponent(ref)}`)).board
 }
 
+/**
+ * A dry run must not create a board or register a project: the board with this title, found without writing
+ * (in the file's project when the canvas lists it, else any), or undefined when a real draw would create it.
+ */
+async function findBoard(api: Api, ref: string, projectRoot?: string, kind?: string): Promise<Board | undefined> {
+  if (!ref.startsWith('title:')) return (await api<{ board: Board }>('GET', `/api/boards/${encodeURIComponent(ref)}`)).board
+  const title = ref.slice(6).trim()
+  const { boards } = await api<{ boards: Array<{ id: string; title: string; kind: string; project?: string }> }>('GET', '/api/boards')
+  const named = boards.filter((b) => b.title === title && (!kind || b.kind === kind))
+  let project: string | undefined
+  if (projectRoot && named.length > 1) {
+    const { projects = [] } = await api<{ projects?: Array<{ id: string; root?: string }> }>('GET', '/api/projects').catch(() => ({ projects: [] }))
+    project = projects.find((p) => p.root && path.resolve(p.root) === path.resolve(projectRoot))?.id
+  }
+  const hit = (project ? named.find((b) => b.project === project) : undefined) ?? named[0]
+  return hit ? (await api<{ board: Board }>('GET', `/api/boards/${hit.id}`)).board : undefined
+}
+
 export { frameOf, growFrame, proposalOps }
+
+/** A redraw's preview (`--dry-run`): what it would add, update, remove and keep, and why — nothing written. */
+export interface DryRun {
+  base: string
+  boardId?: string
+  key: string
+  plan?: RedrawPlan
+  /** the preview as text lines (heading, counts, up to `limit` lines per section) */
+  lines: string[]
+}
 
 export interface DrawOptions {
   board: string
@@ -90,10 +119,35 @@ export interface DrawOptions {
   at?: { x: number; y: number }
   /** the proposal thread this redraw applies: answers "Applied …" there, and commits if UNPROSE_APPLY_COMMIT=1 (docs/canvas.md) */
   applied?: string
+  /** lines per section in a dry run's preview (default 8) */
+  limit?: number
 }
 
 /** Draw or refresh one diagram frame from its file (docs/diagrams.md §2). */
 export interface UnresolvedTrace { item: string; trace: { from: string; rel: string }; reason: string }
+
+/** What `drawDesign` would do, without writing anything (no board created, no project registered, no ops, no meta). */
+export async function previewDesign(file: string, opts: DrawOptions): Promise<DryRun> {
+  const base = canvasBase(opts.canvas)
+  const api = canvasApi(base)
+  const abs = path.resolve(file)
+  const d = parseDesignFile(abs, fs.readFileSync(abs, 'utf8'))
+  const root = repoRoot(path.dirname(abs))
+  const source = path.relative(root, abs)
+  const board = await findBoard(api, opts.board, root)
+  if (!board) return { base, key: d.key, lines: [`Redraw preview — ${d.key} (dry run: nothing written)`, `  no board ${opts.board} yet: a real draw creates it (freeform, in this project) and adds the whole frame`] }
+  const wf = d.kind === 'workflow' ? withDetails(toGraph(loadWorkflow(abs).def), abs) : undefined
+  const { items: served } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, {
+    kind: d.kind,
+    content: wf ? wf.graph : d.content,
+    frame: { key: d.key, title: d.title, source, level: d.level, ...(opts.at ? { at: opts.at } : {}) },
+  })
+  const drawn = withDesignFindings(d, served)
+  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
+  const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(board, d.key)
+  const { plan } = explainRedraw(board.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && board.items[frame.id] ? { frame: frame.id } : {}) })
+  return { base, boardId: board.id, key: d.key, plan, lines: planLines(plan, { title: `Redraw preview — ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }) }
+}
 
 export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult }> {
   const base = canvasBase(opts.canvas)
@@ -115,12 +169,10 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   // a UI mock's lint findings go on its elements, from the file as written (docs/diagrams.md §6c)
   const drawn = withDesignFindings(d, served)
   const current = (await api<{ board: Board }>('GET', `/api/boards/${board.id}`)).board
-  const { changes } = await api<{ changes: Array<{ ops: Array<{ kind: string; id?: string; patch?: Record<string, unknown> }> }> }>('GET', `/api/boards/${board.id}/changes?since=0&author=user`)
+  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(current, d.key)
-  const placed = placedByUser(changes)
-  const ops = planRedraw(current.items, drawn, placed, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []) })
-  const grow = frame && current.items[frame.id] ? growFrame(current.items[frame.id], drawn, placed) : undefined
-  if (grow) ops.push(grow)
+  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && current.items[frame.id] ? { frame: frame.id } : {}) })
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design draw: ${source}` })
   // PATCH merges: only this diagram's entry changes — another machine's diagrams and keys stay as they are.
   // the holder: this agent has the files and where (machine, root — the project root per diagram); the canvas stamps the
@@ -170,7 +222,7 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     return cmdDesignLint(file)
   }
   if (sub === 'draw') {
-    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y] [--applied <proposal thread id>]')
+    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]')
     const findings = lintDesign(parseDesignFile(file, fs.readFileSync(file, 'utf8')), file)
     const errors = findings.filter((f) => f.severity === 'error')
     if (errors.length) {
@@ -180,6 +232,11 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     for (const w of findings.filter((f) => f.severity === 'warning' && f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.message}`)
     const at = str(flags.at)?.split(',').map(Number)
     const applied = str(flags.applied)
+    if (flags['dry-run']) {
+      const p = await previewDesign(file, { board: boardRef, canvas, limit: Number(str(flags.limit)) || undefined, ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
+      for (const line of p.lines) console.log(line)
+      return true
+    }
     const r = await drawDesign(file, { board: boardRef, canvas, ...(applied ? { applied } : {}), ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
     console.log(`✔ ${path.basename(file)} → frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== 'error').length} note(s) — awd design lint ${file})`)
     if (r.applied) console.log(`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`)

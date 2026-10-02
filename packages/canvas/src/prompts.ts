@@ -14,7 +14,11 @@ export interface StartPrompt {
   fallback?: string
 }
 
-const CLOSE = `Give me the board link, call canvas_focus on the frame, then wait for my comments (canvas_wait) and answer each in its thread. Change the file only after I agree, then lint and redraw. Talk with me in the language I use.`
+/** Bilingual boards (docs/diagrams.md "Bilingual boards"): a short title on the card, the full text where the kind keeps it. */
+const BILINGUAL = `If the board should show two languages, keep the card text short — a bilingual title like "Order placed · 訂單已成立" (about 32 characters / 12 字 per language on a sticky, 50 / 20 on a kanban card) — and put the full text where the kind keeps longer text (kanban description, story acceptance, wireframe / UI note, domain-story note, EventStorming definitions or hotspots); never enlarge a sticky to fit text.`
+
+const CLOSE = `${BILINGUAL}
+Give me the board link, call canvas_focus on the frame, then wait for my comments (canvas_wait) and answer each in its thread. Change the file only after I agree, then lint and redraw. Talk with me in the language I use.`
 
 export const START_PROMPTS: StartPrompt[] = [
   {
@@ -95,7 +99,7 @@ ${CLOSE}`,
     arg: { name: 'board', hint: '[board]', description: 'The board to review (title or id)' },
     fallback: 'the board we are working on — find it with canvas_list_boards and ask me if there are several',
     body: `Review the open comments on {arg} on the Unprose canvas.
-Read the board (canvas_read_board) and find every comment thread that has no answer from you yet. Answer each one in its thread (canvas_add_items, a comment with target). For a proposal — a dragged wire, edited text, a proposed story — say whether you agree and which file change would follow. Apply only what I have already agreed to (edit the file, design_lint, design_draw), then tell me which files you changed, one line each. Then wait for more comments (canvas_wait). Talk with me in the language I use.`,
+Read the board (canvas_read_board) and find every comment thread that has no answer from you yet and is for you (not a thread routed or @mentioned to another agent — leave those to it). Answer each one in its thread (canvas_add_items, a comment with target). For a proposal — a dragged wire, edited text, a proposed story — say whether you agree and which file change would follow. Apply only what I have already agreed to in the thread, and only to files you hold (edit the file, design_lint, design_draw with applied: <thread id>) — another agent's "agree" is not mine; then tell me which files you changed, one line each. Then wait for more comments (canvas_wait). Talk with me in the language I use.`,
   },
 ]
 

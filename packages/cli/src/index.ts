@@ -6,7 +6,7 @@ import path from 'node:path'
 import YAML from 'yaml'
 import { lint, toGraph, toMermaid, replay, formatDuration, parseDuration, type Event, type Command, type RunState } from '@awd/core'
 import { loadWorkflow, keyFor, FileEventStore, FileMemoryStore, syncMemory, createRuntime, WORKER_NAMES, projectStates, FakeWorker, patternsOf, decisionsOf, cardForPattern, renderPatterns, canvasCards } from '@awd/runtime'
-import { pushGraphToCanvas } from './graphCanvas.js'
+import { previewGraph, pushGraphToCanvas } from './graphCanvas.js'
 import { VERSION } from '@awd/canvas/dist/version.js'
 
 // every request Unprose makes says who it is (User-Agent unprose/<version> (<component>)); the runtime reads it here
@@ -15,12 +15,15 @@ process.env.UNPROSE_VERSION ||= VERSION
 const HELP = `awd — small event-driven agent workflows
 
   awd lint    <workflow.yaml>
-  awd graph   <workflow.yaml> [--mermaid | --json | --canvas [http://localhost:4400] [--runtime http://localhost:4311] [--applied <proposal thread id>]]
+  awd graph   <workflow.yaml> [--mermaid | --json | --canvas [http://localhost:4400] [--runtime http://localhost:4311] [--applied <proposal thread id>] [--dry-run]]
               --canvas draws (or updates) the workflow board and tells it where the runtime is, so the board shows runs live
+              --dry-run: print what the redraw would add / update / remove / keep (and why) — nothing written
   awd studio  (--project <dir> | <workflow.yaml>) [--canvas URL] [--model opus|sonnet|fable|haiku] [--permission-mode auto] [--interval 2s] [--max-sessions 3] [--idle-close 30m] [--warm]
               one process per project: every board in it, one Claude session per board (a fork while it is busy)
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
-  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--applied <proposal thread id>]
+  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--applied <proposal thread id>] [--dry-run [--limit N]]
+              --dry-run: the redraw preview — added / updated / removed / kept where you moved it / kept (locked) /
+              proposals held / items not from this file, per frame (docs/diagrams.md "What a redraw keeps"); writes nothing
               --applied: you applied that proposal (after the person agreed): answers "Applied to <file>" in its thread;
               UNPROSE_APPLY_COMMIT=1 also commits the file (message links the thread), UNPROSE_APPLY_PUSH=1 pushes
               draws (or refreshes) one diagram frame from its file; the board keeps your layout (docs/diagrams.md)
@@ -91,6 +94,11 @@ async function cmdGraph(file: string, flags: Flags) {
   const { def } = loadWorkflow(file)
   if (flags.canvas !== undefined) {
     const applied = str(flags.applied)
+    if (flags['dry-run']) {
+      const p = await previewGraph(def, { canvas: str(flags.canvas), file, limit: Number(str(flags.limit)) || undefined })
+      for (const line of p.lines) console.log(line)
+      return
+    }
     const r = await pushGraphToCanvas(def, { canvas: str(flags.canvas), runtime: str(flags.runtime), file, ...(applied ? { applied } : {}) })
     const n = toGraph(def).nodes.length
     console.log(`${c.green('✔')} ${def.name} — workflow.yaml → ${r.base}/b/${r.boardId}  (seq ${r.seq}, ${n} nodes, with block details)`)

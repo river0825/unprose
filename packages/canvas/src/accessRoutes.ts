@@ -91,6 +91,27 @@ const mayApprove = (req: http.IncomingMessage, g: Grant | undefined) => localPag
 /** May this caller create and revoke tokens? */
 const mayManage = (req: http.IncomingMessage, g: Grant | undefined) => localPage(req, g) || (g?.as === 'browser' && g.manage && sameOrigin(req))
 
+/** Who did it, for the access log: 'this machine' or the browser session's name. */
+const who = (req: http.IncomingMessage, g: Grant) => (localPage(req, g) ? 'this machine' : g.name)
+
+/**
+ * Why this page may not manage agents, and how it can (shown next to the disabled buttons):
+ *   'remote'      — reached from elsewhere (a tunnel, another host) with a browser session without the right: ask for it;
+ *   'not-signed-in' — reached from elsewhere on an open canvas (no session): open it on the canvas machine;
+ *   'host'        — on this machine but not opened as localhost (a LAN name, a rebinding name), or a cross-site page;
+ *   'agent'       — an agent token (agents never manage).
+ */
+export function whyNotManage(req: http.IncomingMessage, g: Grant | undefined): { reason: 'remote' | 'not-signed-in' | 'host' | 'agent'; text: string; canRequest: boolean; port?: number } {
+  // the port the canvas listens on (behind a tunnel the page's own port is the tunnel's): for `ssh -L <port>:localhost:<port>`
+  const port = req.socket?.localPort
+  const at = `http://localhost:${port ?? 4400}/agents`
+  const base = { ...(port ? { port } : {}) }
+  if (g?.as === 'agent') return { reason: 'agent', text: 'agent tokens never manage agents', canRequest: false, ...base }
+  if (g?.kind === 'local') return { reason: 'host', text: `this page is on the canvas machine but not opened as localhost — open ${at}`, canRequest: false, ...base }
+  if (g?.as === 'browser') return { reason: 'remote', text: `this page was opened from elsewhere and this browser was not given the right to manage agents — open ${at} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`), or ask for manage rights for this browser on the Connected agents page`, canRequest: true, ...base }
+  return { reason: 'not-signed-in', text: `this page was opened from elsewhere without signing in — open ${at} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`)`, canRequest: false, ...base }
+}
+
 function sessionCookie(req: http.IncomingMessage, origin: string, value: string, maxAge: number): string {
   const secure = origin.startsWith('https:') || req.headers['x-forwarded-proto'] === 'https'
   return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`
@@ -254,6 +275,7 @@ export async function accessRoute(req: http.IncomingMessage, res: Res, url: URL,
       remoteAuth: access.remoteAuth,
       canApprove: mayApprove(req, grant),
       canManage: mayManage(req, grant),
+      ...(mayManage(req, grant) ? {} : { whyNotManage: whyNotManage(req, grant) }),
       oneClick: localPage(req, grant),
       publicUrl: configured || origin(),
     })
@@ -299,7 +321,20 @@ export async function accessRoute(req: http.IncomingMessage, res: Res, url: URL,
 
   if (p === '/api/access/requests' && method === 'GET') {
     if (!mayApprove(req, grant)) return json(res, 403, { error: 'only a page on the canvas machine or a signed-in page sees connect requests' }), true
-    json(res, 200, { requests: access.pendingViews(), oneClick: localPage(req, grant) })
+    json(res, 200, { requests: access.pendingViews({ manage: mayManage(req, grant) }), oneClick: localPage(req, grant) })
+    return true
+  }
+  // a signed-in browser asks for the right to manage agents; a page that manages approves it with the code
+  if (p === '/api/access/manage-request' && method === 'POST') {
+    const r = access.startManage(grant, clientIp(req), req.headers['user-agent'])
+    if (!r.pending) return json(res, r.http ?? 400, { error: r.error }), true
+    json(res, 200, { id: r.pending.id, code: r.pending.code, expiresAt: new Date(r.pending.expiresAt).toISOString() })
+    return true
+  }
+  const managePoll = /^\/api\/access\/manage-request\/([A-Za-z0-9_-]+)$/.exec(p)
+  if (managePoll && method === 'GET') {
+    const r = access.poll(managePoll[1])
+    json(res, 200, { status: r.status, ...(r.locked ? { locked: true } : {}) })
     return true
   }
   const decide = /^\/api\/access\/requests\/([A-Za-z0-9_-]+)$/.exec(p)
@@ -325,13 +360,22 @@ export async function accessRoute(req: http.IncomingMessage, res: Res, url: URL,
   }
   if (p === '/api/access/agents' && method === 'GET') {
     if (!mayApprove(req, grant)) return json(res, 403, { error: 'agent tokens cannot list the connected agents' }), true
-    json(res, 200, { agents: access.list(), requests: access.pendingViews(), canManage: mayManage(req, grant), oneClick: localPage(req, grant), store: localPage(req, grant) ? access.storeWhere : undefined })
+    const manage = mayManage(req, grant)
+    json(res, 200, {
+      agents: access.list(),
+      requests: access.pendingViews({ manage }),
+      canManage: manage,
+      ...(manage ? {} : { whyNotManage: whyNotManage(req, grant) }),
+      oneClick: localPage(req, grant),
+      store: localPage(req, grant) ? access.storeWhere : undefined,
+      ...(manage ? { audit: access.auditLog() } : {}),
+    })
     return true
   }
   if (p === '/api/access/agents' && method === 'POST') {
-    if (!mayManage(req, grant)) return json(res, 403, { error: 'tokens can only be made on a page opened on the canvas machine (http://localhost…)' }), true
+    if (!mayManage(req, grant)) return json(res, 403, { error: `tokens can only be made by a page that may manage agents — ${whyNotManage(req, grant).text}` }), true
     const b = await readForm(req)
-    const r = access.createToken(b, localPage(req, grant) ? 'this machine' : grant.name)
+    const r = access.createToken(b, who(req, grant))
     const o = typeof b.publicUrl === 'string' && /^https?:\/\//.test(b.publicUrl) ? b.publicUrl.replace(/\/+$/, '') : origin()
     json(res, 201, { agent: r.agent, token: r.token, setup: setupFor(o, r.token, r.agent.name) })
     return true
@@ -343,17 +387,31 @@ export async function accessRoute(req: http.IncomingMessage, res: Res, url: URL,
   }
   const one = /^\/api\/access\/agents\/([A-Za-z0-9_-]+)$/.exec(p)
   if (one && (method === 'PATCH' || method === 'PUT')) {
-    if (!mayManage(req, grant)) return json(res, 403, { error: 'agents can only be renamed on a page opened on the canvas machine (http://localhost…)' }), true
+    if (!mayManage(req, grant)) return json(res, 403, { error: `agents can only be changed by a page that may manage agents — ${whyNotManage(req, grant).text}` }), true
     const b = await readForm(req)
-    const r = access.rename(one[1], b.name)
-    if (!r) return json(res, 404, { error: 'no such agent (or revoked)' }), true
-    if (r.from !== r.to) ctx.onRename?.(r.from, r.to)
-    json(res, 200, { ok: true, from: r.from, name: r.to })
+    const by = who(req, grant)
+    // the access (read ↔ read and draw) and the project / board limits, in place (logged)
+    let changed: string[] = []
+    if ('scope' in b || 'projects' in b || 'boards' in b) {
+      if (b.scope !== undefined && b.scope !== 'read' && b.scope !== 'write') return json(res, 400, { error: "scope must be 'read' or 'write'" }), true
+      const u = access.updateAccess(one[1], { scope: b.scope, projects: b.projects === null ? [] : b.projects, boards: b.boards === null ? [] : b.boards }, by)
+      if (!u) return json(res, 404, { error: 'no such agent (or revoked)' }), true
+      changed = u.changed
+    }
+    let name: { from: string; to: string } | undefined
+    if (b.name !== undefined) {
+      name = access.rename(one[1], b.name, by)
+      if (!name) return json(res, 404, { error: 'no such agent (or revoked)' }), true
+      if (name.from !== name.to) ctx.onRename?.(name.from, name.to)
+    }
+    const agent = access.list().find((a) => a.id === one[1])
+    if (!agent || agent.revokedAt) return json(res, 404, { error: 'no such agent (or revoked)' }), true
+    json(res, 200, { ok: true, ...(name ? { from: name.from } : {}), name: agent.name, agent, changed })
     return true
   }
   if (one && method === 'DELETE') {
-    if (!mayManage(req, grant)) return json(res, 403, { error: 'tokens can only be revoked on a page opened on the canvas machine (http://localhost…)' }), true
-    const ok = url.searchParams.get('forget') === '1' ? access.remove(one[1]) : access.revoke(one[1])
+    if (!mayManage(req, grant)) return json(res, 403, { error: `tokens can only be revoked by a page that may manage agents — ${whyNotManage(req, grant).text}` }), true
+    const ok = url.searchParams.get('forget') === '1' ? access.remove(one[1], who(req, grant)) : access.revoke(one[1], who(req, grant))
     if (!ok) return json(res, 404, { error: 'no such agent (or already revoked)' }), true
     json(res, 200, { ok: true })
     return true

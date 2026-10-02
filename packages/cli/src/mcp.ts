@@ -6,7 +6,7 @@ import path from 'node:path'
 import { z } from 'zod'
 import { runMcp, sessionProjectRoot, type McpOptions } from '@awd/canvas'
 import { findingLine } from '@awd/canvas/diagrams'
-import { drawDesign, exportEgonFile, importEgonFile, lintDesign, parseDesignFile, proposeStoriesToBoard, unresolvedReport } from './design.js'
+import { drawDesign, previewDesign, exportEgonFile, importEgonFile, lintDesign, parseDesignFile, proposeStoriesToBoard, unresolvedReport } from './design.js'
 import { START_PROMPTS, promptText } from './prompts.js'
 
 type Server = Parameters<NonNullable<McpOptions['extend']>>[0]
@@ -57,17 +57,20 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: 'Draw (or refresh) one diagram frame from its file. The board keeps the person\'s layout: items they moved stay put, pending proposals stay, items no longer in the file go. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates is answered by you.',
+      description: 'Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person\'s, another agent\'s, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" — the person confirms it.',
       inputSchema: {
         file: z.string().describe('Path to the diagram file, relative to the project'),
         board: z.string().describe('A board id, or "title:<title>" (found or created in this project)'),
         at: z.object({ x: z.number(), y: z.number() }).optional().describe('Where a NEW frame goes (board coordinates); an existing frame stays where it is'),
         applied: z.string().optional().describe('The proposal thread (comment id) this redraw applies, after the person agreed: answers "Applied to <file>" there, and commits the file if this machine set UNPROSE_APPLY_COMMIT=1 (pushes with UNPROSE_APPLY_PUSH=1)'),
+        dryRun: z.boolean().optional().describe('true: only preview the redraw (what it adds, updates, removes, keeps, and why); nothing is written and no board is created'),
+        limit: z.number().int().min(1).max(200).optional().describe('dryRun: lines per section (default 8)'),
       },
     },
-    async ({ file, board, at, applied }) =>
+    async ({ file, board, at, applied, dryRun, limit }) =>
       guard(async () => {
         const f = abs(file)
+        if (dryRun) return text((await previewDesign(f, { board, ...(at ? { at } : {}), ...(limit ? { limit } : {}) })).lines.join('\n'))
         const { findings } = lintFile(f)
         const errors = findings.filter((x) => x.severity === 'error')
         if (errors.length) return fail([`not drawn: ${errors.length} lint error(s) in ${file}`, ...errors.map(findingLine)].join('\n'))

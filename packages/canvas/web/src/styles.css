@@ -1780,6 +1780,30 @@ kbd {
   font-family: inherit;
   font-size: 11.5px;
 }
+/* a locked item (docs/diagrams.md "What a redraw keeps"): a small lock at its top-left corner; it is not dragged */
+.lock-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--rule-2);
+  color: var(--ink-2);
+  pointer-events: auto;
+}
+.frame > .lock-badge {
+  top: 6px;
+  left: auto;
+  right: 6px;
+}
+.react-flow__node.node-locked {
+  cursor: default;
+}
 /* an element the agent proposed, not in the file yet */
 .react-flow__node.node-pending > .item {
   border-style: dashed;

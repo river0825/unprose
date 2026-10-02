@@ -29,7 +29,7 @@ export class FileAccessStore implements AccessStore {
   read(): AccessData {
     try {
       const j = JSON.parse(fs.readFileSync(this.where, 'utf8')) as Partial<AccessData>
-      return { agents: Array.isArray(j.agents) ? j.agents : [], clients: Array.isArray(j.clients) ? j.clients : [] }
+      return { agents: Array.isArray(j.agents) ? j.agents : [], clients: Array.isArray(j.clients) ? j.clients : [], ...(Array.isArray(j.audit) ? { audit: j.audit } : {}) }
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === 'ENOENT') return empty()
       throw new Error(`cannot read ${this.where}: ${(e as Error).message}`)

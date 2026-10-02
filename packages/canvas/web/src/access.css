@@ -316,6 +316,42 @@ button.danger {
 .feedback-list li { border: 1px solid var(--rule); border-radius: var(--radius); padding: 8px 10px; background: var(--paper); }
 .feedback-list li > div + div { margin-top: 4px; color: var(--ink); }
 
+/* Why a page cannot manage agents, and how to get the right (docs/canvas.md "Manage rights for a browser elsewhere") */
+.manage-why {
+  margin: 12px 0 4px;
+  max-width: 760px;
+  border: 1px solid var(--rule-2);
+  border-left: 3px solid var(--agent);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  background: var(--chrome);
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.manage-why h2 { font-size: 15px; margin: 0 0 6px; }
+.manage-why p { margin: 6px 0; }
+.manage-why ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 8px; }
+.manage-why code { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+.manage-why button { margin-left: 4px; }
+.manage-ask { margin-top: 8px; }
+.code-show {
+  display: inline-block;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  border: 1px solid var(--rule-2);
+  user-select: all;
+}
+.actions-off { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.actions-off button[disabled] { opacity: 0.55; cursor: not-allowed; }
+.why-link { font-size: 12.5px; color: var(--ink-2); }
+.access-edit-row td { background: var(--paper); }
+.access-editor { display: grid; gap: 8px; max-width: 560px; padding: 4px 0; }
+.access-editor .access-fieldset { margin: 0; }
+.audit-list li { font-size: 13px; }
 /* an agent's @handle next to its name (what people mention it by) */
 .agent-handle {
   margin-left: 0.45em;

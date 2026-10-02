@@ -2,8 +2,9 @@
 // grammar findings) and a selected element inside one (what it means in the book, who it should sit
 // next to, and the trace links to other diagrams). A proposed story (pending) can be accepted — asked of
 // the AI, which writes the story-map file — or dismissed.
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Board, Item } from '../../../src/model'
+import { checkLayout, type LayoutKind } from '../../../src/layoutCheck'
 import { KIND_NAMES, diagramOf, membersOf, type DiagramInfo } from '../diagrams/frame'
 import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/es'
 import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
@@ -69,6 +70,52 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
       ) : null}
       <FreezeToggle board={board} diagramKey={diagram.key} />
       {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
+      <LayoutFindings board={board} diagramKey={diagram.key} onSelect={onSelect} />
+    </section>
+  )
+}
+
+const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere' }
+
+/** The layout check (src/layoutCheck.ts): what overlaps, is cut off, sticks out or is far too big in this frame — the same findings agents get. */
+function LayoutFindings({ board, diagramKey, onSelect }: { board: Board; diagramKey: string; onSelect: (id: string) => void }) {
+  const report = useMemo(() => {
+    try {
+      return checkLayout(board, { frame: diagramKey, limit: 50 })
+    } catch {
+      return undefined
+    }
+  }, [board, diagramKey])
+  if (!report) return null
+  const total = Object.values(report.counts).reduce((n, c) => n + c, 0)
+  return (
+    <section className="insp-sec">
+      <h3>
+        Layout <span className="muted">({total ? `${total} to look at` : 'nothing to fix'})</span>
+      </h3>
+      {total ? (
+        <ul className="dg-findings">
+          {report.findings.map((f, i) => {
+            const it = board.items[f.id]
+            return (
+              <li key={`${f.id}-${f.kind}-${i}`} title={f.suggestion}>
+                <span className="dg-sev layout">{LAYOUT_TAGS[f.kind]}</span>{' '}
+                {it ? (
+                  <PanelLink id={it.id} name={nameOf(it)} className="link dg-finding" onSelect={onSelect}>
+                    {f.message}
+                  </PanelLink>
+                ) : (
+                  <span>{f.message}</span>
+                )}{' '}
+                <span className="muted dg-fix">{f.suggestion}</span>
+              </li>
+            )
+          })}
+          {total > report.findings.length ? <li className="muted">… {total - report.findings.length} more</li> : null}
+        </ul>
+      ) : (
+        <p className="muted">Nothing overlaps, sticks out or is cut off.</p>
+      )}
     </section>
   )
 }

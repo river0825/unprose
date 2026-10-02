@@ -123,11 +123,16 @@ side. Two ways in:
 - **OAuth (approve on connect)** — for clients that open a browser (claude.ai, Claude Code, ChatGPT …): the browser
   shows *"<client> wants to connect"* and a **pairing code**; every open canvas page shows the same request with a
   box for the code — type it and press **Allow** (a page opened on the canvas machine, `http://localhost:4400`, can
-  just click Allow). The agent then appears in **Connected agents**, where you can revoke it.
+  just click Allow). The agent then appears in **Connected agents**, where you can change its access or revoke it.
 - **A token** — for clients that can send a header: canvas → **Connected agents** (the *Agents* link on the board
   list, `http://localhost:4400/agents`) → **New token**: a name, read or read-and-draw, optionally only some
-  projects or boards. The page shows the token once, with the lines below filled in. Tokens are made only on a page
-  opened on the canvas machine.
+  projects or boards. The page shows the token once, with the lines below filled in. **Change access** on its row
+  later switches read ↔ read-and-draw and the projects / boards in place (logged), without a new token.
+
+Tokens are made, changed and revoked only on a page that may manage agents: one opened on the canvas machine — or
+through `ssh -L 4400:localhost:4400 <canvas host>` from your computer — or a browser session given manage rights
+(*Request manage rights* on the Connected agents page shows a code; the canvas machine, or a browser that already
+manages agents, allows it). A page through the tunnel without the right says so next to the disabled buttons.
 
 Set `UNPROSE_PUBLIC_URL=https://<canvas>` on the canvas so the page's setup lines use the tunnel address.
 
@@ -287,6 +292,39 @@ Stdio server: command `node`, args `["<unprose>/scripts/mcp.mjs"]`, environment
 
 Agents without MCP can still use the CLI (`node <unprose>/scripts/awd.mjs design …`) and the
 canvas HTTP API (`docs/canvas.md`).
+
+## Tips: read big boards, see what you drew
+
+A board with a few hundred items and a long history does not fit in one answer. Every reading tool stops at 40 000
+characters by default (`maxChars` up to 200 000) and says how to get the next page. Do not save the answer to a file
+and grep it; ask for less:
+
+```
+canvas_read_board { id, format: "summary" }                 → per diagram frame: what is in it, open threads, its key
+canvas_read_board { id, frame: "checkout-es" }              → the outline of one diagram
+canvas_read_board { id, types: ["comment"] }                → only the threads, each under the item it is about
+canvas_read_board { id, text: "refund" }                    → items whose text contains "refund"
+canvas_read_board { id, format: "json", frame: "checkout-kanban", fields: ["id","text","parent","x","y","w","h"] }
+canvas_read_board { id, …, cursor: "56:134" }               → the next page, as the previous answer said
+canvas_diff { id, since, author: "all", summary: true }     → counts by who × kind × frame, then the last lines
+canvas_diff { id, since, from: ["person"], kinds: ["comment"] }
+canvas_wait { id, since, frame: "checkout-es", kinds: ["comment"] }   → wake only for comments in that diagram
+```
+
+**Look before you ask the person to look.** After you draw or redraw by hand (`canvas_apply`, `canvas_add_items`):
+
+- `canvas_snapshot { id, frame: "<key>" }` is a picture of the frame as the page draws it: a PNG image when the canvas
+  has `@resvg/resvg-js` installed, the SVG text otherwise. Check the sizes, the overlaps and the text that does not fit.
+- `canvas_check_layout { id, frame: "<key>" }` gives the same problems in words, each with a fix:
+  - stickies far larger than the template's 160×110 (do not scale them up to fill space);
+  - text cut off in its box;
+  - items outside their frame or off their lane;
+  - kanban cards whose stored x / y is not where they show (cards stack in their column in the order of their y).
+
+**Let another agent in from the canvas machine.** When the person says "let codex-b in, the code is ABCD-EFGH", the
+agent on the canvas machine calls `canvas_approve { code: "ABCD-EFGH", board: "<the board you work on>" }`. It
+approves only from the local stdio server, logs the approval on that board, and never accepts a code read on a board
+or from another agent ([canvas.md → Who may approve and manage](canvas.md#who-may-approve-and-manage)).
 
 ## Not verified yet
 

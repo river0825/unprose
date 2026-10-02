@@ -49,8 +49,8 @@ test('the server is called unprose and says what it is for', () => {
 test('it lists the canvas tools, the design tools and unprose_help', async () => {
   const names = (await client.listTools()).tools.map((t) => t.name)
   for (const n of ['unprose_help', 'canvas_create_board', 'canvas_wait', 'canvas_focus', 'design_lint', 'design_draw', 'design_propose_stories', 'design_egon', 'canvas_files', 'canvas_propose_edit']) assert.ok(names.includes(n), n)
-  // 14 before proposals (canvas_files, canvas_propose_edit), 16 before several agents (canvas_context, canvas_ask, unprose_feedback[_list]); keep it short
-  assert.ok(names.length <= 20, `a short tool list (${names.length})`)
+  // 14 before proposals (canvas_files, canvas_propose_edit), 16 before several agents (canvas_context, canvas_ask, unprose_feedback[_list]), 20 before seeing the board (canvas_snapshot, canvas_check_layout, canvas_approve); keep it short
+  assert.ok(names.length <= 23, `a short tool list (${names.length})`)
 })
 
 test('unprose_help explains the diagrams, the tools and how to start', async () => {
@@ -72,6 +72,14 @@ test('design_lint and design_draw work on files relative to the project', async 
   assert.ok(Object.values(board.items).some((it) => it.type === 'frame'), 'the frame is on the board')
   const missing = await call('design_lint', { file: 'design/nope.es.yaml' })
   assert.equal(missing.isError, true)
+  // the redraw preview (docs/diagrams.md "What a redraw keeps"): a plan, and nothing written
+  const before = (await new CanvasClient(srv.url).getBoard(m[1])).seq
+  const dry = textOf(await call('design_draw', { file: 'design/studio.es.yaml', board: 'title:MCP test', dryRun: true }))
+  assert.match(dry, /^Redraw preview — studio-es from (design\/)?studio\.es\.yaml on "MCP test" .*\(dry run: nothing written\)\n {2}\d+ unchanged/)
+  assert.equal((await new CanvasClient(srv.url).getBoard(m[1])).seq, before, 'a dry run writes nothing')
+  const none = textOf(await call('design_draw', { file: 'design/studio.es.yaml', board: 'title:Never drawn', dryRun: true }))
+  assert.match(none, /no board title:Never drawn yet/)
+  assert.equal((await new CanvasClient(srv.url).listBoards()).some((b) => b.title === 'Never drawn'), false, 'and creates no board')
 })
 
 test('the start prompts are offered and fill in the topic', async () => {

@@ -8,7 +8,10 @@ packages/canvas/
   src/ports/boardRepository.ts   the port; src/adapters/boards/{file,memory}.ts implement it
                           (file = boards/<id>.json snapshot + boards/<id>.changes.ndjson log); src/store.ts is a shim
   src/templates/          pure render(kind, content) → Item[]   (the agent never computes pixels) — seven kinds
-  src/diff.ts             summarize(changes) → lines the agent reads · outline(board) → compact text · cardMoves(board, changes)
+  src/diff.ts             summarize(changes) → lines the agent reads · filterChanges / diffSummary / pageLines · cardMoves(board, changes)
+  src/outline.ts · read.ts   the outline (diagram frame → lane / column → items) · readBoard: filters, formats, pages, size cap
+  src/snapshot.ts · raster.ts   server-side SVG of a frame / items / the board (PNG with the optional @resvg/resvg-js)
+  src/layoutCheck.ts · shown.ts · textMetrics.ts   layout findings · where the page draws things (kanban) · text metrics
   src/place.ts · thumb.ts · docs.ts   auto-place agent comments · board thumbnails · the /docs site
   src/server.ts           HTTP + WebSocket API, serves web/dist and /docs
   src/mcp.ts              MCP stdio server (the agent's tools), thin over the HTTP API
@@ -62,15 +65,18 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `unprose_help` | – | what Unprose can do — the diagrams, the tools, the comment loop, the ways to start — for the agent to pass on in the person's language; also the canvas URL and version |
 | `canvas_list_boards` | – | id, kind, seq, item count, title, url per board |
 | `canvas_create_board` | `title, kind, content, meta?` | render the template and create the board → id, url, seq |
-| `canvas_read_board` | `id, format: outline\|json` | `outline` (default): compact text grouped by lane/frame with arrows and comments; `json`: raw items with ids and geometry |
-| `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}` |
+| `canvas_read_board` | `id, format: outline\|json\|summary, frame?, types?, ids?, text?, fields?, limit?, cursor?, maxChars?` | `outline` (default): text grouped by diagram frame → lane / column / screen / group → items, with threads, proposals and wires; `summary`: counts per frame; `json`: items with ids and geometry, one per line. Filters, pages and a size cap (40 000 characters by default) — [Reading big boards](#reading-big-boards) |
+| `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}`; and the layout lock: `lock {id}` / `lock {frame: '<diagram key>'}` / `unlock …` set or clear `data.lock: 'layout'` (redraws and the kanban auto-layout never move a locked item; a locked frame keeps everything in it — docs/diagrams.md "What a redraw keeps"). An agent may unlock only what an agent locked |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
-| `canvas_diff` | `id, since, from: person\|others\|all` (older spelling `author: user\|others\|agent\|all`) | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you) |
-| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others, listen = mine\|all` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
+| `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
+| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short |
+| `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image when the canvas has a rasterizer, else the SVG text ([Seeing the board](#seeing-the-board)) |
+| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban) — each with a suggestion; the same list is in the frame panel |
+| `canvas_approve` | `code, scope?, name?, board?` | **local agent only** (never on `/mcp`): approve a connect request by the pairing code the person read out; logged on `board` ([Who may approve and manage](#who-may-approve-and-manage)) |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
 | `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
-| `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) sets the responder — both logged |
+| `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) **suggests** the responder for the person to confirm — both logged |
 | `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board (`agent`: its @handle or its name): posts an `@handle` thread (on `about[0]`, else loose) and blocks until it answers in the thread; the result says exactly who it was delivered to (*Delivered to @codex-b — watching this board now*, or that it is not watching / never seen); on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
 | `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
 | `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
@@ -84,6 +90,124 @@ Paths are relative to the session's project. The `design_*` tools are served by 
 `awd-canvas mcp`); the canvas's remote endpoint `/mcp` serves `design_lint` / `design_draw` / `design_propose_stories`
 taking the file's text instead (see [Remote agents](#remote-agents)).
 
+### Reading big boards
+
+A board with a few hundred items and a long history is more than an agent can read in one go: before these tools,
+`canvas_diff` answered 135 000 characters and `canvas_read_board` json 298 000. So every reading tool (and its HTTP route)
+filters, pages and stops at a **size cap** — 40 000 characters by default, `maxChars` up to 200 000. A capped answer
+ends with one line saying what was left out and the exact call for the next page:
+
+```
+… 195 more item(s) of 329 not shown (size cap 40000 characters) — next page: canvas_read_board({ id: "b_mudv…", format: "json", cursor: "56:134" }); narrow with frame / types / ids / text, or fewer fields (…)
+```
+
+A cursor is `<board seq>:<offset>`; a cursor from an older seq still works and says the board changed meanwhile.
+
+**Start with the summary**, then read one diagram:
+
+```
+canvas_read_board({ id, format: "summary" })
+# Unprose — Studio 設計 (freeform, seq 56, 329 items)
+Answered by: any agent
+
+## EventStorming "Studio · Ask AI（process）" — frame: "studio-es" · design/studio.es.yaml  #diagram.studio-es
+  99 items: 45 arrow, 10 event, 9 legend, 8 command, 8 system, 6 person, 6 policy, …
+  0 comment thread(s) · 4 proposed element(s)
+## kanban "Studio · Kanban" — frame: "studio-kanban" · design/studio.kanban.yaml  #diagram.studio-kanban
+  5 items: 4 column, 1 card
+  4 columns: Backlog (1) · Doing (0) · Review (0) · Done (0)
+…
+
+canvas_read_board({ id, frame: "studio-kanban" })
+## kanban "Studio · Kanban" — key studio-kanban · design/studio.kanban.yaml · 5 items  #diagram.studio-kanban
+  ## column: Backlog [1 cards]  #studio-kanban.column.backlog-c22f42
+    - card: Release 1 [release]  #studio-kanban.card.release-1
+  ## column: Doing [0 cards, WIP 1]  #studio-kanban.column.doing-c10eab
+```
+
+| Parameter | `canvas_read_board` (`GET /api/boards/:id/read`, `/outline`) |
+|---|---|
+| `format` | `outline` (default) · `summary` · `json` (one item per line after a header line; bulky `data` — UI mock trees, workflow details, proposal diffs — is summarised unless named in `fields`; the board meta is listed by key: `canvas_context` / `canvas_files` read it) |
+| `frame` | a diagram key (`studio-es`), a frame / lane / column item id, or a legacy board's kind: that container, everything in it, the wires with an end in it, the threads about them |
+| `types` | item types or roles: `["comment"]`, `["event","hotspot"]`, `["card"]`, `["arrow"]`, UI mock element types (`["button"]`) |
+| `ids` | these items (a container brings what it holds; threads come along) |
+| `text` | a case-insensitive substring of the text, label or id |
+| `fields` | json: which fields, e.g. `["id","role","text","x","y","w","h","parent"]`, `"data.ui"` |
+| `limit` · `cursor` · `maxChars` | json: items per page (default 200); outline: lines per page; the next page; the size cap |
+
+**The outline** groups by diagram frame → lane / column / screen / group → items, in reading order (a kanban column's
+cards in the order they stack). Containment is `parent` when it names an item, else the smallest container holding
+the item's centre — never the item's own descendant, and a diagram frame without a parent is always top level (the
+old outline could count a frame as inside its own release lane and dropped everything into "(unplaced)"). It marks:
+`[proposed add by codex-b]` on items with `data.pending`; threads under their item, with `[3 messages · waiting for an
+answer]` when the person spoke last, `[proposal: edit to design/x.yaml]`, the last 3 replies (`… N earlier replies`);
+the frame header names the file and who holds it; each diagram lists its own wires, wires between diagrams come last;
+a domain story lists its sentences in order. With filters, the containers on the way are printed as headers, and a
+filtered comment shows under the item it is about.
+
+**Changes**: `canvas_diff` and `canvas_wait` (and `GET /diff`, `/wait`, `/changes`) take
+
+| Parameter | |
+|---|---|
+| `frame` | only ops on items inside that diagram / frame (removed items count by where they were) |
+| `from` | who: agent names, `person`, `studio` (the default local agent) — `canvas_wait` takes a list here besides `person` / `others` |
+| `kinds` | `add` · `update` · `remove` · `comment` (any op on a comment) · `move` (pure move / resize / reroute) |
+| `summary` | counts by who × kind and by frame, then the last `last` lines (default 20; 10 for a wait) |
+| `limit` · `cursor` · `maxChars` | `canvas_diff`: pages of lines; a wait cuts at `maxChars` and points to `canvas_diff` for the rest |
+
+Moves that stay in their lane fold into one `moved N items: …` line in the diff too (`?moves=each` on HTTP lists
+them one by one).
+
+```
+canvas_diff({ id, since: 0, author: "all", summary: true })
+138 change(s) since seq 0 (board seq 151), 706 op(s), 239 line(s)
+by who × kind:
+  agent: 451 update, 86 add, 30 remove, 8 comment
+  person: 95 move, 32 comment, 4 remove, 2 update
+by frame (ops):
+  workflow: 706
+last 20 line(s):
+  [148 agent] removed arrow human-review → build @builder (opus)
+  …
+canvas_diff({ id, since: 0, author: "all", from: ["person"], kinds: ["comment"] })   → the person's 32 comments only
+```
+
+### Seeing the board
+
+`canvas_snapshot { id, frame?, ids?, scale?, maxPx? = 2000, theme? = light | dark, format? = png | svg }` renders on the
+server what the page draws (`src/snapshot.ts`): frames with their kind badge and title, lanes, kanban columns with
+their header and the cards where they stack (`src/shown.ts`, the same code the page uses), stickies in the theme
+colours with wrapped text (`src/textMetrics.ts`, the stylesheet's sizes and paddings) and role labels, cards, text,
+wireframe primitives, UI mock elements, Domain Storytelling pictograms with numbered activities, wires with arrowheads
+and labels (traces dotted, proposals dashed), comment badges with their message count. The region is the frame's box,
+the union of `ids` (a container brings its contents), or the whole board; it is scaled down to fit `maxPx` (at most
+4000) with a note saying so. Colours are literal (no CSS variables), so any SVG rasterizer can draw it.
+
+**PNG** needs a rasterizer: when the optional package [`@resvg/resvg-js`](https://github.com/yisibl/resvg-js) is
+installed next to the canvas, the tool returns an MCP image (`image/png`); without it, the SVG text, and the result says
+so (`UNPROSE_SNAPSHOT_PNG=0` turns PNG off). Over HTTP: `GET /api/boards/:id/snapshot?frame=&ids=&scale=&maxPx=&theme=&format=png|svg`
+→ `image/png` or `image/svg+xml`, with `x-unprose-snapshot: { width, height, scale, items, region, notes }`.
+
+```
+canvas_snapshot({ id, frame: "studio-kanban" })
+snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region x 7396 y -48 w 1200 h 716
+[image/png]   — or, without a rasterizer: "No PNG on this canvas — SVG follows (4402 characters): <svg …"
+```
+
+**Layout check.** `canvas_check_layout { id, frame?, limit? }` (`GET /api/boards/:id/layout?frame=` → `{ findings, counts,
+checked, lines }`, `src/layoutCheck.ts`) is pure geometry on the positions as drawn: items overlapping their siblings,
+text likely cut off (the same text metrics), items outside their parent or off their lane, items 3× the median of
+their siblings or far larger than the template sticky (160×110), and items drawn elsewhere than stored (a kanban card's
+x / y are not where it shows — its stored y only orders the column). Each finding says what to do. The frame panel on
+the page lists the same findings under **Layout**.
+
+```
+Layout: 5 finding(s) — 5 clipped (198 items checked; positions as the page draws them)
+- [clipped] text of hotspot "改 workflow.yaml 要重啟 awd run；…" likely cut off: needs ~6 lines at 13 px, the 120×80 box fits 3 #runner-es.hotspot.… — make it 44 px taller (h 124), or wider, or shorten the text
+- [moved-by-layout] card "Drop legacy_contacts table" is stored at 1170,410 but the page draws it at 1188,164 … — set y to reorder (x is ignored)
+- [oversized] sticky "檔案是唯一真相 …" is 262×210, 3.1× a template sticky (160×110) — use 160×110; do not scale stickies up to fill space
+```
+
 ### Start prompts and slash commands
 
 Eight ways to start a conversation, written once in `packages/cli/src/prompts.ts`: `help`, `eventstorm <topic>`,
@@ -91,6 +215,42 @@ Eight ways to start a conversation, written once in `packages/cli/src/prompts.ts
 them as MCP prompts. The Claude Code plugin gets them as slash commands `/unprose:<name>` (`commands/*.md`,
 written by `npm run gen:commands`; a test fails when they drift) and turns the MCP prompts off
 (`UNPROSE_MCP_PROMPTS=0`) so the menu does not list them twice.
+
+## What each surface can do
+
+Four ways in, with different reach. **Web UI** = a person's page (on the canvas machine, or remote through a tunnel —
+"manage" rows need the canvas machine, a page allowed to manage, or a manage-rights request approved there). **CLI** =
+`awd` / `awd-canvas` on a machine with the files. **stdio MCP** = `awd mcp` (`node scripts/mcp.mjs`, the plugin's
+server) next to the files. **Remote MCP** = the canvas's own `/mcp` (claude.ai connectors, cloud agents, another
+machine without the canvas's files), which serves the same canvas tools minus local-only ones and takes file *text*.
+
+| Capability | Web UI | `awd` CLI | stdio MCP | Remote `/mcp` |
+|---|---|---|---|---|
+| Draw a diagram from a **file path** | – | `awd design draw <file>`, `awd graph <wf> --canvas` | `design_draw { file }` (diagrams and workflows) | – (the canvas cannot read your disk) |
+| Draw a diagram from **file content** | – | – | – | `design_draw { name, content }` (no workflows: draw `awd graph --json` with `canvas_create_board`) |
+| Draw from structured content / raw ops | edit by hand | `awd-canvas render` (print only), `card add/move` | `canvas_create_board`, `canvas_add_items`, `canvas_apply` | same |
+| **Redraw preview** (what a redraw keeps/removes; no writes) | – | `awd design draw --dry-run`, `awd graph --canvas --dry-run` | `design_draw { dryRun: true }` | `design_draw { dryRun: true }` |
+| **Lock layout** (`data.lock: 'layout'` — redraws and the kanban layout never move it; docs/diagrams.md "What a redraw keeps") | context menu *Lock position* / frame *Lock layout*; a lock badge | – | `canvas_apply` ops `{kind:'lock', id \| frame}` / `unlock` (unlocks only agents' locks) | same |
+| Lint a diagram file | – | `awd design lint` | `design_lint { file }` | `design_lint { name, content }` |
+| Read the files behind a board | Files tab, source dialog | the files themselves | `canvas_files` | `canvas_files` |
+| Propose an edit to a file | edit text in the source dialog, drag a wire, UI-mock text edits | – | `canvas_propose_edit` | `canvas_propose_edit` (the only way to change a file) |
+| Apply a proposal (`--applied`) | *Agree* in the thread (consent only; never writes files) | `awd design draw --applied`, `awd graph --canvas --applied` | `design_draw { applied }` | – (the holder applies) |
+| Read a board / diff / wait (filters, summary, pages, size cap — [Reading big boards](#reading-big-boards)) | the board | `awd-canvas outline`, `awd-canvas diff` | `canvas_read_board`, `canvas_diff`, `canvas_wait` | same |
+| Focus the person's page ("look here") | – (the person navigates; Go-to palette) | – | `canvas_focus` | `canvas_focus` |
+| Board settings: context, *Answered by* | header menu (sets it), context panel | – | `canvas_context` (context; *Answered by* only as a suggestion) | same |
+| Ask another agent | `@name` in a comment | – | `canvas_ask` | `canvas_ask` |
+| **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG with the optional `@resvg/resvg-js` installed next to the canvas, else SVG) | `canvas_snapshot` (same) |
+| **Layout check** (overlaps, cut-off text, oversized, drawn elsewhere) | frame panel → *Layout* | `GET /api/boards/:id/layout` | `canvas_check_layout` | `canvas_check_layout` |
+| Replay a board's history | Replay bar | – (`awd replay` replays a *workflow's* event log) | – | – |
+| Approve a pairing code / OAuth client | Connected agents → *Enter a code*, the notification | – | `canvas_approve` (the agent on the canvas machine only, a code the person read out; logged) | – (never) |
+| Request manage rights for a remote page | Connected agents → *Request manage rights* (a code a managing page approves) | – | – | – |
+| Manage tokens / OAuth clients (create, revoke, rename, change access and scope) | Connected agents (canvas machine or a managing page) | – | – | – |
+| Register / move projects | board list shows them | `awd-canvas serve --project`, auto-registered by `design draw` / `graph --canvas`, `awd boards move` | the session's project is registered on start | – (boards go to the token's project) |
+| Upgrade the canvas | release-notes dialog: *Check for updates*, *Upgrade* | `node scripts/ensure.mjs` (plugin) | – | – |
+| Feedback about Unprose | – | – | `unprose_feedback`, `unprose_feedback_list` | `unprose_feedback` (reading it is local only) |
+| Start / stop studio | studio control (allowed projects only) | `awd studio` | – | – |
+
+`unprose_help` carries a short version of this table.
 
 ## Projects
 
@@ -197,13 +357,49 @@ canvas that already sits behind an access proxy that does the job. Local-only ac
   **signed-in** page anywhere (a browser session) — only with the requester's pairing code. A session can grant at
   most its own scope and projects. **Five wrong codes lock the request** (the agent has to start again); codes typed
   without picking a request are limited to ten wrong ones per ten minutes per approver.
-- **Create and revoke tokens:** a page on the canvas machine, or a browser session that a page on the canvas machine
-  approved with *“may also manage agents and tokens”*. A page that can merely load through the tunnel can do none of
-  this; agent tokens can neither approve nor list agents.
+- **Create, change and revoke tokens (manage agents):** a page on the canvas machine, or a browser session that may
+  manage agents — approved with *“may also manage agents and tokens”* on the canvas machine, or given the right later
+  (below). A page that can merely load through the tunnel can do none of this; agent tokens can neither approve nor
+  list agents. A page that may not manage says **why** next to its disabled buttons (*“Why can’t I change or revoke
+  agents here?”*) and how to get the right.
+- **Changing an agent's access:** Connected agents → *Change access* on a row: **read only ↔ read and draw**, the
+  projects (none ticked = all) and the boards (ids, empty = all) — for a token, an OAuth client, a device-code agent or
+  a browser session, in place: the agent keeps its token and gets the new access on its next request
+  (`PATCH /api/access/agents/:id { scope?, projects?, boards? }`). Every change is written to the **access log**
+  (shown on the page to those who manage: who, when, “changed codex-b: access read only → read and draw; boards all →
+  b_…”), as are tokens made, renamed, revoked and forgotten, requests let in, and manage rights asked for and given.
+- **Manage rights for a browser elsewhere:** a page reached through the tunnel that is signed in but may not manage
+  offers two ways: (a) open it on the canvas machine — `http://localhost:4400/agents` — or from your computer forward
+  the port, `ssh -L 4400:localhost:4400 <canvas host>`, and open that address; (b) **Request manage rights**: the page
+  shows a pairing code, and a page that already manages agents (or the canvas machine) sees *“<browser> asks to manage
+  agents”* and allows it — on the canvas machine with one click, from another managing browser by typing the code. The
+  same rules as a connect request: 10 minutes, five wrong codes lock it, at most 3 waiting per address; a browser can
+  never approve its own request, and pages that do not manage are not shown it. Once allowed, that browser session
+  manages agents until it is revoked (revoke it on the page to take the right back).
 - **Signing a browser in from elsewhere:** the page shows *“Ask to be let in”* — it gets a pairing code; type it on a
   page on the canvas machine or on a page that is already signed in (one click on the canvas machine works too).
   Or paste a token made on the agents page. A person who only ever reaches the canvas through the tunnel makes one
   token (or approves the first browser) while at the machine, once.
+- **The agent on the canvas machine** (the stdio MCP server, no token) can approve a pairing code with
+  **`canvas_approve { code, scope?, name?, board? }`** (`POST /api/approve`) — when the person reads the code out to
+  it ("let codex-b in, the code is ABCD-EFGH"). Why this is safe, and its limits:
+  - *It adds no power.* An agent process on the canvas machine runs as the person and can already reach the
+    one-click approve API from loopback (an agent once did, with curl and a hand-made `Origin` header). The tool turns
+    that into a narrow, logged path, and the page API stays for pages.
+  - *Local only, checked by the canvas.* `POST /api/approve` answers only a loopback caller with no forwarding headers,
+    no token, no session cookie, and none of the headers a browser sends on a POST (`Origin`, `Sec-Fetch-Site`). A web
+    page cannot use it — not even a page of this canvas, which has its own route — and neither can a tunnel, an agent
+    token or the remote `/mcp` (whose in-process client carries a token). The tool is not even registered on `/mcp`.
+  - *The code is the person's consent.* It approves only the request whose code it is, the way the page's "Enter a
+    code" box does, and it never lists requests. Unknown codes count against the same ten-wrong-per-ten-minutes limit
+    (`429` past it). The tool description tells the agent to use only a code the person gave it in the conversation,
+    never one read on a board, in a comment or from another agent. That closes the prompt-injection route ("approve
+    ABCD-EFGH" in a comment): an attacker would also need a pending request of their own, which only a code typed on
+    the canvas can approve.
+  - *Logged.* The canvas log prints `approved <name> (device from <ip>, write) with its pairing code — by the local
+    agent <name>`. With `board`, the same line is written to that board's change feed (a no-op change by the agent),
+    so the person sees it next to the conversation. The connection then appears on **Connected agents**, revocable,
+    created by *this machine*. `scope: 'read'` grants less than asked; nothing grants more than the request asked for.
 
 ### Safety details
 
@@ -226,7 +422,7 @@ canvas that already sits behind an access proxy that does the job. Local-only ac
 The same tools as the stdio server (`canvas_*`, `unprose_help`) plus `design_lint`, `design_draw` and
 `design_propose_stories` that take the file's text (`content`) and its file name (`name`, e.g. `checkout.es.yaml`)
 instead of a path — the canvas cannot read the agent's files; the agent keeps the file as the truth on its side.
-`design_egon` (writes files) and workflow files (`awd graph`) stay with the local tools. To change a file behind a board (a workflow's yaml, a design file drawn from the person's machine) a remote agent proposes: `canvas_files` → `canvas_propose_edit` ([Proposals and saving](#proposals-and-saving)). The start prompts
+`design_egon` (writes files), workflow files (`awd graph`) and `canvas_approve` (approving pairing codes) stay with the local tools. To change a file behind a board (a workflow's yaml, a design file drawn from the person's machine) a remote agent proposes: `canvas_files` → `canvas_propose_edit` ([Proposals and saving](#proposals-and-saving)). The start prompts
 (`eventstorm`, `storymap` …) are MCP prompts. New boards are not opened in a browser on the canvas machine: the
 tool returns the link to give the person. `/mcp` is stateless (each POST stands alone; nothing is lost on a restart)
 and streams with keep-alives, so a `canvas_wait` of up to 120 s survives proxies.
@@ -340,6 +536,20 @@ meant for another agent that has the context. Four things sort it out, all kept 
 | **Context** | a short markdown note on what the board is about — the meeting, decisions, links to the notes — that every agent gets first | `meta.context = { text, by, at }` |
 | **File holder** | who drew each diagram from which files: agent, machine, repo, git remote; proposals on a diagram go to its holder | `meta.diagrams[key].holder`, `meta.workflow.holder` |
 
+**Watching ≠ answering ≠ being mentioned ≠ allowed to apply.** These are four separate things; having one never
+gives an agent another:
+
+| Notion | What it gives the agent | Who decides | How it is set |
+|---|---|---|---|
+| **Watching** | the board's news: `canvas_wait` returns what is for it (`listen: 'all'`: everything); `canvas_read_board` / `canvas_diff` show everything | the agent (any token that may read the board) | `canvas_wait` / `GET /wait`; shown as *here* / *away* |
+| **Answering** (*Answered by*) | the person's comments that name nobody wake this agent | **the person only** | the header menu, or confirming a suggestion. An agent that draws a new board (`awd design draw`, `awd graph --canvas`, `design_draw`) or calls `canvas_context { answeredBy }` only **suggests** it (`meta.responderSuggestion`); the header shows *Suggested: codex-b — Confirm* |
+| **Being mentioned** | one thread: `@codex-b` (or `canvas_ask`) sends that thread to it, replies included | whoever writes the mention (the person, or an agent asking) | `data.mention` on the comment |
+| **Allowed to apply** | changing the files behind a diagram and redrawing with `--applied` | the person, **in the thread** | only the file holder (the agent that drew it from its files), only after the person agreed. A token's *read + draw* access, a watch, a mention or another agent's "agree" is **not** consent; a remote agent proposes (`canvas_propose_edit`) and never applies |
+
+So watching a board does not make an agent its responder, being the responder does not let it apply proposals, and
+an agent never replies on behalf of another one (a comment routed to `codex-b` does not wake `claude-a`, and a token
+always writes as its own name). Boards that already have *Answered by* keep it; the suggestion never replaces it.
+
 ### Names
 
 An agent is known by its name: a token's or OAuth client's name, or `UNPROSE_AGENT_NAME` for a local agent (sent as
@@ -418,21 +628,26 @@ characters.
 
 ### Settings: Answered by, context, loop guard
 
-`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{
-name, label, handle, watching, seen?, holder }], you? }` (`holders` without machine and root for a caller elsewhere; an agent
-token gets only the names active on that board). `PUT` the same path with any of `{ answeredBy: 'any' | 'studio' |
-'me' | <name> | null, context: <markdown> | null, agentTurns: 1–100 | null }` — needs write access (a read-only token
-gets `403`). Each change is **logged**: a change with no ops, `note` (*set "Answered by" to codex-b; updated the board
+`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, suggestion?, suggestionBy?,
+suggestionWhy?: 'asked' | 'holder', agents: [{ name, label, handle, watching, seen?, holder }], you? }` (`holders` without
+machine and root for a caller elsewhere; an agent token gets only the names active on that board). `PUT` the same
+path with any of `{ answeredBy: 'any' | 'studio' | 'me' | <name> | null, context: <markdown> | null, agentTurns:
+1–100 | null }` — needs write access (a read-only token gets `403`). `answeredBy` from **the person** sets *Answered
+by* (and clears a suggestion; `null` while nothing is set dismisses the suggestion); from **an agent** (a token, or
+`author: 'agent'`) it only records a suggestion (`meta.responderSuggestion`, logged as *suggested "Answered by":
+codex-b — the person confirms it*; `""` withdraws it). `POST /api/boards { answeredBy: 'me' }` from a named agent
+does the same, and an agent cannot put `responder` / `agentTurns` into a new board's `meta`. Each change is **logged**: a change with no ops, `note` (*set "Answered by" to codex-b; updated the board
 context*) and `meta` (the keys set), so it shows in the change feed and the diff, and open pages update at once. A
 `PUT` / `PATCH /api/boards/:id` of the meta (a redraw) never changes them. The context is at most 4 000 characters — link
 to longer notes.
 
 In the UI: the board header's **Answered by** menu (studio & any agent · any agent · studio · each known agent, marked
-*holds files* / *here*), a **Use codex-b?** suggestion when no responder is set and one agent holds every diagram's
-files (a suggestion only — existing boards keep their behaviour), and, when the responder has not waited on the board
+*holds files* / *here*), **Suggested: codex-b · Confirm** when no responder is set and an agent suggested one (it drew
+the board, or asked through `canvas_context`; **×** dismisses it) or one agent holds every diagram's files — one
+click, logged as the person; existing boards keep their responder — and, when the responder has not waited on the board
 for a minute, **"codex-b is away — your comments wait for it"** (from `presence.seen`). The **Context** note is at the
 top of the side panel (collapsible per viewer, links clickable, *Edit*). Agents read and write it with
-`canvas_context { id, text?, answeredBy? }`; it opens studio's briefs and `canvas_read_board`'s outline.
+`canvas_context { id, text?, answeredBy? }` (`answeredBy` = a suggestion); it opens studio's briefs and `canvas_read_board`'s outline.
 
 ### File holders
 
@@ -501,16 +716,20 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | PATCH | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — merges: each top-level meta key given replaces that key (`null` removes it); `meta.diagrams` merges per diagram key (an entry replaces that diagram's, `null` removes it). Settings keys are ignored (they change through `/settings`); holders are stamped from the caller |
 | DELETE | `/api/boards/:id` | | `{ deleted }` |
 | POST | `/api/boards/:id/ops` | `{ author: 'agent'\|'user', ops: Op[], note? }` | `{ seq, change }` (atomic batch) |
-| GET | `/api/boards/:id/changes` | `?since=N&author=` | `{ changes: Change[], seq }` |
-| GET | `/api/boards/:id/diff` | `?since=N&author=` | `{ lines: string[], count, seq }` |
+| GET | `/api/boards/:id/changes` | `?since=N&author=&frame=&from=&kinds=` | `{ changes: Change[], seq }` — `frame` / `from` / `kinds` keep only the ops that pass ([Reading big boards](#reading-big-boards)) |
+| GET | `/api/boards/:id/diff` | `?since=N&author=&frame=&from=&kinds=&summary=1&last=&limit=&cursor=&maxChars=&moves=each` | `{ lines: string[], count, total, from, seq, nextCursor?, more?, summary? }` — a page of lines under the size cap (40 000 characters by default); with `summary=1`, `summary` (counts by who × kind × frame + the last lines) and no lines |
+| GET | `/api/boards/:id/read` | `?format=outline\|json\|summary&frame=&types=&ids=&text=&fields=&limit=&cursor=&maxChars=&items=1` | `{ format, text, matched, seq, nextCursor?, more? }` (`items=1`: also the json page as an array) |
+| GET | `/api/boards/:id/snapshot` | `?frame=&ids=&scale=&maxPx=&theme=light\|dark&format=png\|svg` | `image/png` (with `@resvg/resvg-js`) or `image/svg+xml`; header `x-unprose-snapshot: { width, height, scale, items, region, notes }` |
+| GET | `/api/boards/:id/layout` | `?frame=&limit=` | `{ findings: [{ id, kind, message, suggestion, others?, frame? }], counts, checked, frame?, lines }` |
+| POST | `/api/approve` | `{ code, scope?: 'read', name?, board? }` | `{ status, approved: { name, via, scope, ip }, audit, seq? }` — the local agent only (`canvas_approve`); `403` for tokens, sessions, browsers and anything not from loopback, `404` an unknown code, `429` after ten wrong ones |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
-| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
+| GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all&frame=&from=&kinds=&summary=1&maxChars=` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
 | GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{ name, label, handle, watching, seen?, holder }], you?, seq? }`; a PUT is a logged change (`403` read-only) |
 | POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
 | POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |
 | GET | `/api/boards/:id/thumb.svg` | | SVG thumbnail of the board (used by the board list) |
-| GET | `/api/boards/:id/outline` | | `text/plain` outline |
+| GET | `/api/boards/:id/outline` | the `/read` filters | `text/plain` outline, capped (a closing line and `x-unprose-next-cursor` say how to page on) |
 | POST | `/api/boards/:id/template` | `{ kind?, content, at?, scope?, frame?: { key, title?, source?, level?, at? } }` | `{ items, ops }` — rendered but **not** applied. With `frame`, drawn inside the diagram frame `diagram.<key>` (created if missing; an existing frame keeps its geometry), ids `<key>.<role>.<element id>`; trace links become dotted `trace` wires when their target is on the board |
 | GET | `/api/boards/:id/studio` | | `{ capable, running, pid?, since?, exitedAt?, exitCode?, log: string[] (last 50), sessions?: { open, max, queued } }` — `capable: false` unless the board's `meta.workflow.file` is one of the server's `--studio` files |
 | POST | `/api/boards/:id/studio` | `{ action: 'start' \| 'stop' }` | same shape; `403` for a board that is not studio-capable, `400` for another action. Start is idempotent; one child per workflow; no auto-restart |
@@ -524,12 +743,13 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | GET | `/authorize` | `response_type=code, client_id, redirect_uri, code_challenge, code_challenge_method=S256, state, scope?` | the approve-on-connect page (pairing code; one click on the canvas machine); `GET /authorize/status?id=` → `{ status, redirect? }` |
 | POST | `/token` | form: `grant_type=authorization_code \| refresh_token \| urn:ietf:params:oauth:grant-type:device_code`, … | `{ access_token, token_type, expires_in?, refresh_token?, scope }` |
 | POST | `/device_authorization` · `/revoke` | form: `client_name` · `token` | `{ device_code, user_code, verification_uri, expires_in, interval }` · `200` |
-| GET | `/api/access/me` | | `{ grant, signedIn, local, remoteAuth, canApprove, canManage, oneClick, publicUrl }` |
+| GET | `/api/access/me` | | `{ grant, signedIn, local, remoteAuth, canApprove, canManage, whyNotManage?, oneClick, publicUrl }` — `whyNotManage: { reason: 'remote' \| 'not-signed-in' \| 'host' \| 'agent', text, canRequest, port }` when it may not manage |
 | POST/GET | `/api/access/signin` · `/api/access/signin/:id` | | a browser asks to be let in → `{ id, code, expiresAt }`; polling sets the session cookie once approved |
 | POST | `/api/access/session` · `/api/access/signout` | `{ token }` · | sign in with a pasted token · sign out (the session is revoked) |
-| GET/POST | `/api/access/agents` | `{ name, scope, projects?, boards?, publicUrl? }` | the agents and pending requests · make a token → `201 { agent, token, setup }` (token shown once) |
-| DELETE | `/api/access/agents/:id` | `?forget=1` | revoke (forget a revoked one) |
-| PATCH | `/api/access/agents/:id` | `{ name }` | rename → `{ ok, from, name }`; boards naming it follow |
+| GET/POST | `/api/access/agents` | `{ name, scope, projects?, boards?, publicUrl? }` | the agents, pending requests, `canManage`, `whyNotManage?`, `audit` (the access log, manage only) · make a token → `201 { agent, token, setup }` (token shown once) |
+| DELETE | `/api/access/agents/:id` | `?forget=1` | revoke (forget a revoked one); logged |
+| PATCH | `/api/access/agents/:id` | `{ name?, scope?, projects?, boards? }` | rename and / or change access in place (`[]` or `null` = no limit) → `{ ok, from?, name, agent, changed }`; logged; boards naming a renamed agent follow |
+| POST/GET | `/api/access/manage-request` · `/api/access/manage-request/:id` | | a signed-in browser that may not manage asks for the right → `{ id, code, expiresAt }` · its status (`pending` / `approved` / `denied` / `expired`); approved with `/api/access/requests/:id` or `/api/access/approve` by a page that manages |
 | GET | `/api/access/feedback` | | `{ feedback }` — the agents page's *Feedback from agents* (manage only) |
 | GET/POST | `/api/access/requests` · `/api/access/requests/:id` · `/api/access/approve` | `{ allow, scope?, projects?, boards?, name?, code?, manage? }` · `{ code, … }` | pending requests · allow / deny one · allow the one whose code this is |
 | WS | `/ws` | | the server socket: `access-request` / `access-resolved` (pages that may approve), `access-changed` |

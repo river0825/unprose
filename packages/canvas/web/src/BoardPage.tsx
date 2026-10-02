@@ -22,7 +22,7 @@ import '@xyflow/react/dist/style.css'
 import './select.css'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { Board, ColorToken, Item, Op } from '../../src/model'
-import { isUnread, markSeen, newId } from '../../src/model'
+import { isUnread, markSeen, newId, ownLock, layoutLock, LAYOUT_LOCK } from '../../src/model'
 import { ContextMenu, type MenuState } from './components/ContextMenu'
 import { Rail, type Tool } from './components/Rail'
 import { ShortcutsSheet } from './components/ShortcutsSheet'
@@ -1070,6 +1070,20 @@ function BoardInner({ id }: { id: string }) {
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
           onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
+          lock={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : { locked: ownLock(menuItem), frame: menuItem.type === 'frame', byFrame: !ownLock(menuItem) && layoutLock(board.items, menuItem.id) === 'frame' }}
+          onToggleLock={(iid) => {
+            const it = board.items[iid]
+            if (!it) return
+            const on = !ownLock(it)
+            const data = { ...(it.data ?? {}) }
+            if (on) Object.assign(data, { lock: LAYOUT_LOCK, lockedBy: 'person' })
+            else {
+              delete data.lock
+              delete data.lockedBy
+            }
+            const what = it.type === 'frame' ? 'the layout of' : 'the position of'
+            void commit([{ kind: 'update', id: iid, patch: { data } }], `${on ? 'locked' : 'unlocked'} ${what} '${(it.text ?? it.type).slice(0, 40)}'`)
+          }}
         />
       )}
       {helpOpen && <ShortcutsSheet onClose={() => setHelpOpen(false)} />}

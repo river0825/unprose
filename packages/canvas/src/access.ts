@@ -10,7 +10,7 @@
 import type http from 'node:http'
 import crypto from 'node:crypto'
 import type { AccessRequestView } from './model.js'
-import type { AccessData, AccessStore, AgentRecord, OAuthClientRecord } from './ports/accessStore.js'
+import type { AccessAuditEntry, AccessData, AccessStore, AgentRecord, OAuthClientRecord } from './ports/accessStore.js'
 import { cleanName, hashSecret, LOCAL_GRANT, newSecret, normalizeCode, OPEN_GRANT, pairingCode, pkceMatches, redirectUriOk, sameCode, sameHash, scopeFrom, type Grant, type Scope } from './accessPolicy.js'
 import { isLocalRequest } from './projectsApi.js'
 import { handleOf } from './routing.js'
@@ -27,6 +27,7 @@ export const MAX_CODE_ATTEMPTS = 5
 /** Wrong codes typed without picking a request, per approver, per 10 minutes. */
 const MAX_LOOSE_ATTEMPTS = 10
 const DEVICE_INTERVAL_S = 5
+const MAX_AUDIT = 200
 
 /** What a page may see of an agent record: never a hash. */
 export interface AgentView {
@@ -70,8 +71,10 @@ interface Pending {
   id: string
   /** What approving pages use to name the request — never the secret id. */
   ref: string
-  via: 'oauth' | 'device' | 'browser'
+  via: 'oauth' | 'device' | 'browser' | 'manage'
   name: string
+  /** manage: the browser session (agent record id) asking for the right to manage agents. */
+  sessionId?: string
   /** The pairing code, shown only to the requester. */
   code: string
   attempts: number
@@ -196,6 +199,17 @@ export class AccessService {
   }
   private iso(t = this.now()) {
     return new Date(t).toISOString()
+  }
+  /** One line in the access log (kept with the records, at most 200). */
+  private log(by: string, what: string, agentId?: string) {
+    const audit = (this.data.audit ??= [])
+    audit.push({ at: this.iso(), by, what, ...(agentId ? { agentId } : {}) })
+    if (audit.length > MAX_AUDIT) audit.splice(0, audit.length - MAX_AUDIT)
+    this.save()
+  }
+  /** The access log, newest first. */
+  auditLog(limit = 50): AccessAuditEntry[] {
+    return (this.data.audit ?? []).slice(-limit).reverse()
   }
 
   // ── who is calling ──────────────────────────────────────────────────────────
@@ -323,14 +337,48 @@ export class AccessService {
   createToken(input: { name?: unknown; scope?: unknown; projects?: unknown; boards?: unknown }, createdBy: string): { agent: AgentView; token: string } {
     const token = newSecret('unp')
     const rec = this.addRecord({ name: cleanName(input.name, 'agent'), via: 'token', scope: input.scope === 'read' ? 'read' : 'write', ...limits(input), tokenHash: hashSecret(token), createdBy })
+    this.log(createdBy, `made a token for ${rec.name}: ${describeAccess(rec)}`, rec.id)
     return { agent: this.view_(rec.id), token }
+  }
+
+  /**
+   * Change what an agent (a token, an OAuth client, a device-code agent, a browser session) may do, in place: its
+   * access (read ↔ read and draw) and its project / board limits (an empty list = no limit). Takes effect on its
+   * next request. Returns the agent and what changed (nothing changed = an empty list), or undefined if there is
+   * no such live record.
+   */
+  updateAccess(id: string, input: { scope?: unknown; projects?: unknown; boards?: unknown }, by: string): { agent: AgentView; changed: string[] } | undefined {
+    const r = this.data.agents.find((a) => a.id === id && !a.revokedAt)
+    if (!r) return undefined
+    const before = { scope: r.scope, projects: r.projects, boards: r.boards }
+    if (input.scope === 'read' || input.scope === 'write') r.scope = input.scope
+    if (input.projects !== undefined) {
+      const p = limits({ projects: input.projects }).projects
+      if (p) r.projects = p
+      else delete r.projects
+    }
+    if (input.boards !== undefined) {
+      const b = limits({ boards: input.boards }).boards
+      if (b) r.boards = b
+      else delete r.boards
+    }
+    const list = (v?: string[]) => (v?.length ? v.join(', ') : 'all')
+    const changed: string[] = []
+    if (before.scope !== r.scope) changed.push(`access ${scopeText(before.scope)} → ${scopeText(r.scope)}`)
+    if (list(before.projects) !== list(r.projects)) changed.push(`projects ${list(before.projects)} → ${list(r.projects)}`)
+    if (list(before.boards) !== list(r.boards)) changed.push(`boards ${list(before.boards)} → ${list(r.boards)}`)
+    if (changed.length) {
+      this.log(by, `changed ${r.name}: ${changed.join('; ')}`, r.id)
+      this.emit({ type: 'access-changed', at: this.iso() })
+    }
+    return { agent: this.view_(r.id), changed }
   }
 
   /**
    * Rename an agent (or a browser session): the name its changes are signed with from now on, and the one people
    * @mention. Earlier changes keep the name they were made with. Returns the old and the new (unique) name.
    */
-  rename(id: string, raw: unknown): { from: string; to: string } | undefined {
+  rename(id: string, raw: unknown, by?: string): { from: string; to: string } | undefined {
     const r = this.data.agents.find((a) => a.id === id && !a.revokedAt)
     if (!r) return undefined
     const from = r.name
@@ -338,26 +386,29 @@ export class AccessService {
     if (to === from) return { from, to }
     r.name = to
     this.save()
+    if (by) this.log(by, `renamed ${from} to ${to}`, r.id)
     this.emit({ type: 'access-changed', at: this.iso() })
     return { from, to }
   }
 
-  revoke(id: string): boolean {
+  revoke(id: string, by?: string): boolean {
     const r = this.data.agents.find((a) => a.id === id)
     if (!r || r.revokedAt) return false
     r.revokedAt = this.iso()
     r.refreshHash = undefined
     this.save()
+    if (by) this.log(by, `revoked ${r.name}`, r.id)
     this.emit({ type: 'access-changed', at: this.iso() })
     return true
   }
 
   /** Forget a revoked record entirely. */
-  remove(id: string): boolean {
+  remove(id: string, by?: string): boolean {
     const i = this.data.agents.findIndex((a) => a.id === id && a.revokedAt)
     if (i < 0) return false
-    this.data.agents.splice(i, 1)
+    const [gone] = this.data.agents.splice(i, 1)
     this.save()
+    if (by) this.log(by, `forgot ${gone.name}`, gone.id)
     this.emit({ type: 'access-changed', at: this.iso() })
     return true
   }
@@ -442,9 +493,10 @@ export class AccessService {
   }
 
   /** Requests waiting for a decision (for a page that may approve). */
-  pendingViews(): AccessRequestView[] {
+  pendingViews(o: { manage?: boolean } = {}): AccessRequestView[] {
     this.sweep()
-    return [...this.pending.values()].filter((p) => p.status === 'pending').map((p) => this.view(p))
+    // requests for the right to manage agents are for pages that manage (o.manage false leaves them out)
+    return [...this.pending.values()].filter((p) => p.status === 'pending' && (o.manage !== false || p.via !== 'manage')).map((p) => this.view(p))
   }
 
   /** A request by its secret id (the requester polling). */
@@ -481,6 +533,23 @@ export class AccessService {
   }
 
   /**
+   * A signed-in browser that may not manage agents asks for that right (the Connected agents page's "Request
+   * manage rights"). Same machinery as connecting: a pairing code shown to the requester, ten minutes, the same
+   * limits per address; only a page on this machine or a browser that already manages may approve it, and an
+   * approver from elsewhere must type the code. Reloading reuses the session's pending request.
+   */
+  startManage(grant: Grant, ip: string, userAgent?: string): { pending?: Pending; error?: string; http?: number } {
+    if (grant.as !== 'browser' || !grant.agentId) return { error: 'only a signed-in browser can ask for manage rights (sign this page in first)', http: 403 }
+    if (grant.manage) return { error: 'this browser may already manage agents', http: 409 }
+    this.sweep()
+    const same = [...this.pending.values()].find((x) => x.status === 'pending' && x.via === 'manage' && x.sessionId === grant.agentId)
+    if (same) return { pending: same }
+    const r = this.open({ via: 'manage', name: grant.name, sessionId: grant.agentId, scope: grant.scope, ip, userAgent })
+    if (r.pending) this.log(grant.name, `asked for the right to manage agents (from ${ip})`, grant.agentId)
+    return r.error ? { error: r.error, http: 429 } : r
+  }
+
+  /**
    * Allow or deny a pending request. A page on this machine (`approver.kind === 'local'`) needs no code; a
    * signed-in browser must type the requester's pairing code to allow (denying needs none), and may grant at
    * most its own scope and projects. Five wrong codes lock the request.
@@ -491,18 +560,40 @@ export class AccessService {
     if (p.status !== 'pending') return { ok: false, error: p.locked ? 'this request was locked after too many wrong codes — the agent has to connect again' : `this request was already ${p.status}`, status: p.status, http: 409 }
     const local = approver.kind === 'local'
     if (!local && approver.as !== 'browser') return { ok: false, error: 'only a page on the canvas machine or a signed-in page can approve', http: 403 }
-    if (!d.allow) return this.finish(p, 'denied')
+    const by = local ? 'this machine' : approver.name
+    if (p.via === 'manage') {
+      // the right to manage agents is given only by someone who has it — never by the requester itself
+      if (!local && !approver.manage) return { ok: false, error: 'only a page on the canvas machine or a browser that may manage agents can give manage rights', http: 403 }
+      if (!local && approver.agentId && approver.agentId === p.sessionId) return { ok: false, error: 'a browser cannot approve its own request', http: 403 }
+    }
+    if (!d.allow) {
+      if (p.via === 'manage') this.log(by, `denied manage rights to ${p.name}`, p.sessionId)
+      return this.finish(p, 'denied')
+    }
     if (!local) {
       const typed = normalizeCode(d.code)
       if (!typed || !sameCode(typed, p.code)) {
         p.attempts++
         if (p.attempts >= MAX_CODE_ATTEMPTS) {
           p.locked = true
+          if (p.via === 'manage') this.log(by, `manage-rights request of ${p.name} locked after ${MAX_CODE_ATTEMPTS} wrong codes`, p.sessionId)
           this.finish(p, 'denied')
           return { ok: false, error: `wrong code — the request is now locked after ${MAX_CODE_ATTEMPTS} wrong codes; the agent has to connect again`, status: 'denied', http: 403, attemptsLeft: 0 }
         }
         return { ok: false, error: `wrong code (${MAX_CODE_ATTEMPTS - p.attempts} tries left) — type the code the agent shows`, http: 403, attemptsLeft: MAX_CODE_ATTEMPTS - p.attempts }
       }
+    }
+    if (p.via === 'manage') {
+      const rec = this.data.agents.find((a) => a.id === p.sessionId && !a.revokedAt)
+      if (!rec) {
+        this.finish(p, 'denied')
+        return { ok: false, error: 'that browser session is gone (signed out or revoked)', status: 'denied', http: 409 }
+      }
+      rec.manage = true
+      p.decision = { scope: rec.scope, name: rec.name, by, manage: true }
+      this.log(by, `gave ${rec.name} the right to manage agents`, rec.id)
+      this.emit({ type: 'access-changed', at: this.iso() })
+      return this.finish(p, 'approved')
     }
     // an approver never hands out more than it has
     let scope: Scope = d.scope === 'read' ? 'read' : d.scope === 'write' ? 'write' : p.scope
@@ -511,7 +602,8 @@ export class AccessService {
     if (approver.projects?.length) lim = { ...lim, projects: lim.projects?.filter((x) => approver.projects!.includes(x)) ?? approver.projects }
     if (approver.boards?.length) lim = { ...lim, boards: lim.boards?.filter((x) => approver.boards!.includes(x)) ?? approver.boards }
     if (lim.projects && !lim.projects.length) return { ok: false, error: 'none of those projects are yours to give', http: 403 }
-    p.decision = { scope, ...lim, name: cleanName(d.name, p.name), by: local ? 'this machine' : approver.name, manage: local && p.via === 'browser' && !!d.manage }
+    p.decision = { scope, ...lim, name: cleanName(d.name, p.name), by, manage: local && p.via === 'browser' && !!d.manage }
+    this.log(by, `let in ${p.decision.name} (${p.via}): ${describeAccess(p.decision)}${p.decision.manage ? ', may manage agents' : ''}`)
     return this.finish(p, 'approved')
   }
 
@@ -556,7 +648,8 @@ export class AccessService {
       p.codeExpiresAt = this.now() + TEN_MIN
       return { status: 'approved', redirect: withParams(p.redirectUri!, { code, state: p.state }) }
     }
-    if (p.claimed) return { status: 'approved' }
+    // manage rights: the session already has them; nothing to hand out
+    if (p.claimed || p.via === 'manage') return { status: 'approved' }
     p.claimed = true
     const session = newSecret('unps')
     const d = p.decision!
@@ -671,6 +764,13 @@ function limits(x: { projects?: unknown; boards?: unknown }): { projects?: strin
   const projects = strings(x.projects)
   const boards = strings(x.boards)
   return { ...(projects ? { projects } : {}), ...(boards ? { boards } : {}) }
+}
+
+const scopeText = (s: Scope) => (s === 'read' ? 'read only' : 'read and draw')
+
+/** "read and draw, projects shop, boards b_1" — for the access log. */
+function describeAccess(x: { scope: Scope; projects?: string[]; boards?: string[] }): string {
+  return [scopeText(x.scope), x.projects?.length ? `projects ${x.projects.join(', ')}` : 'all projects', ...(x.boards?.length ? [`boards ${x.boards.join(', ')}`] : [])].join(', ')
 }
 
 function withParams(uri: string, params: Record<string, string | undefined>): string {

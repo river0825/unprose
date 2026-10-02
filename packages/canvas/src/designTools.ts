@@ -6,8 +6,8 @@ import YAML from 'yaml'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CanvasClient } from './client.js'
-import { designFromObject, findingLine, frameOf, growFrame, lintDesignContent, proposalOps, withDesignFindings, yamlCommentHint, type DesignFile } from './diagrams/designFile.js'
-import { planRedraw, placedByUser, type BoardItem } from './diagrams/redraw.js'
+import { designFromObject, findingLine, frameOf, lintDesignContent, proposalOps, withDesignFindings, yamlCommentHint, type DesignFile } from './diagrams/designFile.js'
+import { explainRedraw, planLines, redrawInputs, type BoardItem, type LoggedChange } from './diagrams/redraw.js'
 import { proposeStories } from './diagrams/proposeStories.js'
 import { proposeFromDomainStory } from './diagrams/proposeFromDomainStory.js'
 import { START_PROMPTS, promptText } from './prompts.js'
@@ -41,10 +41,37 @@ export function parseDesignText(name: string, content: string): DesignFile {
 async function resolveBoard(client: CanvasClient, ref: string): Promise<{ id: string; note?: string }> {
   if (!ref.startsWith('title:')) return { id: (await client.getBoard(ref)).id }
   const title = ref.slice(6).trim()
-  // a board an agent draws from its own files is answered by that agent (docs/canvas.md "Several agents on one board")
+  // a board an agent draws from its own files suggests that agent as "Answered by"; the person confirms (docs/canvas.md "Several agents on one board")
   const r = await client.boardByTitle({ title, kind: 'freeform', answeredBy: 'me' })
   const many = r.ambiguous && r.ambiguous.length > 1 ? `${r.ambiguous.length} boards are titled "${title}" (${r.ambiguous.map((b) => `${b.id} [${b.project}]`).join(', ')}) — used ${r.board.id}, the most recently changed; pass a board id to use another` : undefined
   return { id: r.board.id, ...(many ? { note: many } : {}) }
+}
+
+/** The redraw of one diagram on a board, computed and not applied: its ops, its plan, and what it read. */
+async function planDesignRedraw(client: CanvasClient, d: DesignFile, name: string, boardId: string, at?: { x: number; y: number }) {
+  const r = await client.template(boardId, d.kind as never, d.content, undefined, undefined, { key: d.key, title: d.title, source: name, level: d.level, ...(at ? { at } : {}) })
+  // a UI mock's lint findings go on its elements (docs/diagrams.md §6c)
+  const drawn = withDesignFindings(d, r.items as unknown as BoardItem[])
+  const current = await client.getBoard(boardId)
+  const items = current.items as unknown as Record<string, BoardItem>
+  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const { changes } = await client.changes(boardId, 0)
+  const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf({ items }, d.key)
+  const res = explainRedraw(items, drawn, redrawInputs(changes as unknown as LoggedChange[]), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && items[frame.id] ? { frame: frame.id } : {}) })
+  return { ...res, current, unresolved: r.unresolvedTraces ?? [] }
+}
+
+/** design_draw { dryRun: true }: the redraw preview — nothing written, no board created. */
+export async function previewDesignContent(client: CanvasClient, name: string, content: string, board: string, o: { at?: { x: number; y: number }; limit?: number } = {}) {
+  const d = parseDesignText(name, content)
+  const errors = lintDesignContent(d).filter((f) => f.severity === 'error')
+  const lintLine = errors.length ? [`  ✖ ${errors.length} lint error(s): a real draw refuses this file (design_lint)`] : []
+  let boardId: string | undefined
+  if (!board.startsWith('title:')) boardId = (await client.getBoard(board)).id
+  else boardId = (await client.listBoards()).find((b) => b.title === board.slice(6).trim())?.id
+  if (!boardId) return { key: d.key, lines: [`Redraw preview — ${d.key} (dry run: nothing written)`, `  no board ${board} yet: a real draw creates it and adds the whole frame`, ...lintLine] }
+  const { plan, current } = await planDesignRedraw(client, d, name, boardId, o.at)
+  return { key: d.key, boardId, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${name} on "${current.title}" (${client.boardUrl(boardId)})`, limit: o.limit }), ...lintLine] }
 }
 
 export async function drawDesignContent(client: CanvasClient, name: string, content: string, board: string, at?: { x: number; y: number }) {
@@ -54,22 +81,12 @@ export async function drawDesignContent(client: CanvasClient, name: string, cont
   if (errors.length) throw new Error([`not drawn: ${errors.length} lint error(s) in ${name}`, ...errors.map(findingLine)].join('\n'))
   const found = await resolveBoard(client, board)
   const boardId = found.id
-  const r = await client.template(boardId, d.kind as never, d.content, undefined, undefined, { key: d.key, title: d.title, source: name, level: d.level, ...(at ? { at } : {}) })
-  // a UI mock's lint findings go on its elements (docs/diagrams.md §6c)
-  const drawn = withDesignFindings(d, r.items as unknown as BoardItem[])
-  const current = await client.getBoard(boardId)
-  const items = current.items as unknown as Record<string, BoardItem>
-  const { changes } = await client.changes(boardId, 0, 'user')
-  const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf({ items }, d.key)
-  const placed = placedByUser(changes as never)
-  const ops = planRedraw(items, drawn, placed, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []) })
-  const grow = frame && items[frame.id] ? growFrame(items[frame.id], drawn, placed) : undefined
-  if (grow) ops.push(grow)
+  const { ops, current, unresolved } = await planDesignRedraw(client, d, name, boardId, at)
   const { seq } = await client.apply(boardId, ops as unknown as Op[], 'agent', `design_draw: ${name}`)
   // only this diagram's entry changes (PATCH merges per diagram key: another agent's diagrams stay as they are)
   // the caller holds this file (the canvas stamps its name; there is no path to record from here)
   await client.patchBoard(boardId, { meta: { diagrams: { [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } } } })
-  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== 'error'), unresolved: r.unresolvedTraces ?? [], ...(found.note ? { note: found.note } : {}) }
+  return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== 'error'), unresolved, ...(found.note ? { note: found.note } : {}) }
 }
 
 /** design_lint / design_draw / design_propose_stories over file content, and the start prompts. */
@@ -106,15 +123,18 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: 'Draw (or refresh) one diagram frame from its file. The board keeps the person\'s layout: items they moved stay put, pending proposals stay, items no longer in the file go. Refuses a file with lint errors. Pass the file\'s text as `content` and its name as `name` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).',
+      description: 'Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person\'s, another agent\'s, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Pass the file\'s text as `content` and its name as `name` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).',
       inputSchema: {
         ...fileArgs,
         board: z.string().describe('A board id, or "title:<title>" (found, or created)'),
         at: z.object({ x: z.number(), y: z.number() }).optional().describe('Where a NEW frame goes (board coordinates); an existing frame stays where it is'),
+        dryRun: z.boolean().optional().describe('true: only preview the redraw (what it adds, updates, removes, keeps, and why); nothing is written and no board is created'),
+        limit: z.number().int().min(1).max(200).optional().describe('dryRun: lines per section (default 8)'),
       },
     },
-    async ({ name, content, board, at }) =>
+    async ({ name, content, board, at, dryRun, limit }) =>
       guard(async () => {
+        if (dryRun) return text((await previewDesignContent(client, name, content, board, { ...(at ? { at } : {}), ...(limit ? { limit } : {}) })).lines.join('\n'))
         const r = await drawDesignContent(client, name, content, board, at)
         const unresolved = r.unresolved.length ? [`⚠ ${r.unresolved.length} trace(s) not drawn:`, ...r.unresolved.map((u) => `  ${u.item} —${u.trace.rel}→ ${u.trace.from}: ${u.reason === 'bad-ref' ? 'not a <diagram key>/<element id> ref' : 'target not found on the board'}`)] : []
         return text([`✔ ${name} → frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...(r.note ? [`⚠ ${r.note}`] : []), ...r.notes.map(findingLine), ...unresolved].join('\n'))

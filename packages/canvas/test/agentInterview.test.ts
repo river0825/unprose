@@ -100,9 +100,12 @@ test('MCP schemas: canvas_wait and canvas_diff say `from` (person | others), and
   const tools = (await client.listTools()).tools
   const wait = tools.find((t) => t.name === 'canvas_wait')!
   const diff = tools.find((t) => t.name === 'canvas_diff')!
-  const props = (t: typeof wait) => t.inputSchema.properties as Record<string, { enum?: string[] }>
-  assert.deepEqual(props(wait).from.enum, ['person', 'others'])
-  assert.deepEqual(props(diff).from.enum, ['person', 'others', 'all'])
+  const props = (t: typeof wait) => t.inputSchema.properties as Record<string, { enum?: string[]; anyOf?: Array<{ enum?: string[]; type?: string }> }>
+  // the words, or (docs/canvas.md "Reading big boards") a list of names
+  const words = (p: { enum?: string[]; anyOf?: Array<{ enum?: string[] }> }) => p.enum ?? p.anyOf?.find((a) => a.enum)?.enum
+  assert.deepEqual(words(props(wait).from), ['person', 'others'])
+  assert.deepEqual(words(props(diff).from), ['person', 'others', 'all'])
+  assert.ok(props(diff).from.anyOf?.some((a) => a.type === 'array'), 'canvas_diff from: or a list of names')
   assert.match(wait.description ?? '', /`from`/)
   assert.match(wait.description ?? '', /signed in through a tunnel counts as the person/)
   assert.match(diff.description ?? '', /`from`/)

@@ -143,7 +143,8 @@ export type WsMessage =
 export interface AccessRequestView {
   id: string
   /** 'oauth': an MCP client through OAuth; 'device': an agent without a browser; 'browser': a page reached from elsewhere. */
-  via: 'oauth' | 'device' | 'browser'
+  /** 'manage': a signed-in browser asking for the right to manage agents — only a page that manages approves it. */
+  via: 'oauth' | 'device' | 'browser' | 'manage'
   /** The client's own name (from its registration / request) or a description of the browser. */
   name: string
   /** Where the agent will be sent back to (its host), for an OAuth request. */
@@ -328,6 +329,33 @@ export function isSeenOnly(op: Op, before: Item | null | undefined): boolean {
 /** A change made only of read receipts; diffs and waits ignore it. */
 export function isBookkeeping(change: Change): boolean {
   return change.ops.length > 0 && change.ops.every((op) => op.kind === 'update' && isSeenOnly(op, change.before[op.id]))
+}
+
+// ── Layout lock (docs/diagrams.md "What a redraw keeps") ─────────────────────
+// `data.lock: 'layout'` on an item: redraws and the kanban's auto-layout never move or resize it. On a frame:
+// the same for the frame and everything inside it. Only the person moves a locked item (after unlocking it).
+
+export const LAYOUT_LOCK = 'layout'
+type Lockable = { id: string; type?: string; parent?: string; data?: Record<string, unknown> }
+
+/** Is this item's own layout locked (`data.lock: 'layout'`)? */
+export const ownLock = (it: Lockable | undefined): boolean => it?.data?.lock === LAYOUT_LOCK
+
+/**
+ * Why an item's layout is locked: 'item' (its own lock), 'frame' (a frame around it is locked), else undefined.
+ * A locked column or lane does not lock its cards — only a frame locks what is inside it.
+ */
+export function layoutLock(items: Record<string, Lockable>, id: string): 'item' | 'frame' | undefined {
+  const it = items[id]
+  if (!it) return undefined
+  if (ownLock(it)) return 'item'
+  if (it.type === 'comment') return undefined
+  const seen = new Set<string>([id])
+  for (let p = it.parent ? items[it.parent] : undefined; p && !seen.has(p.id); p = p.parent ? items[p.parent] : undefined) {
+    seen.add(p.id)
+    if (p.type === 'frame' && ownLock(p)) return 'frame'
+  }
+  return undefined
 }
 
 let counter = 0

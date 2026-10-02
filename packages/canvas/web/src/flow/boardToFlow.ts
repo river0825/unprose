@@ -1,5 +1,6 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react'
-import type { Board, Item } from '../../../src/model'
+import { ownLock, type Board, type Item } from '../../../src/model'
+import { KANBAN_GAP, KANBAN_HEADER, stackCards } from './kanbanAlign'
 import { KIND_NAMES, diagramData } from '../diagrams/frame'
 import { findingCount } from '../diagrams/findings'
 import { autoSides, planSides, type Box } from './route'
@@ -47,6 +48,7 @@ function nodeClass(it: Item): { className?: string } {
     it.type !== 'comment' && it.data?.pending ? 'node-pending' : '',
     it.data?.ds === 'group' ? 'ds-group' : it.data?.ds === 'annotation' ? 'ds-annotation' : '',
     passThrough(it) ? 'awd-container' : '',
+    ownLock(it) ? 'node-locked' : '',
   ].filter(Boolean)
   return c.length ? { className: c.join(' ') } : {}
 }
@@ -134,7 +136,8 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
       ...nodeClass(it),
       // a frame, lane, column or screen moves by its title bar or border; a drag on its body draws a selection box (docs/canvas.md)
       ...(passThrough(it) ? { dragHandle: `.${DRAG_HANDLE}` } : {}),
-      draggable: true,
+      // a locked item stays put until the person unlocks it (docs/diagrams.md "What a redraw keeps")
+      draggable: !ownLock(it),
       selectable: true,
       connectable: it.type !== 'comment',
     })
@@ -255,21 +258,14 @@ export function spreadPorts(edges: Edge[], byId: Board['items'], stacked: Map<st
 }
 
 /** Kanban columns: cards are shown stacked top → bottom in the order of their model `y`, so a dropped card snaps into the pile. */
-const KANBAN_HEADER = 44
-const KANBAN_GAP = 12
-const KANBAN_PAD = 20
 export function kanbanLayout(board: Board): Map<string, { x: number; y: number }> {
   const out = new Map<string, { x: number; y: number }>()
   const columns = Object.values(board.items).filter((it) => it.type === 'lane' && it.role === 'column')
   for (const col of columns) {
-    const cards = Object.values(board.items)
-      .filter((it) => it.type === 'card' && it.parent === col.id)
-      .sort((a, b) => a.y - b.y || (a.order ?? 0) - (b.order ?? 0))
-    let y = col.y + KANBAN_HEADER + KANBAN_GAP
-    for (const c of cards) {
-      out.set(c.id, { x: col.x + KANBAN_PAD, y })
-      y += c.h + KANBAN_GAP
-    }
+    // a kanban in a locked frame is shown as stored (docs/diagrams.md "What a redraw keeps"); locked cards keep their place
+    const frame = col.parent ? board.items[col.parent] : undefined
+    if (frame?.type === 'frame' && ownLock(frame)) continue
+    stackCards(board, col, col.x, col.y + KANBAN_HEADER + KANBAN_GAP, out)
   }
   return out
 }

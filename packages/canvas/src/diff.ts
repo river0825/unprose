@@ -1,7 +1,7 @@
 // Human-readable diffs and outlines — what the agent reads instead of raw JSON.
 import { diffStat } from './patch.js'
-import { isBookkeeping, isLayoutOnly, isSeenOnly, markSeen, meaningOf, type Author, type Board, type Change, type Item, type Op } from './model.js'
-import { settingsLines } from './routing.js'
+import { diagramSpecOf, isBookkeeping, isLayoutOnly, isSeenOnly, markSeen, meaningOf, type Author, type Board, type Change, type Item, type Op } from './model.js'
+import { containmentTree, frameKeys, itemsInFrame, resolveFrame } from './outline.js'
 
 const short = (s: string | undefined, n = 60) => {
   const t = (s ?? '').replace(/\s+/g, ' ').trim()
@@ -271,101 +271,157 @@ function neighbourBefore(board: Board, item: Item | undefined): Item | undefined
   return best
 }
 
-/**
- * Compact text rendering of the whole board, grouped by container, with arrows
- * and comments, in reading order (left → right, top → bottom).
- */
-export function outline(board: Board): string {
-  const items = Object.values(board.items)
-  const containers = items.filter((i) => i.type === 'lane' || i.type === 'frame' || i.type === 'wireframe' || isUiBox(i)).sort(byPos)
-  const arrows = items.filter((i) => i.type === 'arrow')
-  const find: Lookup = (id) => (id ? board.items[id] : undefined)
-  const replies = new Map<string, Item[]>()
-  const comments = items.filter((i) => {
-    if (i.type !== 'comment') return false
-    const root = rootOf(i, find)
-    if (root.id === i.id) return true
-    replies.set(root.id, [...(replies.get(root.id) ?? []), i])
-    return false
-  })
-  const stickies = items.filter((i) => !['arrow', 'comment', 'lane', 'frame', 'wireframe'].includes(i.type) && !isUiBox(i))
-  const commentsFor = new Map<string, Item[]>()
-  for (const c of comments) {
-    const k = c.target ?? ''
-    if (!commentsFor.has(k)) commentsFor.set(k, [])
-    commentsFor.get(k)!.push(c)
-  }
-  const out: string[] = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`]
-  // what the board is about, who answers it, who holds the files (docs/canvas.md "Several agents on one board")
-  const settings = settingsLines(board.meta)
-  if (settings.length) out.push(...settings, '')
-  const printed = new Set<string>()
-  // who wrote it, and who it is for when the canvas routed it ("codex-b → claude-a"); paused = the loop guard tripped
-  const said = (c: Item) => {
-    const by = c.createdBy === 'agent' && typeof c.data?.by === 'string' ? c.data.by : c.createdBy
-    const to = Array.isArray(c.data?.to) && c.data.route === 'mention' && (c.data.to as unknown[]).length ? ` → ${(c.data.to as string[]).join(', ')}` : ''
-    return `(${by}${to})${c.data?.paused ? ' [agents paused here — waits for the person]' : ''}`
-  }
-  const comment = (c: Item, indent: string) => {
-    out.push(`${indent}💬 ${said(c)} ${short(c.text, 200)}  #${c.id}`)
-    printed.add(c.id)
-    for (const r of replies.get(c.id) ?? []) out.push(`${indent}  ↳ ${said(r)} ${short(r.text, 200)}  #${r.id}`)
-  }
-  const line = (i: Item, indent: string) => {
-    const role = i.role ?? i.type
-    if (role === 'pivotal') {
-      // a pivotal marker is a bare line; the event itself already carries the flag
-      printed.add(i.id)
-      return
-    }
-    const flags: string[] = []
-    if (i.data?.pivotal) flags.push('pivotal')
-    if (i.updatedBy === 'user') flags.push('edited by user')
-    out.push(`${indent}- ${role}: ${short(i.text, 80) || '(untitled)'}${flags.length ? ` [${flags.join(', ')}]` : ''}  #${i.id}`)
-    for (const c of commentsFor.get(i.id) ?? []) comment(c, `${indent}    `)
-    printed.add(i.id)
-  }
-  const childrenOf = (container: Item) =>
-    stickies.filter((s) => !printed.has(s.id) && containerOf(board, s)?.id === container.id).sort(byPos)
-  // Outer containers first (those not inside another container).
-  const outer = containers.filter((c) => !containerOf(board, c) || containerOf(board, c)?.id === c.id)
-  const walk = (c: Item, indent: string) => {
-    out.push(`${indent}## ${c.role ?? c.type}: ${short(c.text, 80) || '(untitled)'}  #${c.id}`)
-    printed.add(c.id)
-    for (const cc of commentsFor.get(c.id) ?? []) comment(cc, `${indent}    `)
-    for (const inner of containers.filter((x) => !printed.has(x.id) && x.id !== c.id && containerOf(board, x)?.id === c.id).sort(byPos)) walk(inner, indent + '  ')
-    for (const s of childrenOf(c)) line(s, indent + '  ')
-  }
-  for (const c of outer) walk(c, '')
-  const loose = stickies.filter((s) => !printed.has(s.id)).sort(byPos)
-  if (loose.length) {
-    out.push('## (unplaced)')
-    for (const s of loose) line(s, '  ')
-  }
-  if (arrows.length) {
-    out.push('## arrows')
-    for (const a of arrows.sort((p, q) => (p.from ?? '').localeCompare(q.from ?? ''))) {
-      const f = board.items[a.from ?? '']
-      const t = board.items[a.to ?? '']
-      out.push(`  - ${short(f?.text, 40) || a.from} → ${short(t?.text, 40) || a.to}${a.label ? ` (${short(a.label, 40)})` : ''}`)
-    }
-  }
-  const orphanComments = comments.filter((c) => !printed.has(c.id))
-  if (orphanComments.length) {
-    out.push('## comments (general)')
-    for (const c of orphanComments.sort(byPos)) comment(c, '  ')
-  }
-  return out.join('\n')
-}
-
-function byPos(a: Item, b: Item): number {
-  const rowA = Math.round(a.y / 60)
-  const rowB = Math.round(b.y / 60)
-  return rowA !== rowB ? rowA - rowB : a.x - b.x
-}
+/** The board outline moved to outline.ts (grouped by diagram frame → lane / column → items); kept here for callers. */
+export { outline } from './outline.js'
 
 /** `+3 −1 lines` of a unified diff. */
 function diffCount(diff: string): string {
   const { added, removed } = diffStat(diff)
   return `+${added} −${removed} lines`
+}
+
+// ── Reading changes at agent scale (docs/canvas.md "Reading big boards") ────────────────────────────────
+
+/** What an op does, for the `kinds` filter: comments are their own kind; a pure move / resize / reroute is a move. */
+export type ChangeKind = 'add' | 'update' | 'remove' | 'comment' | 'move'
+export const CHANGE_KINDS: ChangeKind[] = ['add', 'update', 'remove', 'comment', 'move']
+
+export function opKind(op: Op, before: Item | null | undefined): ChangeKind {
+  const it = op.kind === 'add' ? op.item : before
+  if (it?.type === 'comment') return 'comment'
+  if (op.kind === 'add') return 'add'
+  if (op.kind === 'remove') return 'remove'
+  return isLayoutOnly(op, before) ? 'move' : 'update'
+}
+
+export interface ChangeFilter {
+  /** a diagram key, or a frame / container id: only ops on items inside it (and threads about them) */
+  frame?: string
+  /** who made it: agent names, 'person' (the person), 'agent' / 'studio' (the default local agent) */
+  from?: string[]
+  kinds?: ChangeKind[]
+}
+
+/** Who a change is from, as the `from` filter and the summary name it. */
+export const changeWho = (c: Change): string => c.by ?? (c.author === 'user' ? 'person' : 'agent')
+
+function fromMatches(c: Change, from: string[]): boolean {
+  const who = changeWho(c).toLowerCase()
+  return from.some((f) => {
+    const n = f.trim().toLowerCase()
+    if (n === 'person' || n === 'user') return c.author === 'user'
+    if (n === 'studio' || n === 'agent') return c.author === 'agent' && !c.by
+    return who === n
+  })
+}
+
+/**
+ * Changes narrowed to the ops that pass the filter (a change with none left is dropped; a settings change with no
+ * ops stays when no frame / kinds filter asks otherwise). Throws a plain Error naming the keys for an unknown frame.
+ */
+export function filterChanges(board: Board, changes: Change[], f: ChangeFilter): Change[] {
+  const kinds = f.kinds?.length ? new Set(f.kinds) : undefined
+  let inFrame: ((id: string, before: Item | null | undefined) => boolean) | undefined
+  if (f.frame) {
+    const fr = resolveFrame(board, f.frame)
+    if (!fr) throw Object.assign(new Error(`no frame "${f.frame}" on this board — diagram keys: ${frameKeys(board).join(', ') || '(none)'}`), { status: 404 })
+    if (fr !== 'board') {
+      const set = itemsInFrame(board, fr)
+      const key = (fr.data?.diagram as { key?: string } | undefined)?.key
+      const was = (id: string, before: Item | null | undefined): boolean => {
+        if (set.has(id)) return true
+        if (key && id.startsWith(`${key}.`)) return true
+        if (!before) return false
+        // removed or changed items: through their parent, target or wire end as it was
+        for (const ref of [before.parent, before.target, before.from]) if (ref && (ref === fr.id || set.has(ref))) return true
+        return false
+      }
+      inFrame = was
+    }
+  }
+  const out: Change[] = []
+  for (const c of changes) {
+    if (f.from?.length && !fromMatches(c, f.from)) continue
+    if (!c.ops.length) {
+      if (!inFrame && (!kinds || kinds.has('update'))) out.push(c)
+      continue
+    }
+    const ops = c.ops.filter((op) => {
+      const id = op.kind === 'add' ? op.item.id : op.id
+      const before = c.before[id] ?? (op.kind === 'add' ? op.item : undefined)
+      if (kinds && !kinds.has(opKind(op, c.before[id]))) return false
+      if (inFrame && !inFrame(id, before ?? board.items[id])) return false
+      return true
+    })
+    if (ops.length) out.push(ops.length === c.ops.length ? c : { ...c, ops })
+  }
+  return out
+}
+
+/** Counts by who × kind and by diagram frame, then the last `last` lines — what to read first on a long history. */
+export function diffSummary(board: Board, changes: Change[], lines: string[], o: { since: number; last?: number } = { since: 0 }): string {
+  const byWho = new Map<string, Map<ChangeKind, number>>()
+  const byFrame = new Map<string, number>()
+  let ops = 0
+  const tree = containmentTree(board)
+  const frameOf = (id: string, before: Item | null | undefined): string => {
+    for (let cur: string | undefined = id, g = 0; cur && g < 200; g++, cur = tree.parent.get(cur) ?? board.items[cur]?.parent) {
+      const spec = diagramSpecOf(board.items[cur])
+      if (spec) return spec.key
+    }
+    const it = before ?? board.items[id]
+    const ref = it?.target ?? it?.from ?? it?.parent
+    if (ref && ref !== id && board.items[ref]) return frameOf(ref, undefined)
+    const key = /^([a-z0-9-]+)\./.exec(id)?.[1]
+    return key && board.items[`diagram.${key}`] ? key : board.kind !== 'freeform' ? board.kind : '(no frame)'
+  }
+  for (const c of changes) {
+    if (isBookkeeping(c)) continue
+    const who = changeWho(c)
+    const m = byWho.get(who) ?? new Map<ChangeKind, number>()
+    byWho.set(who, m)
+    if (!c.ops.length) {
+      m.set('update', (m.get('update') ?? 0) + 1)
+      continue
+    }
+    for (const op of c.ops) {
+      const id = op.kind === 'add' ? op.item.id : op.id
+      if (op.kind === 'update' && isSeenOnly(op, c.before[id])) continue
+      ops++
+      const k = opKind(op, c.before[id])
+      m.set(k, (m.get(k) ?? 0) + 1)
+      const fr = frameOf(id, c.before[id] ?? (op.kind === 'add' ? op.item : undefined))
+      byFrame.set(fr, (byFrame.get(fr) ?? 0) + 1)
+    }
+  }
+  const last = o.last ?? 20
+  const fmt = (m: Map<ChangeKind, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join(', ')
+  const out = [`${changes.length} change(s) since seq ${o.since} (board seq ${board.seq}), ${ops} op(s), ${lines.length} line(s)`]
+  if (byWho.size) out.push('by who × kind:', ...[...byWho.entries()].map(([w, m]) => `  ${w}: ${fmt(m) || '—'}`))
+  if (byFrame.size) out.push('by frame (ops):', ...[...byFrame.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `  ${k}: ${n}`))
+  if (lines.length) out.push(`last ${Math.min(last, lines.length)} line(s):`, ...lines.slice(-last).map((l) => `  ${l}`))
+  return out.join('\n')
+}
+
+/** A page of lines under a size cap: `cursor` is the line offset as the previous page gave it ("<seq>:<n>"). */
+export function pageLines(lines: string[], o: { cursor?: string; limit?: number; maxChars?: number; seq: number }): { lines: string[]; nextCursor?: string; left: number; from: number } {
+  let from = 0
+  if (o.cursor) {
+    const m = /^(?:[a-z]+:)?(\d+):(\d+)$/.exec(o.cursor.trim())
+    if (!m) throw Object.assign(new Error(`cursor "${o.cursor}" is not one this canvas gave out (it looks like "56:120")`), { status: 400 })
+    from = Number(m[2])
+  }
+  const max = Math.min(200_000, Math.max(2_000, o.maxChars ?? 40_000))
+  const limit = o.limit && o.limit > 0 ? o.limit : Infinity
+  const page: string[] = []
+  let size = 0
+  let i = from
+  for (; i < lines.length && page.length < limit; i++) {
+    const s = lines[i].length + 1
+    if (page.length && size + s > max) break
+    page.push(lines[i])
+    size += s
+  }
+  const left = lines.length - i
+  return { lines: page, left, from, ...(left > 0 ? { nextCursor: `${o.seq}:${i}` } : {}) }
 }

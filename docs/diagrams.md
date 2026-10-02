@@ -54,14 +54,103 @@ content is the template's schema (zod-validated), extended with **stable element
   `data.element`, else by the id convention `<key>.<role>.<element id>` (items drawn before a template set
   `data.element`); `awd design draw` lists every trace it could not draw instead of dropping it.
 - `awd design draw <file> --board <id | title:…> [--canvas URL]` draws or refreshes the frame. A redraw keeps
-  what the person placed, keeps receipts, removes stale items **inside that frame only**, and keeps items
-  holding a pending proposal until the file explains them (the workflow redraw rules, scoped to the frame).
+  what the person placed or locked, keeps receipts, removes stale items **inside that frame only**, and keeps items
+  holding a pending proposal until the file explains them (the workflow redraw rules, scoped to the frame) — the
+  whole rule set is in the table below. `--dry-run` prints what it would do and writes nothing.
 - `awd design lint <file>` validates every kind that has a schema, offline (EventStorming also gets its grammar,
   §3; the board shows the same findings on the frame). Fields the schema does not know are warnings
   (`unknown field \`x\` at cards[2]`), on lint and on draw, instead of being dropped silently. A YAML parse
   error caused by an unquoted `#` inside `[ … ]` says so (quote values containing `#`).
 - Board meta records the project: `meta.project = { root: <abs repo root> }`, and per frame the files
   snapshot as for workflows (`meta.diagrams[<key>] = { source, files }`).
+
+### What a redraw keeps
+
+Four things have state: **the file** (the truth for content), **the board's file snapshot** (`meta.diagrams[key].files`,
+what the Files tab and remote agents read — replaced on every draw), **the person's layout** (where they moved or
+resized things, read from the change log, plus any **lock**), and **items nobody drew from this file** (the person's
+stickies, another agent's cards, comments, proposals). A redraw (`awd design draw`, `design_draw`, `awd graph --canvas`)
+decides each item's fate like this:
+
+| Item | Content (text, colour, data) | Position and size | Removed when the file drops it? |
+|---|---|---|---|
+| Drawn from the file, **locked** (`data.lock: 'layout'` on it, or on its frame) | from the file | **kept** (lock wins) | yes — a lock keeps the place, not the item |
+| Drawn from the file, **moved or resized by the person** (any time, per the change log) | from the file | **kept** | yes |
+| Drawn from the file, neither | from the file | from the file | yes |
+| The **frame** itself | title from the file | kept if moved or locked; else grows to fit (never shrinks) | never |
+| A **proposal** of this drawing (`data.pending`: a dragged wire, edited words, a proposed story) | left exactly as it is | left as it is | removed once the file explains it (then the drawn element replaces it) |
+| **Comments** (any id) | kept | kept | never |
+| **Foreign items in the frame** — another id (the person's sticky, a card another agent added with `canvas_add_items`/`canvas_apply`) | kept | kept | **never**: listed as "not from this file (kept)" in the preview |
+| An item with this file's id prefix that **the person added**, or **another agent added by hand** (a change that was not a redraw, by an agent that never redrew this frame) | kept | kept | **never** — treated as foreign |
+| Items of **other frames** on the board, and their proposals | untouched | untouched | never |
+
+Precedence for geometry: **locked > moved by the person > the file.** Presentation data (read receipts, wire sides and
+bends, the lock itself) survives every redraw. Nothing a redraw writes goes back into the file: layout lives on the
+board only.
+
+**Lock.** The person right-clicks an item → **Lock position** (a frame: **Lock layout**, which locks the frame and
+everything inside it); a small lock shows at its corner and it can no longer be dragged or resized until **Unlock**.
+Agents lock with `canvas_apply` ops `{kind: 'lock', id}` or `{kind: 'lock', frame: '<key>'}` (and `unlock`; they may unlock only what an agent locked — a lock the person set
+stays until the person removes it). In a **kanban**, auto-stacking respects locks: a kanban in a locked frame is shown
+exactly as stored (no stacking, no snapping, no growing); a locked column keeps its place and height while the other
+columns flow around it, and its cards still stack inside it; a locked card keeps its place and the other cards of its
+column stack around it. A locked column does not lock its cards (only a frame locks what is inside it).
+
+**Preview.** `awd design draw <file> --board … --dry-run [--limit N]`, `awd graph <wf> --canvas --dry-run`, and
+`design_draw { …, dryRun: true }` (local and remote MCP) print the plan and write nothing — no board is created, no
+project registered, no ops, no meta:
+
+```
+Redraw preview — plan-kanban from design/plan.kanban.yaml on "Release plan" (http://localhost:4400/b/b_…) (dry run: nothing written)
+  2 added · 2 updated · 2 unchanged · 2 removed · 1 kept where the person moved it · 1 kept: locked · 1 not from this file (kept)
+  added (2):
+    + plan-kanban.card.Refund-flow-partial-refunds-too  "Refund flow (partial refunds too)"
+    + plan-kanban.card.Gift-cards  "Gift cards"
+  updated (2):
+    ~ plan-kanban.card.Payment-webhook  "Payment webhook" — data
+    ~ plan-kanban.card.Order-emails  "Order emails" — x, y
+  removed (2):
+    - plan-kanban.card.Refund-flow  "Refund flow" — no longer in the file
+    - plan-kanban.card.Old-coupon-code  "Old coupon code" — no longer in the file
+  kept where the person moved it (1):
+    = plan-kanban.card.Checkout-page  "Checkout page" — you moved it: keeps x, y, order
+  kept: locked (1):
+    # plan-kanban.card.Payment-webhook  "Payment webhook" — locked: keeps x, y, order
+  not from this file (kept) (1):
+    * codex-b.note.sizing  "Sizing: ask about webhooks" — added by codex-b, not from this file: kept
+```
+
+Run it before redrawing a frame that other people or agents worked on; if something you expected to move is "kept",
+the person moved or locked it — ask before changing that.
+
+### Bilingual boards (e.g. English + 繁體中文)
+
+Two languages on one sticky double its text, and a sticky that grows to fit it pushes the timeline apart and
+hides the flow. Use **a short title + the full detail**:
+
+- **On the card: a short bilingual title** — `Order placed · 訂單已成立`, two short phrases, not two sentences.
+- **The full text goes where the kind keeps longer text** (shown in the Inspector, not on the card): kanban
+  `cards[].description`; story map `stories[].acceptance`; wireframe / UI mock `note`; domain story `sentences[].note`
+  and `annotations`; workflow `description` / `detail`; EventStorming has no free-text field on a sticky — put the
+  explanation in a `definitions` entry (`term` + `text`, the glossary below the timeline) or, for an open question,
+  a `hotspots` entry on the element.
+- **Do not enlarge stickies** (no `w` / `h` / `fontSize` to make text fit): templates keep every sticky the same
+  size so the timeline reads; a cut-off title means the title is too long.
+
+Recommended maximum length of the **text on the card**, per language (CJK characters count about double width):
+
+| Kind | Element | English | 中文 |
+|---|---|---|---|
+| EventStorming | event, command, policy, read model, system (160 px sticky) | 32 chars | 12 字 |
+| EventStorming | person, milestone (small sticky) | 20 chars | 8 字 |
+| Story map | activity, step, story (150 px card) | 40 chars | 15 字 |
+| Kanban | card title (240 px card) | 50 chars | 20 字 |
+| Domain story | actor, work object, verb | 20 chars | 8 字 |
+| Wireframe / UI mock | heading, button, label | as the real UI would — one language per screen is usually clearer; a second screen per language if both matter |
+| Workflow | block label | 24 chars | 10 字 |
+
+Keep ids in one language (ASCII slugs: `order-placed`) so traces and references stay stable when a translation
+changes. The start prompts (`/unprose:eventstorm`, …) and `canvas_create_board`'s content help say the same.
 
 ## 3. EventStorming, as the book describes it
 

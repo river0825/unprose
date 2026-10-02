@@ -10,7 +10,7 @@ import { boardByTitle, canvasApi, canvasBase, holderInfo, registerProject } from
 import { afterApplied, type AppliedResult } from './applied.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
-import { planRedraw, placedByUser } from '@awd/canvas/diagrams'
+import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
 
 export interface PushGraphOptions {
   /** Canvas server (default AWD_CANVAS_URL or http://localhost:4400). */
@@ -33,8 +33,9 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   const board = await boardByTitle(api, title, 'workflow', project, (b) => b.kind === 'workflow', true)
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem>; meta?: { workflow?: { statusUrl?: string } } & Record<string, unknown> } }>('GET', `/api/boards/${board.id}`)
-  const { changes } = await api<{ changes: UserChange[] }>('GET', `/api/boards/${board.id}/changes?since=0&author=user`)
-  const ops = planRedraw(current.items, drawn, placedByUser(changes))
+  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
+  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes))
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd graph: ${def.name}` })
   // A redraw without --runtime keeps the runtime the board already points at (studio redraws without one).
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || 'http://localhost:4311').replace(/\/$/, '')
@@ -45,6 +46,22 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   await api('PATCH', `/api/boards/${board.id}`, { meta: { workflow: { statusUrl, name: def.name, file: opts.file ? path.resolve(opts.file) : undefined, ...files, ...(holder ? { holder } : {}) } } })
   const applied = opts.applied && root && opts.file ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: path.relative(root, path.resolve(opts.file)) }) : undefined
   return { base, boardId: board.id, seq, ...(applied ? { applied } : {}) }
+}
+
+/** `awd graph --canvas --dry-run`: what the redraw would do to the workflow board — nothing written, no board created. */
+export async function previewGraph(def: WorkflowDefinition, opts: PushGraphOptions & { limit?: number } = {}): Promise<{ base: string; boardId?: string; plan?: RedrawPlan; lines: string[] }> {
+  const base = canvasBase(opts.canvas)
+  const { graph } = withDetails(toGraph(def), opts.file)
+  const title = `${def.name} — workflow.yaml`
+  const api = canvasApi(base)
+  const { boards } = await api<{ boards: Array<{ id: string; title: string; kind: string }> }>('GET', '/api/boards')
+  const hit = boards.find((b) => b.title === title && b.kind === 'workflow')
+  if (!hit) return { base, lines: [`Redraw preview — ${def.name} (dry run: nothing written)`, `  no board "${title}" yet: a real draw creates it and adds every block`] }
+  const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${hit.id}/template`, { kind: 'workflow', content: graph })
+  const { board: current } = await api<{ board: { items: Record<string, BoardItem> } }>('GET', `/api/boards/${hit.id}`)
+  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${hit.id}/changes?since=0`)
+  const { plan } = explainRedraw(current.items, drawn, redrawInputs(changes))
+  return { base, boardId: hit.id, plan, lines: planLines(plan, { title: `Redraw preview — workflow ${def.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }) }
 }
 
 /**
@@ -105,4 +122,3 @@ export function repoRoot(dir: string, cwd = process.cwd(), home = os.homedir()):
 // The redraw rules are pure and live in @awd/canvas (the server's remote design tools use them too).
 export { keepUserLayout, isResolved, planRedraw, placedByUser, type RedrawScope } from '@awd/canvas/diagrams'
 type BoardItem = { id: string; type: string; from?: string; to?: string; data?: Record<string, unknown>; [k: string]: unknown }
-type UserChange = { ops: Array<{ kind: string; id?: string; patch?: Record<string, unknown> }> }

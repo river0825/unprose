@@ -29,10 +29,13 @@ interface Props {
   askEnabled: boolean
   /** a domain-story frame (or an item in one): replay its story sentence by sentence (docs/diagrams.md §6b) */
   onPlayStory?: () => void
+  /** the layout lock (docs/diagrams.md "What a redraw keeps"): absent for comments and wires */
+  lock?: { locked: boolean; frame: boolean; byFrame: boolean }
+  onToggleLock?: (id: string) => void
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory, lock, onToggleLock }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -141,6 +144,21 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
           <span aria-hidden="true" className="sub-arrow">
             ▶
           </span>
+        </button>
+      )}
+      {lock && onToggleLock && (
+        <button
+          role="menuitem"
+          title={
+            lock.frame
+              ? 'Redraws and the kanban layout keep this frame and everything in it where it is (docs/diagrams.md "What a redraw keeps")'
+              : lock.byFrame
+                ? 'Its frame is locked already: redraws keep it where it is. This also stops it being dragged.'
+                : 'Redraws and the kanban layout keep it where it is, and it cannot be dragged until you unlock it'
+          }
+          onClick={act(() => onToggleLock(menu.itemId))}
+        >
+          {lock.locked ? (lock.frame ? 'Unlock layout' : 'Unlock position') : lock.frame ? 'Lock layout' : 'Lock position'}
         </button>
       )}
       <button role="menuitem" onClick={act(() => onDuplicate(menu.itemId))}>

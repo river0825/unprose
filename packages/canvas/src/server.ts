@@ -12,7 +12,7 @@ import { isLocalRequest, moveRoute, ProjectHttpError, projectsRoute, resolveProj
 import { pickBoardByTitle } from './boardLookup.js'
 import type { Handoff, UpdateService } from './updater.js'
 import { redactPaths } from './updatePolicy.js'
-import { agentSeenOps, cardMoves, outline, summarize } from './diff.js'
+import { agentSeenOps, cardMoves, summarize } from './diff.js'
 import { contentSchemas, diagramKinds, render, cardHeight, columnsOf, bottomOf, cardId as kanbanCardId, CARD_W, CARD_SIZES, frameOrigin, placeInFrame, resolveTraces, type FrameRequest } from './templates/index.js'
 import { DIAGRAM_KEY } from './diagrams/ids.js'
 import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
@@ -21,7 +21,7 @@ import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
 import { applyOps, diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
-import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, sameAgent, soleHolder, stampHolders, stampRouting } from './routing.js'
+import { addressedTo, asksMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
@@ -29,6 +29,12 @@ import { MemoryAccessStore } from './adapters/access/index.js'
 import { canSeeBoard, canSeeProject, canWrite, cleanName, projectForNewBoard, type Grant } from './accessPolicy.js'
 import { accessRoute, localPage, sameOrigin } from './accessRoutes.js'
 import { handleMcp } from './remoteMcp.js'
+// agent-scale reading, snapshots, layout check, local approval (docs/canvas.md "Reading big boards")
+import { CHANGE_KINDS, diffSummary, filterChanges, pageLines, type ChangeFilter, type ChangeKind } from './diff.js'
+import { readBoard, ReadError, type ReadFormat, type ReadOptions } from './read.js'
+import { renderSnapshot, SnapshotError } from './snapshot.js'
+import { checkLayout, layoutLines, LayoutError } from './layoutCheck.js'
+import { svgToPng } from './raster.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // The web UI: next to the bundled server (`dist/web`, the published plugin — unprose#4), else the workspace build.
@@ -80,7 +86,7 @@ export interface ServerOptions {
 }
 
 /** Board settings kept in `meta`, changed only through /settings (logged), never by a PUT of the whole meta. */
-const SETTINGS_KEYS = ['responder', 'context', 'agentTurns'] as const
+const SETTINGS_KEYS = ['responder', 'responderSuggestion', 'context', 'agentTurns'] as const
 
 /** One project the owner allowed studio for, resolved at startup — never taken from a board or a request. */
 export interface StudioProject {
@@ -303,13 +309,18 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     const watching = new Set(store.watcherNames(b.id))
     const seen = store.watcherSeen(b.id)
     const holders = holdersOf(meta)
+    // a suggestion only while nobody answers yet: one an agent asked for, else the agent holding every diagram's files
+    const asked = r ? undefined : suggestionOf(b.meta)
+    const sole = soleHolder(b.meta)
+    const suggestion = r ? undefined : asked ? responderValue(asked) : sole && !sameAgent(sole, LOCAL_AGENT) ? sole : undefined
     return {
       responder: r ?? null,
       answeredBy: responderLabel(r),
       context: contextOf(b.meta) ?? null,
       agentTurns: maxTurns(b),
       holders,
-      suggestion: !r && soleHolder(b.meta) && !sameAgent(soleHolder(b.meta), LOCAL_AGENT) ? soleHolder(b.meta) : undefined,
+      suggestion,
+      ...(suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? 'asked' : 'holder' } : {}),
       agents: knownAgents(b.id, g)
         .sort((a, z) => (a === LOCAL_AGENT ? -1 : z === LOCAL_AGENT ? 1 : a.localeCompare(z)))
         .map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w) => sameAgent(w, name)), ...(seen[name] ? { seen: seen[name] } : {}), holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
@@ -321,7 +332,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     for (const b of store.list()) {
       const m = renameInMeta(b.meta, from, to)
       if (!m) continue
-      const patch = Object.fromEntries(['responder', 'diagrams', 'workflow'].filter((k) => JSON.stringify(m[k]) !== JSON.stringify(b.meta?.[k])).map((k) => [k, m[k]]))
+      const patch = Object.fromEntries(['responder', 'responderSuggestion', 'diagrams', 'workflow'].filter((k) => JSON.stringify(m[k]) !== JSON.stringify(b.meta?.[k])).map((k) => [k, m[k]]))
       if (Object.keys(patch).length) store.setMeta(b.id, patch, 'user', `renamed agent ${from} → ${to}`)
     }
   }
@@ -549,6 +560,33 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         }
         throw new HttpError(405, 'method not allowed')
       }
+      // ---- A pairing code approved by the local agent (canvas_approve; docs/canvas.md "Who may approve and manage") ----
+      if (parts[1] === 'approve' && !parts[2]) {
+        if (method !== 'POST') throw new HttpError(405, 'method not allowed')
+        // only an agent process on this machine: loopback, no forwarding headers, no token or session, and no browser
+        // (a browser always sends Origin / Sec-Fetch-Site on a POST, so no web page — not even this canvas's — can use it)
+        const browser = req.headers.origin !== undefined || req.headers['sec-fetch-site'] !== undefined || req.headers.cookie !== undefined
+        if (grant.kind !== 'local' || grant.as || !isLocalRequest(req) || browser) throw new HttpError(403, 'pairing codes are approved here only by an agent running on the canvas machine (the local stdio MCP server); people approve on the canvas page, agents elsewhere never can')
+        const body = (await readBody(req)) as { code?: unknown; scope?: unknown; name?: unknown; board?: unknown }
+        if (body.scope !== undefined && body.scope !== 'read' && body.scope !== 'write') throw new HttpError(400, "scope must be 'read' or 'write'")
+        const boardId = typeof body.board === 'string' && body.board ? body.board : undefined
+        if (boardId && !store.get(boardId)) throw new HttpError(404, `board ${boardId} not found`)
+        const me = agentName(req, grant) ?? LOCAL_AGENT
+        const before = access.pendingViews()
+        // the same path as the page's "Enter a code": unknown codes count against the ten-per-ten-minutes limit
+        // `read` grants less than asked; never more than the request asked for (`write` = as asked)
+        const scope = body.scope === 'read' ? ('read' as const) : undefined
+        const r = access.decideByCode(body.code, { scope, name: typeof body.name === 'string' ? body.name : undefined }, grant, `local-agent:${me}`)
+        if (!r.ok) throw new HttpError(r.http ?? 400, r.error ?? 'not approved')
+        const left = new Set(access.pendingViews().map((p) => p.id))
+        const approved = before.find((p) => !left.has(p.id))
+        const what = approved ? `${approved.name} (${approved.via}${approved.ip ? ` from ${approved.ip}` : ''}, ${scope ?? approved.scope})` : 'a connect request'
+        const note = `approved ${what} with its pairing code — by the local agent ${displayName(me)}`
+        console.log(`unprose: ${note}`)
+        let seq: number | undefined
+        if (boardId) seq = store.setMeta(boardId, {}, 'agent', note, me === LOCAL_AGENT ? undefined : me).seq
+        return json(res, 200, { status: r.status, approved: approved ? { name: approved.name, via: approved.via, scope: scope ?? approved.scope, ip: approved.ip } : undefined, audit: note, ...(seq !== undefined ? { seq } : {}) })
+      }
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
       const sub = parts[3]
@@ -585,9 +623,12 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
             items = render(body.kind, parsed.data)
           }
           const who = actor(req, grant, body.author, 'agent')
-          // a board an agent draws from its files is answered by that agent (docs/canvas.md "Several agents on one board")
-          const answeredBy = body.answeredBy === 'me' && who.author === 'agent' && who.by ? { responder: { mode: 'agent', agent: who.by, by: who.by, at: new Date().toISOString() } } : {}
-          const meta = body.meta || Object.keys(answeredBy).length ? { ...(body.meta ?? {}), ...answeredBy } : undefined
+          // A board an agent draws from its files SUGGESTS that agent as "Answered by"; the person confirms it
+          // (docs/canvas.md "Several agents on one board"). An agent never sets the settings keys itself.
+          const answeredBy = body.answeredBy === 'me' && who.author === 'agent' && who.by ? { responderSuggestion: { mode: 'agent', agent: who.by, by: who.by, at: new Date().toISOString() } } : {}
+          const given = { ...(body.meta ?? {}) }
+          if (who.author === 'agent') for (const k of SETTINGS_KEYS) if (k !== 'context') delete given[k]
+          const meta = body.meta || Object.keys(answeredBy).length ? { ...given, ...answeredBy } : undefined
           const board = store.create({ title: body.title, kind: body.kind, meta, items, ...(project ? { project } : {}), ...(who.by ? { by: who.by } : {}) }, who.author)
           remember(who.author === 'agent' ? who.by : undefined)
           return json(res, 201, { board: viewOf(grant, board), project: hasProjects(store) ? store.projectOf(board.id) : 'personal' })
@@ -692,16 +733,24 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       if (sub === 'changes' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0)
         const f = authorFilter(req, grant, url.searchParams.get('author'))
-        const changes = store.changes(id, { since, ...f })
+        const cf = changeFilterOf(url)
+        const changes = agentScale(() => (cf ? filterChanges(store.get(id)!, store.changes(id, { since, ...f }), cf) : store.changes(id, { since, ...f })))
         return json(res, 200, { changes, seq: store.get(id)!.seq })
       }
       if (sub === 'diff' && method === 'GET') {
+        // ?frame= &from= &kinds= &summary=1 &last= &limit= &cursor= &maxChars= (docs/canvas.md "Reading big boards")
         const since = Number(url.searchParams.get('since') ?? 0)
         const f = authorFilter(req, grant, url.searchParams.get('author'))
-        const changes = store.changes(id, { since, ...f }).filter((c) => !isBookkeeping(c))
-        const lines = summarize(store.get(id)!, changes)
+        const cf = changeFilterOf(url)
+        const now = store.get(id)!
+        const all = store.changes(id, { since, ...f }).filter((c) => !isBookkeeping(c))
+        const changes = agentScale(() => (cf ? filterChanges(now, all, cf) : all))
+        const lines = summarize(now, changes, { collapseMoves: url.searchParams.get('moves') !== 'each' })
+        const page = agentScale(() => pageLines(lines, { cursor: url.searchParams.get('cursor') ?? undefined, limit: numParam(url, 'limit'), maxChars: numParam(url, 'maxChars'), seq: now.seq }))
+        const summaryText = boolParam(url, 'summary') ? diffSummary(now, changes, lines, { since, last: numParam(url, 'last') }) : undefined
         const cur = readByAgent(id, changes, f.author, agentName(req, grant))
-        return json(res, 200, { since, seq: cur.seq, lines, count: changes.length })
+        const more = page.left ? `${page.left} more line(s) of ${lines.length} not shown (size cap) — next page: cursor "${page.nextCursor}"; or summary=1, frame=, from=, kinds= to narrow` : undefined
+        return json(res, 200, { since, seq: cur.seq, lines: summaryText ? [] : page.lines, count: changes.length, total: lines.length, from: page.from, ...(page.nextCursor && !summaryText ? { nextCursor: page.nextCursor, more } : {}), ...(summaryText ? { summary: summaryText } : {}) })
       }
       if (sub === 'wait' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? board.seq)
@@ -721,9 +770,16 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const fromAuthor = (c: Change) => (!f.author || c.author === f.author) && (!f.match || f.match(c))
         const now = () => store.get(id)!
         const forMe = (c: Change) => all || addressedTo(now(), c, me)
-        const match = (c: Change) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c)
-        const changes = await store.waitFor(id, since, timeout, undefined, { quietMs, wake, match, who: name })
-        const lines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
+        // ?frame= &from= &kinds=: only changes with an op that passes wake you and come back (docs/canvas.md "Reading big boards")
+        const cf = changeFilterOf(url)
+        if (cf?.frame) agentScale(() => filterChanges(board, [], cf))
+        const passes = (c: Change) => !cf || filterChanges(now(), [c], cf).length > 0
+        const match = (c: Change) => (fromAuthor(c) || asksMe(now(), c, me)) && forMe(c) && passes(c)
+        const woke = await store.waitFor(id, since, timeout, undefined, { quietMs, wake, match, who: name })
+        const changes = cf ? filterChanges(store.get(id)!, woke, cf) : woke
+        const allLines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
+        const page = pageLines(allLines, { maxChars: numParam(url, 'maxChars'), seq: store.get(id)!.seq })
+        const lines = boolParam(url, 'summary') && allLines.length > 1 ? [diffSummary(store.get(id)!, changes, allLines, { since, last: numParam(url, 'last') ?? 10 })] : page.left ? [...page.lines, `… ${page.left} more line(s) not shown (size cap) — canvas_diff({ since: ${since}, cursor: "${page.nextCursor}" }) or summary: true`] : page.lines
         const cur = readByAgent(id, changes, f.author, name)
         const last = changes.length ? changes[changes.length - 1].seq : cur.seq
         const notForYou = all ? 0 : store.changes(id, { since }).filter((c) => c.seq <= last && !isBookkeeping(c) && fromAuthor(c) && !forMe(c)).length
@@ -746,9 +802,27 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           const r = parseResponder(asked, w.author === 'agent' ? (w.by ?? LOCAL_AGENT) : undefined, by, at)
           if (r === undefined) throw new HttpError(400, "answeredBy must be 'any', 'studio', 'me' (an agent) or an agent's name")
           const cur = responderOf(board.meta)
-          if ((r?.mode ?? 'default') !== (cur?.mode ?? 'default') || !sameAgent(r?.agent ?? '', cur?.agent ?? '') || (r?.agent ?? '') !== (cur?.agent ?? '')) {
-            patch.responder = r ? Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined)) : null
+          const clean = (x: object) => Object.fromEntries(Object.entries(x).filter(([, v]) => v !== undefined))
+          if (w.author === 'agent') {
+            // an agent only suggests who answers; the person confirms (watching ≠ answering — docs/canvas.md)
+            const was = suggestionOf(board.meta)
+            if (!r) {
+              if (was) {
+                patch.responderSuggestion = null
+                notes.push('withdrew the "Answered by" suggestion')
+              }
+            } else if (!was || was.mode !== r.mode || (was.agent ?? '') !== (r.agent ?? '')) {
+              patch.responderSuggestion = clean(r)
+              notes.push(`suggested "Answered by": ${responderLabel(r)} — the person confirms it`)
+            }
+          } else if ((r?.mode ?? 'default') !== (cur?.mode ?? 'default') || (r?.agent ?? '') !== (cur?.agent ?? '')) {
+            patch.responder = r ? clean(r) : null
+            if (suggestionOf(board.meta)) patch.responderSuggestion = null
             notes.push(r ? `set "Answered by" to ${responderLabel(r)}` : 'set "Answered by" back to the default (studio and any agent)')
+          } else if (!r && suggestionOf(board.meta)) {
+            // the person keeps the default: the suggestion is dismissed
+            patch.responderSuggestion = null
+            notes.push('dismissed the "Answered by" suggestion')
           }
         }
         if ('context' in body) {
@@ -823,9 +897,41 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         }
         throw new HttpError(404, 'not found')
       }
+      // ---- Agent-scale reading, seeing the board, the layout check (docs/canvas.md "Reading big boards", "Seeing the board") ----
       if (sub === 'outline' && method === 'GET') {
-        res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
-        return void res.end(outline(board))
+        // the same filters as /read; without any, the whole outline — capped (a "more" line says how to page on)
+        const r = agentScale(() => readBoard(board, { ...readOptionsOf(url), format: 'outline' }))
+        res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', ...(r.nextCursor ? { 'x-unprose-next-cursor': r.nextCursor, 'access-control-expose-headers': 'www-authenticate, mcp-session-id, x-unprose-next-cursor' } : {}) })
+        return void res.end(r.text)
+      }
+      if (sub === 'read' && method === 'GET') {
+        // json: the items as text lines in `text`; `items=1` also returns them as an array (not both by default — size)
+        const { items, ...r } = agentScale(() => readBoard(board, readOptionsOf(url)))
+        return json(res, 200, boolParam(url, 'items') && items ? { ...r, items } : r)
+      }
+      if (sub === 'layout' && method === 'GET') {
+        const report = agentScale(() => checkLayout(board, { frame: url.searchParams.get('frame') || undefined, limit: numParam(url, 'limit') }))
+        return json(res, 200, { ...report, lines: layoutLines(report, board, numParam(url, 'limit') ?? 60) })
+      }
+      if (sub === 'snapshot' && method === 'GET') {
+        const format = url.searchParams.get('format') ?? 'png'
+        if (format !== 'png' && format !== 'svg') throw new HttpError(400, 'format must be png or svg')
+        const theme = url.searchParams.get('theme') ?? 'light'
+        if (theme !== 'light' && theme !== 'dark') throw new HttpError(400, 'theme must be light or dark')
+        const snap = agentScale(() => renderSnapshot(board, { frame: url.searchParams.get('frame') || undefined, ids: listParam(url, 'ids'), scale: numParam(url, 'scale'), maxPx: numParam(url, 'maxPx'), theme }))
+        const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes }
+        const head = { 'cache-control': 'no-store', 'x-unprose-snapshot': JSON.stringify(info), 'access-control-expose-headers': 'www-authenticate, mcp-session-id, x-unprose-snapshot' }
+        if (format === 'png') {
+          const r = await svgToPng(snap.svg)
+          if (r.png) {
+            res.writeHead(200, { 'content-type': 'image/png', ...head })
+            return void res.end(r.png)
+          }
+          res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', ...head, 'x-unprose-snapshot': JSON.stringify({ ...info, notes: [...snap.notes, r.why] }) })
+          return void res.end(snap.svg)
+        }
+        res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', ...head })
+        return void res.end(snap.svg)
       }
       if (sub === 'thumb.svg' && method === 'GET') {
         res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-cache' })
@@ -1057,4 +1163,60 @@ function summary(b: Board) {
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+}
+
+// ---- Query parameters of the agent-scale routes (docs/canvas.md "Reading big boards") ----
+
+/** A repeatable or comma-separated list: `?types=event,hotspot` or `?types=event&types=hotspot`. */
+function listParam(url: URL, k: string): string[] | undefined {
+  const v = url.searchParams.getAll(k).flatMap((s) => s.split(',')).map((s) => s.trim()).filter(Boolean)
+  return v.length ? v : undefined
+}
+function numParam(url: URL, k: string): number | undefined {
+  const raw = url.searchParams.get(k)
+  if (raw === null || raw === '') return undefined
+  const n = Number(raw)
+  if (!Number.isFinite(n)) throw new HttpError(400, `${k} must be a number`)
+  return n
+}
+const boolParam = (url: URL, k: string) => ['1', 'true', 'yes'].includes(url.searchParams.get(k) ?? '')
+
+function readOptionsOf(url: URL): ReadOptions {
+  const format = url.searchParams.get('format') ?? undefined
+  if (format !== undefined && !['outline', 'json', 'summary'].includes(format)) throw new HttpError(400, 'format must be outline, json or summary')
+  return {
+    format: format as ReadFormat | undefined,
+    frame: url.searchParams.get('frame') || undefined,
+    types: listParam(url, 'types'),
+    ids: listParam(url, 'ids'),
+    text: url.searchParams.get('text') || undefined,
+    fields: listParam(url, 'fields'),
+    limit: numParam(url, 'limit'),
+    cursor: url.searchParams.get('cursor') || undefined,
+    maxChars: numParam(url, 'maxChars'),
+  }
+}
+
+/** `?frame= &from= &kinds=` on changes / diff / wait; undefined when none is given. */
+function changeFilterOf(url: URL): ChangeFilter | undefined {
+  const frame = url.searchParams.get('frame') || undefined
+  // who: agent names, person, studio (`by` is accepted as another spelling)
+  const from = listParam(url, 'from') ?? listParam(url, 'by')
+  const kinds = listParam(url, 'kinds')
+  const bad = kinds?.filter((k) => !CHANGE_KINDS.includes(k as ChangeKind))
+  if (bad?.length) throw new HttpError(400, `kinds must be among ${CHANGE_KINDS.join(', ')} (not ${bad.join(', ')})`)
+  if (!frame && !from && !kinds) return undefined
+  return { frame, from, kinds: kinds as ChangeKind[] | undefined }
+}
+
+/** The pure readers throw their own errors with a status; answer them as HTTP errors. */
+function agentScale<T>(run: () => T): T {
+  try {
+    return run()
+  } catch (e) {
+    if (e instanceof ReadError || e instanceof SnapshotError || e instanceof LayoutError) throw new HttpError(e.status, e.message)
+    const status = (e as { status?: unknown }).status
+    if (typeof status === 'number') throw new HttpError(status, (e as Error).message)
+    throw e
+  }
 }

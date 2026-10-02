@@ -24,7 +24,8 @@ export function AccessCenter({ hidden }: { hidden?: boolean }) {
   const requests = usePendingRequests(me.canApprove && !hidden)
   const [later, setLater] = useState<Set<string>>(new Set())
   if (hidden || !me.canApprove) return null
-  const shown = requests.filter((r) => !later.has(r.id))
+  // a request for manage rights is only for pages that manage
+  const shown = requests.filter((r) => !later.has(r.id) && (r.via !== 'manage' || me.canManage))
   if (!shown.length) return null
   return (
     <div className="access-stack" aria-label="Connect requests">

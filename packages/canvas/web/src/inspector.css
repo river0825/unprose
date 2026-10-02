@@ -936,3 +936,7 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .edit-prop-diff .hunk { color: var(--ink-3); }
 .edit-prop-how { margin: 0; font-size: 12px; }
 .edit-prop-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* the frame panel's Layout findings (src/layoutCheck.ts): the kind tag and the suggestion line */
+.dg-sev.layout { color: var(--ink-2); }
+.dg-fix { font-size: 11.5px; }

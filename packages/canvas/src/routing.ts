@@ -61,6 +61,20 @@ export function responderOf(meta: Meta): Responder | undefined {
   return r.mode === 'any' || r.mode === 'studio' ? r : undefined
 }
 
+/**
+ * A responder an agent suggested (`meta.responderSuggestion`): agents never set "Answered by" themselves — drawing a
+ * new board, or asking through canvas_context, only suggests it, and the person confirms it with one click (logged as
+ * the person). Watching a board, being mentioned and holding the files are separate from answering it.
+ */
+export function suggestionOf(meta: Meta): Responder | undefined {
+  return responderOf({ responder: meta?.responderSuggestion })
+}
+
+/** The value a person sends to /settings to accept a suggestion: an agent's name, 'studio' or 'any'. */
+export function responderValue(r: Responder): string {
+  return r.mode === 'agent' ? r.agent! : r.mode
+}
+
 /** The name the responder answers as: `agent` for studio, the agent's name, undefined for anyone. */
 export function responderName(r: Responder | undefined): string | undefined {
   if (!r || r.mode === 'any') return undefined
@@ -294,6 +308,11 @@ export function renameInMeta(meta: Meta, from: string, to: string): Record<strin
   const r = responderOf(meta)
   if (r?.mode === 'agent' && sameAgent(r.agent, from)) {
     out.responder = { ...r, agent: to }
+    changed = true
+  }
+  const s = suggestionOf(meta)
+  if (s?.mode === 'agent' && sameAgent(s.agent, from)) {
+    out.responderSuggestion = { ...s, agent: to }
     changed = true
   }
   const fix = (v: unknown) => {
@@ -592,6 +611,8 @@ export function settingsLines(meta: Meta): string[] {
   if (c) out.push(`Board context${c.by ? ` (from ${displayName(c.by)})` : ''}:`, ...c.text.split('\n').map((l) => `  ${l}`))
   const r = responderOf(meta)
   if (r && r.mode !== 'any') out.push(`Answered by: ${responderLabel(r)} — the person's comments here go to it; an @mention sends a thread to another agent`)
+  const s = suggestionOf(meta)
+  if (!r && s) out.push(`Answered by: not set — ${s.by ? displayName(s.by) : 'an agent'} suggested ${responderLabel(s)}; only the person can confirm it`)
   for (const { key, source, holder } of holdersOf(meta)) {
     out.push(`Files of ${key}${source ? ` (${source})` : ''}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ''}${holder.remote ? ` · ${holder.remote}` : ''} — proposals on it go to that agent`)
   }

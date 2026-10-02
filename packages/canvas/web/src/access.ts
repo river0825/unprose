@@ -13,6 +13,24 @@ export interface AccessMe {
   /** A page on this machine, opened as localhost: approves with one click, no code. */
   oneClick: boolean
   publicUrl: string
+  /** Why this page may not manage agents (absent when it may) — shown next to the disabled buttons. */
+  whyNotManage?: WhyNotManage
+}
+
+/** Why a page may not manage agents: reached from elsewhere with a session (it can ask), without one, a non-localhost name on this machine, or an agent. */
+export interface WhyNotManage {
+  reason: 'remote' | 'not-signed-in' | 'host' | 'agent'
+  text: string
+  canRequest: boolean
+  /** the port the canvas listens on (for `ssh -L`) */
+  port?: number
+}
+
+export interface AuditEntry {
+  at: string
+  by: string
+  what: string
+  agentId?: string
 }
 
 export interface AgentView {
@@ -70,7 +88,13 @@ export const accessApi = {
   pollSignIn: (id: string) => fetch(`/api/access/signin/${encodeURIComponent(id)}`).then((r) => body<{ status: 'pending' | 'approved' | 'denied' | 'expired' | 'unknown'; locked?: boolean }>(r)),
   session: (token: string) => post('/api/access/session', { token }).then((r) => body<{ ok: true }>(r)),
   signOut: () => post('/api/access/signout').then((r) => body<{ ok: true }>(r)),
-  agents: () => fetch('/api/access/agents').then((r) => body<{ agents: AgentView[]; requests: AccessRequestView[]; canManage: boolean; oneClick: boolean; store?: string }>(r)),
+  agents: () => fetch('/api/access/agents').then((r) => body<{ agents: AgentView[]; requests: AccessRequestView[]; canManage: boolean; whyNotManage?: WhyNotManage; oneClick: boolean; store?: string; audit?: AuditEntry[] }>(r)),
+  /** Change an agent's access (read ↔ read and draw) and its project / board limits (an empty list = no limit); logged. */
+  updateAccess: (id: string, patch: { scope?: 'read' | 'write'; projects?: string[]; boards?: string[] }) =>
+    fetch(`/api/access/agents/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch) }).then((r) => body<{ ok: true; agent: AgentView; changed: string[] }>(r)),
+  /** Ask for the right to manage agents for this browser: a pairing code that a managing page (or the canvas machine) approves. */
+  requestManage: () => post('/api/access/manage-request').then((r) => body<{ id: string; code: string; expiresAt: string }>(r)),
+  pollManage: (id: string) => fetch(`/api/access/manage-request/${encodeURIComponent(id)}`).then((r) => body<{ status: 'pending' | 'approved' | 'denied' | 'expired' | 'unknown'; locked?: boolean }>(r)),
   create: (input: { name: string; scope: 'read' | 'write'; projects?: string[]; boards?: string[]; publicUrl?: string }) =>
     post('/api/access/agents', input).then((r) => body<{ agent: AgentView; token: string; setup: Setup }>(r)),
   /** Rename an agent: the name its changes are signed with from now on, and the one people @mention. */
@@ -96,6 +120,7 @@ export const VIA_TEXT: Record<AccessRequestView['via'], string> = {
   oauth: 'MCP client (OAuth)',
   device: 'agent without a browser',
   browser: 'browser sign-in',
+  manage: 'manage rights for a signed-in browser',
 }
 
 /** Reconnecting server socket (`/ws`): connect requests and agents-list changes. */

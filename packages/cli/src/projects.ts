@@ -87,7 +87,7 @@ export async function boardByTitle(api: Api, title: string, kind: string, projec
   const note = ambiguityNote(title, found)
   if (note) console.warn(`⚠ ${note}`)
   if (found.board) return found.board
-  // a board drawn from this agent's files is answered by this agent (a named one; the canvas ignores it otherwise)
+  // a board drawn from this agent's files suggests this agent as "Answered by" (a named one); the person confirms it
   const made = await api<{ board: Summary; reused?: boolean; ambiguous?: Summary[] }>('POST', '/api/boards', { title, kind, ...(project ? { project } : {}), answeredBy: 'me', reuse: sameKind ? 'title+kind' : 'title' })
   return made.board
 }

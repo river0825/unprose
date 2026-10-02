@@ -13,7 +13,10 @@ export interface BoardSettings {
   context: BoardContext | null
   agentTurns: number
   holders: Array<{ key: string; source?: string; holder: FileHolder }>
+  /** a responder the person may confirm: one an agent asked for ('asked', by suggestionBy), or the sole file holder ('holder') */
   suggestion?: string
+  suggestionBy?: string | null
+  suggestionWhy?: 'asked' | 'holder'
   agents: Array<{ name: string; label: string; /** what people @mention it by */ handle?: string; watching: boolean; seen?: string; holder: boolean }>
   you?: string
   seq?: number
@@ -197,14 +200,17 @@ export class CanvasClient {
     if (author) q.set('author', author)
     return this.req<{ changes: Change[]; seq: number }>('GET', `/api/boards/${encodeURIComponent(id)}/changes?${q}`)
   }
-  diff(id: string, since: number, author?: Author | 'others') {
+  /** `extra`: frame, from (names), kinds, summary, last, limit, cursor, maxChars (docs/canvas.md "Reading big boards"). */
+  diff(id: string, since: number, author?: Author | 'others', extra?: AgentScaleQuery) {
     const q = new URLSearchParams({ since: String(since) })
     if (author) q.set('author', author)
-    return this.req<{ since: number; seq: number; lines: string[]; count: number }>('GET', `/api/boards/${encodeURIComponent(id)}/diff?${q}`)
+    addQuery(q, extra)
+    return this.req<{ since: number; seq: number; lines: string[]; count: number; total?: number; nextCursor?: string; more?: string; summary?: string }>('GET', `/api/boards/${encodeURIComponent(id)}/diff?${q}`)
   }
   /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
-  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake, listen?: 'mine' | 'all') {
+  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake, listen?: 'mine' | 'all', extra?: AgentScaleQuery) {
     const q = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) })
+    addQuery(q, extra)
     if (author) q.set('author', author)
     if (quietMs !== undefined) q.set('quiet', String(quietMs))
     if (wake) q.set('wake', wake)
@@ -252,6 +258,49 @@ export class CanvasClient {
   propose(id: string, input: { file: string; base: string; diff?: string; newText?: string; note: string; about?: string[]; wires?: Array<{ from: string; to: string; event: string; condition?: string; remove?: boolean }> }) {
     return this.req<{ seq: number; comment: string; file: string; diff: string; about: string[]; added: number; removed: number; offsets: number[] }>('POST', `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input, author: 'agent' })
   }
+  // ---- Agent-scale reading, seeing the board, the layout check, local approval (docs/canvas.md "Reading big boards") ----
+  /** A board read with filters, a format and a size cap (`GET /api/boards/:id/read`). */
+  read(id: string, o: AgentScaleQuery & { format?: 'outline' | 'json' | 'summary'; types?: string[]; ids?: string[]; text?: string; fields?: string[] } = {}) {
+    const q = new URLSearchParams()
+    addQuery(q, o)
+    return this.req<{ format: string; text: string; matched: number; nextCursor?: string; more?: string; seq: number }>('GET', `/api/boards/${encodeURIComponent(id)}/read?${q}`)
+  }
+  /** The layout findings of a board or one frame. */
+  layout(id: string, frame?: string, limit?: number) {
+    const q = new URLSearchParams()
+    addQuery(q, { frame, limit })
+    return this.req<{ findings: Array<{ id: string; kind: string; message: string; suggestion: string; others?: string[]; frame?: string }>; checked: number; frame?: string; counts: Record<string, number> }>('GET', `/api/boards/${encodeURIComponent(id)}/layout?${q}`)
+  }
+  /** A server-side render: PNG bytes when the canvas can rasterize, else the SVG text; `info` says what is in it. */
+  async snapshot(id: string, o: { frame?: string; ids?: string[]; scale?: number; maxPx?: number; theme?: 'light' | 'dark'; format?: 'png' | 'svg' } = {}): Promise<{ mime: string; png?: Buffer; svg?: string; info: { width: number; height: number; scale: number; items: number; region: { x: number; y: number; w: number; h: number }; notes: string[] } }> {
+    const q = new URLSearchParams()
+    addQuery(q, o)
+    let res: Response
+    try {
+      res = await fetch(`${this.baseUrl}/api/boards/${encodeURIComponent(id)}/snapshot?${q}`, { headers: this.headers() })
+    } catch (e) {
+      throw new Error(`canvas server not reachable at ${this.baseUrl} — start it with \`awd-canvas serve\` (${(e as Error).message})`)
+    }
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string }
+      if (res.status === 401 && this.authHint) throw new Error(this.authHint)
+      throw new Error(body.error ?? `${res.status} ${res.statusText}`)
+    }
+    const mime = (res.headers.get('content-type') ?? '').split(';')[0]
+    let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [] as string[] }
+    try {
+      info = { ...info, ...(JSON.parse(res.headers.get('x-unprose-snapshot') ?? '{}') as Partial<typeof info>) }
+    } catch {
+      // no info header: an older canvas
+    }
+    if (mime === 'image/png') return { mime, png: Buffer.from(await res.arrayBuffer()), info }
+    return { mime, svg: await res.text(), info }
+  }
+  /** Approve a pairing code as the local agent (only a canvas on this machine accepts it). */
+  approve(code: string, o: { scope?: 'read' | 'write'; name?: string; board?: string } = {}) {
+    return this.req<{ status: string; approved?: { name: string; via: string; scope: string; ip?: string }; audit: string; seq?: number }>('POST', '/api/approve', { code, ...o })
+  }
+
   /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
   boardUrl(id: string, at: { frame?: string; focus?: string } = {}) {
     const q = new URLSearchParams()
@@ -259,5 +308,26 @@ export class CanvasClient {
     if (at.focus) q.set('focus', at.focus)
     const qs = q.toString()
     return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`
+  }
+}
+
+/** The query parameters of the agent-scale routes (docs/canvas.md "Reading big boards"); lists go comma-separated. */
+export interface AgentScaleQuery {
+  frame?: string
+  /** who: agent names, "person", "studio" */
+  from?: string[]
+  kinds?: string[]
+  summary?: boolean
+  last?: number
+  limit?: number
+  cursor?: string
+  maxChars?: number
+  [k: string]: string | string[] | number | boolean | undefined
+}
+
+function addQuery(q: URLSearchParams, extra: Record<string, string | string[] | number | boolean | undefined> | undefined) {
+  for (const [k, v] of Object.entries(extra ?? {})) {
+    if (v === undefined || v === false || (Array.isArray(v) && !v.length) || v === '') continue
+    q.set(k, Array.isArray(v) ? v.join(',') : v === true ? '1' : String(v))
   }
 }

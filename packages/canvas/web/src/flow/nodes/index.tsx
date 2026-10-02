@@ -1,6 +1,6 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { useRef, useState, type ReactNode } from 'react'
-import type { ColorToken, Item } from '../../../../src/model'
+import { ownLock, type ColorToken, type Item } from '../../../../src/model'
 import type { ItemNode } from '../boardToFlow'
 import { CommentBadge, ThreadBody } from '../CommentThread'
 import { EditableText } from '../EditableText'
@@ -51,6 +51,8 @@ export function Shell({
   onDouble?: () => void
 }) {
   const edit = useEdit()
+  // a locked item (docs/diagrams.md "What a redraw keeps") is not dragged or resized until it is unlocked
+  const locked = ownLock(item)
   const [liveH, setLiveH] = useState<number | null>(null)
   const font = SCALES_FONT.has(item.type) || item.fontSize ? { fontSize: (fontOf(item) * (liveH ?? item.h)) / Math.max(item.h, 1) } : undefined
   // long-press (touch) opens the item menu, like a right-click
@@ -63,7 +65,7 @@ export function Shell({
     <>
     {resizable && (
       <NodeResizer
-        isVisible={selected && edit.editingId !== item.id}
+        isVisible={selected && edit.editingId !== item.id && !locked}
         minWidth={24}
         minHeight={20}
         onResize={(_, p) => setLiveH(p.height)}
@@ -101,8 +103,22 @@ export function Shell({
       <Tether />
       {item.type !== 'comment' && item.type !== 'arrow' && item.data?.pending ? <ProposedTag kind={(item.data.pending as { kind?: string }).kind} /> : null}
       {children}
+      {locked ? <LockBadge frame={item.type === 'frame'} /> : null}
     </div>
     </>
+  )
+}
+
+/** The lock badge: this item (a frame: everything in it) keeps its place through redraws and the kanban layout. */
+function LockBadge({ frame }: { frame: boolean }) {
+  const what = frame ? 'Layout locked: redraws and the kanban layout keep this frame and everything in it where it is' : 'Position locked: redraws and the kanban layout keep it here'
+  return (
+    <span className="lock-badge" role="img" aria-label={what} title={`${what} — right-click → Unlock`}>
+      <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+        <rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" />
+        <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+    </span>
   )
 }
 

@@ -69,4 +69,26 @@ export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSp
 export { gotoTargets, rankTargets, type GotoTarget } from './goto.js'
 export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'
 export { KIND_ALIASES, designFromObject, yamlCommentHint, lintDesignContent, withDesignFindings, findingLine, frameOf, growFrame, proposalOps, type DesignFile, type DesignFinding } from './designFile.js'
-export { placedByUser, keepUserLayout, isResolved, planRedraw, type RedrawScope, type TemplateOp, type BoardItem as RedrawItem, type UserChange } from './redraw.js'
+export {
+  placedByUser,
+  keepUserLayout,
+  isResolved,
+  planRedraw,
+  explainRedraw,
+  redrawInputs,
+  originsOf,
+  isRedrawNote,
+  planLines,
+  planSummary,
+  type RedrawScope,
+  type RedrawPlan,
+  type RedrawResult,
+  type RedrawInputs,
+  type PlanLine,
+  type ItemOrigin,
+  type LoggedChange,
+  type TemplateOp,
+  type BoardItem as RedrawItem,
+  type UserChange,
+} from './redraw.js'
+export { LAYOUT_LOCK, ownLock, layoutLock } from '../model.js'

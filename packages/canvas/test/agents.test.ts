@@ -280,12 +280,51 @@ test('holders: recorded on a redraw with the caller\'s name; machine and repo ro
   assert.equal(settings.suggestion, 'codex-mac', 'a board whose files one agent holds suggests it as the responder')
 })
 
-test('a board an agent draws from its files is answered by it; a proposal goes to the holder, who wakes for it', async () => {
+test('a board an agent draws only SUGGESTS it as "Answered by": the person confirms (or dismisses); agents never set it', async () => {
+  const codex = access.createToken({ name: 'codex-sugg' }, 't').token
+  const created = await (await send('POST', '/api/boards', { title: 'suggest me', kind: 'freeform', answeredBy: 'me', meta: { responder: { mode: 'agent', agent: 'codex-sugg' }, agentTurns: 99 } }, remote(codex))).json()
+  const id = created.board.id
+  assert.equal(created.board.meta.responder, undefined, 'not answered by the agent that drew it')
+  assert.equal(created.board.meta.agentTurns, undefined, 'an agent cannot slip settings into a new board')
+  assert.equal(created.board.meta.responderSuggestion.agent, 'codex-sugg')
+  let s = await (await call(`/api/boards/${id}/settings`)).json()
+  assert.equal(s.answeredBy, 'any agent')
+  assert.equal(s.suggestion, 'codex-sugg')
+  assert.equal(s.suggestionWhy, 'asked')
+  assert.equal(s.suggestionBy, 'codex-sugg')
+  // an agent asking through settings (canvas_context answeredBy) still only suggests
+  s = await (await send('PUT', `/api/boards/${id}/settings`, { answeredBy: 'claude-a' }, remote(codex))).json()
+  assert.equal(s.responder, null)
+  assert.equal(s.suggestion, 'claude-a')
+  assert.match(store.changes(id, { since: 0 }).at(-1)!.note ?? '', /suggested "Answered by": claude-a/)
+  const local1 = await (await send('PUT', `/api/boards/${id}/settings`, { answeredBy: 'me', author: 'agent' }, local('gemini'))).json()
+  assert.equal(local1.responder, null, 'a local agent only suggests too')
+  assert.equal(local1.suggestion, 'gemini')
+  // the person confirms with one click: logged as the person, the suggestion goes
+  s = await (await send('PUT', `/api/boards/${id}/settings`, { answeredBy: 'gemini', author: 'user' })).json()
+  assert.equal(s.answeredBy, 'gemini')
+  assert.equal(s.suggestion, undefined)
+  assert.equal(store.get(id)!.meta!.responderSuggestion, undefined)
+  const last = store.changes(id, { since: 0 }).at(-1)!
+  assert.equal(last.author, 'user')
+  // dismissing: the person keeps the default
+  const d = (await (await send('POST', '/api/boards', { title: 'dismiss me', kind: 'freeform', answeredBy: 'me' }, remote(codex))).json()).board.id
+  s = await (await send('PUT', `/api/boards/${d}/settings`, { answeredBy: null, author: 'user' })).json()
+  assert.equal(s.suggestion, undefined)
+  assert.match(store.changes(d, { since: 0 }).at(-1)!.note ?? '', /dismissed/)
+  // an existing board keeps its responder: an agent's suggestion does not replace it
+  const kept = newBoard({ responder: { mode: 'agent', agent: 'codex-b' } })
+  s = await (await send('PUT', `/api/boards/${kept.id}/settings`, { answeredBy: 'me' }, remote(codex))).json()
+  assert.equal(s.answeredBy, 'codex-b')
+  assert.equal(s.suggestion, undefined, 'no suggestion is shown while someone answers')
+})
+
+test('a proposal goes to the holder, who wakes for it', async () => {
   const codex = access.createToken({ name: 'codex-new' }, 't').token
   const created = await (await send('POST', '/api/boards', { title: 'new from files', kind: 'freeform', answeredBy: 'me' }, remote(codex))).json()
-  assert.equal(created.board.meta.responder.agent, 'codex-new')
+  assert.equal(created.board.meta.responder, undefined)
   const plain = await (await send('POST', '/api/boards', { title: 'by hand', kind: 'freeform', answeredBy: 'me' })).json()
-  assert.equal(plain.board.meta?.responder, undefined, 'the default local agent leaves the default')
+  assert.equal(plain.board.meta?.responderSuggestion, undefined, 'the default local agent suggests nothing')
   // claude-a (a local named agent) holds the file; codex proposes; claude-a waits for the person and still wakes
   const b = newBoard()
   await send('PUT', `/api/boards/${b.id}`, { meta: { ...store.get(b.id)!.meta, diagrams: { 'shop-es': { ...(store.get(b.id)!.meta!.diagrams as Record<string, object>)['shop-es'], holder: { repo: 'shop' } } } } }, local('claude-a'))

@@ -181,7 +181,7 @@ test('threads: a reply reads as "replied in thread", a root move is a thread mov
   assert.match(lines[1], /comment thread "why here\?" \[root\]: moved by \(\+40, \+10\)/)
 
   const text = outline(store.get(board.id)!)
-  assert.match(text, /💬 \(user\) why here\?  #root\n\s+↳ \(agent\) because of RFA  #r1\n\s+↳ \(user\) ok, and size\?  #r2/)
+  assert.match(text, /💬 \(user\) why here\?(?: \[[^\]]*\])?  #root\n\s+↳ \(agent\) because of RFA  #r1\n\s+↳ \(user\) ok, and size\?  #r2/)
   assert.doesNotMatch(text, /comments \(general\)/)
 
   const seq2 = store.get(board.id)!.seq
