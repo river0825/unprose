@@ -10,6 +10,7 @@ import {
   ConnectionMode,
   SelectionMode,
   useReactFlow,
+  useStoreApi,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -29,6 +30,7 @@ import { SidePanel } from './components/SidePanel'
 import { EditContext, type EditApi } from './flow/EditContext'
 import { absolutePosition, boardToFlow, containerAt, isContainer, threadOf, threadRoot, type ItemNode } from './flow/boardToFlow'
 import { alignKanban, snapColumns } from './flow/kanbanAlign'
+import { bandSelection, rectBetween, type BandNode } from './flow/bandSelect'
 import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
@@ -48,6 +50,9 @@ import { GoToPalette } from './components/GoToPalette'
 import { FocusBanner, readFollow, writeFollow } from './components/FocusBanner'
 import { EmptyBoardHint } from './components/AskHints'
 import type { FocusRequest } from './store'
+import { ReplayBar } from './components/ReplayBar'
+import { applyReplay, replay, replayFrameOf, useReplay } from './flow/replay'
+import { buildReplay } from './diagrams/replay'
 
 const GRID: [number, number] = [10, 10]
 const MULTI_SELECT_KEYS = ['Meta', 'Control', 'Shift']
@@ -195,8 +200,56 @@ function BoardInner({ id }: { id: string }) {
     })
   }, [board, edges, selectedIds, panelHover, flashIds, wireView.mode])
 
-  const onNodesChange = useCallback((changes: NodeChange<ItemNode>[]) => {
-    setNodes((ns) => applyNodeChanges(changes, ns))
+  // a domain story being replayed (flow/replay.ts): only this viewer's view changes, nothing is stored
+  const replayView = useReplay()
+  const replayModel = useMemo(() => (replayView && laid ? buildReplay(laid, replayView.frameId) : undefined), [laid, replayView?.frameId])
+  const played = useMemo(() => applyReplay(shownNodes, shownEdges, replayModel, replayView), [shownNodes, shownEdges, replayModel, replayView])
+  const replayOn = useRef(false)
+  replayOn.current = Boolean(replayView && replayModel?.steps.length)
+  useEffect(() => {
+    // a story that lost its sentences (or its frame) stops; a shorter one keeps its step inside the story
+    if (replayView && replayModel && !replayModel.steps.length) replay.stop()
+    else if (replayView && replayModel && replayView.step > replayModel.steps.length) replay.update({ step: replayModel.steps.length })
+  }, [replayView, replayModel])
+  useEffect(() => () => replay.stop(), [id])
+
+  // ---- rubber band (flow/bandSelect.ts): a band drawn inside a frame selects the items in it, not the frame; Shift adds
+  const rf = useStoreApi()
+  const band = useRef<{ before: string[]; additive: boolean } | null>(null)
+  const pointerAt = useRef<{ x: number; y: number } | null>(null)
+  const pressed = useRef<{ before: string[]; additive: boolean }>({ before: [], additive: false })
+  const onNodesChange = useCallback(
+    (changes: NodeChange<ItemNode>[]) => {
+      const b = band.current
+      const start = rf.getState().userSelectionRect
+      if (!b || !pointerAt.current || !start || !laid || !changes.some((c) => c.type === 'select')) {
+        setNodes((ns) => applyNodeChanges(changes, ns))
+        return
+      }
+      // the band in board coordinates: from where the drag began (startX/Y are flow coordinates) to the pointer
+      const rect = rectBetween({ x: start.startX, y: start.startY }, flow.screenToFlowPosition(pointerAt.current))
+      setNodes((ns) => {
+        const next = applyNodeChanges(changes, ns)
+        const info = new Map<string, BandNode>()
+        for (const n of next) {
+          const it = laid.items[n.id]
+          if (it) info.set(n.id, { id: n.id, container: isContainer(it), rect: { x: it.x, y: it.y, w: it.w, h: it.h } })
+        }
+        const keep = bandSelection(next.filter((n) => n.selected).map((n) => n.id), info, rect, b.before, b.additive)
+        return next.map((n) => (Boolean(n.selected) === keep.has(n.id) ? n : { ...n, selected: keep.has(n.id) }))
+      })
+    },
+    [rf, laid, flow],
+  )
+  const onSelectionStart = useCallback(() => {
+    band.current = pressed.current
+    if (!band.current.additive) return
+    // React Flow clears the selection when a band starts; with Shift the earlier selection stays
+    const before = new Set(band.current.before)
+    setNodes((ns) => ns.map((n) => (before.has(n.id) && !n.selected ? { ...n, selected: true } : n)))
+  }, [])
+  const onSelectionEnd = useCallback(() => {
+    band.current = null
   }, [])
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setEdges((es) => applyEdgeChanges(changes, es))
@@ -706,6 +759,8 @@ function BoardInner({ id }: { id: string }) {
       const target = e.target as HTMLElement | null
       const typing = target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.isContentEditable)
       if (menu || helpOpen) return
+      // a replay has its own keys (components/ReplayBar.tsx); the board's edit keys wait until it stops
+      if (replayOn.current && !(e.metaKey || e.ctrlKey)) return
       // A text view or the source dialog handles its own keys (arrows move lines, not items; ⌘Z is the editor's).
       if (target?.closest?.('[data-no-board-keys]')) return
       if (e.key === 'Escape') {
@@ -852,12 +907,24 @@ function BoardInner({ id }: { id: string }) {
         canRedo={store.canRedo}
         onHelp={() => setHelpOpen(true)}
       />
-      <div className="canvas-wrap" ref={wrapRef} onDoubleClick={onWrapDoubleClick}>
+      <div
+        className="canvas-wrap"
+        ref={wrapRef}
+        onDoubleClick={onWrapDoubleClick}
+        // what a rubber band needs (flow/bandSelect.ts): the selection when the drag began, Shift, and where the pointer is
+        onPointerDownCapture={(e) => {
+          pressed.current = { before: selectedRef.current, additive: e.shiftKey || e.metaKey || e.ctrlKey }
+          pointerAt.current = { x: e.clientX, y: e.clientY }
+        }}
+        onPointerMoveCapture={(e) => {
+          pointerAt.current = { x: e.clientX, y: e.clientY }
+        }}
+      >
         <EditContext.Provider value={editApi}>
         <WireBadgeContext.Provider value={toggleBadge}>
           <ReactFlow
-            nodes={shownNodes}
-            edges={shownEdges}
+            nodes={played.nodes}
+            edges={played.edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
@@ -869,6 +936,8 @@ function BoardInner({ id }: { id: string }) {
               startEdit(edge.id)
             }}
             onSelectionChange={onSelectionChange}
+            onSelectionStart={onSelectionStart}
+            onSelectionEnd={onSelectionEnd}
             onNodeDragStop={onNodeDragStop}
             onConnect={onConnect}
             onNodeContextMenu={(e, n) => {
@@ -919,6 +988,7 @@ function BoardInner({ id }: { id: string }) {
           onGo={goToRequest}
           onDismiss={store.clearFocus}
         />
+        {replayView && replayModel?.steps.length ? <ReplayBar model={replayModel} view={replayView} title={board.items[replayView.frameId]?.text ?? 'Domain story'} /> : null}
         <GoToPalette board={board} open={gotoOpen} onClose={() => setGotoOpen(false)} onGo={(t) => goTo([t.id])} />
         {tool === 'comment' && <div className="hint">Click an item to comment on it. Esc cancels.</div>}
         {store.storageError && (
@@ -998,6 +1068,7 @@ function BoardInner({ id }: { id: string }) {
           copyCount={selectedIds.includes(menu.itemId) ? selectedIds.length : 1}
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
+          onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
         />
       )}
       {helpOpen && <ShortcutsSheet onClose={() => setHelpOpen(false)} />}

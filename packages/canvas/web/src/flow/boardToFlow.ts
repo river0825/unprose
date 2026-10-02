@@ -23,6 +23,34 @@ export function isContainer(it: Item): boolean {
   return CONTAINERS.has(it.type)
 }
 
+/** The class a container's title bar and border carry: only they start a move (React Flow `dragHandle`). */
+export const DRAG_HANDLE = 'drag-handle'
+
+const PASS_UI = new Set(['screen', 'section'])
+
+/**
+ * A container whose body lets pointer events through to the canvas, so dragging its empty area draws a selection box
+ * (as on the empty canvas) instead of moving it: frames (diagram frames, domain-story groups), lanes, kanban columns,
+ * wireframe and UI-mock screens, and a UI mock's sections (layout, mostly empty space). A UI card, navbar or sidebar is
+ * an element of the mock and moves like any item.
+ */
+export function passThrough(it: Item): boolean {
+  if (it.type === 'frame' || it.type === 'lane') return true
+  if (it.type === 'wireframe') return it.role === 'screen'
+  if (it.type === 'ui') return PASS_UI.has((it.data?.ui as { type?: string } | undefined)?.type ?? '')
+  return false
+}
+
+function nodeClass(it: Item): { className?: string } {
+  const c = [
+    // an element the agent proposed (a story from EventStorming) is dashed until the file has it
+    it.type !== 'comment' && it.data?.pending ? 'node-pending' : '',
+    it.data?.ds === 'group' ? 'ds-group' : it.data?.ds === 'annotation' ? 'ds-annotation' : '',
+    passThrough(it) ? 'awd-container' : '',
+  ].filter(Boolean)
+  return c.length ? { className: c.join(' ') } : {}
+}
+
 /** The comment a thread hangs from: follow `target` through comments. A cycle makes each comment its own root. */
 export function threadRoot(board: Board, id: string): Item | undefined {
   const start = board.items[id]
@@ -103,9 +131,9 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
       extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
       data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}) },
-      // an element the agent proposed (a story from EventStorming) is dashed until the file has it
-      ...(it.type !== 'comment' && it.data?.pending ? { className: 'node-pending' } : {}),
-      ...(it.data?.ds === 'group' ? { className: 'ds-group' } : it.data?.ds === 'annotation' ? { className: 'ds-annotation' } : {}),
+      ...nodeClass(it),
+      // a frame, lane, column or screen moves by its title bar or border; a drag on its body draws a selection box (docs/canvas.md)
+      ...(passThrough(it) ? { dragHandle: `.${DRAG_HANDLE}` } : {}),
       draggable: true,
       selectable: true,
       connectable: it.type !== 'comment',

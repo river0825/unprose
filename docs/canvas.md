@@ -575,6 +575,29 @@ The workflow board a runtime draws (`awd graph … --canvas`) also shows **live 
 
 `npm test -w @awd/canvas` — templates (determinism, level filtering, lane containment, no overlaps), the board repository (log + snapshot + rebuild, wait, memory adapter), kanban (`cardMoves`, `/cards` round trip), diff summaries, thumbnails, comment placement, the HTTP/WS server on a random port, and the architecture rule (ports / adapters).
 
+## Moving and selecting inside frames
+
+Like Miro, FigJam and tldraw, a container moves by its edge and its inside is paper (`web/src/flow/bandSelect.ts`,
+`boardToFlow.ts` `passThrough`, `select.css`):
+
+- **Drag the empty inside of a frame** (a diagram frame, a domain-story group), **a lane, a kanban column, a wireframe
+  or UI-mock screen, or a UI mock's section** — it draws a selection box, exactly like dragging on empty paper. The box
+  selects every item it touches; a frame, lane, column or screen only when the box holds all of it, so a box drawn inside
+  a frame never picks up the frame it was drawn on.
+- **Drag its title bar or its border** (an 8 px strip along each edge; the cursor turns into a hand) — it moves, with
+  everything inside. A kanban column moves by its header and snaps into its place in the row. Clicking the title or
+  border selects it; once selected, its corners resize it as before.
+- **Drag an item** (sticky, card, block, UI element — a UI card, navbar or sidebar included) — that item moves, alone.
+- **Shift-drag** anywhere — the box adds to the current selection instead of replacing it (a Shift drag that starts on an
+  item draws a box too). Shift- or ⌘/Ctrl-click still adds or removes one item.
+- Middle-button drag, Space-drag and two-finger scroll pan the board; on a touch screen a drag on a frame's inside does
+  what it does on empty paper. Long-press (touch) or right-click a frame's **title** for its menu; a double-click on
+  its inside adds a sticky there, and a double-click on its title edits the title.
+
+Technically: a container's React Flow node lets pointer events through (`pointer-events: none`) except on its title bar,
+border strips and resize handles (class `drag-handle`, also the node's `dragHandle`), so a press on its body reaches the
+pane and starts React Flow's selection box. The items inside are their own nodes and keep their events.
+
 ## Wires
 
 How the board draws wires (`web/src/flow/route.ts`, `ItemEdge.tsx`, `catchAll.ts`). All of it is a way of looking:

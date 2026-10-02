@@ -5,6 +5,7 @@ import type { ItemNode } from '../boardToFlow'
 import { CommentBadge, ThreadBody } from '../CommentThread'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
+import { PlayStoryButton } from '../../components/ReplayBar'
 import { SCALES_FONT, fontOf } from '../font'
 import { DsIconNode } from './DsIconNode'
 import { UiNode } from './UiNode'
@@ -13,6 +14,18 @@ import { WireBadges } from '../WireControls'
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
 const colorVar = (c?: ColorToken) => `var(--c-${c ?? 'yellow'})`
+
+/**
+ * A container's border as four thin grab strips: with its title bar, the only parts of a frame, lane, column or screen
+ * that take the pointer (its body lets a drag through to the canvas, which draws a selection box). docs/canvas.md
+ */
+export const Rims = () => (
+  <>
+    {(['t', 'r', 'b', 'l'] as const).map((s) => (
+      <div key={s} className={`rim rim-${s} drag-handle`} aria-hidden="true" />
+    ))}
+  </>
+)
 
 /** Shared chrome: agent-change wash, comment-attach click, double-click to edit, connection handles, resize handles. */
 export function Shell({
@@ -182,7 +195,8 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
   const edit = useEdit()
   return (
     <Shell item={item} pulse={pulse} selected={selected} resizable className="frame" handles={false}>
-      <div className="frame-title">
+      <Rims />
+      <div className="frame-title drag-handle">
         {data.diagram ? (
           <span className={`dg-badge k-${data.diagram.kind}`} title={`${data.diagram.name} · key ${data.diagram.key}`}>
             {data.diagram.name}
@@ -194,6 +208,7 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
             {data.diagram.findings} to check
           </span>
         ) : null}
+        {data.diagram?.kind === 'domain-story' ? <PlayStoryButton frameId={item.id} compact /> : null}
       </div>
     </Shell>
   )
@@ -209,7 +224,8 @@ export function LaneNode({ data, selected }: NodeProps<ItemNode>) {
     const over = wip !== undefined && count > wip
     return (
       <Shell item={item} pulse={pulse} selected={selected} resizable className="lane column" handles={false}>
-        <div className="column-head">
+        <Rims />
+        <div className="column-head drag-handle">
           <span className="name">{edit.editingId === item.id ? <Text item={item} /> : item.text}</span>
           <span className={`count ${over ? 'over' : ''}`} title={wip !== undefined ? `${count} of ${wip} allowed` : `${count} cards`}>
             {wip !== undefined ? `${count}/${wip}${over ? ' over' : ''}` : count}
@@ -220,7 +236,8 @@ export function LaneNode({ data, selected }: NodeProps<ItemNode>) {
   }
   return (
     <Shell item={item} pulse={pulse} selected={selected} resizable className="lane" handles={false}>
-      <div className="lane-title">{edit.editingId === item.id ? <Text item={item} /> : item.text}</div>
+      <Rims />
+      <div className="lane-title drag-handle">{edit.editingId === item.id ? <Text item={item} /> : item.text}</div>
     </Shell>
   )
 }
@@ -278,7 +295,10 @@ export function WireframeNode({ data, selected }: NodeProps<ItemNode>) {
   return (
     <Shell item={item} pulse={pulse} selected={selected} resizable className={`wf ${role}`} handles={role !== 'screen'}>
       {role === 'screen' ? (
-        <div className="wf-title">{item.text}</div>
+        <>
+          <Rims />
+          <div className="wf-title drag-handle">{item.text}</div>
+        </>
       ) : role === 'nav' ? (
         (item.text ?? 'Home, About').split(/\s*[·|,]\s*/).map((t, i) => <span key={i}>{t}</span>)
       ) : (

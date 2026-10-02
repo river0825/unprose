@@ -6,6 +6,22 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-10-02
+
+### Fixed
+- **Drag inside a frame selects; the frame moves by its title or border.** Dragging the empty inside of a frame, lane,
+  kanban column, wireframe or UI-mock screen now draws a selection box, as on empty paper, instead of moving the whole
+  frame. A box drawn inside a frame selects the items it touches, never the frame around them (a frame is selected when
+  the box holds all of it). Move a frame, lane or column by its title bar or its border; items still move when dragged.
+  Shift-drag now adds to the selection instead of replacing it. See docs/canvas.md → "Moving and selecting inside frames".
+
+### Added
+- **Replay a domain story, sentence by sentence** (as Egon.io's Replay): **Play story** on a domain-story frame (its
+  header, side panel or right-click menu) hides what is not told yet, steps one sequence number at a time (parallel
+  activities together), highlights the current sentence and reads it out; restart / previous / next, "n / N",
+  auto-play with a speed, a ghost mode, keys ← → Space Home End P Esc. Only your view changes — nothing is stored on
+  the board (docs/diagrams.md §6b "Replay").
+
 ## [0.8.1] — 2026-10-02
 
 ### Added
@@ -369,7 +385,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/river0825/unprose/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/river0825/unprose/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/river0825/unprose/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/river0825/unprose/compare/v0.7.0...v0.7.1

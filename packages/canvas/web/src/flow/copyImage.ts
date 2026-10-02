@@ -106,6 +106,7 @@ function keep(node: Node, req: CaptureRequest): boolean {
   if (cl.contains('edge-label')) return req.edges.has(el.dataset.edgeId ?? '')
   if (cl.contains('react-flow__handle') || cl.contains('react-flow__resize-control') || cl.contains('edge-grip')) return false
   if (cl.contains('react-flow__connectionline')) return false
+  if (cl.contains('replay-play')) return false // the frame header's Play story button is a control, not part of the board
   if (cl.contains('frozen-headers')) return false // pinned header strips are a viewing aid, not part of the board
   return true
 }

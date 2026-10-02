@@ -27,10 +27,12 @@ interface Props {
   copyCount: number
   canColor: boolean
   askEnabled: boolean
+  /** a domain-story frame (or an item in one): replay its story sentence by sentence (docs/diagrams.md §6b) */
+  onPlayStory?: () => void
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -132,6 +134,14 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
             </div>
           )}
         </>
+      )}
+      {onPlayStory && (
+        <button role="menuitem" onClick={act(onPlayStory)}>
+          Play story
+          <span aria-hidden="true" className="sub-arrow">
+            ▶
+          </span>
+        </button>
       )}
       <button role="menuitem" onClick={act(() => onDuplicate(menu.itemId))}>
         Duplicate

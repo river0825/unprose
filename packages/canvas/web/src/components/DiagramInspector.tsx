@@ -14,6 +14,7 @@ import { useModelChoice } from '../inspector/useModel'
 import { useFrozen } from '../flow/freeze'
 import { headerGroups } from '../flow/headerStrips'
 import { PanelLink } from '../inspector/panelNav'
+import { PlayStoryButton } from './ReplayBar'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
@@ -58,6 +59,11 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         <dt>Elements</dt>
         <dd>{count}</dd>
       </dl>
+      {diagram.kind === 'domain-story' ? (
+        <p className="dg-replay">
+          <PlayStoryButton frameId={diagram.frame.id} /> <span className="muted">sentence by sentence, as in Egon.io</span>
+        </p>
+      ) : null}
       <FreezeToggle board={board} diagramKey={diagram.key} />
       {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
     </section>

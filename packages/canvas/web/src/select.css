@@ -9,3 +9,44 @@
 .react-flow__node.selected .item {
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--marker) 22%, transparent);
 }
+
+/* Frames, lanes, kanban columns and screens (boardToFlow passThrough): the body lets the pointer through to the canvas,
+   so a drag on a container's empty area draws a selection box; the title bar and the border move it (docs/canvas.md). */
+.react-flow__node.awd-container,
+.react-flow__node.awd-container .tether-handle {
+  /* React Flow sets pointer-events inline on the node wrapper */
+  pointer-events: none !important;
+}
+.react-flow__node.awd-container .drag-handle,
+.react-flow__node.awd-container .react-flow__resize-control,
+.react-flow__node.awd-container .nodrag,
+.react-flow__node.awd-container .ui-finding-mark {
+  pointer-events: auto;
+}
+.react-flow__node.awd-container .drag-handle {
+  cursor: grab;
+}
+.react-flow__node.awd-container.dragging .drag-handle {
+  cursor: grabbing;
+}
+/* the border, as four 8px grab strips straddling the edge */
+.rim {
+  position: absolute;
+  z-index: 1;
+}
+.rim-t,
+.rim-b {
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+.rim-l,
+.rim-r {
+  top: 0;
+  bottom: 0;
+  width: 8px;
+}
+.rim-t { top: -4px; }
+.rim-b { bottom: -4px; }
+.rim-l { left: -4px; }
+.rim-r { right: -4px; }

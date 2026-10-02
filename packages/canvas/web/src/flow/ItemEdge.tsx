@@ -188,6 +188,9 @@ export function ItemEdge(props: EdgeProps) {
   const targetSelected = tgtNode?.selected
   const focus = useWireFocus(source, target, selected)
   const quiet = (isTrace && !selected && !editing && !sourceSelected && !targetSelected) || (focus === 'off' && !editing)
+  // a domain story being replayed: the current sentence's number and verb stand out, what is still to come is faint (flow/replay.ts)
+  const replayed = (data as { replay?: string } | undefined)?.replay
+  const rc = replayed ? ` replay-${replayed}` : ''
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || editing) return
@@ -216,7 +219,7 @@ export function ItemEdge(props: EdgeProps) {
       <BaseEdge id={id} path={path} markerEnd={markerEnd} interactionWidth={16} style={style} className={focus ? `wire-focus-${focus}` : undefined} />
       {seq !== undefined && (
         <EdgeLabelRenderer>
-          <div className="ds-seq nodrag nopan" aria-label={`activity ${seq}`} style={{ transform: `translate(-50%, -50%) translate(${seqAt.x}px, ${seqAt.y}px)` }}>
+          <div className={`ds-seq nodrag nopan${rc}`} aria-label={`activity ${seq}`} style={{ transform: `translate(-50%, -50%) translate(${seqAt.x}px, ${seqAt.y}px)` }}>
             {seq}
           </div>
         </EdgeLabelRenderer>
@@ -226,7 +229,7 @@ export function ItemEdge(props: EdgeProps) {
           {text || editing || tag ? (
             <div
               data-edge-id={id}
-              className={`edge-label nodrag nopan ${ds ? 'ds-verb' : ''} ${(data as { item?: Item } | undefined)?.item?.role === 'trace' ? 'trace' : ''} ${selected ? 'selected' : ''} ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}
+              className={`edge-label nodrag nopan${rc} ${ds ? 'ds-verb' : ''} ${(data as { item?: Item } | undefined)?.item?.role === 'trace' ? 'trace' : ''} ${selected ? 'selected' : ''} ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}
               style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
               title="Drag to reroute, double-click to edit"
               {...grip}

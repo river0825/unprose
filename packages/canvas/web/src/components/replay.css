@@ -1,0 +1,61 @@
+/* Domain-story replay (docs/diagrams.md §6b "Replay"): the floating controls and how the board looks meanwhile. */
+.replay-bar {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 2600;
+  width: max-content;
+  max-width: min(760px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-2);
+  border-top: 3px solid var(--marker);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lift);
+  font-size: 13.5px;
+}
+.replay-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.replay-title { flex: 1 1 auto; min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.replay-kicker { font-weight: 600; color: var(--ink); }
+.replay-count { font-size: 13px; color: var(--ink); padding: 2px 8px; border-radius: 999px; background: var(--chrome); border: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+.replay-buttons { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.replay-bar button.icon { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; padding: 0 8px; }
+.replay-speed { min-height: 32px; padding: 0 4px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--chrome); font-size: 12.5px; }
+.replay-ghost-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+.replay-ghost-toggle input { margin: 0; }
+.replay-stop { margin-left: auto; }
+.replay-sentence { display: flex; flex-direction: column; gap: 2px; font-size: 15px; line-height: 1.35; font-weight: 500; overflow-wrap: anywhere; }
+.replay-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .replay-bar { left: 16px; right: 16px; top: 8px; transform: none; width: auto; max-width: none; padding: 6px 8px 8px; }
+  .replay-title { flex: 1 1 0; max-width: none; order: 0; }
+  .replay-count { order: 1; }
+  .replay-stop { order: 2; margin-left: 0; }
+  .replay-buttons { order: 3; flex: 1 1 100%; justify-content: space-between; }
+  .replay-bar button.icon { min-width: 32px; padding: 0 6px; }
+  .replay-sentence { font-size: 14px; }
+}
+
+/* the board during a replay — Egon.io: the current activity's line thick, its verb bold, its number filled */
+.react-flow__node.replay-ghost, .react-flow__edge.replay-ghost { opacity: 0.13; pointer-events: none; }
+.ds-seq.replay-ghost, .edge-label.replay-ghost { opacity: 0.13; }
+.ds-seq.replay-current { background: var(--marker-soft); border-color: var(--marker); border-width: 2px; color: var(--ink); font-weight: 700; line-height: 18px; }
+.edge-label.ds-verb.replay-current { font-weight: 700; }
+.react-flow__node.replay-current .item.ds-icon .ds-glyph { color: var(--marker); }
+.react-flow__node.replay-current .item.ds-icon .ds-name { font-weight: 600; }
+.react-flow__node.replay-current > .item, .react-flow__node.replay-told > .item { transition: opacity 200ms var(--ease); }
+@media (prefers-reduced-motion: no-preference) {
+  .react-flow__node.replay-current .item.ds-icon { animation: replay-in 260ms var(--ease); }
+}
+@keyframes replay-in { from { opacity: 0.2; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* "Play story" on a domain-story frame's header */
+.frame-title .replay-play { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 1px 8px; font-size: 12px; margin-left: 6px; border-radius: 999px; }
+.frame-title .replay-play svg { flex: none; }
+.dg-replay { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; }

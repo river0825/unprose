@@ -9,7 +9,7 @@ import { uiFindingsOf } from '../../diagrams/uiFindings'
 import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
-import { Shell } from './index'
+import { Rims, Shell } from './index'
 import '../../ui-mock.css'
 
 interface UiItem { id?: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean }
@@ -174,7 +174,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
   switch (u.type) {
     case 'screen':
       return (
-        <div className="ui-screen-name">
+        <div className="ui-screen-name drag-handle">
           <Words item={item} />
           <span className="ui-screen-size">
             {u.device ?? ''} · {Math.round(item.w)}×{Math.round(item.h)}
@@ -486,6 +486,7 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
       style={style}
       onDouble={editable ? undefined : () => undefined}
     >
+      {(u.type === 'screen' || u.type === 'section') && <Rims />}
       <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id)}</ValueCtx.Provider>
       {findings.length ? (
         <span

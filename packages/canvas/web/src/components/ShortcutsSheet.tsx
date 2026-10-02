@@ -33,7 +33,9 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
     title: 'Move and select',
     rows: [
       [`${MOD} K`, 'Go to a frame or item (also “Go to…” in the header)'],
-      ['Drag on empty paper', 'Select everything the box touches'],
+      ['Drag on empty paper, or inside a frame, lane or column', 'Select everything the box touches (a frame only when the box holds all of it)'],
+      ['Shift drag', 'Add what the box touches to the selection'],
+      ['Drag a frame, lane or column by its title or border', 'Move it with everything inside'],
       [`Shift or ${MOD} click`, 'Add an item to the selection, or take it out'],
       ['Space drag, middle-button drag, two-finger scroll', 'Pan the board'],
       ['Arrow keys', 'Nudge the selection 10 px'],

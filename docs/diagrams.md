@@ -196,6 +196,37 @@ annotations: [{ on: clerk, text: Cash only }]
   `toLabel` field (Egon labels both arrows), treating a sentence without a work object as an actor → actor
   activity.
 
+### Replay
+
+A domain story is told one sentence at a time, and the board can tell it that way too — as Egon.io's **Replay**
+does (its `tools/replay` in github.com/WPS/egon.io). Start it with **Play story** on a domain-story frame's header,
+in the frame's side panel, or from the right-click menu of the frame or anything in it.
+
+- **One step per sequence number.** Step 1 shows only sentence 1: its actor, the numbered activity arrow, the work
+  object, the onward arrow and the receiving actor. **Next** reveals the next sentence; everything told earlier
+  stays, everything later is hidden. Sentences that **share a number** (parallel activities) are **one step**, as
+  in Egon. Gaps in the numbering are simply skipped.
+- **The current sentence stands out** the way Egon marks it — the activity line thick, its verb bold, its number
+  circle filled — and, beyond Egon, the pictograms of the sentence take the accent colour and a bold name.
+- **Annotations** appear with what they explain; a **group outline** appears when its first member does; a
+  comment about a story item appears with the item; an actor in no sentence is not shown during the replay (Egon
+  hides it too). The legend, the scope line and anything else in the frame that is not part of the story stay.
+- **Controls** (a floating bar at the top of the canvas): ⏮ restart, ◀ previous, ▶ next, the step "3 / 8", the
+  sentence(s) read out as the Inspector reads them ("③ Bea assigns claim form to Clerk"), **auto-play** at
+  1.5 / 2.5 / 4 s per sentence, **Ghost** (show what is still to come faintly instead of hiding it), ✕ stop.
+  Keys: → ↓ Space PageDown next, ← ↑ PageUp previous (Egon uses the arrow keys; Space and PageUp / PageDown are what
+  presentation clickers send), Home / End first / last, P play / pause, Esc stop.
+- **The view follows** gently: at the start it fits the whole story; on each step it moves only when the current
+  sentence is out of view, and never zooms in further than you had.
+- **Purely a way of looking**: nothing is stored on the board and other viewers are not affected; while it plays
+  the story's items cannot be dragged and the board's edit keys wait. **Copy as image** during a replay copies
+  what is visible (hidden sentences are not drawn; ghosted ones come out faint).
+- **Differences from Egon.io**, on purpose: Egon refuses to start when a number is missing ("Sentence 3 is
+  missing") — we skip the gap, since lint already reports it; Egon hides groups unless "show groups" is on and then
+  shows them all from step 1 — we bring each group in with its first member; Egon has no auto-play, ghost mode,
+  restart / last-step keys or spoken-out sentence; Egon's HTML presentation export (one slide per sentence) is not
+  copied. Not yet: presenting to everyone on the board at once.
+
 ## 6c. UI mock — real-looking screens to discuss, like a Figma frame
 
 A wireframe (low-fi boxes on a 12-column grid) settles *what is on a page*. A **UI mock** shows *what it will look
