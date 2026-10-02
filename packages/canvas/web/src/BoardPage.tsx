@@ -28,6 +28,7 @@ import { ShortcutsSheet } from './components/ShortcutsSheet'
 import { SidePanel } from './components/SidePanel'
 import { EditContext, type EditApi } from './flow/EditContext'
 import { absolutePosition, boardToFlow, containerAt, isContainer, threadOf, threadRoot, type ItemNode } from './flow/boardToFlow'
+import { alignKanban, snapColumns } from './flow/kanbanAlign'
 import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
@@ -120,7 +121,9 @@ function BoardInner({ id }: { id: string }) {
     if (draftComment && editingId !== draftComment.id) setDraftComment(null)
   }, [draftComment, editingId])
   const shown = useMemo(() => (board && draftComment ? { ...board, items: { ...board.items, [draftComment.id]: draftComment } } : board), [board, draftComment])
-  const derived = useMemo(() => (shown ? boardToFlow(shown, pulse, openComments) : { nodes: [], edges: [] as Edge[] }), [shown, pulse, openComments])
+  // kanban columns line up and grow to hold their cards, as shown (flow/kanbanAlign.ts); geometry for drags and resizes is read from this too
+  const laid = useMemo(() => (shown ? alignKanban(shown) : shown), [shown])
+  const derived = useMemo(() => (laid ? boardToFlow(laid, pulse, openComments) : { nodes: [], edges: [] as Edge[] }), [laid, pulse, openComments])
   useEffect(() => {
     setNodes((prev) => {
       const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
@@ -238,7 +241,7 @@ function BoardInner({ id }: { id: string }) {
         const it = board.items[n.id]
         if (!it) continue
         // n.position is relative to its React Flow parent (which mirrors it.parent)
-        const abs = absolutePosition(board, n.id, n.position)
+        const abs = absolutePosition(laid ?? board, n.id, n.position)
         const patch: Partial<Item> = {}
         if (Math.round(abs.x) !== Math.round(it.x) || Math.round(abs.y) !== Math.round(it.y)) {
           patch.x = Math.round(abs.x)
@@ -249,7 +252,7 @@ function BoardInner({ id }: { id: string }) {
           // re-parent when the item's centre lands in a different container
           const cx = abs.x + it.w / 2
           const cy = abs.y + it.h / 2
-          const container = containerAt(board, cx, cy, n.id)
+          const container = containerAt(laid ?? board, cx, cy, n.id)
           const nextParent = container?.id
           if ((it.parent ?? undefined) !== nextParent) patch.parent = nextParent
         }
@@ -266,11 +269,17 @@ function BoardInner({ id }: { id: string }) {
           patches.set(it.id, { ...patches.get(it.id), x: it.x + dx, y: it.y + dy })
         }
       }
+      // a dropped kanban column snaps into its place in the row (and the others make room)
+      if (moved.some((m) => board.items[m.id]?.type === 'lane' && board.items[m.id]?.role === 'column')) {
+        const after: Board = { ...board, items: { ...board.items } }
+        for (const [id, p] of patches) after.items[id] = { ...after.items[id], ...p }
+        for (const { id, patch } of snapColumns(board, after, moved.map((m) => m.id))) patches.set(id, { ...patches.get(id), ...patch })
+      }
       const ops: Op[] = [...patches].map(([id, patch]) => ({ kind: 'update', id, patch }))
       const names = moved.map((m) => board.items[m.id]?.text?.trim()).filter(Boolean)
       void commit(ops, moved.length === 1 ? `moved ${names[0] ? `'${names[0].slice(0, 40)}'` : 'an item'}` : `moved ${moved.length} items`)
     },
-    [board, commit],
+    [board, laid, commit],
   )
 
   const onConnect = useCallback(
@@ -415,7 +424,7 @@ function BoardInner({ id }: { id: string }) {
     (iid: string, rect: { x: number; y: number; width: number; height: number }) => {
       const it = board?.items[iid]
       if (!board || !it) return
-      const abs = absolutePosition(board, iid, rect)
+      const abs = absolutePosition(laid ?? board, iid, rect)
       const next = { x: Math.round(abs.x), y: Math.round(abs.y), w: Math.round(rect.width), h: Math.round(rect.height) }
       const patch: Partial<Item> = {}
       for (const k of ['x', 'y', 'w', 'h'] as const) if (next[k] !== Math.round(it[k])) patch[k] = next[k]
@@ -423,7 +432,7 @@ function BoardInner({ id }: { id: string }) {
       if (!Object.keys(patch).length) return
       void commit([{ kind: 'update', id: iid, patch }], `resized '${(it.text ?? it.type).slice(0, 40)}'`)
     },
-    [board, commit],
+    [board, laid, commit],
   )
 
   const deleteItems = useCallback(
@@ -853,7 +862,7 @@ function BoardInner({ id }: { id: string }) {
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
-            <FrozenHeaders board={board} />
+            <FrozenHeaders board={laid ?? board} />
             <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
           </ReactFlow>
         </EditContext.Provider>

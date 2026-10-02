@@ -6,6 +6,14 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-02
+
+### Changed
+- **Kanban columns line up like their cards.** The columns of a kanban (in a frame, or a kanban board) stand side by
+  side in left → right order on one row; drag a column to reorder it and it snaps into place. A column grows to hold
+  all its cards — a long list no longer runs past its bottom — every column is as tall as the tallest, and the frame
+  grows to hold them.
+
 ## [0.7.0] — 2026-10-01
 
 ### Added
@@ -286,7 +294,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/river0825/unprose/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/river0825/unprose/compare/v0.6.7...v0.7.0
 [0.6.7]: https://github.com/river0825/unprose/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/river0825/unprose/compare/v0.6.5...v0.6.6
