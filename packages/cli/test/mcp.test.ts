@@ -48,8 +48,9 @@ test('the server is called unprose and says what it is for', () => {
 
 test('it lists the canvas tools, the design tools and unprose_help', async () => {
   const names = (await client.listTools()).tools.map((t) => t.name)
-  for (const n of ['unprose_help', 'canvas_create_board', 'canvas_wait', 'canvas_focus', 'design_lint', 'design_draw', 'design_propose_stories', 'design_egon']) assert.ok(names.includes(n), n)
-  assert.ok(names.length <= 14, `a short tool list (${names.length})`)
+  for (const n of ['unprose_help', 'canvas_create_board', 'canvas_wait', 'canvas_focus', 'design_lint', 'design_draw', 'design_propose_stories', 'design_egon', 'canvas_files', 'canvas_propose_edit']) assert.ok(names.includes(n), n)
+  // 14 before proposals (canvas_files, canvas_propose_edit); keep it short
+  assert.ok(names.length <= 16, `a short tool list (${names.length})`)
 })
 
 test('unprose_help explains the diagrams, the tools and how to start', async () => {

@@ -30,8 +30,9 @@ export function canvasBoardHttp(opts: CanvasBoardHttpOptions = {}): CanvasBoard 
       return req<{ changes: BoardChange[]; seq: number }>('GET', `${b(id)}/changes?since=${since}`)
     },
     async wait(id, since, timeoutMs) {
-      // wake on comments/adds only; moves are layout, not requests
-      await req('GET', `${b(id)}/wait?since=${since}&timeout=${timeoutMs}&quiet=500&author=user&wake=meaningful`)
+      // wake on comments/adds only; moves are layout, not requests. `others`: the person and other (named)
+      // agents — a remote agent's edit proposal is a request too (docs/studio.md §10) — never studio itself
+      await req('GET', `${b(id)}/wait?since=${since}&timeout=${timeoutMs}&quiet=500&author=others&wake=meaningful`)
     },
     async add(id, items: NewItem[], note) {
       // explicit ids: freeform ids hash the text, so two identical acks would collide

@@ -12,6 +12,7 @@ import { timeAgo } from '../time'
 import { AgentStatus, SignLine } from './AgentStatus'
 import '../inspector.css'
 import { StudioHint } from './StudioControl'
+import { EditProposal, editOf, signedBy } from './EditProposal'
 
 interface Props {
   board: Board
@@ -133,9 +134,10 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
               </>
             )}
           </p>
+          <EditProposal root={chat.root} answered={chat.messages.some((m) => m.id !== chat.root.id && m.createdBy === 'user')} onReply={onReply} />
           <ol className="chat-msgs">
             {chat.messages.map((m) => (
-              <Bubble key={m.id} m={m} tag={m.id === chat.root.id && chat.ai ? `${(chat.root.data?.discuss as { proposal?: unknown } | undefined)?.proposal ? 'wire change · ' : ''}asked AI${chat.model ? ` · ${chat.model}` : ''}` : undefined} />
+              <Bubble key={m.id} m={m} tag={m.id === chat.root.id && chat.ai ? rootTag(chat) : undefined} />
             ))}
           </ol>
           <AgentStatus root={chat.root} messages={chat.messages} />
@@ -172,13 +174,21 @@ export function ChatThread({ board, chat, open, onToggle, onReply, onLocate }: {
   )
 }
 
+/** The root's tag: what kind of request it is. An agent's proposal did not "ask AI" — it is the AI's. */
+function rootTag(chat: Chat): string {
+  if (chat.root.createdBy === 'agent' && editOf(chat.root)) return 'proposal'
+  return `${(chat.root.data?.discuss as { proposal?: unknown } | undefined)?.proposal ? 'wire change · ' : editOf(chat.root) ? 'edit · ' : ''}asked AI${chat.model ? ` · ${chat.model}` : ''}`
+}
+
 function Bubble({ m, tag }: { m: Item; tag?: string }) {
   const mine = m.createdBy === 'user'
   const anchor = anchorOf(m)
+  // agents are named when the canvas knows the name (a token, UNPROSE_AGENT_NAME): "codex-laptop", else "Agent"
+  const who = mine ? 'You' : (signedBy(m) ?? 'Agent')
   return (
     <li className={`chat-msg ${mine ? 'mine' : 'theirs'}`}>
       <div className="chat-who">
-        {mine ? 'You' : 'Agent'} · {timeAgo(m.updatedAt)}
+        {who} · {timeAgo(m.updatedAt)}
         {tag && <span className="insp-tag">{tag}</span>}
       </div>
       {anchor && (

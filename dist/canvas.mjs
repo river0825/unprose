@@ -2279,7 +2279,7 @@ var require_websocket = __commonJS({
     var http2 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash3 } = __require("crypto");
+    var { randomBytes, createHash: createHash4 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -2960,7 +2960,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash3("sha1").update(key + GUID).digest("base64");
+        const digest = createHash4("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -3329,7 +3329,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http2 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash3 } = __require("crypto");
+    var { createHash: createHash4 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -3636,7 +3636,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash3("sha1").update(key + GUID).digest("base64");
+        const digest = createHash4("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -3838,24 +3838,24 @@ var require_identity = __commonJS({
     var SCALAR = /* @__PURE__ */ Symbol.for("yaml.scalar");
     var SEQ = /* @__PURE__ */ Symbol.for("yaml.seq");
     var NODE_TYPE = /* @__PURE__ */ Symbol.for("yaml.node.type");
-    var isAlias = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === ALIAS;
-    var isDocument = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === DOC;
-    var isMap = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === MAP;
-    var isPair = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === PAIR;
-    var isScalar = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === SCALAR;
-    var isSeq = (node3) => !!node3 && typeof node3 === "object" && node3[NODE_TYPE] === SEQ;
-    function isCollection(node3) {
-      if (node3 && typeof node3 === "object")
-        switch (node3[NODE_TYPE]) {
+    var isAlias = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === ALIAS;
+    var isDocument = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === DOC;
+    var isMap = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === MAP;
+    var isPair = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === PAIR;
+    var isScalar = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === SCALAR;
+    var isSeq = (node4) => !!node4 && typeof node4 === "object" && node4[NODE_TYPE] === SEQ;
+    function isCollection(node4) {
+      if (node4 && typeof node4 === "object")
+        switch (node4[NODE_TYPE]) {
           case MAP:
           case SEQ:
             return true;
         }
       return false;
     }
-    function isNode(node3) {
-      if (node3 && typeof node3 === "object")
-        switch (node3[NODE_TYPE]) {
+    function isNode(node4) {
+      if (node4 && typeof node4 === "object")
+        switch (node4[NODE_TYPE]) {
           case ALIAS:
           case MAP:
           case SCALAR:
@@ -3864,7 +3864,7 @@ var require_identity = __commonJS({
         }
       return false;
     }
-    var hasAnchor = (node3) => (isScalar(node3) || isCollection(node3)) && !!node3.anchor;
+    var hasAnchor = (node4) => (isScalar(node4) || isCollection(node4)) && !!node4.anchor;
     exports.ALIAS = ALIAS;
     exports.DOC = DOC;
     exports.MAP = MAP;
@@ -3892,98 +3892,98 @@ var require_visit = __commonJS({
     var BREAK = /* @__PURE__ */ Symbol("break visit");
     var SKIP = /* @__PURE__ */ Symbol("skip children");
     var REMOVE = /* @__PURE__ */ Symbol("remove node");
-    function visit2(node3, visitor) {
+    function visit2(node4, visitor) {
       const visitor_ = initVisitor(visitor);
-      if (identity.isDocument(node3)) {
-        const cd = visit_(null, node3.contents, visitor_, Object.freeze([node3]));
+      if (identity.isDocument(node4)) {
+        const cd = visit_(null, node4.contents, visitor_, Object.freeze([node4]));
         if (cd === REMOVE)
-          node3.contents = null;
+          node4.contents = null;
       } else
-        visit_(null, node3, visitor_, Object.freeze([]));
+        visit_(null, node4, visitor_, Object.freeze([]));
     }
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node3, visitor, path12) {
-      const ctrl = callVisitor(key, node3, visitor, path12);
+    function visit_(key, node4, visitor, path12) {
+      const ctrl = callVisitor(key, node4, visitor, path12);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
         replaceNode(key, path12, ctrl);
         return visit_(key, ctrl, visitor, path12);
       }
       if (typeof ctrl !== "symbol") {
-        if (identity.isCollection(node3)) {
-          path12 = Object.freeze(path12.concat(node3));
-          for (let i = 0; i < node3.items.length; ++i) {
-            const ci = visit_(i, node3.items[i], visitor, path12);
+        if (identity.isCollection(node4)) {
+          path12 = Object.freeze(path12.concat(node4));
+          for (let i = 0; i < node4.items.length; ++i) {
+            const ci = visit_(i, node4.items[i], visitor, path12);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
               return BREAK;
             else if (ci === REMOVE) {
-              node3.items.splice(i, 1);
+              node4.items.splice(i, 1);
               i -= 1;
             }
           }
-        } else if (identity.isPair(node3)) {
-          path12 = Object.freeze(path12.concat(node3));
-          const ck = visit_("key", node3.key, visitor, path12);
+        } else if (identity.isPair(node4)) {
+          path12 = Object.freeze(path12.concat(node4));
+          const ck = visit_("key", node4.key, visitor, path12);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
-            node3.key = null;
-          const cv = visit_("value", node3.value, visitor, path12);
+            node4.key = null;
+          const cv = visit_("value", node4.value, visitor, path12);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
-            node3.value = null;
+            node4.value = null;
         }
       }
       return ctrl;
     }
-    async function visitAsync(node3, visitor) {
+    async function visitAsync(node4, visitor) {
       const visitor_ = initVisitor(visitor);
-      if (identity.isDocument(node3)) {
-        const cd = await visitAsync_(null, node3.contents, visitor_, Object.freeze([node3]));
+      if (identity.isDocument(node4)) {
+        const cd = await visitAsync_(null, node4.contents, visitor_, Object.freeze([node4]));
         if (cd === REMOVE)
-          node3.contents = null;
+          node4.contents = null;
       } else
-        await visitAsync_(null, node3, visitor_, Object.freeze([]));
+        await visitAsync_(null, node4, visitor_, Object.freeze([]));
     }
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node3, visitor, path12) {
-      const ctrl = await callVisitor(key, node3, visitor, path12);
+    async function visitAsync_(key, node4, visitor, path12) {
+      const ctrl = await callVisitor(key, node4, visitor, path12);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
         replaceNode(key, path12, ctrl);
         return visitAsync_(key, ctrl, visitor, path12);
       }
       if (typeof ctrl !== "symbol") {
-        if (identity.isCollection(node3)) {
-          path12 = Object.freeze(path12.concat(node3));
-          for (let i = 0; i < node3.items.length; ++i) {
-            const ci = await visitAsync_(i, node3.items[i], visitor, path12);
+        if (identity.isCollection(node4)) {
+          path12 = Object.freeze(path12.concat(node4));
+          for (let i = 0; i < node4.items.length; ++i) {
+            const ci = await visitAsync_(i, node4.items[i], visitor, path12);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
               return BREAK;
             else if (ci === REMOVE) {
-              node3.items.splice(i, 1);
+              node4.items.splice(i, 1);
               i -= 1;
             }
           }
-        } else if (identity.isPair(node3)) {
-          path12 = Object.freeze(path12.concat(node3));
-          const ck = await visitAsync_("key", node3.key, visitor, path12);
+        } else if (identity.isPair(node4)) {
+          path12 = Object.freeze(path12.concat(node4));
+          const ck = await visitAsync_("key", node4.key, visitor, path12);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
-            node3.key = null;
-          const cv = await visitAsync_("value", node3.value, visitor, path12);
+            node4.key = null;
+          const cv = await visitAsync_("value", node4.value, visitor, path12);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
-            node3.value = null;
+            node4.value = null;
         }
       }
       return ctrl;
@@ -4006,32 +4006,32 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node3, visitor, path12) {
+    function callVisitor(key, node4, visitor, path12) {
       if (typeof visitor === "function")
-        return visitor(key, node3, path12);
-      if (identity.isMap(node3))
-        return visitor.Map?.(key, node3, path12);
-      if (identity.isSeq(node3))
-        return visitor.Seq?.(key, node3, path12);
-      if (identity.isPair(node3))
-        return visitor.Pair?.(key, node3, path12);
-      if (identity.isScalar(node3))
-        return visitor.Scalar?.(key, node3, path12);
-      if (identity.isAlias(node3))
-        return visitor.Alias?.(key, node3, path12);
+        return visitor(key, node4, path12);
+      if (identity.isMap(node4))
+        return visitor.Map?.(key, node4, path12);
+      if (identity.isSeq(node4))
+        return visitor.Seq?.(key, node4, path12);
+      if (identity.isPair(node4))
+        return visitor.Pair?.(key, node4, path12);
+      if (identity.isScalar(node4))
+        return visitor.Scalar?.(key, node4, path12);
+      if (identity.isAlias(node4))
+        return visitor.Alias?.(key, node4, path12);
       return void 0;
     }
-    function replaceNode(key, path12, node3) {
+    function replaceNode(key, path12, node4) {
       const parent = path12[path12.length - 1];
       if (identity.isCollection(parent)) {
-        parent.items[key] = node3;
+        parent.items[key] = node4;
       } else if (identity.isPair(parent)) {
         if (key === "key")
-          parent.key = node3;
+          parent.key = node4;
         else
-          parent.value = node3;
+          parent.value = node4;
       } else if (identity.isDocument(parent)) {
-        parent.contents = node3;
+        parent.contents = node4;
       } else {
         const pt = identity.isAlias(parent) ? "alias" : "scalar";
         throw new Error(`Cannot replace node with ${pt} parent`);
@@ -4191,9 +4191,9 @@ var require_directives = __commonJS({
         let tagNames;
         if (doc && tagEntries.length > 0 && identity.isNode(doc.contents)) {
           const tags = {};
-          visit2.visit(doc.contents, (_key, node3) => {
-            if (identity.isNode(node3) && node3.tag)
-              tags[node3.tag] = true;
+          visit2.visit(doc.contents, (_key, node4) => {
+            if (identity.isNode(node4) && node4.tag)
+              tags[node4.tag] = true;
           });
           tagNames = Object.keys(tags);
         } else
@@ -4230,9 +4230,9 @@ var require_anchors = __commonJS({
     function anchorNames(root) {
       const anchors = /* @__PURE__ */ new Set();
       visit2.visit(root, {
-        Value(_key, node3) {
-          if (node3.anchor)
-            anchors.add(node3.anchor);
+        Value(_key, node4) {
+          if (node4.anchor)
+            anchors.add(node4.anchor);
         }
       });
       return anchors;
@@ -4436,20 +4436,20 @@ var require_Alias = __commonJS({
         } else {
           nodes = [];
           visit2.visit(doc, {
-            Node: (_key, node3) => {
-              if (identity.isAlias(node3) || identity.hasAnchor(node3))
-                nodes.push(node3);
+            Node: (_key, node4) => {
+              if (identity.isAlias(node4) || identity.hasAnchor(node4))
+                nodes.push(node4);
             }
           });
           if (ctx)
             ctx.aliasResolveCache = nodes;
         }
         let found = void 0;
-        for (const node3 of nodes) {
-          if (node3 === this)
+        for (const node4 of nodes) {
+          if (node4 === this)
             break;
-          if (node3.anchor === this.source)
-            found = node3;
+          if (node4.anchor === this.source)
+            found = node4;
         }
         if (found && ctx) {
           const { anchors: anchors2, doc: doc2, maxAliasCount } = ctx;
@@ -4498,22 +4498,22 @@ var require_Alias = __commonJS({
         return src;
       }
     };
-    function getAliasCount(doc, node3, anchors2) {
-      if (identity.isAlias(node3)) {
-        const source = node3.resolve(doc);
+    function getAliasCount(doc, node4, anchors2) {
+      if (identity.isAlias(node4)) {
+        const source = node4.resolve(doc);
         const anchor2 = anchors2 && source && anchors2.get(source);
         return anchor2 ? anchor2.count * anchor2.aliasCount : 0;
-      } else if (identity.isCollection(node3)) {
+      } else if (identity.isCollection(node4)) {
         let count = 0;
-        for (const item of node3.items) {
+        for (const item of node4.items) {
           const c = getAliasCount(doc, item, anchors2);
           if (c > count)
             count = c;
         }
         return count;
-      } else if (identity.isPair(node3)) {
-        const kc = getAliasCount(doc, node3.key, anchors2);
-        const vc = getAliasCount(doc, node3.value, anchors2);
+      } else if (identity.isPair(node4)) {
+        const kc = getAliasCount(doc, node4.key, anchors2);
+        const vc = getAliasCount(doc, node4.value, anchors2);
         return Math.max(kc, vc);
       }
       return 1;
@@ -4603,10 +4603,10 @@ var require_createNode = __commonJS({
           value = value.toJSON();
         }
         if (!value || typeof value !== "object") {
-          const node4 = new Scalar.Scalar(value);
+          const node5 = new Scalar.Scalar(value);
           if (ref2)
-            ref2.node = node4;
-          return node4;
+            ref2.node = node5;
+          return node5;
         }
         tagObj = value instanceof Map ? schema[identity.MAP] : Symbol.iterator in Object(value) ? schema[identity.SEQ] : schema[identity.MAP];
       }
@@ -4614,14 +4614,14 @@ var require_createNode = __commonJS({
         onTagObj(tagObj);
         delete ctx.onTagObj;
       }
-      const node3 = tagObj?.createNode ? tagObj.createNode(ctx.schema, value, ctx) : typeof tagObj?.nodeClass?.from === "function" ? tagObj.nodeClass.from(ctx.schema, value, ctx) : new Scalar.Scalar(value);
+      const node4 = tagObj?.createNode ? tagObj.createNode(ctx.schema, value, ctx) : typeof tagObj?.nodeClass?.from === "function" ? tagObj.nodeClass.from(ctx.schema, value, ctx) : new Scalar.Scalar(value);
       if (tagName)
-        node3.tag = tagName;
+        node4.tag = tagName;
       else if (!tagObj.default)
-        node3.tag = tagObj.tag;
+        node4.tag = tagObj.tag;
       if (ref2)
-        ref2.node = node3;
-      return node3;
+        ref2.node = node4;
+      return node4;
     }
     exports.createNode = createNode;
   }
@@ -4691,10 +4691,10 @@ var require_Collection = __commonJS({
           this.add(value);
         else {
           const [key, ...rest] = path12;
-          const node3 = this.get(key, true);
-          if (identity.isCollection(node3))
-            node3.addIn(rest, value);
-          else if (node3 === void 0 && this.schema)
+          const node4 = this.get(key, true);
+          if (identity.isCollection(node4))
+            node4.addIn(rest, value);
+          else if (node4 === void 0 && this.schema)
             this.set(key, collectionFromPath(this.schema, rest, value));
           else
             throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
@@ -4708,9 +4708,9 @@ var require_Collection = __commonJS({
         const [key, ...rest] = path12;
         if (rest.length === 0)
           return this.delete(key);
-        const node3 = this.get(key, true);
-        if (identity.isCollection(node3))
-          return node3.deleteIn(rest);
+        const node4 = this.get(key, true);
+        if (identity.isCollection(node4))
+          return node4.deleteIn(rest);
         else
           throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
       }
@@ -4721,17 +4721,17 @@ var require_Collection = __commonJS({
        */
       getIn(path12, keepScalar) {
         const [key, ...rest] = path12;
-        const node3 = this.get(key, true);
+        const node4 = this.get(key, true);
         if (rest.length === 0)
-          return !keepScalar && identity.isScalar(node3) ? node3.value : node3;
+          return !keepScalar && identity.isScalar(node4) ? node4.value : node4;
         else
-          return identity.isCollection(node3) ? node3.getIn(rest, keepScalar) : void 0;
+          return identity.isCollection(node4) ? node4.getIn(rest, keepScalar) : void 0;
       }
       hasAllNullValues(allowScalar) {
-        return this.items.every((node3) => {
-          if (!identity.isPair(node3))
+        return this.items.every((node4) => {
+          if (!identity.isPair(node4))
             return false;
-          const n2 = node3.value;
+          const n2 = node4.value;
           return n2 == null || allowScalar && identity.isScalar(n2) && n2.value == null && !n2.commentBefore && !n2.comment && !n2.tag;
         });
       }
@@ -4742,8 +4742,8 @@ var require_Collection = __commonJS({
         const [key, ...rest] = path12;
         if (rest.length === 0)
           return this.has(key);
-        const node3 = this.get(key, true);
-        return identity.isCollection(node3) ? node3.hasIn(rest) : false;
+        const node4 = this.get(key, true);
+        return identity.isCollection(node4) ? node4.hasIn(rest) : false;
       }
       /**
        * Sets a value in this collection. For `!!set`, `value` needs to be a
@@ -4754,10 +4754,10 @@ var require_Collection = __commonJS({
         if (rest.length === 0) {
           this.set(key, value);
         } else {
-          const node3 = this.get(key, true);
-          if (identity.isCollection(node3))
-            node3.setIn(rest, value);
-          else if (node3 === void 0 && this.schema)
+          const node4 = this.get(key, true);
+          if (identity.isCollection(node4))
+            node4.setIn(rest, value);
+          else if (node4 === void 0 && this.schema)
             this.set(key, collectionFromPath(this.schema, rest, value));
           else
             throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
@@ -5283,16 +5283,16 @@ var require_stringify = __commonJS({
       }
       return tagObj;
     }
-    function stringifyProps(node3, tagObj, { anchors: anchors$1, doc }) {
+    function stringifyProps(node4, tagObj, { anchors: anchors$1, doc }) {
       if (!doc.directives)
         return "";
       const props = [];
-      const anchor2 = (identity.isScalar(node3) || identity.isCollection(node3)) && node3.anchor;
+      const anchor2 = (identity.isScalar(node4) || identity.isCollection(node4)) && node4.anchor;
       if (anchor2 && anchors.anchorIsValid(anchor2)) {
         anchors$1.add(anchor2);
         props.push(`&${anchor2}`);
       }
-      const tag = node3.tag ?? (tagObj.default ? null : tagObj.tag);
+      const tag = node4.tag ?? (tagObj.default ? null : tagObj.tag);
       if (tag)
         props.push(doc.directives.tagString(tag));
       return props.join(" ");
@@ -5314,15 +5314,15 @@ var require_stringify = __commonJS({
         }
       }
       let tagObj = void 0;
-      const node3 = identity.isNode(item) ? item : ctx.doc.createNode(item, { onTagObj: (o) => tagObj = o });
-      tagObj ?? (tagObj = getTagObject(ctx.doc.schema.tags, node3));
-      const props = stringifyProps(node3, tagObj, ctx);
+      const node4 = identity.isNode(item) ? item : ctx.doc.createNode(item, { onTagObj: (o) => tagObj = o });
+      tagObj ?? (tagObj = getTagObject(ctx.doc.schema.tags, node4));
+      const props = stringifyProps(node4, tagObj, ctx);
       if (props.length > 0)
         ctx.indentAtStart = (ctx.indentAtStart ?? 0) + props.length + 1;
-      const str = typeof tagObj.stringify === "function" ? tagObj.stringify(node3, ctx, onComment, onChompKeep) : identity.isScalar(node3) ? stringifyString.stringifyString(node3, ctx, onComment, onChompKeep) : node3.toString(ctx, onComment, onChompKeep);
+      const str = typeof tagObj.stringify === "function" ? tagObj.stringify(node4, ctx, onComment, onChompKeep) : identity.isScalar(node4) ? stringifyString.stringifyString(node4, ctx, onComment, onChompKeep) : node4.toString(ctx, onComment, onChompKeep);
       if (!props)
         return str;
-      return identity.isScalar(node3) || str[0] === "{" || str[0] === "[" ? `${props} ${str}` : `${props}
+      return identity.isScalar(node4) || str[0] === "{" || str[0] === "[" ? `${props} ${str}` : `${props}
 ${ctx.indent}${str}`;
     }
     exports.createStringifyContext = createStringifyContext;
@@ -5589,8 +5589,8 @@ var require_addPairToJSMap = __commonJS({
       if (identity.isNode(key) && ctx?.doc) {
         const strCtx = stringify.createStringifyContext(ctx.doc, {});
         strCtx.anchors = /* @__PURE__ */ new Set();
-        for (const node3 of ctx.anchors.keys())
-          strCtx.anchors.add(node3.anchor);
+        for (const node4 of ctx.anchors.keys())
+          strCtx.anchors.add(node4.anchor);
         strCtx.inFlow = true;
         strCtx.inStringifyKey = true;
         const strKey = key.toString(strCtx);
@@ -5899,8 +5899,8 @@ var require_YAMLMap = __commonJS({
       }
       get(key, keepScalar) {
         const it = findPair(this.items, key);
-        const node3 = it?.value;
-        return (!keepScalar && identity.isScalar(node3) ? node3.value : node3) ?? void 0;
+        const node4 = it?.value;
+        return (!keepScalar && identity.isScalar(node4) ? node4.value : node4) ?? void 0;
       }
       has(key) {
         return !!findPair(this.items, key);
@@ -6213,9 +6213,9 @@ var require_float = __commonJS({
       format: "EXP",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
       resolve: (str) => parseFloat(str),
-      stringify(node3) {
-        const num = Number(node3.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node3);
+      stringify(node4) {
+        const num = Number(node4.value);
+        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node4);
       }
     };
     var float = {
@@ -6224,11 +6224,11 @@ var require_float = __commonJS({
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+\.[0-9]*)$/,
       resolve(str) {
-        const node3 = new Scalar.Scalar(parseFloat(str));
+        const node4 = new Scalar.Scalar(parseFloat(str));
         const dot = str.indexOf(".");
         if (dot !== -1 && str[str.length - 1] === "0")
-          node3.minFractionDigits = str.length - dot - 1;
-        return node3;
+          node4.minFractionDigits = str.length - dot - 1;
+        return node4;
       },
       stringify: stringifyNumber.stringifyNumber
     };
@@ -6245,11 +6245,11 @@ var require_int = __commonJS({
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
     var intResolve = (str, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix);
-    function intStringify(node3, radix, prefix) {
-      const { value } = node3;
+    function intStringify(node4, radix, prefix) {
+      const { value } = node4;
       if (intIdentify(value) && value >= 0)
         return prefix + value.toString(radix);
-      return stringifyNumber.stringifyNumber(node3);
+      return stringifyNumber.stringifyNumber(node4);
     }
     var intOct = {
       identify: (value) => intIdentify(value) && value >= 0,
@@ -6258,7 +6258,7 @@ var require_int = __commonJS({
       format: "OCT",
       test: /^0o[0-7]+$/,
       resolve: (str, _onError, opt) => intResolve(str, 2, 8, opt),
-      stringify: (node3) => intStringify(node3, 8, "0o")
+      stringify: (node4) => intStringify(node4, 8, "0o")
     };
     var int2 = {
       identify: intIdentify,
@@ -6275,7 +6275,7 @@ var require_int = __commonJS({
       format: "HEX",
       test: /^0x[0-9a-fA-F]+$/,
       resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
-      stringify: (node3) => intStringify(node3, 16, "0x")
+      stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
     exports.intHex = intHex;
@@ -6653,9 +6653,9 @@ var require_float2 = __commonJS({
       format: "EXP",
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
       resolve: (str) => parseFloat(str.replace(/_/g, "")),
-      stringify(node3) {
-        const num = Number(node3.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node3);
+      stringify(node4) {
+        const num = Number(node4.value);
+        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node4);
       }
     };
     var float = {
@@ -6664,14 +6664,14 @@ var require_float2 = __commonJS({
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:[0-9][0-9_]*)?\.[0-9_]*$/,
       resolve(str) {
-        const node3 = new Scalar.Scalar(parseFloat(str.replace(/_/g, "")));
+        const node4 = new Scalar.Scalar(parseFloat(str.replace(/_/g, "")));
         const dot = str.indexOf(".");
         if (dot !== -1) {
           const f = str.substring(dot + 1).replace(/_/g, "");
           if (f[f.length - 1] === "0")
-            node3.minFractionDigits = f.length;
+            node4.minFractionDigits = f.length;
         }
-        return node3;
+        return node4;
       },
       stringify: stringifyNumber.stringifyNumber
     };
@@ -6710,13 +6710,13 @@ var require_int2 = __commonJS({
       const n2 = parseInt(str, radix);
       return sign === "-" ? -1 * n2 : n2;
     }
-    function intStringify(node3, radix, prefix) {
-      const { value } = node3;
+    function intStringify(node4, radix, prefix) {
+      const { value } = node4;
       if (intIdentify(value)) {
         const str = value.toString(radix);
         return value < 0 ? "-" + prefix + str.substr(1) : prefix + str;
       }
-      return stringifyNumber.stringifyNumber(node3);
+      return stringifyNumber.stringifyNumber(node4);
     }
     var intBin = {
       identify: intIdentify,
@@ -6725,7 +6725,7 @@ var require_int2 = __commonJS({
       format: "BIN",
       test: /^[-+]?0b[0-1_]+$/,
       resolve: (str, _onError, opt) => intResolve(str, 2, 2, opt),
-      stringify: (node3) => intStringify(node3, 2, "0b")
+      stringify: (node4) => intStringify(node4, 2, "0b")
     };
     var intOct = {
       identify: intIdentify,
@@ -6734,7 +6734,7 @@ var require_int2 = __commonJS({
       format: "OCT",
       test: /^[-+]?0[0-7_]+$/,
       resolve: (str, _onError, opt) => intResolve(str, 1, 8, opt),
-      stringify: (node3) => intStringify(node3, 8, "0")
+      stringify: (node4) => intStringify(node4, 8, "0")
     };
     var int2 = {
       identify: intIdentify,
@@ -6751,7 +6751,7 @@ var require_int2 = __commonJS({
       format: "HEX",
       test: /^[-+]?0x[0-9a-fA-F_]+$/,
       resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
-      stringify: (node3) => intStringify(node3, 16, "0x")
+      stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
     exports.intBin = intBin;
@@ -6861,13 +6861,13 @@ var require_timestamp = __commonJS({
       const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num(60) + num(p), num(0));
       return sign === "-" ? num(-1) * res : res;
     }
-    function stringifySexagesimal(node3) {
-      let { value } = node3;
+    function stringifySexagesimal(node4) {
+      let { value } = node4;
       let num = (n2) => n2;
       if (typeof value === "bigint")
         num = (n2) => BigInt(n2);
       else if (isNaN(value) || !isFinite(value))
-        return stringifyNumber.stringifyNumber(node3);
+        return stringifyNumber.stringifyNumber(node4);
       let sign = "";
       if (value < 0) {
         sign = "-";
@@ -7278,13 +7278,13 @@ var require_Document = __commonJS({
        * `name` will be used as a prefix for a new unique anchor.
        * If `name` is undefined, the generated anchor will use 'a' as a prefix.
        */
-      createAlias(node3, name) {
-        if (!node3.anchor) {
+      createAlias(node4, name) {
+        if (!node4.anchor) {
           const prev = anchors.anchorNames(this);
-          node3.anchor = // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          node4.anchor = // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           !name || prev.has(name) ? anchors.findNewAnchor(name || "a", prev) : name;
         }
-        return new Alias.Alias(node3.anchor);
+        return new Alias.Alias(node4.anchor);
       }
       createNode(value, replacer, options) {
         let _replacer = void 0;
@@ -7316,11 +7316,11 @@ var require_Document = __commonJS({
           schema: this.schema,
           sourceObjects
         };
-        const node3 = createNode.createNode(value, tag, ctx);
-        if (flow && identity.isCollection(node3))
-          node3.flow = true;
+        const node4 = createNode.createNode(value, tag, ctx);
+        if (flow && identity.isCollection(node4))
+          node4.flow = true;
         setAnchors();
-        return node3;
+        return node4;
       }
       /**
        * Convert a key and a value into a `Pair` using the current schema,
@@ -7917,11 +7917,11 @@ var require_resolve_block_seq = __commonJS({
             continue;
           }
         }
-        const node3 = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, start, null, props, onError);
+        const node4 = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, start, null, props, onError);
         if (ctx.schema.compat)
           utilFlowIndentCheck.flowIndentCheck(bs.indent, value, onError);
-        offset = node3.range[2];
-        seq.items.push(node3);
+        offset = node4.range[2];
+        seq.items.push(node4);
       }
       seq.range = [bs.offset, offset, commentEnd ?? offset];
       return seq;
@@ -8221,12 +8221,12 @@ var require_compose_collection = __commonJS({
       }
       const coll = resolveCollection(CN, ctx, token, onError, tagName, tag);
       const res = tag.resolve?.(coll, (msg) => onError(tagToken, "TAG_RESOLVE_FAILED", msg), ctx.options) ?? coll;
-      const node3 = identity.isNode(res) ? res : new Scalar.Scalar(res);
-      node3.range = coll.range;
-      node3.tag = tagName;
+      const node4 = identity.isNode(res) ? res : new Scalar.Scalar(res);
+      node4.range = coll.range;
+      node4.tag = tagName;
       if (tag?.format)
-        node3.format = tag.format;
-      return node3;
+        node4.format = tag.format;
+      return node4;
     }
     exports.composeCollection = composeCollection;
   }
@@ -8243,7 +8243,7 @@ var require_resolve_block_scalar = __commonJS({
       if (!header)
         return { value: "", type: null, comment: "", range: [start, start, start] };
       const type = header.mode === ">" ? Scalar.Scalar.BLOCK_FOLDED : Scalar.Scalar.BLOCK_LITERAL;
-      const lines2 = scalar.source ? splitLines(scalar.source) : [];
+      const lines2 = scalar.source ? splitLines2(scalar.source) : [];
       let chompStart = lines2.length;
       for (let i = lines2.length - 1; i >= 0; --i) {
         const content = lines2[i][1];
@@ -8401,7 +8401,7 @@ var require_resolve_block_scalar = __commonJS({
       }
       return { mode, indent, chomp, comment, length };
     }
-    function splitLines(source) {
+    function splitLines2(source) {
       const split = source.split(/\n( *)/);
       const first = split[0];
       const m2 = first.match(/^( *)/);
@@ -8761,11 +8761,11 @@ var require_compose_node = __commonJS({
     function composeNode(ctx, token, props, onError) {
       const atKey = ctx.atKey;
       const { spaceBefore, comment, anchor: anchor2, tag } = props;
-      let node3;
+      let node4;
       let isSrcToken = true;
       switch (token.type) {
         case "alias":
-          node3 = composeAlias(ctx, token, onError);
+          node4 = composeAlias(ctx, token, onError);
           if (anchor2 || tag)
             onError(token, "ALIAS_PROPS", "An alias node must not specify any properties");
           break;
@@ -8773,17 +8773,17 @@ var require_compose_node = __commonJS({
         case "single-quoted-scalar":
         case "double-quoted-scalar":
         case "block-scalar":
-          node3 = composeScalar.composeScalar(ctx, token, tag, onError);
+          node4 = composeScalar.composeScalar(ctx, token, tag, onError);
           if (anchor2)
-            node3.anchor = anchor2.source.substring(1);
+            node4.anchor = anchor2.source.substring(1);
           break;
         case "block-map":
         case "block-seq":
         case "flow-collection":
           try {
-            node3 = composeCollection.composeCollection(CN, ctx, token, props, onError);
+            node4 = composeCollection.composeCollection(CN, ctx, token, props, onError);
             if (anchor2)
-              node3.anchor = anchor2.source.substring(1);
+              node4.anchor = anchor2.source.substring(1);
           } catch (error62) {
             const message = error62 instanceof Error ? error62.message : String(error62);
             onError(token, "RESOURCE_EXHAUSTION", message);
@@ -8795,24 +8795,24 @@ var require_compose_node = __commonJS({
           isSrcToken = false;
         }
       }
-      node3 ?? (node3 = composeEmptyNode(ctx, token.offset, void 0, null, props, onError));
-      if (anchor2 && node3.anchor === "")
+      node4 ?? (node4 = composeEmptyNode(ctx, token.offset, void 0, null, props, onError));
+      if (anchor2 && node4.anchor === "")
         onError(anchor2, "BAD_ALIAS", "Anchor cannot be an empty string");
-      if (atKey && ctx.options.stringKeys && (!identity.isScalar(node3) || typeof node3.value !== "string" || node3.tag && node3.tag !== "tag:yaml.org,2002:str")) {
+      if (atKey && ctx.options.stringKeys && (!identity.isScalar(node4) || typeof node4.value !== "string" || node4.tag && node4.tag !== "tag:yaml.org,2002:str")) {
         const msg = "With stringKeys, all keys must be strings";
         onError(tag ?? token, "NON_STRING_KEY", msg);
       }
       if (spaceBefore)
-        node3.spaceBefore = true;
+        node4.spaceBefore = true;
       if (comment) {
         if (token.type === "scalar" && token.source === "")
-          node3.comment = comment;
+          node4.comment = comment;
         else
-          node3.commentBefore = comment;
+          node4.commentBefore = comment;
       }
       if (ctx.options.keepSourceTokens && isSrcToken)
-        node3.srcToken = token;
-      return node3;
+        node4.srcToken = token;
+      return node4;
     }
     function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anchor: anchor2, tag, end }, onError) {
       const token = {
@@ -8821,19 +8821,19 @@ var require_compose_node = __commonJS({
         indent: -1,
         source: ""
       };
-      const node3 = composeScalar.composeScalar(ctx, token, tag, onError);
+      const node4 = composeScalar.composeScalar(ctx, token, tag, onError);
       if (anchor2) {
-        node3.anchor = anchor2.source.substring(1);
-        if (node3.anchor === "")
+        node4.anchor = anchor2.source.substring(1);
+        if (node4.anchor === "")
           onError(anchor2, "BAD_ALIAS", "Anchor cannot be an empty string");
       }
       if (spaceBefore)
-        node3.spaceBefore = true;
+        node4.spaceBefore = true;
       if (comment) {
-        node3.comment = comment;
-        node3.range[2] = end;
+        node4.comment = comment;
+        node4.range[2] = end;
       }
-      return node3;
+      return node4;
     }
     function composeAlias({ options }, { offset, source, end }, onError) {
       const alias = new Alias.Alias(source.substring(1));
@@ -11964,8 +11964,8 @@ var require_codegen = __commonJS({
       endIf() {
         return this._endBlockNode(If, Else);
       }
-      _for(node3, forBody) {
-        this._blockNode(node3);
+      _for(node4, forBody) {
+        this._blockNode(node4);
         if (forBody)
           this.code(forBody).endFor();
         return this;
@@ -12014,10 +12014,10 @@ var require_codegen = __commonJS({
       }
       // `return` statement
       return(value) {
-        const node3 = new Return();
-        this._blockNode(node3);
+        const node4 = new Return();
+        this._blockNode(node4);
         this.code(value);
-        if (node3.nodes.length !== 1)
+        if (node4.nodes.length !== 1)
           throw new Error('CodeGen: "return" should have one node');
         return this._endBlockNode(Return);
       }
@@ -12025,16 +12025,16 @@ var require_codegen = __commonJS({
       try(tryBody, catchCode, finallyCode) {
         if (!catchCode && !finallyCode)
           throw new Error('CodeGen: "try" without "catch" and "finally"');
-        const node3 = new Try();
-        this._blockNode(node3);
+        const node4 = new Try();
+        this._blockNode(node4);
         this.code(tryBody);
         if (catchCode) {
           const error62 = this.name("e");
-          this._currNode = node3.catch = new Catch(error62);
+          this._currNode = node4.catch = new Catch(error62);
           catchCode(error62);
         }
         if (finallyCode) {
-          this._currNode = node3.finally = new Finally();
+          this._currNode = node4.finally = new Finally();
           this.code(finallyCode);
         }
         return this._endBlockNode(Catch, Finally);
@@ -12079,13 +12079,13 @@ var require_codegen = __commonJS({
           this._root.optimizeNames(this._root.names, this._constants);
         }
       }
-      _leafNode(node3) {
-        this._currNode.nodes.push(node3);
+      _leafNode(node4) {
+        this._currNode.nodes.push(node4);
         return this;
       }
-      _blockNode(node3) {
-        this._currNode.nodes.push(node3);
-        this._nodes.push(node3);
+      _blockNode(node4) {
+        this._currNode.nodes.push(node4);
+        this._nodes.push(node4);
       }
       _endBlockNode(N1, N2) {
         const n2 = this._currNode;
@@ -12095,12 +12095,12 @@ var require_codegen = __commonJS({
         }
         throw new Error(`CodeGen: not in block "${N2 ? `${N1.kind}/${N2.kind}` : N1.kind}"`);
       }
-      _elseNode(node3) {
+      _elseNode(node4) {
         const n2 = this._currNode;
         if (!(n2 instanceof If)) {
           throw new Error('CodeGen: "else" without "if"');
         }
-        this._currNode = n2.else = node3;
+        this._currNode = n2.else = node4;
         return this;
       }
       get _root() {
@@ -12110,9 +12110,9 @@ var require_codegen = __commonJS({
         const ns = this._nodes;
         return ns[ns.length - 1];
       }
-      set _currNode(node3) {
+      set _currNode(node4) {
         const ns = this._nodes;
-        ns[ns.length - 1] = node3;
+        ns[ns.length - 1] = node4;
       }
     };
     exports.CodeGen = CodeGen;
@@ -19095,6 +19095,225 @@ function redactPaths(value) {
   return walk(value);
 }
 
+// packages/canvas/dist/patch.js
+function lineOps(a, b2) {
+  let start = 0;
+  while (start < a.length && start < b2.length && a[start] === b2[start])
+    start++;
+  let endA = a.length;
+  let endB = b2.length;
+  while (endA > start && endB > start && a[endA - 1] === b2[endB - 1]) {
+    endA--;
+    endB--;
+  }
+  const n2 = endA - start;
+  const m2 = endB - start;
+  const lcs = new Int32Array((n2 + 1) * (m2 + 1));
+  const at2 = (i2, j3) => i2 * (m2 + 1) + j3;
+  for (let i2 = n2 - 1; i2 >= 0; i2--)
+    for (let j3 = m2 - 1; j3 >= 0; j3--)
+      lcs[at2(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at2(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at2(i2 + 1, j3)], lcs[at2(i2, j3 + 1)]);
+  const ops = [];
+  for (let k2 = 0; k2 < start; k2++)
+    ops.push({ kind: " ", text: a[k2], a: k2, b: k2 });
+  let i = 0;
+  let j2 = 0;
+  while (i < n2 || j2 < m2) {
+    if (i < n2 && j2 < m2 && a[start + i] === b2[start + j2]) {
+      ops.push({ kind: " ", text: a[start + i], a: start + i, b: start + j2 });
+      i++;
+      j2++;
+    } else if (i < n2 && (j2 === m2 || lcs[at2(i + 1, j2)] >= lcs[at2(i, j2 + 1)])) {
+      ops.push({ kind: "-", text: a[start + i], a: start + i, b: start + j2 });
+      i++;
+    } else {
+      ops.push({ kind: "+", text: b2[start + j2], a: start + i, b: start + j2 });
+      j2++;
+    }
+  }
+  for (let k2 = 0; k2 < a.length - endA; k2++)
+    ops.push({ kind: " ", text: a[endA + k2], a: endA + k2, b: endB + k2 });
+  return ops;
+}
+var NO_EOL = "\0";
+function splitLines(text3) {
+  if (text3 === "")
+    return [];
+  const lines2 = text3.split("\n");
+  if (lines2[lines2.length - 1] === "")
+    lines2.pop();
+  else
+    lines2[lines2.length - 1] += NO_EOL;
+  return lines2;
+}
+function joinLines(lines2) {
+  return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
+`).join("");
+}
+function unifiedDiff(before, after, path12 = "file", context = 3) {
+  if (before === after)
+    return "";
+  const ops = lineOps(splitLines(before), splitLines(after));
+  const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
+  const out = [`--- a/${path12}`, `+++ b/${path12}`];
+  let k2 = 0;
+  while (k2 < changed.length) {
+    const lo = Math.max(0, changed[k2] - context);
+    let hiChange = changed[k2];
+    while (k2 + 1 < changed.length && changed[k2 + 1] - hiChange <= context * 2)
+      hiChange = changed[++k2];
+    const hi = Math.min(ops.length - 1, hiChange + context);
+    const slice = ops.slice(lo, hi + 1);
+    const aStart = slice[0].a + 1;
+    const bStart = slice[0].b + 1;
+    const aLen = slice.filter((o) => o.kind !== "+").length;
+    const bLen = slice.filter((o) => o.kind !== "-").length;
+    out.push(`@@ -${aLen ? aStart : aStart - 1},${aLen} +${bLen ? bStart : bStart - 1},${bLen} @@`);
+    for (const o of slice) {
+      if (o.text.endsWith(NO_EOL))
+        out.push(`${o.kind}${o.text.slice(0, -1)}`, "\\ No newline at end of file");
+      else
+        out.push(`${o.kind}${o.text}`);
+    }
+    k2++;
+  }
+  return out.join("\n") + "\n";
+}
+function firstChange(before, after) {
+  if (before === after)
+    return void 0;
+  const a = splitLines(before);
+  const ops = lineOps(a, splitLines(after));
+  const k2 = ops.findIndex((o) => o.kind !== " ");
+  if (k2 < 0)
+    return void 0;
+  let end = k2;
+  while (end + 1 < ops.length && ops[end + 1].kind !== " ")
+    end++;
+  const removed = ops.slice(k2, end + 1).filter((o) => o.kind === "-");
+  const line = Math.max(1, Math.min(a.length, ops[k2].a + 1));
+  return { line, endLine: removed.length ? removed[removed.length - 1].a + 1 : line };
+}
+function diffStat(diff) {
+  let added = 0;
+  let removed = 0;
+  for (const l of diff.split("\n")) {
+    if (l.startsWith("+++") || l.startsWith("---"))
+      continue;
+    if (l.startsWith("+"))
+      added++;
+    else if (l.startsWith("-"))
+      removed++;
+  }
+  return { added, removed };
+}
+var strip = (p) => p.replace(/^[ab]\//, "").replace(/\t.*$/, "").trim();
+function diffPath(diff) {
+  const plus = diff.split("\n").find((l) => l.startsWith("+++ "));
+  const minus = diff.split("\n").find((l) => l.startsWith("--- "));
+  const p = plus ? strip(plus.slice(4)) : minus ? strip(minus.slice(4)) : void 0;
+  return p && p !== "/dev/null" ? p : void 0;
+}
+function parseHunks(diff) {
+  const lines2 = diff.replace(/\r\n/g, "\n").split("\n");
+  if (lines2[lines2.length - 1] === "")
+    lines2.pop();
+  const hunks = [];
+  let files = 0;
+  let cur;
+  let last;
+  for (let i = 0; i < lines2.length; i++) {
+    const l = lines2[i];
+    const m2 = l.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+    if (m2) {
+      cur = { header: m2[0], aStart: Number(m2[1]), aLen: m2[2] === void 0 ? 1 : Number(m2[2]), bStart: Number(m2[3]), bLen: m2[4] === void 0 ? 1 : Number(m2[4]), old: [], new: [] };
+      hunks.push(cur);
+      last = void 0;
+      continue;
+    }
+    const inBody = cur && (cur.old.length < cur.aLen || cur.new.length < cur.bLen);
+    if (!inBody) {
+      if (l.startsWith("--- ")) {
+        files++;
+        if (files > 1)
+          return "the diff touches more than one file: propose one file at a time";
+      }
+      if (l.startsWith("\\") && cur && last) {
+        if (last !== "+")
+          cur.old[cur.old.length - 1] += NO_EOL;
+        if (last !== "-")
+          cur.new[cur.new.length - 1] += NO_EOL;
+      }
+      continue;
+    }
+    if (l.startsWith("\\")) {
+      if (last && last !== "+")
+        cur.old[cur.old.length - 1] += NO_EOL;
+      if (last && last !== "-")
+        cur.new[cur.new.length - 1] += NO_EOL;
+      continue;
+    }
+    const kind = l === "" ? " " : l[0];
+    const body = l.slice(1);
+    if (kind === " ") {
+      cur.old.push(body);
+      cur.new.push(body);
+    } else if (kind === "-")
+      cur.old.push(body);
+    else if (kind === "+")
+      cur.new.push(body);
+    else
+      return `line ${i + 1} of the diff is not part of a hunk (it should start with " ", "-" or "+"): ${JSON.stringify(l.slice(0, 80))}`;
+    last = kind;
+  }
+  if (!hunks.length)
+    return "no hunks (@@ -a,b +c,d @@) in the diff";
+  for (const [k2, h] of hunks.entries()) {
+    if (h.old.length !== h.aLen || h.new.length !== h.bLen)
+      return `hunk ${k2 + 1} (${h.header}) says ${h.aLen} old / ${h.bLen} new lines but has ${h.old.length} / ${h.new.length}`;
+  }
+  return hunks;
+}
+function applyUnifiedDiff(text3, diff) {
+  const parsed = parseHunks(diff);
+  if (typeof parsed === "string")
+    return { ok: false, error: parsed };
+  const lines2 = splitLines(text3);
+  const out = [];
+  let cursor = 0;
+  let delta = 0;
+  const offsets = [];
+  for (const [k2, h] of parsed.entries()) {
+    const want = (h.aLen === 0 ? h.aStart : h.aStart - 1) + delta;
+    const fits = (at3) => at3 >= cursor && at3 + h.old.length <= lines2.length && h.old.every((l, i) => lines2[at3 + i] === l);
+    let at2 = -1;
+    if (h.old.length === 0)
+      at2 = Math.min(Math.max(want, cursor), lines2.length);
+    else
+      for (let d = 0; d <= lines2.length; d++) {
+        if (fits(want - d)) {
+          at2 = want - d;
+          break;
+        }
+        if (d && fits(want + d)) {
+          at2 = want + d;
+          break;
+        }
+      }
+    if (at2 < 0) {
+      const near = lines2.slice(Math.max(0, want - 1), want + Math.max(3, h.old.length + 1)).map((l) => l.replace(NO_EOL, ""));
+      return { ok: false, hunk: k2 + 1, error: `hunk ${k2 + 1} (${h.header}) does not apply: its context and removed lines are not in the file${near.length ? ` (around line ${Math.max(1, want)} the file says: ${JSON.stringify(near.join("\n").slice(0, 200))})` : ""}` };
+    }
+    delta = at2 - (h.aLen === 0 ? h.aStart : h.aStart - 1);
+    offsets.push(delta);
+    out.push(...lines2.slice(cursor, at2), ...h.new);
+    cursor = at2 + h.old.length;
+  }
+  out.push(...lines2.slice(cursor));
+  const fixed = out.map((l, i) => i < out.length - 1 && l.endsWith(NO_EOL) ? l.slice(0, -1) : l);
+  return { ok: true, text: joinLines(fixed), offsets };
+}
+
 // packages/canvas/dist/diff.js
 var short = (s, n2 = 60) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
@@ -19190,8 +19409,11 @@ function summarize(board, changes, opts = {}) {
           const text3 = short(it.text, 200);
           if (root.id !== it.id)
             lines2.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text3}" [thread ${root.id}]`);
-          else
-            lines2.push(`${prefix} added comment${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}" [thread ${it.id}]`);
+          else {
+            const edit = it.data?.discuss?.edit;
+            const what = edit && typeof edit.diff === "string" ? `proposed an edit to ${typeof edit.file === "string" ? edit.file : "a text"} (${diffCount(edit.diff)})` : "added comment";
+            lines2.push(`${prefix} ${what}${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}" [thread ${it.id}]`);
+          }
         } else if (it.type === "arrow") {
           lines2.push(`${prefix} connected ${nameOf(board.items[it.from ?? ""] ?? ch.before[it.from ?? ""], board)} \u2192 ${nameOf(board.items[it.to ?? ""] ?? ch.before[it.to ?? ""], board)}${it.label ? ` ("${short(it.label)}")` : ""}`);
         } else {
@@ -19445,6 +19667,10 @@ function byPos(a, b2) {
   const rowA = Math.round(a.y / 60);
   const rowB = Math.round(b2.y / 60);
   return rowA !== rowB ? rowA - rowB : a.x - b2.x;
+}
+function diffCount(diff) {
+  const { added, removed } = diffStat(diff);
+  return `+${added} \u2212${removed} lines`;
 }
 
 // node_modules/zod/v4/classic/external.js
@@ -21092,11 +21318,11 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
                 configurable: true
               });
             }
-            const node3 = curr[el];
+            const node4 = curr[el];
             if (terminal) {
-              node3._errors.push(mapper(issue2));
+              node4._errors.push(mapper(issue2));
             }
-            curr = node3;
+            curr = node4;
             i++;
           }
         }
@@ -38896,9 +39122,9 @@ function fromJSONSchema(schema, params) {
 // node_modules/zod/v4/core/visit.js
 var RESOLVING = /* @__PURE__ */ Symbol("z.visit/resolving");
 function visit(schema, fnOrHandlers) {
-  const fn = typeof fnOrHandlers === "function" ? fnOrHandlers : (node3, rewritten) => {
-    const h = fnOrHandlers[node3._zod.def.type];
-    return h ? h(node3, rewritten) : node3;
+  const fn = typeof fnOrHandlers === "function" ? fnOrHandlers : (node4, rewritten) => {
+    const h = fnOrHandlers[node4._zod.def.type];
+    return h ? h(node4, rewritten) : node4;
   };
   const cache = /* @__PURE__ */ new Map();
   function run(s) {
@@ -41531,7 +41757,7 @@ function checkUiMock(raw) {
   for (const s of m2.screens) {
     const explicit = /* @__PURE__ */ new Map();
     for (const e of walkUi(s.body)) {
-      const given = e.path.reduce((node3, k2) => node3?.[k2], raw);
+      const given = e.path.reduce((node4, k2) => node4?.[k2], raw);
       if (given?.id)
         explicit.set(given.id, (explicit.get(given.id) ?? 0) + 1);
       if (e.goto && !screens.has(e.goto))
@@ -43756,6 +43982,243 @@ function findSpot(t, w2, h, taken) {
     }
   }
   return { x: t.x + t.w + GAP2 * 4, y: t.y + t.h + GAP2 * 4 };
+}
+
+// packages/canvas/dist/proposals.js
+import { createHash as createHash2 } from "node:crypto";
+var sha1 = (text3) => createHash2("sha1").update(text3, "utf8").digest("hex");
+function boardFiles(board) {
+  const out = /* @__PURE__ */ new Map();
+  const meta3 = board.meta ?? {};
+  const wf = meta3.workflow;
+  const truncated = new Set(Array.isArray(wf?.truncated) ? wf.truncated.filter((t) => typeof t === "string") : []);
+  const add = (files, from) => {
+    if (!files || typeof files !== "object")
+      return;
+    for (const [path12, text3] of Object.entries(files)) {
+      if (typeof text3 !== "string" || out.has(path12))
+        continue;
+      out.set(path12, { path: path12, text: text3, sha: sha1(text3), truncated: truncated.has(path12), from });
+    }
+  };
+  add(wf?.files, { workflow: true });
+  const diagrams = meta3.diagrams;
+  for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {}))
+    add(d?.files, { diagram: key });
+  return [...out.values()];
+}
+var ProposalError = class extends Error {
+  status;
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+var MAX_DIFF = 6e4;
+var MAX_TEXT = 1e6;
+var MAX_NOTE = 4e3;
+var detailOf = (it) => it?.data?.detail;
+var nodeIdOf = (it) => typeof it?.data?.nodeId === "string" ? it.data.nodeId : void 0;
+var node2 = (id) => id.replace(/^wf\.node\./, "");
+function itemOfNode(board, id) {
+  const want = node2(id);
+  return Object.values(board.items).find((it) => it.type !== "arrow" && it.type !== "comment" && nodeIdOf(it) === want);
+}
+function ownerOf(board, file2, line) {
+  let byFile;
+  let byRange;
+  let frame;
+  for (const it of Object.values(board.items)) {
+    const d = detailOf(it);
+    if (d) {
+      if (d.file === file2)
+        byFile ??= it.id;
+      const y2 = d.yaml;
+      if (d.source?.workflow === file2 && typeof y2?.start === "number" && typeof y2.end === "number" && line >= y2.start && line <= y2.end && (!byRange || y2.end - y2.start < byRange.size))
+        byRange = { id: it.id, size: y2.end - y2.start };
+    }
+    const spec = it.type === "frame" ? it.data?.diagram : void 0;
+    if (spec?.source === file2)
+      frame ??= it.id;
+  }
+  if (byFile)
+    return byFile;
+  if (byRange)
+    return byRange.id;
+  if (frame)
+    return frame;
+  if (board.items["wf.title"])
+    return "wf.title";
+  return Object.values(board.items).find((i) => i.role === "title")?.id;
+}
+var spanOf = (a, b2) => {
+  const [ax, ay, bx, by] = [a.x + a.w / 2, a.y + a.h / 2, b2.x + b2.w / 2, b2.y + b2.h / 2];
+  return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
+};
+var isFlowWire = (it) => it.type === "arrow" && it.role !== "owns" && it.role !== "delegates" && it.role !== "trace";
+var wireEvent = (it) => it.data?.event;
+function buildProposal(board, input2, who, now, newId2) {
+  if (!input2 || typeof input2 !== "object")
+    throw new ProposalError(400, "body must be an object");
+  const files = boardFiles(board);
+  const list2 = () => files.length ? files.map((f2) => f2.path).join(", ") : "none \u2014 this board was drawn without files; propose on a board that `awd graph --canvas` or `awd design draw` drew";
+  if (typeof input2.file !== "string" || !input2.file)
+    throw new ProposalError(400, `file is required (one of: ${list2()})`);
+  const f = files.find((x2) => x2.path === input2.file);
+  if (!f)
+    throw new ProposalError(404, `"${input2.file}" is not among the files behind this board (${list2()}); canvas_files lists them with their base`);
+  if (f.truncated)
+    throw new ProposalError(422, `${f.path} is cut short on the board (over 100 000 characters), so an edit cannot be checked against it; ask the person to have their local agent make this change`);
+  if (typeof input2.base !== "string" || !input2.base)
+    throw new ProposalError(400, `base is required: the sha-1 of the text you edited (canvas_files gives it; now ${f.sha})`);
+  if (input2.base !== f.sha)
+    throw new ProposalError(409, `base ${input2.base.slice(0, 12)} is not the board's snapshot of ${f.path} (now ${f.sha}): the file was redrawn since you read it. Read it again (canvas_files) and redo your edit on the new text.`);
+  if (typeof input2.note !== "string" || !input2.note.trim())
+    throw new ProposalError(400, "note is required: say in a sentence or two what the edit does and why \u2014 it opens the thread the person answers in");
+  if (input2.note.length > MAX_NOTE)
+    throw new ProposalError(400, `note is longer than ${MAX_NOTE} characters`);
+  const hasDiff = typeof input2.diff === "string" && input2.diff.trim() !== "";
+  const hasText = typeof input2.newText === "string";
+  if (hasDiff === hasText)
+    throw new ProposalError(400, "give exactly one of diff (a unified diff against the snapshot) or newText (the whole new file)");
+  let after;
+  let offsets = [];
+  if (hasDiff) {
+    if (input2.diff.length > MAX_DIFF)
+      throw new ProposalError(413, `diff is larger than ${MAX_DIFF} characters; split the change`);
+    const named2 = diffPath(input2.diff);
+    if (named2 && named2 !== f.path)
+      throw new ProposalError(400, `the diff is for ${named2}, not ${f.path}`);
+    const r = applyUnifiedDiff(f.text, input2.diff);
+    if (!r.ok)
+      throw new ProposalError(422, `the diff does not apply to ${f.path} at base ${f.sha.slice(0, 12)}: ${r.error}. Make the diff against the text canvas_files returns, or send newText instead.`);
+    after = r.text;
+    offsets = r.offsets;
+  } else {
+    if (input2.newText.length > MAX_TEXT)
+      throw new ProposalError(413, `newText is larger than ${MAX_TEXT} characters`);
+    after = input2.newText;
+  }
+  if (after === f.text)
+    throw new ProposalError(400, `the edit leaves ${f.path} unchanged`);
+  const diff = unifiedDiff(f.text, after, f.path);
+  if (diff.length > MAX_DIFF)
+    throw new ProposalError(413, `the change is larger than ${MAX_DIFF} characters as a diff; split it`);
+  const at2 = firstChange(f.text, after) ?? { line: 1, endLine: 1 };
+  const quote = f.text.split("\n").slice(at2.line - 1, at2.endLine).join("\n");
+  const ids = Array.isArray(input2.about) ? [...new Set(input2.about)] : [];
+  if (ids.some((id) => typeof id !== "string"))
+    throw new ProposalError(400, "about must be item ids");
+  const missing = ids.filter((id) => !board.items[id]);
+  if (missing.length)
+    throw new ProposalError(404, `no item ${missing.map((m2) => `"${m2}"`).join(", ")} on this board`);
+  if (ids.some((id) => board.items[id].type === "comment"))
+    throw new ProposalError(400, "about lists items to talk about, not comments");
+  const owner = ownerOf(board, f.path, at2.line);
+  const about = ids.length ? ids : owner ? [owner] : [];
+  const commentId = newId2();
+  const author = who.author;
+  const ops = [];
+  const hintIds = [];
+  const pendingBy = who.by ?? author;
+  for (const [k2, w2] of (input2.wires ?? []).entries()) {
+    if (!w2 || typeof w2.from !== "string" || typeof w2.to !== "string" || typeof w2.event !== "string" || !w2.event.trim())
+      throw new ProposalError(400, `wires[${k2}] needs from, to (workflow node ids) and event`);
+    const from = itemOfNode(board, w2.from);
+    const to = itemOfNode(board, w2.to);
+    if (!from || !to)
+      throw new ProposalError(404, `wires[${k2}]: no block ${!from ? `"${w2.from}"` : `"${w2.to}"`} on this board (a hint can only join blocks that are drawn; a new step shows up when the file is applied and redrawn)`);
+    const ends = { from: node2(w2.from), to: node2(w2.to), event: w2.event.trim(), ...w2.condition?.trim() ? { condition: w2.condition.trim() } : {} };
+    const label = `${ends.event}${ends.condition ? ` if ${ends.condition}` : ""}`;
+    if (w2.remove) {
+      const wire = Object.values(board.items).find((it) => {
+        const e = wireEvent(it);
+        return isFlowWire(it) && e && node2(e.from ?? "") === ends.from && node2(e.to ?? "") === ends.to && e.event === ends.event;
+      });
+      if (!wire)
+        throw new ProposalError(404, `wires[${k2}]: no wire ${ends.from} \u2192 ${ends.to} on ${ends.event} to remove`);
+      if (wire.data?.pending)
+        throw new ProposalError(409, `wires[${k2}]: the wire ${wire.id} already holds a proposal`);
+      ops.push({ kind: "update", id: wire.id, patch: { data: { ...wire.data, pending: { kind: "remove", before: { ...ends, ...wireEvent(wire)?.condition ? { condition: wireEvent(wire).condition } : {} }, by: pendingBy, at: now, proposal: commentId } } } });
+      hintIds.push(wire.id);
+    } else {
+      const id = `${commentId}.wire${k2 + 1}`;
+      ops.push({
+        kind: "add",
+        // the box spanning both ends, so a link to the wire (?focus=) centres on it
+        item: { id, type: "arrow", ...spanOf(from, to), from: from.id, to: to.id, role: "flow", label, data: { pending: { kind: "add", after: ends, by: pendingBy, at: now, proposal: commentId } }, createdBy: author, updatedBy: author, updatedAt: now }
+      });
+      hintIds.push(id);
+    }
+    for (const it of [from.id, to.id])
+      if (!about.includes(it) && !hintIds.includes(it))
+        hintIds.push(it);
+  }
+  const allAbout = [...about, ...hintIds.filter((id) => !about.includes(id))];
+  const target = allAbout[0];
+  const { added, removed } = diffStat(diff);
+  const data = {
+    anchor: { file: f.path, line: at2.line, ...at2.endLine > at2.line ? { endLine: at2.endLine } : {}, quote },
+    discuss: { about: allAbout, edit: { file: f.path, base: f.sha, diff, ...who.by ? { by: who.by } : {} } },
+    ...who.by ? { by: who.by } : {}
+  };
+  const text3 = input2.note.trim();
+  let geo = { x: 0, y: 0, w: 260, h: 90 };
+  if (target) {
+    const placed = autoPlaceComments(board, { items: [{ type: "comment", target, w: 260, h: 90 }] });
+    geo = { x: placed.items[0].x ?? 0, y: placed.items[0].y ?? 0, w: 260, h: 90 };
+  } else {
+    const all = Object.values(board.items);
+    geo = { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - 110, w: 260, h: 90 };
+  }
+  const comment = { id: commentId, type: "comment", ...geo, text: text3, ...target ? { target } : {}, data, createdBy: author, updatedBy: author, updatedAt: now };
+  return { ops: [{ kind: "add", item: comment }, ...ops], commentId, file: f.path, diff, about: allAbout, added, removed, offsets };
+}
+var discussEdit = (data) => data?.discuss?.edit;
+function stampAttribution(board, ops, by) {
+  const sign = (data, name) => {
+    if (!data)
+      return data;
+    const out = { ...data };
+    if (name)
+      out.by = name;
+    else
+      delete out.by;
+    const edit = discussEdit(data);
+    if (edit) {
+      const e = { ...edit };
+      if (name)
+        e.by = name;
+      else
+        delete e.by;
+      out.discuss = { ...data.discuss, edit: e };
+    }
+    return out;
+  };
+  return ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment") {
+      if (!op.item.data && !by)
+        return op;
+      return { ...op, item: { ...op.item, data: sign(op.item.data ?? {}, by) } };
+    }
+    if (op.kind === "update" && op.patch.data && typeof op.patch.data === "object") {
+      const cur = board.items[op.id];
+      if (cur?.type !== "comment")
+        return op;
+      const was = cur.data;
+      const data = sign(op.patch.data, typeof was?.by === "string" ? was.by : void 0);
+      const wasEdit = discussEdit(was);
+      const edit = discussEdit(data);
+      if (edit) {
+        if (typeof wasEdit?.by === "string")
+          edit.by = wasEdit.by;
+        else
+          delete edit.by;
+      }
+      return { ...op, patch: { ...op.patch, data } };
+    }
+    return op;
+  });
 }
 
 // packages/canvas/dist/access.js
@@ -48631,6 +49094,17 @@ var CanvasClient = class {
   focus(id, target, author = "agent") {
     return this.req("POST", `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author });
   }
+  /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
+  files(id) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
+  }
+  file(id, path12) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path12)}`).then((r) => r.file);
+  }
+  /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
+  propose(id, input2) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input2, author: "agent" });
+  }
   /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
   boardUrl(id, at2 = {}) {
     const q2 = new URLSearchParams();
@@ -48891,11 +49365,11 @@ var pendingOf = (it) => {
   const p = it?.data?.pending;
   return p && typeof p.kind === "string" ? p : void 0;
 };
-var node2 = (id) => id.replace(/^wf\.node\./, "");
+var node3 = (id) => id.replace(/^wf\.node\./, "");
 var wireOf = (it) => it.data?.event;
 var sameWire = (drawn, want) => {
   const w2 = wireOf(drawn);
-  return !!w2 && node2(w2.from) === node2(want.from) && node2(w2.to) === node2(want.to) && (want.event === void 0 || w2.event === want.event);
+  return !!w2 && node3(w2.from) === node3(want.from) && node3(w2.to) === node3(want.to) && (want.event === void 0 || w2.event === want.event);
 };
 var PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend"];
 function withPresentation(drawn, was) {
@@ -57415,6 +57889,7 @@ function helpText(o) {
     "Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open",
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
     "Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person's page to an item or frame)",
+    `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
   return [
@@ -57438,6 +57913,7 @@ function helpText(o) {
     ...o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(", ")}`] : [],
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
+    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
     "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name."
   ].join("\n");
 }
@@ -57454,7 +57930,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os3.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.8.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.8.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",
@@ -57586,6 +58062,43 @@ ${r.lines.join("\n")}`);
     const r = await client.focus(id, { ids, frame, note });
     const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
     return text2(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+  });
+  server.registerTool("canvas_files", {
+    title: "Read the files behind a board",
+    description: "The files a board is drawn from, as the last redraw put them on the board: a workflow board's yaml, agent files, prompts and scripts; a diagram frame's design file. Without `path`: each file with its sha-1 (`base`), line count and where it comes from. With `path`: that file's exact text \u2014 make your edit against exactly this text, then canvas_propose_edit with this base. It is a snapshot: the real file lives on the machine that drew the board.",
+    inputSchema: { id: external_exports.string().describe("board id"), path: external_exports.string().optional().describe('one file, as listed (repo-relative, e.g. "examples/card-pipeline/workflow.yaml")') }
+  }, async ({ id, path: want }) => {
+    if (!want) {
+      const files = await client.files(id);
+      if (!files.length)
+        return text2("No files on this board: it was not drawn from files (awd graph --canvas / awd design draw / design_draw put them there). Nothing to propose against.");
+      return text2([`${files.length} file(s) behind board ${id}:`, ...files.map((f2) => `${f2.path}	base ${f2.sha}	${f2.lines ?? "?"} lines	${"workflow" in f2.from ? "workflow" : `diagram ${f2.from.diagram}`}${f2.truncated ? "	CUT SHORT on the board \u2014 cannot be proposed against" : ""}`)].join("\n"));
+    }
+    const f = await client.file(id, want);
+    return text2(`file: ${f.path}
+base: ${f.sha}${f.truncated ? "\n(cut short on the board \u2014 not the whole file; it cannot be proposed against)" : ""}
+--- the exact text follows (after this line) ---
+${f.text}`);
+  });
+  server.registerTool("canvas_propose_edit", {
+    title: "Propose an edit to a file behind a board",
+    description: `Propose a change to one file behind a board (canvas_files lists them) when you cannot or should not write it yourself${opts.remote ? " \u2014 this canvas is not on your machine, so this is how you change a workflow or design file" : ""}. Give \`base\` (its sha-1 from canvas_files) and either \`diff\` (a unified diff against that text: \`--- a/<file>\` / \`+++ b/<file>\` / \`@@ -l,n +l,n @@\` hunks with 3 lines of context) or \`newText\` (the whole new file). The canvas checks it applies cleanly to the snapshot, then posts it as a proposal signed with your name: a comment threaded on the block or frame the first changed line belongs to (or on \`about\` item ids), showing the diff. Nothing is written to disk: the person discusses it in the thread, and whoever has the files (the studio session on the canvas machine, or the person's own agent) applies it after they agree. Then canvas_wait for their answer and reply in that thread. On a workflow board, \`wires\` optionally draws the wires your edit adds (or, with remove: true, removes) between existing blocks as dashed proposed wires; the yaml edit itself must be in the diff. Errors say what to fix: a stale base (re-read the file), a hunk that does not apply, an unknown file.`,
+    inputSchema: {
+      id: external_exports.string().describe("board id"),
+      file: external_exports.string().describe("the file, exactly as canvas_files lists it"),
+      base: external_exports.string().describe("sha-1 of the text you edited (from canvas_files)"),
+      diff: external_exports.string().optional().describe("unified diff against that text (one file)"),
+      newText: external_exports.string().optional().describe("the whole new file instead of a diff"),
+      note: external_exports.string().max(4e3).describe("what the edit does and why, for the person \u2014 it opens the thread"),
+      about: external_exports.array(external_exports.string()).optional().describe("item ids the proposal is about (default: the block / frame owning the first changed line)"),
+      wires: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), event: external_exports.string(), condition: external_exports.string().optional(), remove: external_exports.boolean().optional() })).optional().describe("workflow boards: wires the edit adds or removes, by workflow node id \u2014 drawn dashed until the applied file is redrawn")
+    }
+  }, async ({ id, file: file2, base, diff, newText, note, about, wires }) => {
+    const r = await client.propose(id, { file: file2, base, diff, newText, note, about, wires });
+    const moved = r.offsets.some((o) => o !== 0) ? ` (some hunks applied ${r.offsets.map((o) => o > 0 ? `+${o}` : String(o)).join(", ")} lines from where they said)` : "";
+    return text2(`proposed an edit to ${r.file} (+${r.added} \u2212${r.removed})${moved} as comment ${r.comment} on ${r.about.join(", ") || "the board"}; board seq ${r.seq}.
+Link: ${client.boardUrl(id, r.about[0] ? { focus: r.about[0] } : {})}
+The file is unchanged until whoever has it applies the edit after the person agrees. Tell the person, then canvas_wait (since ${r.seq}) for their answer in thread ${r.comment}.`);
   });
   server.registerTool("canvas_open", { title: "Open a board in the browser", description: opts.openBrowser === false ? "The board URL, to give the person." : "Print the board URL and open it in the default browser (macOS).", inputSchema: { id: external_exports.string() } }, async ({ id }) => {
     const url2 = client.boardUrl(id);
@@ -58103,10 +58616,37 @@ function startServer(opts = {}) {
         const body = await readBody(req);
         if (!isAuthor(body.author) && grant.as !== "agent")
           throw new HttpError(400, "author must be 'agent' or 'user'");
-        const ops = assertOps(body.ops);
         const who = actor(req, grant, body.author, "agent");
+        const ops = stampAttribution(board, assertOps(body.ops), who.by);
         const change = store.apply(id, ops, who.author, body.note, who.by);
         return json4(res, 200, { seq: change.seq, change });
+      }
+      if (sub === "files" && method === "GET") {
+        const files = boardFiles(board);
+        const want = url2.searchParams.get("path");
+        if (want !== null) {
+          const f = files.find((x2) => x2.path === want);
+          if (!f)
+            throw new HttpError(404, `"${want}" is not among the files behind this board (${files.map((x2) => x2.path).join(", ") || "none"})`);
+          return json4(res, 200, { file: f });
+        }
+        return json4(res, 200, { files: files.map(({ text: text3, ...f }) => ({ ...f, size: text3.length, lines: text3 === "" ? 0 : text3.replace(/\n$/, "").split("\n").length })) });
+      }
+      if (sub === "proposals" && method === "POST") {
+        const body = await readBody(req);
+        if (body.author !== void 0 && !isAuthor(body.author))
+          throw new HttpError(400, "author must be 'agent' or 'user'");
+        const who = actor(req, grant, body.author, "agent");
+        let p;
+        try {
+          p = buildProposal(store.get(id), body, who, (/* @__PURE__ */ new Date()).toISOString(), () => newId("prop"));
+        } catch (e) {
+          if (e instanceof ProposalError)
+            throw new HttpError(e.status, e.message);
+          throw e;
+        }
+        const change = store.apply(id, p.ops, who.author, `proposed an edit to ${p.file} (+${p.added} \u2212${p.removed})`, who.by);
+        return json4(res, 201, { seq: change.seq, comment: p.commentId, file: p.file, diff: p.diff, about: p.about, added: p.added, removed: p.removed, offsets: p.offsets });
       }
       if (sub === "focus" && method === "POST") {
         const body = await readBody(req);
@@ -58618,7 +59158,7 @@ var GitHubReleaseSource = class {
 };
 
 // packages/canvas/dist/adapters/update/installer.js
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { execFile as execFile3, spawn as spawn2 } from "node:child_process";
 import fs8 from "node:fs";
 import os4 from "node:os";
@@ -58673,7 +59213,7 @@ var ChildInstaller = class {
         await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
       }
       const want = fs8.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
-      const got = createHash2("sha256").update(fs8.readFileSync(tgz)).digest("hex");
+      const got = createHash3("sha256").update(fs8.readFileSync(tgz)).digest("hex");
       if (!want || want !== got)
         throw new Error(`checksum mismatch for ${name}`);
       const out = path9.join(tmp, "x");

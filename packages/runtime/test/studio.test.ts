@@ -476,6 +476,58 @@ test('a source-dialog edit is read from discuss.edit and shown first in the brie
   assert.match(brief, /\*\*before\*\* applying/)
 })
 
+// ── §10: an edit proposed by another (remote) agent ─────────────────────
+
+const DIFF = '--- a/dev/workflow.yaml\n+++ b/dev/workflow.yaml\n@@ -40,1 +40,1 @@\n-    ai: planner\n+    ai: architect\n'
+
+test('a named agent\'s edit proposal opens a chat like a request; unsigned, mismatched or reply ones do not', async () => {
+  const b = board()
+  b.agentProposal('wf.node.plan', 'let the architect plan', { file: 'dev/workflow.yaml', base: 'f00d', diff: DIFF }, 'codex-laptop')
+  // studio's own sessions sign nothing: an edit comment from the default agent is never a request
+  await b.add('b1', [{ type: 'comment', target: 'wf.node.plan', text: 'mine', data: { discuss: { edit: { file: 'dev/workflow.yaml', diff: DIFF } } } }])
+  // a name on the edit that the change log does not carry is not trusted
+  const forged = b.agentProposal('wf.node.plan', 'forged', { file: 'dev/workflow.yaml', diff: DIFF }, 'someone')
+  ;(b.snapshot.items[forged].data!.discuss as { edit: { by: string } }).edit.by = 'the-person'
+  const snap = await b.board()
+  const reqs = discussRequests(snap, (await b.changes('b1', 0)).changes, 0)
+  assert.equal(reqs.length, 1)
+  assert.equal(reqs[0].proposedBy, 'codex-laptop')
+  assert.equal(reqs[0].edit?.file, 'dev/workflow.yaml')
+  assert.equal(reqs[0].block, 'plan')
+})
+
+test('the brief for a remote agent\'s proposal says who, shows the diff, checks base, asks the person first, then apply, lint, test, redraw', async () => {
+  const { canvas, channel, studio, store, later } = setup(board(), new FakeAgentChannel({ stateAfterPrompt: 'working' }))
+  await studio.tick()
+  const id = canvas.agentProposal('wf.node.plan', 'let the architect plan', { file: 'dev/workflow.yaml', base: 'f00dcafe', diff: DIFF }, 'codex-laptop')
+  const [d] = await studio.tick()
+  assert.equal(d.action, 'opened')
+  const prompt = prompts(channel)[0]
+  assert.match(String(prompt.at(-1)), /the agent codex-laptop proposed an edit to dev\/workflow\.yaml/)
+  assert.doesNotMatch(String(prompt.at(-1)), /\n/)
+  const brief = [...store.briefs.values()].at(-1)!
+  assert.match(brief, /## Proposed edit — from codex-laptop, another agent/)
+  assert.ok(brief.indexOf('## Proposed edit') < brief.indexOf("## codex-laptop's note"))
+  assert.match(brief, /```diff\n--- a\/dev\/workflow\.yaml[\s\S]*\+    ai: architect\n```/)
+  assert.match(brief, /shasum -a 1 dev\/workflow\.yaml.*f00dcafe/)
+  assert.match(brief, /git apply --check/)
+  assert.match(brief, /only after the person agrees in this thread/)
+  assert.match(brief, /not the person's agreement/)
+  assert.match(brief, /awd lint dev\/workflow\.yaml/)
+  assert.match(brief, /awd graph dev\/workflow\.yaml --canvas/)
+  assert.match(brief, new RegExp(`target: "${id}"`))
+  assert.deepEqual(canvas.snapshot.items[id].data?.seenBy, ['agent'])
+  // the person's yes is a follow-up to the same chat
+  canvas.userComment(id, 'yes, apply it')
+  later()
+  channel.setState(MAIN, 'idle')
+  await studio.tick()
+  const follow = [...store.briefs.values()].at(-1)!
+  assert.match(follow, /## New message in this chat[\s\S]*yes, apply it/)
+  assert.match(follow, /Person: yes, apply it/)
+  assert.match(follow, /## Proposed edit — from codex-laptop/, 'the follow-up still carries the diff')
+})
+
 // ── every comment reaches the agent while studio runs (docs/studio.md §2) ──
 
 const prompts = (ch: FakeAgentChannel) => ch.calls.filter((c) => c[0] === 'prompt')

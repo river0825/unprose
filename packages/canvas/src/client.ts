@@ -32,6 +32,16 @@ export async function probeCanvas(base: string, timeoutMs = 4000, token?: string
   }
 }
 
+/** A file behind a board, as `GET /api/boards/:id/files` lists it. */
+export interface BoardFileInfo {
+  path: string
+  sha: string
+  truncated: boolean
+  from: { workflow: true } | { diagram: string }
+  size?: number
+  lines?: number
+}
+
 export interface CanvasClientOptions {
   /** An access token (docs/canvas.md "Remote agents"); default `UNPROSE_TOKEN`. */
   token?: string
@@ -163,6 +173,17 @@ export class CanvasClient {
   /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
   focus(id: string, target: { ids?: string[]; frame?: string; note?: string }, author: Author = 'agent') {
     return this.req<{ ok: true; viewers: number; focus: { ids: string[]; frame?: string; note?: string } }>('POST', `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author })
+  }
+  /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
+  files(id: string) {
+    return this.req<{ files: BoardFileInfo[] }>('GET', `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files)
+  }
+  file(id: string, path: string) {
+    return this.req<{ file: BoardFileInfo & { text: string } }>('GET', `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path)}`).then((r) => r.file)
+  }
+  /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
+  propose(id: string, input: { file: string; base: string; diff?: string; newText?: string; note: string; about?: string[]; wires?: Array<{ from: string; to: string; event: string; condition?: string; remove?: boolean }> }) {
+    return this.req<{ seq: number; comment: string; file: string; diff: string; about: string[]; added: number; removed: number; offsets: number[] }>('POST', `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input, author: 'agent' })
   }
   /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
   boardUrl(id: string, at: { frame?: string; focus?: string } = {}) {

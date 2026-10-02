@@ -4,7 +4,7 @@
 
 export type BoardItem = { id: string; type: string; role?: string; text?: string; label?: string; target?: string; parent?: string; from?: string; to?: string; data?: Record<string, unknown>; createdBy?: string }
 export type BoardSnapshot = { id: string; title: string; kind?: string; seq: number; items: Record<string, BoardItem>; meta?: Record<string, unknown> }
-export type BoardChange = { seq: number; author: 'agent' | 'user'; ops: Array<{ kind: string; id?: string; item?: BoardItem; patch?: Partial<BoardItem> }> }
+export type BoardChange = { seq: number; author: 'agent' | 'user'; /** the named agent / signed-in person who made it */ by?: string; ops: Array<{ kind: string; id?: string; item?: BoardItem; patch?: Partial<BoardItem> }> }
 /** An item to add; the canvas fills in id / geometry (a comment lands beside its target). */
 export type NewItem = { type: string; text?: string; target?: string; data?: Record<string, unknown> }
 

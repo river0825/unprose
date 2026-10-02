@@ -30,10 +30,20 @@ export class FakeCanvasBoard implements CanvasBoard {
     return id
   }
 
-  private push(author: 'agent' | 'user', items: BoardItem[]): number {
+  /**
+   * Test hook: a named agent (a remote one, signed by its token) proposes an edit — the comment the canvas's
+   * canvas_propose_edit makes (docs/studio.md §10). `by` lands on the change, like the canvas's `Change.by`.
+   */
+  agentProposal(target: string | undefined, text: string, edit: { file: string; base?: string; diff: string }, by: string): string {
+    const id = `${this.snapshot.id}.p${++this.n}`
+    this.push('agent', [{ id, type: 'comment', ...(target ? { target } : {}), text, data: { by, discuss: { about: target ? [target] : [], edit: { ...edit, by } } }, createdBy: 'agent' }], by)
+    return id
+  }
+
+  private push(author: 'agent' | 'user', items: BoardItem[], by?: string): number {
     const seq = ++this.snapshot.seq
     for (const it of items) this.snapshot.items[it.id] = it
-    this.log.push({ seq, author, ops: items.map((item) => ({ kind: 'add', item })) })
+    this.log.push({ seq, author, ...(by ? { by } : {}), ops: items.map((item) => ({ kind: 'add', item })) })
     return seq
   }
 }

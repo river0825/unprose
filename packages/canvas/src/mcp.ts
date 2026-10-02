@@ -48,6 +48,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open',
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
     'Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person\'s page to an item or frame)',
+    `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
     ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
   return [
@@ -71,6 +72,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     ...(o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(', ')}`] : []),
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
+    'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).',
     'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name.',
   ].join('\n')
 }
@@ -103,7 +105,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.8.0' },
+    { name: 'unprose', version: '0.8.1' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -271,6 +273,51 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
       const r = await client.focus(id, { ids, frame, note })
       const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...(frame ? { frame } : {}) })
       return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now — send the person this link instead: ${link}`)
+    },
+  )
+
+  server.registerTool(
+    'canvas_files',
+    {
+      title: 'Read the files behind a board',
+      description:
+        "The files a board is drawn from, as the last redraw put them on the board: a workflow board's yaml, agent files, prompts and scripts; a diagram frame's design file. Without `path`: each file with its sha-1 (`base`), line count and where it comes from. With `path`: that file's exact text — make your edit against exactly this text, then canvas_propose_edit with this base. It is a snapshot: the real file lives on the machine that drew the board.",
+      inputSchema: { id: z.string().describe('board id'), path: z.string().optional().describe('one file, as listed (repo-relative, e.g. "examples/card-pipeline/workflow.yaml")') },
+    },
+    async ({ id, path: want }) => {
+      if (!want) {
+        const files = await client.files(id)
+        if (!files.length) return text('No files on this board: it was not drawn from files (awd graph --canvas / awd design draw / design_draw put them there). Nothing to propose against.')
+        return text([`${files.length} file(s) behind board ${id}:`, ...files.map((f) => `${f.path}\tbase ${f.sha}\t${f.lines ?? '?'} lines\t${'workflow' in f.from ? 'workflow' : `diagram ${f.from.diagram}`}${f.truncated ? '\tCUT SHORT on the board — cannot be proposed against' : ''}`)].join('\n'))
+      }
+      const f = await client.file(id, want)
+      return text(`file: ${f.path}\nbase: ${f.sha}${f.truncated ? '\n(cut short on the board — not the whole file; it cannot be proposed against)' : ''}\n--- the exact text follows (after this line) ---\n${f.text}`)
+    },
+  )
+
+  server.registerTool(
+    'canvas_propose_edit',
+    {
+      title: 'Propose an edit to a file behind a board',
+      description: `Propose a change to one file behind a board (canvas_files lists them) when you cannot or should not write it yourself${opts.remote ? ' — this canvas is not on your machine, so this is how you change a workflow or design file' : ''}. Give \`base\` (its sha-1 from canvas_files) and either \`diff\` (a unified diff against that text: \`--- a/<file>\` / \`+++ b/<file>\` / \`@@ -l,n +l,n @@\` hunks with 3 lines of context) or \`newText\` (the whole new file). The canvas checks it applies cleanly to the snapshot, then posts it as a proposal signed with your name: a comment threaded on the block or frame the first changed line belongs to (or on \`about\` item ids), showing the diff. Nothing is written to disk: the person discusses it in the thread, and whoever has the files (the studio session on the canvas machine, or the person's own agent) applies it after they agree. Then canvas_wait for their answer and reply in that thread. On a workflow board, \`wires\` optionally draws the wires your edit adds (or, with remove: true, removes) between existing blocks as dashed proposed wires; the yaml edit itself must be in the diff. Errors say what to fix: a stale base (re-read the file), a hunk that does not apply, an unknown file.`,
+      inputSchema: {
+        id: z.string().describe('board id'),
+        file: z.string().describe('the file, exactly as canvas_files lists it'),
+        base: z.string().describe('sha-1 of the text you edited (from canvas_files)'),
+        diff: z.string().optional().describe('unified diff against that text (one file)'),
+        newText: z.string().optional().describe('the whole new file instead of a diff'),
+        note: z.string().max(4000).describe('what the edit does and why, for the person — it opens the thread'),
+        about: z.array(z.string()).optional().describe('item ids the proposal is about (default: the block / frame owning the first changed line)'),
+        wires: z
+          .array(z.object({ from: z.string(), to: z.string(), event: z.string(), condition: z.string().optional(), remove: z.boolean().optional() }))
+          .optional()
+          .describe('workflow boards: wires the edit adds or removes, by workflow node id — drawn dashed until the applied file is redrawn'),
+      },
+    },
+    async ({ id, file, base, diff, newText, note, about, wires }) => {
+      const r = await client.propose(id, { file, base, diff, newText, note, about, wires })
+      const moved = r.offsets.some((o) => o !== 0) ? ` (some hunks applied ${r.offsets.map((o) => (o > 0 ? `+${o}` : String(o))).join(', ')} lines from where they said)` : ''
+      return text(`proposed an edit to ${r.file} (+${r.added} −${r.removed})${moved} as comment ${r.comment} on ${r.about.join(', ') || 'the board'}; board seq ${r.seq}.\nLink: ${client.boardUrl(id, r.about[0] ? { focus: r.about[0] } : {})}\nThe file is unchanged until whoever has it applies the edit after the person agrees. Tell the person, then canvas_wait (since ${r.seq}) for their answer in thread ${r.comment}.`)
     },
   )
 

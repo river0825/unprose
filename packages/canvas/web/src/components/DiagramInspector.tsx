@@ -154,7 +154,7 @@ export function DiagramElementPanel({
         </p>
       ) : null}
       {typeof item.data?.note === 'string' ? <p className="muted">{item.data.note}</p> : null}
-      {pending?.kind === 'add' ? <StoryProposal board={board} item={item} pending={pending} onProposalChat={onProposalChat} onDismiss={onDismiss} /> : null}
+      {pending?.kind === 'add' && item.type !== 'arrow' ? <StoryProposal board={board} item={item} pending={pending} onProposalChat={onProposalChat} onDismiss={onDismiss} /> : null}
       {rule || (nb && (nb.before.length || nb.after.length)) ? (
         <section className="insp-sec">
           <h3>Grammar</h3>

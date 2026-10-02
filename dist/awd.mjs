@@ -35112,7 +35112,7 @@ function editOf(discuss) {
   if (!e || typeof e.diff !== "string" || !e.diff.trim())
     return void 0;
   const str4 = (v2) => typeof v2 === "string" && v2 ? v2 : void 0;
-  return { file: str4(e.file), doc: str4(e.doc), base: str4(e.base), diff: e.diff.slice(0, 6e4) };
+  return { file: str4(e.file), doc: str4(e.doc), base: str4(e.base), diff: e.diff.slice(0, 6e4), ...str4(e.by) ? { by: str4(e.by).slice(0, 80) } : {} };
 }
 function blockOf(item) {
   if (!item || item.type === "comment" || item.type === "arrow")
@@ -35149,6 +35149,23 @@ function newUserComments(board, changes, sinceSeq) {
   }
   return out;
 }
+function agentProposals(board, changes, sinceSeq) {
+  const out = [];
+  for (const ch of changes) {
+    if (ch.seq <= sinceSeq || ch.author !== "agent" || !ch.by)
+      continue;
+    for (const op of ch.ops) {
+      if (op.kind !== "add" || op.item?.type !== "comment")
+        continue;
+      const comment = board.items[op.item.id] ?? op.item;
+      const edit = editOf(comment.data?.discuss);
+      if (!edit || edit.by !== ch.by || comment.target && board.items[comment.target]?.type === "comment")
+        continue;
+      out.push({ seq: ch.seq, comment, by: ch.by });
+    }
+  }
+  return out;
+}
 function rootOf(board, commentId) {
   let id = commentId;
   for (let i = 0; i < 50; i++) {
@@ -35166,13 +35183,19 @@ function discussRequests(board, changes, sinceSeq, defaultModel = "opus", scope 
     if (req)
       out.push(req);
   }
-  return out;
+  for (const { seq, comment } of agentProposals(board, changes, sinceSeq)) {
+    const req = chatRequest(board, comment, seq, defaultModel, scope);
+    if (req)
+      out.push(req);
+  }
+  return out.sort((a, b2) => a.seq - b2.seq);
 }
 function chatRequest(board, comment, seq, defaultModel = "opus", scope = "studio", text3) {
   const discuss = comment.data?.discuss ?? {};
   const pick2 = (m2) => STUDIO_MODELS.includes(m2 ?? "") ? m2 : defaultModel;
+  const proposedBy = comment.createdBy === "agent" ? editOf(discuss)?.by : void 0;
   if (!comment.target) {
-    if (comment.createdBy === "agent")
+    if (comment.createdBy === "agent" && !proposedBy)
       return void 0;
     return {
       seq,
@@ -35185,6 +35208,8 @@ function chatRequest(board, comment, seq, defaultModel = "opus", scope = "studio
       about: [],
       session: `awd-${scope}-board`.slice(0, 32),
       key: "board",
+      ...editOf(discuss) ? { edit: editOf(discuss) } : {},
+      ...proposedBy ? { proposedBy } : {},
       ...text3 !== void 0 ? { followUp: true } : {}
     };
   }
@@ -35208,6 +35233,7 @@ function chatRequest(board, comment, seq, defaultModel = "opus", scope = "studio
     ...anchorOf(comment) ? { anchor: anchorOf(comment) } : {},
     ...proposalOf(discuss) ? { proposal: proposalOf(discuss) } : {},
     ...editOf(discuss) ? { edit: editOf(discuss) } : {},
+    ...proposedBy ? { proposedBy } : {},
     ...text3 !== void 0 ? { followUp: true } : {}
   };
 }
@@ -35365,7 +35391,7 @@ function boardSummary(board, workflow) {
 }
 function renderBoardBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
   const { diagrams, loose: loose2, files } = boardSummary(board, workflow);
-  const chat = Object.values(board.items).filter((i) => i.type === "comment" && i.target === req.commentId).map((i) => `- ${i.createdBy === "agent" ? "Agent" : "Person"}: ${oneLine(i.text ?? "")}`);
+  const chat = Object.values(board.items).filter((i) => i.type === "comment" && i.target === req.commentId).map((i) => `- ${speaker(i)}: ${oneLine(i.text ?? "")}`);
   return [
     "# Studio \u2014 the whole board",
     "",
@@ -35373,7 +35399,8 @@ function renderBoardBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
     "",
     "Nothing was selected: this chat is about the board as a whole. This session is the board's own conversation.",
     "",
-    req.followUp ? "## New message in this chat" : "## The request",
+    ...editSection(req),
+    req.followUp ? "## New message in this chat" : req.proposedBy ? `## ${req.proposedBy}'s note` : "## The request",
     "",
     quote(req.text || "(no text \u2014 the person wants to talk about this board)"),
     "",
@@ -35411,7 +35438,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
   const { diagrams, traces: traces2 } = diagramLines(board, req.about.map((a) => a.itemId));
   const sources = req.about.map((a) => diagramOf2(board, a.itemId)?.source).filter((f) => !!f);
   const files = [workflow, ...details.flatMap(filesOf), ...sources].filter((f, i, all) => !!f && all.indexOf(f) === i);
-  const said = (i) => `- ${i.createdBy === "agent" ? "Agent" : "Person"}: ${oneLine(i.text ?? "")}`;
+  const said = (i) => `- ${speaker(i)}: ${oneLine(i.text ?? "")}`;
   const comments = Object.values(board.items).filter((i) => i.type === "comment" && i.id !== req.commentId);
   const chat = comments.filter((i) => i.target === req.commentId).map(said);
   const earlier = comments.filter((i) => i.target && inSet.has(i.target) && !anchorOf(i)).map((i) => `${said(i)} (on ${name(i.target)})`);
@@ -35423,7 +35450,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
     return a && !answered.has(i.id) && (i.target && inSet.has(i.target) || a.file && behind(a));
   }).map((i) => {
     const a = anchorOf(i);
-    return `- \`${i.id}\` \xB7 ${whereOf(a, board, i.target)}${a.quote ? ` "${oneLine(a.quote).slice(0, 120)}"` : ""} \u2014 ${i.createdBy === "agent" ? "Agent" : "Person"}: ${oneLine(i.text ?? "")}`;
+    return `- \`${i.id}\` \xB7 ${whereOf(a, board, i.target)}${a.quote ? ` "${oneLine(a.quote).slice(0, 120)}"` : ""} \u2014 ${speaker(i)}: ${oneLine(i.text ?? "")}`;
   });
   const look = req.anchor ? ["## Look here", "", `\`${whereOf(req.anchor, board, req.blockItemId)}\` \u2014 the request was written on these lines:`, "", "```", req.anchor.quote, "```", ""] : [];
   const one = req.about.length === 1;
@@ -35440,19 +35467,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
     "Review it with the person in this chat **before** editing: what it would change, what else it touches (other steps listening to the same event, goldens, gates), and whether they still want it. Apply only after they agree; then lint, test and redraw \u2014 the redraw clears the proposal (the wire stops being dashed). If you both decide against it, ask them to press Undo on the wire.",
     ""
   ] : [];
-  const edit = req.edit ? [
-    "## Proposed edit",
-    "",
-    `The person edited \`${req.edit.file ?? req.edit.doc ?? "a text"}\` in the source dialog; the file on disk does not have it yet.${req.edit.base ? ` The diff was made against the board's snapshot (sha-1 \`${req.edit.base}\`); if the file changed since, say so and merge by hand.` : ""}`,
-    ...req.edit.doc && !req.edit.file ? ["", "This text is derived (not a file): work out which source it comes from (agent file, role file, output schema) and change that."] : [],
-    "",
-    "```diff",
-    req.edit.diff.trimEnd(),
-    "```",
-    "",
-    "Review it with the person in this chat **before** applying: what it changes and why, anything it breaks. Apply after they agree; then lint, test and redraw.",
-    ""
-  ] : [];
+  const edit = editSection(req);
   return [
     `# Studio \u2014 ${one ? `${req.kind} \`${req.block}\`` : `${req.about.length} selected items`}`,
     "",
@@ -35462,7 +35477,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
     "",
     ...proposal,
     ...edit,
-    req.followUp ? "## New message in this chat" : "## The request",
+    req.followUp ? "## New message in this chat" : req.proposedBy ? `## ${req.proposedBy}'s note` : "## The request",
     "",
     quote(req.text || `(no text \u2014 the person wants to talk about ${one ? "this item" : "these items"})`),
     "",
@@ -35495,6 +35510,46 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
     ""
   ].join("\n");
 }
+function speaker(i) {
+  const by = typeof i.data?.by === "string" && i.data.by ? i.data.by.slice(0, 80) : void 0;
+  if (i.createdBy === "agent")
+    return by ? `${by} (agent)` : "Agent";
+  return "Person";
+}
+function editSection(req) {
+  const e = req.edit;
+  if (!e)
+    return [];
+  const file2 = e.file ?? e.doc ?? "a text";
+  const diff = ["```diff", e.diff.trimEnd(), "```", ""];
+  if (!req.proposedBy)
+    return [
+      "## Proposed edit",
+      "",
+      `The person edited \`${file2}\` in the source dialog; the file on disk does not have it yet.${e.base ? ` The diff was made against the board's snapshot (sha-1 \`${e.base}\`); if the file changed since, say so and merge by hand.` : ""}`,
+      ...e.doc && !e.file ? ["", "This text is derived (not a file): work out which source it comes from (agent file, role file, output schema) and change that."] : [],
+      "",
+      ...diff,
+      "Review it with the person in this chat **before** applying: what it changes and why, anything it breaks. Apply after they agree; then lint, test and redraw.",
+      ""
+    ];
+  const who = req.proposedBy;
+  const check2 = e.base && e.file ? `\`shasum -a 1 ${e.file}\` (or \`sha1sum\`) must print \`${e.base}\`` : "compare the file with the diff's context lines";
+  return [
+    `## Proposed edit \u2014 from ${who}, another agent`,
+    "",
+    `\`${who}\` is an agent connected to the canvas (a remote agent, signed by its token) that cannot touch this repo's files, so it proposed this change to \`${file2}\` on the board instead. The diff was checked against the board's snapshot of the file${e.base ? ` (sha-1 \`${e.base}\`)` : ""}; nothing is on disk yet. You have the files: you apply it \u2014 **only after the person agrees in this thread**. A reply from \`${who}\` or any other agent is not the person's agreement.`,
+    "",
+    ...diff,
+    "Steps:",
+    "",
+    `1. Read \`${file2}\` and check it still is the text the diff was made against: ${check2}.`,
+    `   - If it differs, the file changed since the proposal. Try the diff anyway (\`git apply --check\` with the diff saved to a file); if it applies cleanly, say so in the thread. If not, do not force it: rebase the change by hand onto the current file and show the person the new diff, or ask \`${who}\` in the thread to read the file again from the board after the next redraw and propose again.`,
+    `2. Reply in this thread first: say that \`${who}\` proposed it, what it changes in a sentence or two, what it touches beyond the lines (other steps on the same event, goldens, gates, traces), and ask the person whether to apply it. Then stop and wait \u2014 their answer comes to you from studio as a new message.`,
+    `3. When the person agrees: apply it (\`git apply\` the saved diff, or edit by hand), then lint, test and redraw as below (the redraw also clears any dashed wire the proposal drew), and reply "Applied to \`${file2}\`" with what you ran. Never commit. If they decline, say so in the thread; dashed wires it drew go away with Undo on the wire.`,
+    ""
+  ];
+}
 function itemSection(item, a, detail) {
   const at2 = detail?.source;
   const where = at2?.workflow ? ` \xB7 defined at \`${at2.workflow}${at2.line ? `:${at2.line}` : ""}\`` : "";
@@ -35506,6 +35561,8 @@ function itemSection(item, a, detail) {
   return [head, "", ...body, ""];
 }
 function promptFor(req, briefPath) {
+  if (req.proposedBy)
+    return `Studio: the agent ${req.proposedBy.replace(/\s+/g, " ")} proposed an edit to ${req.edit?.file ?? "a file"} on the board (${req.block}). Read ${briefPath} \u2014 it has the diff and the steps: check the file, ask the person in the canvas thread, and apply only after they agree.`;
   if (req.kind === "board")
     return `Studio request about the whole board (nothing selected). Read ${briefPath} \u2014 it lists the board's diagrams, the files behind them, the person's request and how to work. Do what it asks, then reply in the canvas thread as it describes.`;
   const what = req.about.length === 1 ? `${req.about[0].block ? "workflow block" : "board item"} "${req.block}" (${req.kind})` : `${req.about.length} selected board items (${req.block})`;
@@ -36137,7 +36194,7 @@ function canvasBoardHttp(opts = {}) {
       return req("GET", `${b2(id)}/changes?since=${since}`);
     },
     async wait(id, since, timeoutMs) {
-      await req("GET", `${b2(id)}/wait?since=${since}&timeout=${timeoutMs}&quiet=500&author=user&wake=meaningful`);
+      await req("GET", `${b2(id)}/wait?since=${since}&timeout=${timeoutMs}&quiet=500&author=others&wake=meaningful`);
     },
     async add(id, items, note) {
       const stamp = `studio.${Date.now().toString(36)}`;
@@ -59043,9 +59100,16 @@ var init_store2 = __esm({
   }
 });
 
+// packages/canvas/dist/patch.js
+var init_patch = __esm({
+  "packages/canvas/dist/patch.js"() {
+  }
+});
+
 // packages/canvas/dist/diff.js
 var init_diff = __esm({
   "packages/canvas/dist/diff.js"() {
+    init_patch();
     init_model();
   }
 });
@@ -64007,6 +64071,14 @@ var init_place = __esm({
   }
 });
 
+// packages/canvas/dist/proposals.js
+var init_proposals = __esm({
+  "packages/canvas/dist/proposals.js"() {
+    init_place();
+    init_patch();
+  }
+});
+
 // packages/canvas/dist/accessPolicy.js
 var init_accessPolicy = __esm({
   "packages/canvas/dist/accessPolicy.js"() {
@@ -66690,6 +66762,17 @@ var init_client2 = __esm({
       /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
       focus(id, target, author = "agent") {
         return this.req("POST", `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author });
+      }
+      /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
+      files(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
+      }
+      file(id, path22) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path22)}`).then((r) => r.file);
+      }
+      /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
+      propose(id, input2) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input2, author: "agent" });
       }
       /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
       boardUrl(id, at2 = {}) {
@@ -75723,6 +75806,7 @@ function helpText(o) {
     "Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open",
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
     "Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person's page to an item or frame)",
+    `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
   return [
@@ -75746,6 +75830,7 @@ function helpText(o) {
     ...o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(", ")}`] : [],
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
+    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
     "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name."
   ].join("\n");
 }
@@ -75762,7 +75847,7 @@ function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os2.h
   return start;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.8.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.8.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   server.registerTool("unprose_help", {
     title: "What Unprose can do",
@@ -75894,6 +75979,43 @@ ${r.lines.join("\n")}`);
     const r = await client.focus(id, { ids, frame, note });
     const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
     return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+  });
+  server.registerTool("canvas_files", {
+    title: "Read the files behind a board",
+    description: "The files a board is drawn from, as the last redraw put them on the board: a workflow board's yaml, agent files, prompts and scripts; a diagram frame's design file. Without `path`: each file with its sha-1 (`base`), line count and where it comes from. With `path`: that file's exact text \u2014 make your edit against exactly this text, then canvas_propose_edit with this base. It is a snapshot: the real file lives on the machine that drew the board.",
+    inputSchema: { id: external_exports.string().describe("board id"), path: external_exports.string().optional().describe('one file, as listed (repo-relative, e.g. "examples/card-pipeline/workflow.yaml")') }
+  }, async ({ id, path: want }) => {
+    if (!want) {
+      const files = await client.files(id);
+      if (!files.length)
+        return text("No files on this board: it was not drawn from files (awd graph --canvas / awd design draw / design_draw put them there). Nothing to propose against.");
+      return text([`${files.length} file(s) behind board ${id}:`, ...files.map((f2) => `${f2.path}	base ${f2.sha}	${f2.lines ?? "?"} lines	${"workflow" in f2.from ? "workflow" : `diagram ${f2.from.diagram}`}${f2.truncated ? "	CUT SHORT on the board \u2014 cannot be proposed against" : ""}`)].join("\n"));
+    }
+    const f = await client.file(id, want);
+    return text(`file: ${f.path}
+base: ${f.sha}${f.truncated ? "\n(cut short on the board \u2014 not the whole file; it cannot be proposed against)" : ""}
+--- the exact text follows (after this line) ---
+${f.text}`);
+  });
+  server.registerTool("canvas_propose_edit", {
+    title: "Propose an edit to a file behind a board",
+    description: `Propose a change to one file behind a board (canvas_files lists them) when you cannot or should not write it yourself${opts.remote ? " \u2014 this canvas is not on your machine, so this is how you change a workflow or design file" : ""}. Give \`base\` (its sha-1 from canvas_files) and either \`diff\` (a unified diff against that text: \`--- a/<file>\` / \`+++ b/<file>\` / \`@@ -l,n +l,n @@\` hunks with 3 lines of context) or \`newText\` (the whole new file). The canvas checks it applies cleanly to the snapshot, then posts it as a proposal signed with your name: a comment threaded on the block or frame the first changed line belongs to (or on \`about\` item ids), showing the diff. Nothing is written to disk: the person discusses it in the thread, and whoever has the files (the studio session on the canvas machine, or the person's own agent) applies it after they agree. Then canvas_wait for their answer and reply in that thread. On a workflow board, \`wires\` optionally draws the wires your edit adds (or, with remove: true, removes) between existing blocks as dashed proposed wires; the yaml edit itself must be in the diff. Errors say what to fix: a stale base (re-read the file), a hunk that does not apply, an unknown file.`,
+    inputSchema: {
+      id: external_exports.string().describe("board id"),
+      file: external_exports.string().describe("the file, exactly as canvas_files lists it"),
+      base: external_exports.string().describe("sha-1 of the text you edited (from canvas_files)"),
+      diff: external_exports.string().optional().describe("unified diff against that text (one file)"),
+      newText: external_exports.string().optional().describe("the whole new file instead of a diff"),
+      note: external_exports.string().max(4e3).describe("what the edit does and why, for the person \u2014 it opens the thread"),
+      about: external_exports.array(external_exports.string()).optional().describe("item ids the proposal is about (default: the block / frame owning the first changed line)"),
+      wires: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), event: external_exports.string(), condition: external_exports.string().optional(), remove: external_exports.boolean().optional() })).optional().describe("workflow boards: wires the edit adds or removes, by workflow node id \u2014 drawn dashed until the applied file is redrawn")
+    }
+  }, async ({ id, file: file2, base, diff, newText, note, about, wires }) => {
+    const r = await client.propose(id, { file: file2, base, diff, newText, note, about, wires });
+    const moved = r.offsets.some((o) => o !== 0) ? ` (some hunks applied ${r.offsets.map((o) => o > 0 ? `+${o}` : String(o)).join(", ")} lines from where they said)` : "";
+    return text(`proposed an edit to ${r.file} (+${r.added} \u2212${r.removed})${moved} as comment ${r.comment} on ${r.about.join(", ") || "the board"}; board seq ${r.seq}.
+Link: ${client.boardUrl(id, r.about[0] ? { focus: r.about[0] } : {})}
+The file is unchanged until whoever has it applies the edit after the person agrees. Tell the person, then canvas_wait (since ${r.seq}) for their answer in thread ${r.comment}.`);
   });
   server.registerTool("canvas_open", { title: "Open a board in the browser", description: opts.openBrowser === false ? "The board URL, to give the person." : "Print the board URL and open it in the default browser (macOS).", inputSchema: { id: external_exports.string() } }, async ({ id }) => {
     const url2 = client.boardUrl(id);
@@ -76075,6 +76197,7 @@ var init_server3 = __esm({
     init_release();
     init_thumb();
     init_place();
+    init_proposals();
     init_model();
     init_access();
     init_access2();

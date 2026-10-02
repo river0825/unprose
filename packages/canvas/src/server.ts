@@ -18,7 +18,8 @@ import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
 import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
-import { diagramFrameId, isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
+import { diagramFrameId, isBookkeeping, newId, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
 import { AccessService } from './access.js'
 import { MemoryAccessStore } from './adapters/access/index.js'
 import { canSeeBoard, canSeeProject, canWrite, cleanName, projectForNewBoard, type Grant } from './accessPolicy.js'
@@ -461,10 +462,36 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       if (sub === 'ops' && method === 'POST') {
         const body = (await readBody(req)) as { author?: unknown; ops?: unknown; note?: string }
         if (!isAuthor(body.author) && grant.as !== 'agent') throw new HttpError(400, "author must be 'agent' or 'user'")
-        const ops = assertOps(body.ops)
         const who = actor(req, grant, body.author, 'agent')
+        // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity")
+        const ops = stampAttribution(board, assertOps(body.ops), who.by)
         const change = store.apply(id, ops, who.author, body.note, who.by)
         return json(res, 200, { seq: change.seq, change })
+      }
+      // ---- Proposals: the files behind a board, and edits to them as chat requests (docs/canvas.md "Proposals and saving") ----
+      if (sub === 'files' && method === 'GET') {
+        const files = boardFiles(board)
+        const want = url.searchParams.get('path')
+        if (want !== null) {
+          const f = files.find((x) => x.path === want)
+          if (!f) throw new HttpError(404, `"${want}" is not among the files behind this board (${files.map((x) => x.path).join(', ') || 'none'})`)
+          return json(res, 200, { file: f })
+        }
+        return json(res, 200, { files: files.map(({ text, ...f }) => ({ ...f, size: text.length, lines: text === '' ? 0 : text.replace(/\n$/, '').split('\n').length })) })
+      }
+      if (sub === 'proposals' && method === 'POST') {
+        const body = (await readBody(req)) as ProposalInput & { author?: unknown }
+        if (body.author !== undefined && !isAuthor(body.author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        const who = actor(req, grant, body.author, 'agent')
+        let p: ReturnType<typeof buildProposal>
+        try {
+          p = buildProposal(store.get(id)!, body, who, new Date().toISOString(), () => newId('prop'))
+        } catch (e) {
+          if (e instanceof ProposalError) throw new HttpError(e.status, e.message)
+          throw e
+        }
+        const change = store.apply(id, p.ops, who.author, `proposed an edit to ${p.file} (+${p.added} −${p.removed})`, who.by)
+        return json(res, 201, { seq: change.seq, comment: p.commentId, file: p.file, diff: p.diff, about: p.about, added: p.added, removed: p.removed, offsets: p.offsets })
       }
       if (sub === 'focus' && method === 'POST') {
         const body = (await readBody(req)) as { ids?: unknown; frame?: unknown; note?: unknown; author?: unknown }

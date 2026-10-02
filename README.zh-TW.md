@@ -172,6 +172,11 @@ runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只
 隨時可以撤銷。細節見 [docs/canvas.md → Remote agents](docs/canvas.md#remote-agents)，各家 client 的設定見
 [docs/agents-setup.md](docs/agents-setup.md#remote-agents-another-machine-or-the-cloud)。
 
+遠端 agent 碰不到你的檔案，所以它用**提案**：從 board 讀出背後的檔案（`canvas_files`），送出修改（`canvas_propose_edit`），
+在 board 的 Chat 裡顯示成一段署名的 diff。你在討論串裡同意或拒絕；由手上有檔案的一方——canvas 所在機器上的 studio session，
+或你自己的 Claude Code——套用、lint、測試、重畫。canvas 本身從不寫檔。細節見
+[docs/canvas.md → Proposals and saving](docs/canvas.md#proposals-and-saving)。
+
 ## 安全
 
 在 canvas 自己那台機器上（`http://localhost…`）和以前一樣不用登入。從其他地方來的請求——tunnel、區網——都需要 token，

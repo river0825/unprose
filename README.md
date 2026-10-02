@@ -180,6 +180,12 @@ Or make a token on the **Connected agents** page (read or read-and-draw, all or 
 changes carry its name, and you can revoke it any time. Details: [docs/canvas.md → Remote agents](docs/canvas.md#remote-agents),
 setup per client: [docs/agents-setup.md](docs/agents-setup.md#remote-agents-another-machine-or-the-cloud).
 
+A remote agent cannot touch your files, so it **proposes**: it reads the files behind a board (`canvas_files`) and
+sends an edit (`canvas_propose_edit`), which shows in the board's Chat as a diff signed with its name. You agree or
+decline in the thread; the agent that has the files — studio's session on the canvas machine, or your own Claude
+Code — applies it, lints, tests and redraws. The canvas itself never writes a file. Details:
+[docs/canvas.md → Proposals and saving](docs/canvas.md#proposals-and-saving).
+
 ## Safety
 
 On its own machine (`http://localhost…`) the canvas needs no sign-in, as before. Everything that comes from

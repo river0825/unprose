@@ -10,6 +10,11 @@ Unprose to discuss designs with a person on a shared canvas.
   Domain stories (docs/diagrams.md §6b): actors appear once, every activity gets its own work object; `awd design
   import-egon` / `export-egon` exchange them with Egon.io.
 - **You edit, the person directs.** Change files after they agree; say which files you changed.
+- **Other agents propose; you apply.** A remote agent (through `/mcp`) cannot write the files, so it proposes an
+  edit (`canvas_propose_edit` → a comment with `data.discuss.edit`, shown as `[n <agent>] proposed an edit to <file>`
+  with `canvas_wait({ from: 'others' })`). If you have the files: discuss it, and only after the person agrees check
+  the file still has the `base` sha-1, apply, lint, test, redraw, reply "Applied to <file>" (docs/canvas.md →
+  Proposals and saving). Without the files yourself: read them with `canvas_files` and propose the same way.
 - **Edits on the canvas are proposals** (a dragged wire, text edited in the source dialog, a proposed
   story). Discuss them in the comment thread first, then apply them to the file and redraw.
 

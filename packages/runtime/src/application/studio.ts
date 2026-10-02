@@ -10,7 +10,7 @@
 
 export type StudioItem = { id: string; type: string; role?: string; text?: string; label?: string; target?: string; parent?: string; from?: string; to?: string; data?: Record<string, unknown>; createdBy?: string }
 export type StudioBoard = { id: string; title: string; kind?: string; seq: number; items: Record<string, StudioItem>; meta?: Record<string, unknown> }
-export type StudioChange = { seq: number; author: 'agent' | 'user'; ops: Array<{ kind: string; id?: string; item?: StudioItem; patch?: Partial<StudioItem> }>; before?: Record<string, StudioItem | null> }
+export type StudioChange = { seq: number; author: 'agent' | 'user'; /** the named agent (or signed-in person) the canvas says made it */ by?: string; ops: Array<{ kind: string; id?: string; item?: StudioItem; patch?: Partial<StudioItem> }>; before?: Record<string, StudioItem | null> }
 
 /** Models a request may ask for. Anything else falls back to the default — the value comes from the board, so it is never passed through as is. */
 export const STUDIO_MODELS = ['opus', 'sonnet', 'fable', 'haiku'] as const
@@ -56,8 +56,10 @@ export interface DiscussRequest {
   anchor?: Anchor
   /** When the person edited a wire on the board and asked the AI to review it (§7). */
   proposal?: Proposal
-  /** When the person edited a file (or the prompt) in the source dialog and asked the AI to apply it (§9). */
+  /** When the person edited a file (or the prompt) in the source dialog and asked the AI to apply it (§9) — or an agent proposed it (§10). */
   edit?: SourceEdit
+  /** An agent (by its name, as the canvas signed it) proposed this edit — not the person (docs/studio.md §10). */
+  proposedBy?: string
   /** A new message in a chat that already exists (the text is that message, not the first one). */
   followUp?: boolean
 }
@@ -69,14 +71,16 @@ export interface SourceEdit {
   /** sha-1 of the snapshot text the diff was made against. */
   base?: string
   diff: string
+  /** the agent that proposed it (stamped by the canvas from its token) */
+  by?: string
 }
 
 /** `data.discuss.edit`, when it is well-formed. The diff is capped so a huge paste cannot flood the brief. */
 export function editOf(discuss: { edit?: unknown } | undefined): SourceEdit | undefined {
-  const e = discuss?.edit as { file?: unknown; doc?: unknown; base?: unknown; diff?: unknown } | undefined
+  const e = discuss?.edit as { file?: unknown; doc?: unknown; base?: unknown; diff?: unknown; by?: unknown } | undefined
   if (!e || typeof e.diff !== 'string' || !e.diff.trim()) return undefined
   const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined)
-  return { file: str(e.file), doc: str(e.doc), base: str(e.base), diff: e.diff.slice(0, 60_000) }
+  return { file: str(e.file), doc: str(e.doc), base: str(e.base), diff: e.diff.slice(0, 60_000), ...(str(e.by) ? { by: str(e.by)!.slice(0, 80) } : {}) }
 }
 
 /** One end-to-end event subscription, by workflow node id (`plan`, not `wf.node.plan`). */
@@ -121,6 +125,29 @@ export function newUserComments(board: StudioBoard, changes: StudioChange[], sin
   return out
 }
 
+/**
+ * Edit proposals other agents made in these changes (docs/studio.md §10): a new comment carrying
+ * `data.discuss.edit`, added by a **named** agent (a remote agent's token, or UNPROSE_AGENT_NAME) whose name the
+ * canvas stamped on the edit. They become chats like the person's requests, so the files get applied by this
+ * machine's session — after the person agrees in the thread. The default local agent (studio's own sessions)
+ * signs nothing, so its comments never come back as requests.
+ */
+export function agentProposals(board: StudioBoard, changes: StudioChange[], sinceSeq: number): Array<{ seq: number; comment: StudioItem; by: string }> {
+  const out: Array<{ seq: number; comment: StudioItem; by: string }> = []
+  for (const ch of changes) {
+    if (ch.seq <= sinceSeq || ch.author !== 'agent' || !ch.by) continue
+    for (const op of ch.ops) {
+      if (op.kind !== 'add' || op.item?.type !== 'comment') continue
+      const comment = board.items[op.item.id] ?? op.item
+      const edit = editOf(comment.data?.discuss as { edit?: unknown } | undefined)
+      // a reply in a thread is talk, not a new proposal; the name on the edit must be the one the change log has
+      if (!edit || edit.by !== ch.by || (comment.target && board.items[comment.target]?.type === 'comment')) continue
+      out.push({ seq: ch.seq, comment, by: ch.by })
+    }
+  }
+  return out
+}
+
 /** The first comment of a thread: follow `target` up while it points at another comment. */
 export function rootOf(board: StudioBoard, commentId: string): string {
   let id = commentId
@@ -144,7 +171,11 @@ export function discussRequests(board: StudioBoard, changes: StudioChange[], sin
     const req = chatRequest(board, comment, seq, defaultModel, scope)
     if (req) out.push(req)
   }
-  return out
+  for (const { seq, comment } of agentProposals(board, changes, sinceSeq)) {
+    const req = chatRequest(board, comment, seq, defaultModel, scope)
+    if (req) out.push(req)
+  }
+  return out.sort((a, b) => a.seq - b.seq)
 }
 
 /**
@@ -155,8 +186,9 @@ export function chatRequest(board: StudioBoard, comment: StudioItem, seq: number
   const discuss = (comment.data?.discuss ?? {}) as { model?: string; about?: unknown; proposal?: unknown; edit?: unknown }
   const pick = (m?: string) => ((STUDIO_MODELS as readonly string[]).includes(m ?? '') ? (m as StudioModel) : defaultModel)
   // A loose comment (no target) is about the whole board (docs/studio.md §2b).
+  const proposedBy = comment.createdBy === 'agent' ? editOf(discuss)?.by : undefined
   if (!comment.target) {
-    if (comment.createdBy === 'agent') return undefined
+    if (comment.createdBy === 'agent' && !proposedBy) return undefined
     return {
       seq,
       commentId: comment.id,
@@ -168,6 +200,8 @@ export function chatRequest(board: StudioBoard, comment: StudioItem, seq: number
       about: [],
       session: `awd-${scope}-board`.slice(0, 32),
       key: 'board',
+      ...(editOf(discuss) ? { edit: editOf(discuss) } : {}),
+      ...(proposedBy ? { proposedBy } : {}),
       ...(text !== undefined ? { followUp: true } : {}),
     }
   }
@@ -191,6 +225,7 @@ export function chatRequest(board: StudioBoard, comment: StudioItem, seq: number
     ...(anchorOf(comment) ? { anchor: anchorOf(comment) } : {}),
     ...(proposalOf(discuss) ? { proposal: proposalOf(discuss) } : {}),
     ...(editOf(discuss) ? { edit: editOf(discuss) } : {}),
+    ...(proposedBy ? { proposedBy } : {}),
     ...(text !== undefined ? { followUp: true } : {}),
   }
 }
@@ -431,7 +466,7 @@ function renderBoardBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
   const { diagrams, loose, files } = boardSummary(board, workflow)
   const chat = Object.values(board.items)
     .filter((i) => i.type === 'comment' && i.target === req.commentId)
-    .map((i) => `- ${i.createdBy === 'agent' ? 'Agent' : 'Person'}: ${oneLine(i.text ?? '')}`)
+    .map((i) => `- ${speaker(i)}: ${oneLine(i.text ?? '')}`)
   return [
     '# Studio — the whole board',
     '',
@@ -439,7 +474,8 @@ function renderBoardBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
     '',
     "Nothing was selected: this chat is about the board as a whole. This session is the board's own conversation.",
     '',
-    req.followUp ? '## New message in this chat' : '## The request',
+    ...editSection(req),
+    req.followUp ? '## New message in this chat' : req.proposedBy ? `## ${req.proposedBy}'s note` : '## The request',
     '',
     quote(req.text || '(no text — the person wants to talk about this board)'),
     '',
@@ -477,7 +513,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
   const { diagrams, traces } = diagramLines(board, req.about.map((a) => a.itemId))
   const sources = req.about.map((a) => diagramOf(board, a.itemId)?.source).filter((f): f is string => !!f)
   const files = [workflow, ...details.flatMap(filesOf), ...sources].filter((f, i, all): f is string => !!f && all.indexOf(f) === i)
-  const said = (i: StudioItem) => `- ${i.createdBy === 'agent' ? 'Agent' : 'Person'}: ${oneLine(i.text ?? '')}`
+  const said = (i: StudioItem) => `- ${speaker(i)}: ${oneLine(i.text ?? '')}`
   const comments = Object.values(board.items).filter((i) => i.type === 'comment' && i.id !== req.commentId)
   const chat = comments.filter((i) => i.target === req.commentId).map(said)
   const earlier = comments.filter((i) => i.target && inSet.has(i.target) && !anchorOf(i)).map((i) => `${said(i)} (on ${name(i.target)})`)
@@ -488,7 +524,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
   const answered = new Set(comments.filter((i) => i.createdBy === 'agent' && i.target).map((i) => i.target!))
   const notes = comments
     .filter((i) => { const a = anchorOf(i); return a && !answered.has(i.id) && ((i.target && inSet.has(i.target)) || (a.file && behind(a))) })
-    .map((i) => { const a = anchorOf(i)!; return `- \`${i.id}\` · ${whereOf(a, board, i.target)}${a.quote ? ` "${oneLine(a.quote).slice(0, 120)}"` : ''} — ${i.createdBy === 'agent' ? 'Agent' : 'Person'}: ${oneLine(i.text ?? '')}` })
+    .map((i) => { const a = anchorOf(i)!; return `- \`${i.id}\` · ${whereOf(a, board, i.target)}${a.quote ? ` "${oneLine(a.quote).slice(0, 120)}"` : ''} — ${speaker(i)}: ${oneLine(i.text ?? '')}` })
   const look = req.anchor ? ['## Look here', '', `\`${whereOf(req.anchor, board, req.blockItemId)}\` — the request was written on these lines:`, '', '```', req.anchor.quote, '```', ''] : []
   const one = req.about.length === 1
   const wire = req.about.map((a) => board.items[a.itemId]).find((i) => i?.type === 'arrow' && i.data?.pending)
@@ -506,21 +542,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
         '',
       ]
     : []
-  const edit = req.edit
-    ? [
-        '## Proposed edit',
-        '',
-        `The person edited \`${req.edit.file ?? req.edit.doc ?? 'a text'}\` in the source dialog; the file on disk does not have it yet.${req.edit.base ? ` The diff was made against the board's snapshot (sha-1 \`${req.edit.base}\`); if the file changed since, say so and merge by hand.` : ''}`,
-        ...(req.edit.doc && !req.edit.file ? ['', 'This text is derived (not a file): work out which source it comes from (agent file, role file, output schema) and change that.'] : []),
-        '',
-        '```diff',
-        req.edit.diff.trimEnd(),
-        '```',
-        '',
-        'Review it with the person in this chat **before** applying: what it changes and why, anything it breaks. Apply after they agree; then lint, test and redraw.',
-        '',
-      ]
-    : []
+  const edit = editSection(req)
   return [
     `# Studio — ${one ? `${req.kind} \`${req.block}\`` : `${req.about.length} selected items`}`,
     '',
@@ -530,7 +552,7 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
     '',
     ...proposal,
     ...edit,
-    req.followUp ? '## New message in this chat' : '## The request',
+    req.followUp ? '## New message in this chat' : req.proposedBy ? `## ${req.proposedBy}'s note` : '## The request',
     '',
     quote(req.text || `(no text — the person wants to talk about ${one ? 'this item' : 'these items'})`),
     '',
@@ -564,6 +586,52 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = 'awd' }: Brie
   ].join('\n')
 }
 
+/** Who said a comment: the person, a named agent (the canvas signs `data.by`), or the local agent. */
+function speaker(i: StudioItem): string {
+  const by = typeof i.data?.by === 'string' && i.data.by ? i.data.by.slice(0, 80) : undefined
+  if (i.createdBy === 'agent') return by ? `${by} (agent)` : 'Agent'
+  return 'Person'
+}
+
+/**
+ * The edit to apply: the person's own (§9, made in the source dialog) or another agent's proposal (§10, a remote
+ * agent that cannot touch this repo). Either way the session reviews it with the person before applying; an
+ * agent's proposal needs the **person's** yes in the thread — another agent's reply is not consent.
+ */
+function editSection(req: DiscussRequest): string[] {
+  const e = req.edit
+  if (!e) return []
+  const file = e.file ?? e.doc ?? 'a text'
+  const diff = ['```diff', e.diff.trimEnd(), '```', '']
+  if (!req.proposedBy)
+    return [
+      '## Proposed edit',
+      '',
+      `The person edited \`${file}\` in the source dialog; the file on disk does not have it yet.${e.base ? ` The diff was made against the board's snapshot (sha-1 \`${e.base}\`); if the file changed since, say so and merge by hand.` : ''}`,
+      ...(e.doc && !e.file ? ['', 'This text is derived (not a file): work out which source it comes from (agent file, role file, output schema) and change that.'] : []),
+      '',
+      ...diff,
+      'Review it with the person in this chat **before** applying: what it changes and why, anything it breaks. Apply after they agree; then lint, test and redraw.',
+      '',
+    ]
+  const who = req.proposedBy
+  const check = e.base && e.file ? `\`shasum -a 1 ${e.file}\` (or \`sha1sum\`) must print \`${e.base}\`` : 'compare the file with the diff\'s context lines'
+  return [
+    `## Proposed edit — from ${who}, another agent`,
+    '',
+    `\`${who}\` is an agent connected to the canvas (a remote agent, signed by its token) that cannot touch this repo's files, so it proposed this change to \`${file}\` on the board instead. The diff was checked against the board's snapshot of the file${e.base ? ` (sha-1 \`${e.base}\`)` : ''}; nothing is on disk yet. You have the files: you apply it — **only after the person agrees in this thread**. A reply from \`${who}\` or any other agent is not the person's agreement.`,
+    '',
+    ...diff,
+    'Steps:',
+    '',
+    `1. Read \`${file}\` and check it still is the text the diff was made against: ${check}.`,
+    `   - If it differs, the file changed since the proposal. Try the diff anyway (\`git apply --check\` with the diff saved to a file); if it applies cleanly, say so in the thread. If not, do not force it: rebase the change by hand onto the current file and show the person the new diff, or ask \`${who}\` in the thread to read the file again from the board after the next redraw and propose again.`,
+    `2. Reply in this thread first: say that \`${who}\` proposed it, what it changes in a sentence or two, what it touches beyond the lines (other steps on the same event, goldens, gates, traces), and ask the person whether to apply it. Then stop and wait — their answer comes to you from studio as a new message.`,
+    `3. When the person agrees: apply it (\`git apply\` the saved diff, or edit by hand), then lint, test and redraw as below (the redraw also clears any dashed wire the proposal drew), and reply "Applied to \`${file}\`" with what you ran. Never commit. If they decline, say so in the thread; dashed wires it drew go away with Undo on the wire.`,
+    '',
+  ]
+}
+
 function itemSection(item: StudioItem | undefined, a: AboutItem, detail: Record<string, unknown> | undefined): string[] {
   const at = detail?.source as { workflow?: string; line?: number } | undefined
   const where = at?.workflow ? ` · defined at \`${at.workflow}${at.line ? `:${at.line}` : ''}\`` : ''
@@ -579,6 +647,7 @@ function itemSection(item: StudioItem | undefined, a: AboutItem, detail: Record<
 
 /** The one-line prompt that points the session at its brief (a newline in a pasted prompt can submit half of it). */
 export function promptFor(req: DiscussRequest, briefPath: string): string {
+  if (req.proposedBy) return `Studio: the agent ${req.proposedBy.replace(/\s+/g, ' ')} proposed an edit to ${req.edit?.file ?? 'a file'} on the board (${req.block}). Read ${briefPath} — it has the diff and the steps: check the file, ask the person in the canvas thread, and apply only after they agree.`
   if (req.kind === 'board') return `Studio request about the whole board (nothing selected). Read ${briefPath} — it lists the board's diagrams, the files behind them, the person's request and how to work. Do what it asks, then reply in the canvas thread as it describes.`
   const what = req.about.length === 1 ? `${req.about[0].block ? 'workflow block' : 'board item'} "${req.block}" (${req.kind})` : `${req.about.length} selected board items (${req.block})`
   return `Studio request on ${what}. Read ${briefPath} — it has the selection, the person's request and how to work. Do what it asks, then reply in the canvas thread as it describes.`
@@ -591,7 +660,7 @@ export function promptForFollowUp(req: DiscussRequest, briefPath: string, resume
 
 /** Claude Code's session display name (`claude -n`): the selection, and what kind of chat it is. */
 export function sessionLabel(req: DiscussRequest): string {
-  return `${req.block}${req.proposal ? ' · proposed wire' : req.edit ? ' · proposed edit' : ''}`
+  return `${req.block}${req.proposal ? ' · proposed wire' : req.proposedBy ? ` · proposal by ${req.proposedBy}` : req.edit ? ' · proposed edit' : ''}`
 }
 
 /** The agent's comment under the request, as a freeform item (the canvas places it beside its target). */

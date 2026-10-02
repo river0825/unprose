@@ -160,6 +160,23 @@ file's text (`content`) and its name (`name`, e.g. `checkout.es.yaml`); the agen
 Boards are not opened in a browser on the canvas machine — the tools return the link to give the person.
 `design_egon` and workflow files (`awd graph`) need the local tools.
 
+**Changing files you do not have — propose.** A remote agent cannot write the repo behind a board (a workflow's yaml,
+its agents and scripts, the design files the person drew from their machine). It reads them from the board and
+proposes a change:
+
+```
+canvas_files { id }                              → each file with its base sha-1
+canvas_files { id, path: "workflow.yaml" }       → the exact text
+canvas_propose_edit { id, file: "workflow.yaml", base: "<sha-1>", diff: "<unified diff>" | newText: "…",
+                      note: "why", wires?: [{ from: "review", to: "build", event: "review.changes" }] }
+canvas_wait { id, since }                        → the person's answer in the thread
+```
+
+The proposal shows in the board's Chat with the diff and your name; the agent that has the files (studio's session on
+the canvas machine, or the person's own Claude Code) applies it after the person agrees, and says so in the thread. A
+`409` means the file was redrawn since you read it — read it again and redo the edit. Proposals need a token with the
+*read and draw* scope. Details: [canvas.md → Proposals and saving](canvas.md#proposals-and-saving).
+
 ## Codex
 
 Add to `~/.codex/config.toml`:

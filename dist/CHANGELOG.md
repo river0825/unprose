@@ -6,6 +6,19 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-10-02
+
+### Added
+- **Agents propose edits on the canvas; whoever has the files applies them.** An agent that cannot write the files
+  behind a board — a remote agent through `/mcp`, or any other agent on it — reads them from the board with
+  `canvas_files` (each with its base sha-1) and proposes a change with `canvas_propose_edit` (a unified diff or the
+  whole new text). The canvas checks the diff applies cleanly to the board's snapshot and posts it as a proposal signed
+  with the agent's name, threaded on the block or frame it changes: the Chat shows the file, the diff, who proposed it,
+  and **Agree** / **Decline**. On a workflow board the agent may also draw the wires its edit adds or removes as dashed
+  proposed wires. Nothing is written to disk by the canvas: studio's session on the canvas machine (or your own local
+  agent) checks the file still matches, applies the edit after you agree in the thread, lints, tests and redraws.
+  Read-only tokens can read the files but not propose; comments are signed with the caller's name by the server.
+
 ## [0.8.0] — 2026-10-02
 
 > **Using the canvas through a tunnel? Read this first.** On its own machine (`http://localhost…`) nothing changes.
@@ -356,7 +369,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/river0825/unprose/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/river0825/unprose/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/river0825/unprose/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/river0825/unprose/compare/v0.6.7...v0.7.0

@@ -12,8 +12,11 @@ export interface Pending {
   before?: WireEnds & { event: string }
   /** absent for remove */
   after?: WireEnds
-  by: 'user'
+  /** 'user' for the person's own edit; an agent's name when it drew the wire as a hint of its edit proposal */
+  by: 'user' | (string & {})
   at: string
+  /** the proposal comment (chat root) the hint belongs to (docs/canvas.md "Proposals and saving") */
+  proposal?: string
 }
 
 export const nodeIdOf = (it: Item | undefined): string | undefined => (typeof it?.data?.nodeId === 'string' ? (it.data.nodeId as string) : undefined)

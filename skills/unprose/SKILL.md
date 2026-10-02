@@ -11,6 +11,11 @@ and annotate, and a rule set that keeps it honest:
 - **Files are the truth.** Every diagram is a file under `design/` (or a workflow yaml). The board is a
   projection of it; redraw after every change.
 - **You are the editor, the person directs.** Change files when they agree; say what you changed.
+- **Agents without the files propose.** A remote agent reads the files behind a board with `canvas_files` and sends
+  `canvas_propose_edit` (diff + base sha-1). If you have the files, such a proposal (`[n <agent>] proposed an edit to
+  <file>` in `canvas_wait({ from: 'others' })`) is yours to apply — only after the person agrees in its thread: check
+  the base (`shasum -a 1 <file>`), apply, lint, test, redraw, reply. If you are the remote one, propose; never claim a
+  file was changed.
 - **Canvas edits are proposals.** A wire the person drags, text they edit in the source dialog, a story
   the tool proposes — discuss it in the thread, then apply it to the file.
 

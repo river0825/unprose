@@ -98,8 +98,11 @@ function Proposal({ board, item, pending, onWireChat, onUndo, onPickEvent, onSel
     <div className={`wire-proposal ${pending.kind}`} role="group" aria-label="Proposed change">
       <div className="wire-proposal-head">
         <span className={`wire-tag ${pending.kind}`}>{pending.kind === 'remove' ? 'remove?' : 'proposed'}</span>
-        <span>Not in the file yet</span>
+        <span>Not in the file yet{pending.by !== 'user' ? <> · by <strong>{pending.by}</strong></> : null}</span>
       </div>
+      {pending.proposal && board.items[pending.proposal] ? (
+        <p className="muted small">Part of {pending.by === 'user' ? 'an' : `${pending.by}'s`} edit proposal: the diff and the discussion are in its chat (Chats tab). Undo removes this hint.</p>
+      ) : null}
       <p className="wire-words">{describePending(pending)}</p>
       {yamlIntent(pending) ? <p className="wire-intent mono">{yamlIntent(pending)}</p> : null}
 

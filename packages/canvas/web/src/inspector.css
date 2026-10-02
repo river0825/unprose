@@ -894,3 +894,45 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .react-flow__node.ds-annotation .item { border-left: 2px solid var(--ink-2); border-top: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); border-radius: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; color: var(--ink); }
 .react-flow__node.ds-group .item { border: 1.6px dashed var(--ink-3) !important; border-radius: 18px !important; background: transparent !important; }
 .react-flow__edge.ds-note-link .react-flow__edge-path { stroke-dasharray: 5 5; }
+
+/* ── An edit proposal at the top of its chat (docs/canvas.md "Proposals and saving") ── */
+:root {
+  --prop-add: rgba(28, 124, 58, 0.12);
+  --prop-del: rgba(200, 40, 40, 0.1);
+  --prop-add-ink: #1c6b34;
+  --prop-del-ink: #a32020;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --prop-add: rgba(133, 217, 150, 0.14);
+    --prop-del: rgba(255, 122, 122, 0.14);
+    --prop-add-ink: #85d996;
+    --prop-del-ink: #ff9a9a;
+  }
+}
+:root[data-theme='dark'] {
+  --prop-add: rgba(133, 217, 150, 0.14);
+  --prop-del: rgba(255, 122, 122, 0.14);
+  --prop-add-ink: #85d996;
+  --prop-del-ink: #ff9a9a;
+}
+.edit-prop {
+  margin: 4px 0 10px; padding: 10px 12px; border: 1px dashed var(--rule-2); border-radius: 8px; background: var(--paper);
+  display: grid; gap: 6px; min-width: 0;
+}
+.edit-prop-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; }
+.edit-prop-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.edit-prop-stat { font-size: 12px; white-space: nowrap; }
+.edit-prop-add { color: var(--prop-add-ink); }
+.edit-prop-del { color: var(--prop-del-ink); }
+.edit-prop-by { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.edit-prop-diff {
+  margin: 0; max-height: 260px; overflow: auto; padding: 4px 0; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--chrome); font-size: 11.5px; line-height: 1.5; white-space: pre;
+}
+.edit-prop-diff span { display: block; padding: 0 8px; min-width: max-content; }
+.edit-prop-diff .add { background: var(--prop-add); }
+.edit-prop-diff .del { background: var(--prop-del); }
+.edit-prop-diff .hunk { color: var(--ink-3); }
+.edit-prop-how { margin: 0; font-size: 12px; }
+.edit-prop-actions { display: flex; gap: 6px; justify-content: flex-end; }

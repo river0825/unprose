@@ -18,7 +18,7 @@ function importsOf(file: string): string[] {
 const rel = (f: string) => path.relative(SRC, f)
 
 type Layer = 'domain' | 'ports' | 'adapters' | 'driving' | 'shim' | 'external'
-const DOMAIN = ['model.ts', 'diff.ts', 'place.ts', 'thumb.ts', 'demo.ts', 'updatePolicy.ts', 'accessPolicy.ts']
+const DOMAIN = ['model.ts', 'diff.ts', 'place.ts', 'thumb.ts', 'demo.ts', 'updatePolicy.ts', 'accessPolicy.ts', 'patch.ts', 'proposals.ts']
 function layerOf(file: string): Layer {
   const r = rel(file)
   if (DOMAIN.includes(r) || r.startsWith('templates/') || r.startsWith('diagrams/')) return 'domain'

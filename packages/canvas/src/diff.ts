@@ -1,4 +1,5 @@
 // Human-readable diffs and outlines — what the agent reads instead of raw JSON.
+import { diffStat } from './patch.js'
 import { isBookkeeping, isLayoutOnly, isSeenOnly, markSeen, meaningOf, type Author, type Board, type Change, type Item, type Op } from './model.js'
 
 const short = (s: string | undefined, n = 60) => {
@@ -101,7 +102,12 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
           const on = find(root.target)
           const text = short(it.text, 200)
           if (root.id !== it.id) lines.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text}" [thread ${root.id}]`)
-          else lines.push(`${prefix} added comment${on ? ` on ${nameOf(on, board)}` : ''}: "${text}" [thread ${it.id}]`)
+          else {
+            // an edit proposal (a person's source-dialog edit, or another agent's canvas_propose_edit)
+            const edit = (it.data?.discuss as { edit?: { file?: unknown; diff?: unknown } } | undefined)?.edit
+            const what = edit && typeof edit.diff === 'string' ? `proposed an edit to ${typeof edit.file === 'string' ? edit.file : 'a text'} (${diffCount(edit.diff)})` : 'added comment'
+            lines.push(`${prefix} ${what}${on ? ` on ${nameOf(on, board)}` : ''}: "${text}" [thread ${it.id}]`)
+          }
         } else if (it.type === 'arrow') {
           lines.push(`${prefix} connected ${nameOf(board.items[it.from ?? ''] ?? ch.before[it.from ?? ''], board)} → ${nameOf(board.items[it.to ?? ''] ?? ch.before[it.to ?? ''], board)}${it.label ? ` ("${short(it.label)}")` : ''}`)
         } else {
@@ -346,4 +352,10 @@ function byPos(a: Item, b: Item): number {
   const rowA = Math.round(a.y / 60)
   const rowB = Math.round(b.y / 60)
   return rowA !== rowB ? rowA - rowB : a.x - b.x
+}
+
+/** `+3 −1 lines` of a unified diff. */
+function diffCount(diff: string): string {
+  const { added, removed } = diffStat(diff)
+  return `+${added} −${removed} lines`
 }

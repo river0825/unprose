@@ -453,3 +453,28 @@ open the workflow yaml at the step's lines, so the command itself is what gets e
   test and redraw. **Discard** drops the draft; the draft survives closing the dialog (per viewer, local
   storage) until sent or discarded.
 - The dialog is keyboard accessible (focus trapped, Esc closes, ⌘Enter sends from a composer).
+
+## 10. Proposals from other agents (remote agents)
+
+An agent that cannot touch this repo — a cloud or laptop agent connected to the canvas through `/mcp` — proposes edits
+on the board with `canvas_propose_edit` (docs/canvas.md → *Proposals and saving*): a comment carrying
+`data.discuss.edit = { file, base, diff, by }`, checked by the canvas against the board's snapshot and signed with the
+agent's name. Studio, which runs where the files are, is the default way such a proposal gets saved:
+
+- **Pickup.** A new comment with `data.discuss.edit` added by a **named** agent (the change's `by`, from its token or
+  `UNPROSE_AGENT_NAME`) whose name matches `edit.by` is a chat request (`agentProposals` in
+  `runtime/src/application/studio.ts`), routed like the person's (board session, fork, queue). The default local agent
+  signs nothing, so studio's own sessions never trigger themselves; a reply in a thread is talk, not a proposal. Studio
+  now long-polls with `author=others`, so a remote agent's proposal wakes it at once.
+- **The brief** opens with *Proposed edit — from <agent>, another agent*: who proposed it, the diff, and the steps —
+  check the file still has the base (`shasum -a 1 <file>`; if not, `git apply --check`, else rebase by hand or ask the
+  agent to propose again from the redrawn board); reply in the thread first (who proposed it, what it changes, what it
+  touches) and ask the person; **apply only after the person agrees** — a reply from that agent or any other is not
+  consent; then lint, test, redraw (clearing any dashed wire it drew) and answer "Applied to <file>". The agent's note
+  appears as *<agent>'s note*; chat lines name agents (`codex-laptop (agent): …`).
+- The person's answer (the **Agree** / **Decline** buttons post one) is a follow-up to the same chat (§2).
+
+**Without studio** the person's own agent does the same: the unprose skill / AGENTS.md loop — `canvas_wait({ from:
+'others' })` shows `[n <agent>] proposed an edit to <file> …`; read the diff from the comment (`canvas_read_board`,
+`format: json`), discuss, and after the person agrees check the base, apply, lint, test, redraw and reply.
+

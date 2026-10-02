@@ -14,6 +14,7 @@ packages/canvas/
   src/mcp.ts              MCP stdio server (the agent's tools), thin over the HTTP API
   src/remoteMcp.ts · designTools.ts   the same tools at /mcp for remote agents (design files as text)
   src/access*.ts · accessRoutes.ts    remote agents: tokens, OAuth 2.1, pairing codes, scopes (Remote agents below)
+  src/proposals.ts · patch.ts         agents' edit proposals: the files snapshot, unified diffs checked against it (Proposals and saving)
   src/cli.ts              awd-canvas serve | mcp | render | demo | outline | diff | card add|move|moves
   web/                    the React UI (built separately); web/src/run/ is the live run overlay
 ```
@@ -65,6 +66,8 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_diff` | `id, since, author: user\|others\|agent\|all` | human-readable lines for every change after `since` (`others`: the person and the other agents, never you) |
 | `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
+| `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
+| `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
 | `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
 | `design_draw` | `file, board, at?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link |
@@ -204,7 +207,7 @@ canvas that already sits behind an access proxy that does the job. Local-only ac
 The same tools as the stdio server (`canvas_*`, `unprose_help`) plus `design_lint`, `design_draw` and
 `design_propose_stories` that take the file's text (`content`) and its file name (`name`, e.g. `checkout.es.yaml`)
 instead of a path — the canvas cannot read the agent's files; the agent keeps the file as the truth on its side.
-`design_egon` (writes files) and workflow files (`awd graph`) stay with the local tools. The start prompts
+`design_egon` (writes files) and workflow files (`awd graph`) stay with the local tools. To change a file behind a board (a workflow's yaml, a design file drawn from the person's machine) a remote agent proposes: `canvas_files` → `canvas_propose_edit` ([Proposals and saving](#proposals-and-saving)). The start prompts
 (`eventstorm`, `storymap` …) are MCP prompts. New boards are not opened in a browser on the canvas machine: the
 tool returns the link to give the person. `/mcp` is stateless (each POST stands alone; nothing is lost on a restart)
 and streams with keep-alives, so a `canvas_wait` of up to 120 s survives proxies.
@@ -247,6 +250,52 @@ After updating, requests through the tunnel need credentials; on the canvas mach
 4. Set `UNPROSE_PUBLIC_URL=https://<tunnel>` on the canvas so the setup lines on the agents page and the OAuth
    metadata use the tunnel address even when you open the page on `localhost`.
 
+## Proposals and saving
+
+Files are the truth; the board is their projection, and **the canvas never writes a file**. An agent that cannot write
+the files behind a board — a remote agent through `/mcp` (the canvas is not on its machine), or any other agent on the
+board — changes them by **proposing**; the agent that has the files saves them.
+
+**Who can propose.** Any caller with write access to the board: an agent token with the *read and draw* scope (limited
+to its projects / boards), a local agent, the person. A read-only token reads the files (`canvas_files`) but gets `403`
+on a proposal. A proposal made with a token is signed with the token's name — the server stamps `data.by` and
+`data.discuss.edit.by` on every new comment, from the credentials, so no caller can sign with another's name.
+
+**What a proposal is.** `canvas_propose_edit` (`POST /api/boards/:id/proposals`) takes one file of the snapshot
+(`meta.workflow.files`, `meta.diagrams[key].files`), its sha-1 `base`, and either a unified diff or the whole new text.
+The canvas checks, without parsing yaml:
+
+- the file is in the board's snapshot, and not cut short there (`meta.workflow.truncated`);
+- `base` is the sha-1 of the snapshot text (else `409`: the file was redrawn since — read it again);
+- the diff names that file (if it names one), every hunk's context and removed lines are in the text exactly (a hunk
+  may sit some lines from where its header says, like `patch`; no fuzz), and it changes something (else `422` with
+  the hunk that failed). The pure diff code is `src/patch.ts` (shared with the web's source dialog).
+
+It then adds the same chat request the person's source-dialog edit makes (docs/studio.md §9): a comment with
+`data.discuss.edit = { file, base, diff, by }` (the diff normalised against the snapshot), `data.anchor` on the first
+changed line, threaded on the item that owns that line (the block whose file it is, the step whose yaml lines hold it,
+the diagram frame drawn from the file, else the title) or on `about`. Optional `wires` (workflow boards, between
+blocks already drawn) add dashed proposed wires — `data.pending = { kind: 'add' | 'remove', …, by: <agent>, proposal:
+<comment id> }`, the mechanism of docs/studio.md §7 — which the next redraw resolves once the applied file has them;
+the yaml change itself must be in the diff. The Chat shows the proposal: file, `+n −m`, who proposed it, the diff,
+**Agree** / **Decline** (they post a reply in the thread).
+
+**Saving: whoever has the files applies it, after the person agrees.**
+
+1. The person discusses it in the thread (the proposing agent can follow with `canvas_wait({ from: 'person' })` and
+   answer there).
+2. The agent on the machine with the repo applies it: **studio's session** when studio runs for the project (a named
+   agent's proposal opens a chat like the person's request — docs/studio.md §10), otherwise **the person's own local
+   agent** (Claude Code with the unprose tools sees it with `canvas_wait({ from: 'others' })` / `canvas_diff({ author:
+   'others' })`: `[12 codex-laptop] proposed an edit to workflow.yaml (+1 −1 lines) on …`; the diff is in the comment's
+   `data.discuss.edit`, `canvas_read_board` with `format: json`).
+3. It applies only after the **person** says yes in the thread (another agent's reply is not consent), checks the file
+   still has the `base` sha-1 (`shasum -a 1 <file>`; if not, `git apply --check`, else rebase by hand or ask the
+   proposer to propose again), applies, lints, tests, redraws (`awd graph … --canvas` / `awd design draw`), and answers
+   "Applied to <file>" in the thread. Nothing is committed for you.
+
+A later option, not built: proposals as a git branch / pull request.
+
 ## HTTP API
 
 | Method | Path | Body / query | Returns |
@@ -264,6 +313,8 @@ After updating, requests through the tunnel need credentials; on the canvas mach
 | GET | `/api/boards/:id/diff` | `?since=N&author=` | `{ lines: string[], count, seq }` |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
 | GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff` | long-poll; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq }`. `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
+| GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
+| POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |
 | GET | `/api/boards/:id/thumb.svg` | | SVG thumbnail of the board (used by the board list) |
 | GET | `/api/boards/:id/outline` | | `text/plain` outline |
 | POST | `/api/boards/:id/template` | `{ kind?, content, at?, scope?, frame?: { key, title?, source?, level?, at? } }` | `{ items, ops }` — rendered but **not** applied. With `frame`, drawn inside the diagram frame `diagram.<key>` (created if missing; an existing frame keeps its geometry), ids `<key>.<role>.<element id>`; trace links become dotted `trace` wires when their target is on the board |
