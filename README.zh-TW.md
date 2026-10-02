@@ -146,7 +146,8 @@ Event、command、system、policy 依時間由左到右排列。
 
 仍在早期，變動很快。目前可用：EventStorming、story map、kanban、wireframe 和 workflow 都以檔案保存；
 可以針對項目、選取範圍、某幾行或整張 board 聊天；提案；已讀狀態；Studio。
-接下來：更多種類的圖、Trello / Jira / Linear 同步、共享 board 的登入、託管版本。
+遠端與雲端 agent 經核准（配對碼或 token）即可連線。
+接下來：更多種類的圖、Trello / Jira / Linear 同步、託管版本。
 
 延伸閱讀（英文）：[diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
 [workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md)。
@@ -161,10 +162,21 @@ runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只
 在終端機更新也可以：執行 `claude plugin update unprose@unprose` 之後，從 plugin 啟動的 canvas 大約十秒內會發現新版，
 自動用新版重新啟動，port 和 board 都不變。
 
+## 遠端 agent
+
+在別台機器上的 agent，以及雲端 agent（claude.ai connector、ChatGPT、雲端 Codex / Claude Code），可以連到 canvas
+自己的 MCP endpoint：`https://<你的 canvas>/mcp`——例如 `claude mcp add --transport http unprose https://canvas.example.com/mcp`，
+或在 claude.ai 新增 custom connector 填這個網址。連線時，agent 那邊的瀏覽器會顯示一組一次性的**配對碼**，
+所有開著的 canvas 頁面同時跳出「<agent> wants to connect」：輸入配對碼再按 **Allow** 即可（在 canvas 所在的機器上開的頁面，
+直接按一下就行）。也可以在 **Connected agents** 頁面產生 token（唯讀或可讀寫、全部或部分專案）。每個 agent 的修改都會標上它的名字，
+隨時可以撤銷。細節見 [docs/canvas.md → Remote agents](docs/canvas.md#remote-agents)，各家 client 的設定見
+[docs/agents-setup.md](docs/agents-setup.md#remote-agents-another-machine-or-the-cloud)。
+
 ## 安全
 
-Board **目前沒有登入機制**，任何連得到的人都能讀取和修改。請只在 `localhost` 使用，
-或在分享前加上存取代理（access proxy）。
+在 canvas 自己那台機器上（`http://localhost…`）和以前一樣不用登入。從其他地方來的請求——tunnel、區網——都需要 token，
+或用配對碼登入過的瀏覽器；token 只以雜湊存放在 `~/.awd/agents.json`。升級、註冊專案、搬移 board 仍然只能在那台機器上做。
+已經透過 tunnel 使用 canvas？請看 [docs/canvas.md](docs/canvas.md#migrating-a-canvas-you-use-through-a-tunnel) 的遷移說明。
 
 ## 授權
 

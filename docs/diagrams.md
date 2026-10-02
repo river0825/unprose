@@ -269,12 +269,31 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   { kind: 'text', before, after, path, key }`, tagged "proposed"; the panel shows before → after and the
   unified diff to the file, with **Ask AI to apply** (a chat request carrying `discuss.edit = { file, base, diff }`,
   the source dialog's protocol, docs/studio.md §9) and **Undo**. A redraw whose file says the new words — or no
-  longer has the element — settles it.
+  longer has the element — settles it. The same goes for **one value inside an element**: double-click a table
+  cell, a list item, a tab, a navbar link, a sidebar or breadcrumb item to change its words — a text proposal for
+  exactly that value (`sub: ['rows', r, c]` or `['items', i]`; the diff touches only that scalar, and a number stays a
+  number).
+- **Removing and adding are proposals too.** Delete (key or menu) on an element does not take it off the board: it
+  stays, struck through and dashed red with everything inside it, as `data.pending = { kind: 'remove', before:
+  { type, text }, path }`; the diff removes exactly its lines from the file (a list left empty reads `[]`). With an
+  element selected and no proposal open, the panel's **Add element** row proposes a new one — button, input, text,
+  heading, link, select, checkbox, toggle, badge, alert, image — at the end of the selected screen / card / section /
+  navbar, or right after the selected element. It appears dashed with a fresh explicit id (`new-button`, …), its
+  words editable in place, as `data.pending = { kind: 'add', node: { type, id, text }, parent | after }`; the diff
+  inserts one line `- { type: …, id: …, text: … }` into the right list (or gives the container a `children:` list),
+  and containers on the board grow to hold it. Both have **Ask AI to apply** / **Undo**; a redraw settles a removal
+  once the element is gone and an addition once an element with that id is drawn. One proposal per element at a
+  time. Diffs find the element by its id in the file as it is now, so an older proposal still lands right after
+  another one was applied; edits are made in the text, so comments, flow style and every other line stay.
 - **Lint** (`awd design lint`, offline): the schema with unknown fields, plus `goto` / `flows` to screens that do
   not exist, table rows whose cell count differs from the columns, unknown icons, children under an element that
-  cannot hold them, ids used twice in a screen.
+  cannot hold them, ids used twice in a screen. **The board shows the same findings**: the drawing puts each on the
+  element it is about (`data.ui.findings`; a `stack` / `row` / `grid`'s go to what holds it, a flow's to the first
+  screen) — a small ! (warning) or i (info) mark on the element, "N to check" on the frame, and the list in the
+  frame's panel under *Checks*: a click moves the board to the element and flashes it, the › opens its details.
+  The selected element's own findings are in its panel too.
 - *Not (yet):* real images, overlays (a modal is a card in the flow), responsive reflow when the person resizes a
-  screen, editing table cells or list items in place (ask in a chat), Figma import.
+  screen, moving an element to another place in the file by dragging it, adding a table row or column, Figma import.
 
 ## 7. Board triggers point at a frame key
 

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { Op } from '../../../src/model'
 
 export interface Rect {
   x: number
@@ -29,6 +30,10 @@ export interface EditApi {
   reply: (rootId: string, text: string) => void
   /** a workflow script block: open its source in the large view (`edit`: straight in Edit mode) */
   openSource: (id: string, mode: 'view' | 'edit') => void
+  /** apply ops made on a node itself, e.g. a UI mock table cell edited in place (a proposal, docs/diagrams.md §6c) */
+  commitOps?: (ops: Op[], label: string) => void
+  /** UI mock items proposed for removal, and what they hold: drawn struck until the file changes */
+  uiRemoved?: ReadonlySet<string>
 }
 
 export const EditContext = createContext<EditApi>({

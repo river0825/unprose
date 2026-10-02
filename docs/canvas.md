@@ -12,6 +12,8 @@ packages/canvas/
   src/place.ts · thumb.ts · docs.ts   auto-place agent comments · board thumbnails · the /docs site
   src/server.ts           HTTP + WebSocket API, serves web/dist and /docs
   src/mcp.ts              MCP stdio server (the agent's tools), thin over the HTTP API
+  src/remoteMcp.ts · designTools.ts   the same tools at /mcp for remote agents (design files as text)
+  src/access*.ts · accessRoutes.ts    remote agents: tokens, OAuth 2.1, pairing codes, scopes (Remote agents below)
   src/cli.ts              awd-canvas serve | mcp | render | demo | outline | diff | card add|move|moves
   web/                    the React UI (built separately); web/src/run/ is the live run overlay
 ```
@@ -60,8 +62,8 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_read_board` | `id, format: outline\|json` | `outline` (default): compact text grouped by lane/frame with arrows and comments; `json`: raw items with ids and geometry |
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}` |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
-| `canvas_diff` | `id, since, author: user\|agent\|all` | human-readable lines for every change after `since` |
-| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
+| `canvas_diff` | `id, since, author: user\|others\|agent\|all` | human-readable lines for every change after `since` (`others`: the person and the other agents, never you) |
+| `canvas_wait` | `id, since, timeoutSec ≤ 120, quietSec = 2.5, wake = meaningful, from = person\|others` | block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching" |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
 | `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
@@ -70,7 +72,8 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `design_egon` | `action: import\|export, file, out` | `awd design import-egon` / `export-egon` (Egon.io) |
 
 Paths are relative to the session's project. The `design_*` tools are served by `awd mcp` (not by
-`awd-canvas mcp`).
+`awd-canvas mcp`); the canvas's remote endpoint `/mcp` serves `design_lint` / `design_draw` / `design_propose_stories`
+taking the file's text instead (see [Remote agents](#remote-agents)).
 
 ### Start prompts and slash commands
 
@@ -99,8 +102,9 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
   a project's id is the slug of its directory name (`-2`, `-3` … on a clash).
 - **Only from this machine:** anything that names a directory — `POST /api/projects`, `projectRoot`, moving
   a board — is accepted only from a loopback caller without proxy/tunnel forwarding headers (the canvas
-  has no auth; a tunnel such as cloudflared connects from localhost but adds them). Creating and reading
-  boards in an already registered project works from anywhere, like every other board operation.
+  names a directory only for the machine it runs on; a tunnel such as cloudflared connects from localhost but adds
+  them, and a request with a token is never local). Creating and reading boards in an already registered project
+  works from anywhere, like every other board operation — with credentials ([Remote agents](#remote-agents)).
 - **Board ids and URLs never change** (`/b/<id>`); the server knows which project stores which board. The
   board list groups boards by project, with a filter that remembers your last choice.
 - **The agent's defaults:** `canvas_create_board` stores new boards in the session's project
@@ -115,6 +119,133 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
   (a title lookup still finds them). Move one into a project with
   `awd boards move <board id | title:…> --to <project dir>` — the snapshot and the log are copied first,
   and the old files are removed only after the copy is in place.
+
+## Remote agents
+
+Agents on other machines (Claude Code, Codex or Cursor on a laptop) and cloud agents (claude.ai custom
+connectors, ChatGPT connectors, cloud Codex / Claude Code) can design with you on this canvas. The canvas serves
+MCP itself at **`<canvas>/mcp`** (Streamable HTTP), so an agent needs nothing installed — just the address,
+e.g. `https://canvas.example.com/mcp` through your tunnel. How each client connects: [agents-setup.md →
+Remote agents](agents-setup.md#remote-agents-another-machine-or-the-cloud).
+
+### Who gets in
+
+| Caller | Needs | Gets |
+|---|---|---|
+| this machine — loopback, no forwarding headers (`X-Forwarded-For`, `CF-Connecting-IP` …), no token | nothing (unchanged) | everything, including the local-only actions (registering projects, moving boards, upgrading) |
+| an agent with a token (`Authorization: Bearer …`), from anywhere — **also from this machine** | a token: made on the **Connected agents** page, or issued by OAuth / a pairing code | what the token allows (read or write, all or some projects / boards); writes are signed with its name; never the local-only actions |
+| a browser elsewhere (the tunnel, the LAN) | signing in once: a pairing code approved on the canvas, or a pasted token | a session cookie (`HttpOnly`, `SameSite=Strict`, `Secure` on https) with the scope it was given |
+| anyone else from elsewhere | — | `401` with `WWW-Authenticate: Bearer resource_metadata=…` and a sentence saying how to connect |
+
+A cloudflared tunnel connects from loopback but adds its headers, so it is **not** local. The rule for "local" is
+`isLocalRequest()` in `src/projectsApi.ts` (loopback address, no forwarding headers, no `Authorization`).
+Public without credentials: the web UI's files, `/docs`, `GET /api/version`, `GET /api/kinds`, the OAuth
+endpoints and the sign-in endpoints below.
+
+`UNPROSE_REMOTE_AUTH=off` brings back the old open canvas (anyone who reaches it reads and writes) — only for a
+canvas that already sits behind an access proxy that does the job. Local-only actions stay local either way.
+
+### Connecting an agent
+
+- **OAuth 2.1 (claude.ai, Claude Code `--transport http`, most remote MCP clients).** The client calls `/mcp`, gets
+  `401`, reads `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-authorization-server`, registers
+  itself (`POST /register`, dynamic client registration, public client + PKCE S256) and opens `/authorize` in the
+  person's browser. That page names the client and where it returns to, and shows a **one-time pairing code**
+  (`ABCD-EFGH`). At the same moment **every open canvas page that may approve** (below) shows
+  **“<client> wants to connect”** with a box for the code, **Allow** and **Deny**. Typing the code proves the person
+  is looking at that agent. On a page opened on the canvas machine (`http://localhost…`), Allow works with one
+  click (no code needed). After Allow, the authorize page sends the browser back to the client with a single-use
+  authorization code (10 minutes); `POST /token` exchanges it (`authorization_code` + PKCE verifier) for an access
+  token (1 hour) and a refresh token (rotated on every use). The agent appears in **Connected agents**, revocable.
+- **An agent without a browser** (the stdio MCP server pointed at the tunnel, a headless cloud agent): the device
+  flow, RFC 8628. `POST /device_authorization` (`client_name=<name>`) returns a `user_code` (the pairing code) and a
+  `device_code`; the agent tells the person the code; the person types it on the canvas (the notification, or
+  **Connected agents → Enter a code**); the agent polls `POST /token` with
+  `grant_type=urn:ietf:params:oauth:grant-type:device_code` and gets a token (no expiry, revocable). The stdio MCP
+  server (`scripts/mcp.mjs`) does this by itself when `AWD_CANVAS_URL` answers `401` and it has no token: every tool
+  result says *“Ask the person to type the code ABCD-EFGH on the canvas …”* until it is approved, then it keeps the
+  token in `~/.awd/tokens.json` (0600; `UNPROSE_TOKENS_FILE` moves it) for next time.
+- **A token made on the page** (clients that can send a header): **Connected agents → New token** — a name, read or
+  read-and-draw, optionally only some projects or boards. The secret is shown **once**, with ready-to-paste setup
+  for Claude Code, Codex, a JSON config and the stdio server.
+
+### Who may approve and manage
+
+- **Approve a connect request:** a page on the canvas machine (opened as `localhost`, same origin) — one click; or a
+  **signed-in** page anywhere (a browser session) — only with the requester's pairing code. A session can grant at
+  most its own scope and projects. **Five wrong codes lock the request** (the agent has to start again); codes typed
+  without picking a request are limited to ten wrong ones per ten minutes per approver.
+- **Create and revoke tokens:** a page on the canvas machine, or a browser session that a page on the canvas machine
+  approved with *“may also manage agents and tokens”*. A page that can merely load through the tunnel can do none of
+  this; agent tokens can neither approve nor list agents.
+- **Signing a browser in from elsewhere:** the page shows *“Ask to be let in”* — it gets a pairing code; type it on a
+  page on the canvas machine or on a page that is already signed in (one click on the canvas machine works too).
+  Or paste a token made on the agents page. A person who only ever reaches the canvas through the tunnel makes one
+  token (or approves the first browser) while at the machine, once.
+
+### Safety details
+
+- Tokens, refresh tokens, session secrets and authorization codes are random 256-bit secrets; only their sha-256 is
+  stored, in **`~/.awd/agents.json`** (mode 0600, directory 0700; `--agents-file` / `UNPROSE_AGENTS_FILE` moves it,
+  `XDG_DATA_HOME` is honoured) — never in a board, a project or a log. Lookups compare hashes in constant time.
+  Pages never receive a hash; a secret is shown once, when it is made.
+- Pending requests expire after 10 minutes; at most 3 waiting per address and 20 in all; client registrations are
+  limited to 20 per address per hour. Approving pages never receive the pairing code.
+- Cross-site protection: the approve / manage API refuses requests whose `Origin` is not the canvas itself or whose
+  `Sec-Fetch-Site` is cross-site; one-click approval also requires a loopback `Host` (no DNS rebinding). The
+  authorize page sends `X-Frame-Options: DENY` and a nonce-based Content-Security-Policy.
+- Redirect URIs must be `https`, or `http` to `localhost` (native apps). Only `response_type=code` with
+  `code_challenge_method=S256`.
+- `UNPROSE_PUBLIC_URL=https://canvas.example.com` fixes the address the canvas tells agents (OAuth issuer, metadata,
+  board links); without it the request's `X-Forwarded-Proto` / `X-Forwarded-Host` / `Host` are used.
+
+### What a remote agent sees
+
+The same tools as the stdio server (`canvas_*`, `unprose_help`) plus `design_lint`, `design_draw` and
+`design_propose_stories` that take the file's text (`content`) and its file name (`name`, e.g. `checkout.es.yaml`)
+instead of a path — the canvas cannot read the agent's files; the agent keeps the file as the truth on its side.
+`design_egon` (writes files) and workflow files (`awd graph`) stay with the local tools. The start prompts
+(`eventstorm`, `storymap` …) are MCP prompts. New boards are not opened in a browser on the canvas machine: the
+tool returns the link to give the person. `/mcp` is stateless (each POST stands alone; nothing is lost on a restart)
+and streams with keep-alives, so a `canvas_wait` of up to 120 s survives proxies.
+
+### Identity: who did what
+
+- Every change made with a token carries `by: <agent name>` (`Change.by`); diff lines read `[7 codex-laptop] …`,
+  and the change feed shows the name. A token always writes as `author: 'agent'` — it cannot pose as the person.
+- A local agent stays the default `agent`; set **`UNPROSE_AGENT_NAME=<name>`** for its MCP server or CLI to sign
+  its changes (sent as `X-Unprose-Agent`, honoured only from this machine).
+- Presence names who is waiting: the board header says *“codex-laptop is watching”* (`presence.agents`).
+- Read receipts are per agent: `data.seenByAgents` lists the agents that read a comment (`data.seenBy` keeps the
+  roles). `canvas_wait` and `canvas_diff` work from each agent's own `since`, so two agents never consume each
+  other's events; `canvas_wait({ from: 'others' })` / `canvas_diff({ author: 'others' })` / `?author=others` also
+  return the other agents' changes — never your own.
+
+### Scopes
+
+A token limited to projects sees only those projects' boards in `canvas_list_boards` / `GET /api/boards` /
+`GET /api/projects`, gets `403` on any other board (HTTP and WebSocket), and creates new boards in its first
+project; a token limited to boards sees only those and cannot create boards. A read-only token reads, waits and
+diffs but gets `403` on every write (ops, cards, focus, board create / update / delete). Agent tokens never start or
+stop Studio.
+
+### Migrating a canvas you use through a tunnel
+
+After updating, requests through the tunnel need credentials; on the canvas machine nothing changes.
+
+1. **Your browser through the tunnel** shows a sign-in page. Choose *Ask to be let in* and type the code on a page
+   at `http://localhost:4400` (or click Allow there) — once per browser. Away from the machine: make a token on
+   `http://localhost:4400/agents` beforehand and paste it into *Use an access token*.
+2. **Agents that used `AWD_CANVAS_URL=https://<tunnel>`** without a token now get `401`. The stdio MCP server asks
+   for a pairing code by itself (the code shows in its tool results); or make a token and set `UNPROSE_TOKEN`; or
+   switch the agent to the remote endpoint `https://<tunnel>/mcp` (OAuth). `awd design draw --canvas https://…` and
+   the other CLI commands send `UNPROSE_TOKEN` too.
+3. **Cloudflare Access in front?** Keep it if you like; add bypass rules for the paths agents use (`/mcp`,
+   `/.well-known/*`, `/register`, `/authorize*`, `/token`, `/revoke`, `/device_authorization`) — agents cannot do a
+   Cloudflare login — and let the canvas's own tokens protect them. Or keep only Cloudflare Access and set
+   `UNPROSE_REMOTE_AUTH=off` (the old behaviour; remote agents then connect without approval).
+4. Set `UNPROSE_PUBLIC_URL=https://<tunnel>` on the canvas so the setup lines on the agents page and the OAuth
+   metadata use the tunnel address even when you open the page on `localhost`.
 
 ## HTTP API
 
@@ -142,9 +273,22 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
 | GET | `/api/update` | `?refresh=1` | `{ current, latest?, available, notes?, url?, checkedAt, source, error?, install: 'plugin'\|'checkout'\|'bundle'\|'unknown', supported, canUpgrade, reason?, command }` — the newest GitHub release (cached 6 h); `canUpgrade` only for a page on this machine |
 | POST | `/api/update` | | `202 { started, version }` — upgrade and restart on the new version (see "Updating"); `403` unless the caller is on this machine, `409 { error }` when it cannot start (up to date, dirty checkout, unsupported install) |
 | GET | `/api/update/status` | | `{ running, phase?, message?, version?, log: string[] }` — the current or last upgrade job |
+| POST | `/mcp` | MCP JSON-RPC (Streamable HTTP, stateless) | the MCP tools as the caller (see [Remote agents](#remote-agents)); `401` + `WWW-Authenticate` without credentials from elsewhere |
+| GET | `/.well-known/oauth-protected-resource[/mcp]` · `/.well-known/oauth-authorization-server` | | RFC 9728 / RFC 8414 metadata |
+| POST | `/register` | `{ client_name, redirect_uris }` | `201 { client_id, … }` — dynamic client registration (public clients, PKCE) |
+| GET | `/authorize` | `response_type=code, client_id, redirect_uri, code_challenge, code_challenge_method=S256, state, scope?` | the approve-on-connect page (pairing code; one click on the canvas machine); `GET /authorize/status?id=` → `{ status, redirect? }` |
+| POST | `/token` | form: `grant_type=authorization_code \| refresh_token \| urn:ietf:params:oauth:grant-type:device_code`, … | `{ access_token, token_type, expires_in?, refresh_token?, scope }` |
+| POST | `/device_authorization` · `/revoke` | form: `client_name` · `token` | `{ device_code, user_code, verification_uri, expires_in, interval }` · `200` |
+| GET | `/api/access/me` | | `{ grant, signedIn, local, remoteAuth, canApprove, canManage, oneClick, publicUrl }` |
+| POST/GET | `/api/access/signin` · `/api/access/signin/:id` | | a browser asks to be let in → `{ id, code, expiresAt }`; polling sets the session cookie once approved |
+| POST | `/api/access/session` · `/api/access/signout` | `{ token }` · | sign in with a pasted token · sign out (the session is revoked) |
+| GET/POST | `/api/access/agents` | `{ name, scope, projects?, boards?, publicUrl? }` | the agents and pending requests · make a token → `201 { agent, token, setup }` (token shown once) |
+| DELETE | `/api/access/agents/:id` | `?forget=1` | revoke (forget a revoked one) |
+| GET/POST | `/api/access/requests` · `/api/access/requests/:id` · `/api/access/approve` | `{ allow, scope?, projects?, boards?, name?, code?, manage? }` · `{ code, … }` | pending requests · allow / deny one · allow the one whose code this is |
+| WS | `/ws` | | the server socket: `access-request` / `access-resolved` (pages that may approve), `access-changed` |
 | WS | `/ws/:id` | | `{ type:'hello', board }` then `{ type:'change', change }` per change |
 
-Every `Change` carries `before` — a snapshot of each touched item before the change — so diffs never need a second read. CORS is open.
+Every `Change` carries `before` — a snapshot of each touched item before the change — so diffs never need a second read, and `by` when a named agent or person made it. CORS is open for the board API and the OAuth endpoints; the approve / manage API (`/api/access/…`) is same-origin only. From elsewhere every `/api` route except `version` and `kinds` needs credentials ([Remote agents](#remote-agents)); `?author=others` on `changes` / `diff` / `wait` means everyone but the calling agent.
 
 ### Model (from `src/model.ts`)
 
@@ -154,7 +298,7 @@ Item   { id, type: sticky|text|frame|lane|arrow|comment|wireframe|card|ui, x, y,
          role?, parent?, from?, to?, label?, target?, order?, data?,
          createdBy, updatedBy: 'agent'|'user', updatedAt }
 Op     { kind:'add', item } | { kind:'update', id, patch } | { kind:'remove', id }
-Change { seq, ts, author, boardId, ops, before: { [id]: Item|null }, note? }
+Change { seq, ts, author, boardId, ops, before: { [id]: Item|null }, note?, by? }
 ```
 
 Coordinates are absolute even for items with a `parent`. Containment for diffs is `parent` when set, else whichever lane/frame geometrically contains the item's centre — so a plain drag into another lane still reads as "moved from A → B".
@@ -266,7 +410,11 @@ one element. Each screen and element becomes a `ui` item (`role` = its type) wit
 ids are `<key>.screen.<screen>` and `<key>.ui.<screen>.<element>`. `goto` and `flows` draw `navigate` arrows to the
 target screen; `note` becomes a comment bubble. The full list of types and props is in the MCP `CONTENT_HELP`
 and docs/diagrams.md §6c. A text edit on the board sets `data.pending = { kind: 'text', before: { text }, after:
-{ text }, path, key, by: 'user', at }`; a redraw whose file says the new text clears it.
+{ text }, path, key, by: 'user', at }` (a table cell or list item adds `sub: ['rows', r, c] | ['items', i]`); Delete
+sets `{ kind: 'remove', before: { type, text }, path }` and keeps the item; the panel's Add element adds an item
+`<key>.ui.<screen>.new-<type>` with `{ kind: 'add', node: { type, id, text }, parent | after: { element, path }, path }`.
+A redraw clears each once the file explains it (new text, element gone, element with that id drawn). The drawing
+puts `awd design lint`'s findings on the elements as `data.ui.findings: [{ severity, message }]`.
 
 ### `workflow`
 
@@ -351,7 +499,8 @@ Semantics the trigger can rely on: one change = at most one move per card; `from
 
 ```
 awd-canvas serve [--port 4400] [--dir <boards dir, default ~/.awd/boards>] [--store file|memory] [--open]
-                 [--studio <workflow.yaml>]... [--studio-cmd "<command with {file}>"]
+                 [--studio <workflow.yaml>]... [--studio-cmd "<command with {file}>"] [--agents-file <file>]
+                 # env: UNPROSE_REMOTE_AUTH=off · UNPROSE_PUBLIC_URL=https://… · UNPROSE_AGENTS_FILE
 awd-canvas mcp
 awd-canvas render <kind> <content.json>      # print the items a template produces (no server needed)
 awd-canvas demo [--url http://localhost:4400]
@@ -374,6 +523,36 @@ The workflow board a runtime draws (`awd graph … --canvas`) also shows **live 
 ## Tests
 
 `npm test -w @awd/canvas` — templates (determinism, level filtering, lane containment, no overlaps), the board repository (log + snapshot + rebuild, wait, memory adapter), kanban (`cardMoves`, `/cards` round trip), diff summaries, thumbnails, comment placement, the HTTP/WS server on a random port, and the architecture rule (ports / adapters).
+
+## Wires
+
+How the board draws wires (`web/src/flow/route.ts`, `ItemEdge.tsx`, `catchAll.ts`). All of it is a way of looking:
+nothing here is stored on the board, and a copied image shows what is shown.
+
+- **Sides and routes.** A side the person (or a template) chose is kept. Otherwise every pair of sides is tried —
+  facing sides (right → left, bottom → top …), one side into a perpendicular one (one bend), and a loop under or
+  over both boxes — and the route that **crosses the fewest boxes** wins, then the shortest; the facing pair wins
+  a near tie (40 px), so a wire changes sides only when that clears a box. A straight run sits in the best gap
+  between boxes, wires sharing a side are spread along it, and a label sits on the wire's own run, never on a box.
+  Going back along the same row a wire loops under (or over) rather than lying on the forward wire.
+- **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
+- **Wires: All / Selected / None** (bottom-right corner, **W** cycles; remembered per viewer in this browser).
+  *Selected* draws only the wires touching the selected blocks (others are hidden, not faded); *None* hides
+  every wire. A wire picked in the Inspector's Wiring list is drawn in any mode.
+- **Catch-all listeners are badges.** On a workflow board a subscription that listens to (or fans out across)
+  many blocks is drawn as a small badge instead of a long wire: on the listener above its top edge
+  (`on *.failed`, `resume: card.moved`, `on tick`, `on 8 events · 5 blocks` for a hub) and on the emitting block
+  below its bottom edge (`card.moved → 2 blocks`, `3 events → park`); the badge's tooltip lists every wire.
+  Click a badge to draw its wires again (click again to fold them back), or tick **Show catch-all wires** next to
+  the mode buttons. The Inspector's Wiring section lists them as before. The rule — a flow wire carrying
+  `data.event` is a catch-all when:
+  1. its event pattern contains `*` (`*.failed`, `build.*`);
+  2. it is a human step's `resume_on` (`data.event.resume`) — the trigger wakes a waiting step, it does not start one;
+  3. its source is a cron trigger (`data.config.on: cron`, e.g. `tick`) — a sweep on a timer;
+  4. *fan-out*: its source sends the same event to **4 or more** different blocks;
+  5. *fan-in*: its target listens to **4 or more** different blocks (a hub such as `park` on every failure).
+
+  Rules 4–5 count only the wires rules 1–3 left, so a trigger's resume fan-out does not hide its real start wire.
 
 ## Going to something
 
@@ -411,7 +590,7 @@ server does not answer within 15 s, the old one listens again and reports the fa
 A canvas run by launchd (`XPC_SERVICE_NAME` naming an awd/unprose job) just exits after installing and launchd
 starts it again.
 
-- **Only from this machine:** the canvas has no login, so `POST /api/update` answers `403` to any caller that
+- **Only from this machine:** upgrading runs commands on it, so `POST /api/update` answers `403` to any caller that
   is not on loopback or that came through a proxy/tunnel (`X-Forwarded-For`, `CF-Connecting-IP` …). Pages
   opened through a tunnel see the notice and the command to run by hand, with the button disabled.
 - **Private repository:** the check uses the public API, then `GITHUB_TOKEN` / `GH_TOKEN`, then the `gh` CLI's

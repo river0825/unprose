@@ -228,3 +228,24 @@ test('redraw: a UI mock text proposal is held until the file says the new words 
   const gone = planRedraw(board, [], new Set(), { prefix: 'k.' })
   assert.deepEqual(gone, [{ kind: 'remove', id: 'k.ui.cart.pay' }], 'renamed in the file: nothing left to hold')
 })
+
+test('redraw: UI mock removal, new element and cell proposals are held until the file explains them', () => {
+  const at = 'x'
+  const remove = { kind: 'remove', before: { type: 'button', text: 'Pay' }, path: ['screens', 0, 'body', 0], by: 'user', at }
+  const add = { kind: 'add', node: { type: 'text', id: 'new-text', text: 'Hi' }, parent: { element: 'cart', path: ['screens', 0] }, path: ['screens', 0, 'body', 2], by: 'user', at }
+  const cell = { kind: 'text', before: { text: '1' }, after: { text: '2' }, path: ['screens', 0, 'body', 1], key: 'rows', sub: ['rows', 0, 1], by: 'user', at }
+  const board = {
+    'k.ui.cart.pay': { id: 'k.ui.cart.pay', type: 'ui', text: 'Pay', data: { pending: remove } },
+    'k.ui.cart.new-text': { id: 'k.ui.cart.new-text', type: 'ui', text: 'Hi', data: { pending: add } },
+    'k.ui.cart.t': { id: 'k.ui.cart.t', type: 'ui', data: { ui: { rows: [['a', '2']] }, pending: cell } },
+  }
+  const table = (v: string) => ({ id: 'k.ui.cart.t', type: 'ui', data: { ui: { type: 'table', rows: [['a', v]] } } })
+  const pay = { id: 'k.ui.cart.pay', type: 'ui', text: 'Pay', data: {} }
+  assert.deepEqual(planRedraw(board, [pay, table('1')], new Set(), { prefix: 'k.' }), [], 'nothing applied yet: all three held')
+  const applied = planRedraw(board, [table('2'), { id: 'k.ui.cart.new-text', type: 'ui', text: 'Hi', data: { ui: { type: 'text' } } }], new Set(), { prefix: 'k.' })
+  assert.deepEqual(applied.filter((o) => o.kind === 'remove').map((o) => o.id), ['k.ui.cart.pay'], 'the removed element goes')
+  for (const id of ['k.ui.cart.t', 'k.ui.cart.new-text']) {
+    const up = applied.find((o) => o.kind === 'update' && o.id === id) as { patch: { data: Record<string, unknown> } } | undefined
+    assert.ok(up && up.patch.data.pending === undefined, `${id}: the drawing replaces the proposal`)
+  }
+})

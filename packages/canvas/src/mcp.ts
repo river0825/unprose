@@ -18,7 +18,7 @@ const CONTENT_HELP = `content shape per kind (see docs/canvas.md for full exampl
 - user-story-map: { activities: [{id?, text, steps: [{id?, text, stories: [{id?, text, release?, acceptance?: string[], traces?: [{from: '<diagram key>/<element id>', rel: 'derived-from'|'groups'|'shows'}]}]}]}], releases?: string[] }  (releases are cut lines, top to bottom)
 - user-journey: { persona, stages: [{text, actions?, touchpoints?, emotion: -2..2, pains?, opportunities?}] }
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
-- ui-mock (docs/diagrams.md §6c — real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, …props } — layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; text edited on the board comes back as a proposal (data.pending.kind 'text') with a diff to apply.
+- ui-mock (docs/diagrams.md §6c — real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, …props } — layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' — it stays on the board, struck), an element added (kind 'add' with node { type, id, text } — write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
 - domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md §6b — pictographic sentences read left → right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}] }  — every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  — columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> → <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
@@ -43,12 +43,12 @@ const DIAGRAMS = `Diagrams (one file each, drawn as a frame on a board):
 Link elements across diagrams with \`traces\` (derived-from, groups, shows, relates).`
 
 /** The \`unprose_help\` answer: what Unprose can do and how to start. */
-export function helpText(o: { designTools: boolean; prompts: string[]; canvas: string; version?: string }): string {
+export function helpText(o: { designTools: boolean; prompts: string[]; canvas: string; version?: string; remote?: boolean }): string {
   const tools = [
     'Boards: canvas_list_boards, canvas_create_board, canvas_read_board, canvas_open',
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
     'Conversation: canvas_wait (block until the person comments or hands over), canvas_diff (what changed since a seq), canvas_focus (take the person\'s page to an item or frame)',
-    ...(o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
+    ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
   return [
     ABOUT,
@@ -71,6 +71,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     ...(o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(', ')}`] : []),
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
+    'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name.',
   ].join('\n')
 }
 
@@ -92,13 +93,17 @@ export function sessionProjectRoot(env: NodeJS.ProcessEnv = process.env, cwd = p
 export interface McpOptions {
   /** The session's project id on this canvas: new boards go there, and board lists show its boards first. */
   project?: string
+  /** Open new boards in the browser on this machine (macOS); off for the canvas's remote /mcp endpoint. */
+  openBrowser?: boolean
+  /** Served by the canvas itself at /mcp to an agent elsewhere (docs/canvas.md "Remote agents"). */
+  remote?: boolean
   /** More tools and prompts (the \`awd\` CLI adds the design_* tools and the prompts); runs after the canvas tools. */
   extend?: (server: McpServer, ctx: { client: CanvasClient; project?: string }) => { designTools?: boolean; prompts?: string[] } | void
 }
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.7.1' },
+    { name: 'unprose', version: '0.8.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -115,7 +120,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         .then((r) => (r.ok ? (r.json() as Promise<{ version?: string }>) : {}))
         .then((j) => (j as { version?: string }).version)
         .catch(() => undefined)
-      return text(helpText({ designTools: !!extra.designTools, prompts: extra.prompts ?? [], canvas: client.baseUrl, version }))
+      return text(helpText({ designTools: !!extra.designTools, prompts: extra.prompts ?? [], canvas: client.publicUrl, version, remote: opts.remote }))
     },
   )
 
@@ -151,9 +156,10 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
       const board = await client.createBoard({ title, kind, content, meta, author: 'agent', ...((project ?? opts.project) ? { project: project ?? opts.project } : {}) })
       const n = Object.keys(board.items).length
       const url = client.boardUrl(board.id)
-      // Open it for the person right away so they never have to copy a URL.
-      if (process.platform === 'darwin' && process.env.AWD_CANVAS_NO_OPEN !== '1') execFile('open', [url], () => {})
-      return text(`created board ${board.id} (${kind}, ${n} items, seq ${board.seq}) and opened it in the browser\nurl: ${url}\nNow call canvas_wait with since=${board.seq} — the UI shows "agent is watching" while you do.`)
+      // Open it for the person right away so they never have to copy a URL (only when the canvas is on this machine).
+      const opened = opts.openBrowser !== false && process.platform === 'darwin' && process.env.AWD_CANVAS_NO_OPEN !== '1'
+      if (opened) execFile('open', [url], () => {})
+      return text(`created board ${board.id} (${kind}, ${n} items, seq ${board.seq})${opened ? ' and opened it in the browser' : ' — give the person this link'}\nurl: ${url}\nNow call canvas_wait with since=${board.seq} — the UI shows "agent is watching" while you do.`)
     },
   )
 
@@ -213,15 +219,15 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_diff',
     {
       title: 'What changed since seq',
-      description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions…). By default only the user's changes are returned; pass author 'agent' or omit filtering with author 'all'.",
+      description: "Human-readable lines describing every change after `since` (moves between lanes, added comments, renames, deletions…). By default only the user's changes are returned; author 'others' adds the other agents' changes (never your own — for several agents on one board), 'agent' every agent's, 'all' everything.",
       inputSchema: {
         id: z.string(),
         since: z.number().int().min(0),
-        author: z.enum(['user', 'agent', 'all']).default('user'),
+        author: z.enum(['user', 'others', 'agent', 'all']).default('user'),
       },
     },
     async ({ id, since, author }) => {
-      const r = await client.diff(id, since, author === 'all' ? undefined : (author as Author))
+      const r = await client.diff(id, since, author === 'all' ? undefined : (author as Author | 'others'))
       if (!r.count) return text(`no ${author === 'all' ? '' : author + ' '}changes since seq ${since} (board seq ${r.seq})`)
       return text(`${r.count} change(s), board seq now ${r.seq}:\n${r.lines.join('\n')}`)
     },
@@ -238,12 +244,13 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         timeoutSec: z.number().min(1).max(120).default(60),
         quietSec: z.number().min(0).max(30).default(2.5),
         wake: z.enum(['meaningful', 'any', 'handoff']).default('meaningful'),
+        from: z.enum(['person', 'others']).default('person').describe("'person' (default): wake on the person's changes; 'others': also on other agents' changes on this board (never your own)"),
       },
     },
-    async ({ id, since, timeoutSec, quietSec, wake }) => {
-      const r = await client.wait(id, since, timeoutSec * 1000, 'user', quietSec * 1000, wake)
-      if (r.timedOut) return text(`no user changes in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`)
-      return text(`user changed the board (seq ${r.seq}):\n${r.lines.join('\n')}`)
+    async ({ id, since, timeoutSec, quietSec, wake, from }) => {
+      const r = await client.wait(id, since, timeoutSec * 1000, from === 'others' ? 'others' : 'user', quietSec * 1000, wake)
+      if (r.timedOut) return text(`no ${from === 'others' ? '' : 'user '}changes in ${timeoutSec}s (board seq ${r.seq}). Call canvas_wait again with since=${since} to keep waiting, or continue.`)
+      return text(`${from === 'others' ? 'the board changed' : 'user changed the board'} (seq ${r.seq}):\n${r.lines.join('\n')}`)
     },
   )
 
@@ -269,16 +276,85 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
 
   server.registerTool(
     'canvas_open',
-    { title: 'Open a board in the browser', description: 'Print the board URL and open it in the default browser (macOS).', inputSchema: { id: z.string() } },
+    { title: 'Open a board in the browser', description: opts.openBrowser === false ? 'The board URL, to give the person.' : 'Print the board URL and open it in the default browser (macOS).', inputSchema: { id: z.string() } },
     async ({ id }) => {
       const url = client.boardUrl(id)
-      if (process.platform === 'darwin') execFile('open', [url], () => {})
+      if (opts.openBrowser !== false && process.platform === 'darwin') execFile('open', [url], () => {})
       return text(url)
     },
   )
 
   extra = opts.extend?.(server, { client, project: opts.project }) ?? {}
   return server
+}
+
+/** Tokens this agent got through the device flow, per canvas address (`~/.awd/tokens.json`, 0600). */
+function tokenFile(): string {
+  return process.env.UNPROSE_TOKENS_FILE || path.join(os.homedir(), '.awd', 'tokens.json')
+}
+function savedToken(base: string): string | undefined {
+  try {
+    const j = JSON.parse(fs.readFileSync(tokenFile(), 'utf8')) as Record<string, string>
+    return typeof j[base] === 'string' ? j[base] : undefined
+  } catch {
+    return undefined
+  }
+}
+function saveToken(base: string, token: string | undefined) {
+  const f = tokenFile()
+  let j: Record<string, string> = {}
+  try {
+    j = JSON.parse(fs.readFileSync(f, 'utf8')) as Record<string, string>
+  } catch {
+    // first token
+  }
+  if (token) j[base] = token
+  else delete j[base]
+  fs.mkdirSync(path.dirname(f), { recursive: true, mode: 0o700 })
+  fs.writeFileSync(f, JSON.stringify(j, null, 2) + '\n', { mode: 0o600 })
+}
+
+/**
+ * An agent without a browser connecting to a canvas elsewhere (RFC 8628, docs/canvas.md "Remote agents"):
+ * ask for a pairing code, show it in every tool result until the person types it on the canvas, then use
+ * the token (and keep it for next time).
+ */
+async function connectWithCode(base: string, client: CanvasClient, name: string): Promise<void> {
+  const res = await fetch(`${base}/device_authorization`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_name: name, scope: 'write' }) })
+  const j = (await res.json().catch(() => ({}))) as { device_code?: string; user_code?: string; interval?: number; expires_in?: number; error_description?: string }
+  if (!res.ok || !j.device_code || !j.user_code) {
+    client.authHint = `This canvas (${base}) wants an access token and could not start a pairing code (${j.error_description ?? `HTTP ${res.status}`}). Ask the person for a token (canvas → Connected agents) and set UNPROSE_TOKEN.`
+    return
+  }
+  const hint = (code: string) => `Not connected to the canvas yet. Ask the person to type the code ${code} on the canvas (${base}): the notification "${name} wants to connect", or Connected agents → Enter a code. It expires in 10 minutes; then call this tool again.`
+  client.authHint = hint(j.user_code)
+  process.stderr.write(`unprose MCP: ${client.authHint}\n`)
+  const until = Date.now() + (j.expires_in ?? 600) * 1000
+  let interval = Math.max(5, j.interval ?? 5) * 1000
+  while (Date.now() < until) {
+    await new Promise((r) => setTimeout(r, interval))
+    const t = await fetch(`${base}/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: j.device_code }) }).catch(() => undefined)
+    const body = ((await t?.json().catch(() => ({}))) ?? {}) as { access_token?: string; error?: string }
+    if (body.access_token) {
+      client.setToken(body.access_token)
+      client.authHint = undefined
+      try {
+        saveToken(base, body.access_token)
+      } catch {
+        // kept for this session only
+      }
+      process.stderr.write(`unprose MCP: connected to ${base} as ${name}\n`)
+      return
+    }
+    if (body.error === 'slow_down') interval += 5000
+    else if (body.error && body.error !== 'authorization_pending') break
+  }
+  // denied or expired: the next tool call starts over
+  client.authHint = `Not connected to the canvas (${base}): the pairing code was not accepted in time. Call a canvas tool again to get a new code.`
+  client.onAuthNeeded = () => {
+    client.onAuthNeeded = undefined
+    void connectWithCode(base, client, name)
+  }
 }
 
 export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
@@ -291,23 +367,35 @@ export async function runMcp(extend?: McpOptions['extend']): Promise<void> {
     process.stderr.write(`unprose MCP: AWD_CANVAS_URL "${raw}" is not a URL. Set it to the canvas address, e.g. http://localhost:4400 or https://canvas.example.com\n`)
     process.exit(2)
   }
-  const probe = await probeCanvas(base)
-  if (!probe.ok) {
+  // a token: UNPROSE_TOKEN, else one this agent got earlier with a pairing code
+  let token = process.env.UNPROSE_TOKEN || savedToken(base)
+  let probe = await probeCanvas(base, 4000, token)
+  if (!probe.ok && probe.auth && token && !process.env.UNPROSE_TOKEN) {
+    // the saved token was revoked: forget it and pair again
+    saveToken(base, undefined)
+    token = undefined
+    probe = await probeCanvas(base)
+  }
+  const needsPairing = !probe.ok && probe.auth && !token
+  if (!probe.ok && !needsPairing) {
     process.stderr.write(`unprose MCP: cannot reach ${base} (${probe.reason}). Start the canvas (\`npm start\`) or set AWD_CANVAS_URL to where it runs.\n`)
     process.exit(1)
   }
   process.env.AWD_CANVAS_URL = base
+  const name = process.env.UNPROSE_AGENT_NAME || `agent on ${os.hostname().replace(/\.local$/, '')}`
+  const client = new CanvasClient(base, { token, agentName: process.env.UNPROSE_AGENT_NAME })
+  if (needsPairing) void connectWithCode(base, client, name)
   // Boards this session creates belong to its project (stored in <project>/.unprose/boards/). Only a
   // canvas on this machine accepts the registration; elsewhere the boards stay in its personal space.
   let project: string | undefined
   const root = sessionProjectRoot()
-  if (root) {
+  if (root && !needsPairing) {
     try {
-      project = (await new CanvasClient(base).registerProject(root)).id
+      project = (await client.registerProject(root)).id
     } catch (e) {
       process.stderr.write(`unprose MCP: boards stay in the canvas's personal space (${root} not registered: ${(e as Error).message})\n`)
     }
   }
-  const server = createMcpServer(new CanvasClient(base), { project, extend })
+  const server = createMcpServer(client, { project, extend })
   await server.connect(new StdioServerTransport())
 }

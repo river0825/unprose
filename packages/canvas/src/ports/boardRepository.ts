@@ -12,15 +12,28 @@ export interface CreateBoardInput {
   id?: string
   /** Which project stores it (a `ProjectInfo.id`); default: the personal space. */
   project?: string
+  /** Who drew it (Change.by of the first change). */
+  by?: string
 }
 
 export interface ChangesQuery {
   since?: number
   author?: Author
+  /** A finer filter on top of `author` (e.g. "everyone but this agent", docs/canvas.md "Remote agents"). */
+  match?: (c: Change) => boolean
+}
+
+export interface WaitOptions {
+  quietMs?: number
+  wake?: Wake
+  /** A finer filter on top of `author`: only matching changes wake the wait and come back. */
+  match?: (c: Change) => boolean
+  /** The agent waiting (its name), so the page can say who is watching; default 'agent'. */
+  who?: string
 }
 
 export type ChangeListener = (change: Change) => void
-export type PresenceListener = (boardId: string, watchers: number) => void
+export type PresenceListener = (boardId: string, watchers: number, agents: string[]) => void
 /** Saving a board failed (`ok: false`), or works again after a failure (`ok: true`). */
 export interface StorageEvent { boardId: string; ok: boolean; message: string; at: string }
 export type StorageListener = (e: StorageEvent) => void
@@ -32,8 +45,8 @@ export interface BoardRepository {
   list(): Board[]
   get(id: string): Board | undefined
   create(input: CreateBoardInput, author?: Author): Board
-  /** Apply ops atomically, append the change to the log, notify subscribers. */
-  apply(id: string, ops: Op[], author: Author, note?: string): Change
+  /** Apply ops atomically, append the change to the log, notify subscribers. `by` names the agent or person (Change.by). */
+  apply(id: string, ops: Op[], author: Author, note?: string, by?: string): Change
   /** Update board-level fields (title, meta). Not logged as an item change. */
   updateBoard(id: string, patch: Partial<Pick<Board, 'title' | 'meta'>>): Board
   changes(id: string, q?: ChangesQuery): Change[]
@@ -45,9 +58,11 @@ export interface BoardRepository {
    * changes wake and restart the quiet window: layout-only moves and read
    * receipts do not, but ride along in the result. While pending the board counts as watched.
    */
-  waitFor(id: string, since: number, timeoutMs: number, author?: Author, opts?: { quietMs?: number; wake?: Wake }): Promise<Change[]>
+  waitFor(id: string, since: number, timeoutMs: number, author?: Author, opts?: WaitOptions): Promise<Change[]>
   /** How many agent waits are currently pending on this board. */
   watchers(id: string): number
+  /** The names of the agents waiting on this board right now (sorted, unique). */
+  watcherNames(id: string): string[]
   onPresence(fn: PresenceListener): () => void
   /** Hear about saves that fail (and recover), so clients can say "changes are not being saved". */
   onStorage(fn: StorageListener): () => void

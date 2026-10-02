@@ -9,6 +9,8 @@ import { UpdateService, type Handoff, type UpdateEvent } from '../src/updater.js
 import { FakeInstaller, FakeLauncher, FakeUpdateSource } from '../src/adapters/update/index.js'
 import { releaseFrom, GitHubReleaseSource } from '../src/adapters/update/github.js'
 import { startServer } from '../src/server.js'
+import { AccessService } from '../src/access.js'
+import { MemoryAccessStore } from '../src/adapters/access/index.js'
 import { createBoardRepository } from '../src/adapters/boards/index.js'
 
 test('semver precedence, including prereleases', () => {
@@ -183,17 +185,20 @@ test('routes: GET /api/update (canUpgrade only locally), POST refused from a tun
   installer.files.add('/r/e.js')
   const svc = new UpdateService({ current: '0.4.1', install: { kind: 'checkout', root: '/r', build: false }, source: new FakeUpdateSource({ version: '0.5.0', notes: 'the notes', source: 'fake' }), installer, launcher: new FakeLauncher(undefined), entry: '/r/e.js', argv: [], env: {}, logFile: '/tmp/x.log', bootTimeoutMs: 50, pollMs: 5 })
   const exits: number[] = []
-  const srv = await startServer({ port: 0, store: createBoardRepository('memory'), update: svc, exit: (c) => void exits.push(c) })
+  const access = new AccessService({ store: new MemoryAccessStore() })
+  const { token } = access.createToken({ name: 'remote' }, 'test')
+  const srv = await startServer({ port: 0, store: createBoardRepository('memory'), update: svc, exit: (c) => void exits.push(c), access })
   try {
     const u = `http://127.0.0.1:${srv.port}/api/update`
     const local = await (await fetch(u)).json()
     assert.equal(local.available, true)
     assert.equal(local.canUpgrade, true)
     assert.equal(local.notes, 'the notes')
-    const remote = await (await fetch(u, { headers: { 'x-forwarded-for': '1.2.3.4' } })).json()
+    assert.equal((await fetch(u, { headers: { 'x-forwarded-for': '1.2.3.4' } })).status, 401, 'a tunnel without credentials gets nothing')
+    const remote = await (await fetch(u, { headers: { 'x-forwarded-for': '1.2.3.4', authorization: `Bearer ${token}` } })).json()
     assert.equal(remote.canUpgrade, false)
     assert.match(remote.reason, /only possible from a page opened on this machine/)
-    const denied = await fetch(u, { method: 'POST', headers: { 'cf-connecting-ip': '1.2.3.4' } })
+    const denied = await fetch(u, { method: 'POST', headers: { 'cf-connecting-ip': '1.2.3.4', authorization: `Bearer ${token}` } })
     assert.equal(denied.status, 403)
 
     const board = await (await fetch(`http://127.0.0.1:${srv.port}/api/boards`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 't', kind: 'freeform' }) })).json()

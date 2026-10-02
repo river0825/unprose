@@ -816,3 +816,143 @@
 .ui-screen-name .ui-words {
   white-space: nowrap;
 }
+
+/* proposed for removal (docs/diagrams.md §6c): still in the file, struck on the board until it is applied */
+.item.ui.ui-gone {
+  opacity: 0.55;
+}
+.item.ui.ui-gone .ui-words,
+.item.ui.ui-gone .ui-val,
+.item.ui.ui-gone td,
+.item.ui.ui-gone th {
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
+.react-flow__node.node-pending > .item.ui.ui-gone {
+  outline: 1.5px dashed var(--danger);
+}
+.item.ui.ui-gone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--danger) 18%, transparent) 7px 8px);
+}
+.node-tag.remove {
+  color: var(--danger);
+  border-color: var(--danger);
+  border-style: dashed;
+}
+/* a proposed new element: not in the file yet */
+.react-flow__node.node-pending > .item.ui.ui-new {
+  outline: 1.5px dashed var(--user);
+  outline-offset: 2px;
+}
+
+/* one value edited in place: a table cell, a list / tab item */
+.ui-val {
+  cursor: text;
+}
+.ui-val-proposed {
+  outline: 1.5px dashed var(--marker);
+  outline-offset: 1px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--marker) 10%, transparent);
+}
+.ui-val-editing {
+  display: inline-block;
+  width: 100%;
+}
+.ui-val-editing textarea.edit {
+  position: static;
+  width: 100%;
+  min-width: 60px;
+  height: 1.6em;
+  padding: 0 2px;
+  font: inherit;
+  resize: none;
+}
+
+/* awd design lint found something about this element (the list is on the frame's panel) */
+.ui-finding-mark {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 700 11px/1 var(--font-ui);
+  color: #fff;
+  background: #b45309;
+  box-shadow: 0 0 0 2px var(--paper);
+  cursor: help;
+}
+/* elements that clip their content: the mark sits just inside the corner */
+.ui.ui-table > .ui-finding-mark,
+.ui.ui-list > .ui-finding-mark,
+.ui.ui-chart > .ui-finding-mark,
+.ui.ui-stat > .ui-finding-mark,
+.ui.ui-image > .ui-finding-mark {
+  top: 4px;
+  right: 4px;
+}
+.ui-finding-mark.info {
+  background: var(--ink-3);
+}
+
+/* the side panel: severity of a finding, the element's own findings, adding an element */
+.dg-sev {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font: 600 10px/1.6 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid currentColor;
+}
+.dg-sev.warning {
+  color: #b45309;
+}
+.dg-sev.info {
+  color: var(--ink-3);
+}
+.ui-checks {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.ui-add {
+  margin-top: 10px;
+}
+.ui-add-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.ui-add-types button {
+  font-size: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .dg-sev.warning {
+    color: #f59e0b;
+  }
+}
+:root[data-theme='dark'] .dg-sev.warning {
+  color: #f59e0b;
+}
+/* the "proposed" tag on an element that clips its content sits just inside its top edge */
+.item.ui.ui-table > .node-tag,
+.item.ui.ui-list > .node-tag,
+.item.ui.ui-chart > .node-tag,
+.item.ui.ui-stat > .node-tag,
+.item.ui.ui-image > .node-tag {
+  top: 4px;
+  right: 26px;
+}

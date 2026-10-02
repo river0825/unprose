@@ -6,45 +6,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { checkDomainStory, checkEventStorming, checkUiMock, contentSchemaFor, fromEgon, proposeFromDomainStory, proposeStories, toEgon, unknownContentFields, type StoryCandidate } from '@awd/canvas/diagrams'
+import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { planRedraw, placedByUser, repoRoot, withDetails } from './graphCanvas.js'
-import { boardByTitle, registerProject } from './projects.js'
+import { boardByTitle, canvasHeaders, registerProject } from './projects.js'
 
 type Flags = Record<string, string | boolean>
 const str = (v: string | boolean | undefined) => (typeof v === 'string' ? v : undefined)
 
 // ── the file ─────────────────────────────────────────────────────────────────
+// What a file means is pure and shared with the canvas server's remote design tools (@awd/canvas/diagrams).
 
-/** Filename kind → diagram kind. The filename keeps the short form readable: `studio.es.yaml`. */
-export const KIND_ALIASES: Record<string, string> = {
-  es: 'event-storming',
-  'event-storming': 'event-storming',
-  'story-map': 'user-story-map',
-  usm: 'user-story-map',
-  'user-story-map': 'user-story-map',
-  kanban: 'kanban',
-  wireframe: 'wireframe',
-  'domain-story': 'domain-story',
-  dst: 'domain-story',
-  journey: 'user-journey',
-  'user-journey': 'user-journey',
-  ui: 'ui-mock',
-  mockup: 'ui-mock',
-  'ui-mock': 'ui-mock',
-  workflow: 'workflow',
-}
-
-export interface DesignFile {
-  /** Diagram key, unique on the board: `<name>-<kind alias>` ('studio-es'), or `key:` in the file. */
-  key: string
-  kind: string
-  title?: string
-  level?: string
-  /** The template content: the file without `key` / `kind` / `title`. */
-  content: Record<string, unknown>
-}
+export { KIND_ALIASES, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 
 /**
  * `design/studio.es.yaml` → key `studio-es`, kind `event-storming`. Two diagrams of one topic
@@ -52,65 +26,18 @@ export interface DesignFile {
  * Top-level `key:` / `kind:` / `title:` in the file win over the filename.
  */
 export function parseDesignFile(file: string, text: string): DesignFile {
-  let raw: Record<string, unknown>
+  let raw: unknown
   try {
-    raw = (YAML.parse(text) ?? {}) as Record<string, unknown>
+    raw = YAML.parse(text) ?? {}
   } catch (err) {
     const line = (err as { linePos?: Array<{ line: number }> }).linePos?.[0]?.line
     const hint = yamlCommentHint(text, line)
     throw new Error(`${file}: ${(err as Error).message}${hint ? `\n${hint}` : ''}`)
   }
-  if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${file}: expected a YAML mapping`)
-  const base = path.basename(file).replace(/\.ya?ml$/i, '')
-  const dot = base.lastIndexOf('.')
-  const name = dot > 0 ? base.slice(0, dot) : base
-  const alias = dot > 0 ? base.slice(dot + 1) : undefined
-  // A workflow file is the runner's own format: its `key:` is the run key template and `name:` its
-  // name, so the diagram key comes from the filename and the drawing from the workflow projection.
-  if (alias === 'workflow' || (!raw.kind && !alias && Array.isArray(raw.steps) === false && raw.steps && typeof raw.steps === 'object')) {
-    const key = `${name}-workflow`.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
-    return { key, kind: 'workflow', title: typeof raw.name === 'string' ? raw.name : undefined, content: raw }
-  }
-  const kind = typeof raw.kind === 'string' ? raw.kind : alias ? KIND_ALIASES[alias] : undefined
-  if (!kind) throw new Error(`${file}: which diagram is this? name it <name>.<kind>.yaml (${Object.keys(KIND_ALIASES).join(', ')}) or set kind:`)
-  const derived = alias && !name.endsWith(`-${alias}`) ? `${name}-${alias}` : name
-  const key = typeof raw.key === 'string' ? raw.key : derived.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(key)) throw new Error(`${file}: diagram key "${key}" must be lower-case letters, digits and dashes`)
-  const { key: _k, kind: _kind, title, ...content } = raw
-  const level = typeof content.level === 'string' ? content.level : undefined
-  return { key, kind, title: typeof title === 'string' ? title : undefined, level, content }
-}
-
-/**
- * A `#` after a space starts a YAML comment — inside a flow sequence (`labels: [PR #1113, issue #1112]`)
- * that drops the closing `]` and the parse error only points at a caret. Find such a line at or before
- * the failing one and say why (river0825/unprose#9).
- */
-export function yamlCommentHint(text: string, failingLine?: number): string | undefined {
-  const lines = text.split('\n')
-  const last = Math.min(lines.length, failingLine ?? lines.length)
-  for (let i = last - 1; i >= Math.max(0, last - 20); i--) {
-    // strip quoted strings, then look for an unclosed [ followed by ' #'
-    const bare = lines[i].replace(/"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g, '""')
-    const open = bare.indexOf('[')
-    const hash = open >= 0 ? bare.slice(open).search(/\s#/) : -1
-    // the `]` that should close it sits after the # — i.e. inside the comment
-    if (hash > 0 && !bare.slice(open, open + hash).includes(']')) {
-      return `hint: line ${i + 1} has an unquoted "#" inside [ … ] — a "#" after a space starts a YAML comment, so the rest of the line is dropped. Quote values containing # (e.g. "PR #1113").`
-    }
-  }
-  return undefined
+  return designFromObject(file, raw)
 }
 
 // ── lint ─────────────────────────────────────────────────────────────────────
-
-export interface DesignFinding {
-  severity: 'error' | 'warning' | 'info'
-  message: string
-  element?: string
-  /** Book page behind an EventStorming rule. */
-  page?: string
-}
 
 /** Schema errors (the file will not draw) and, for EventStorming, the book's grammar (docs/diagrams.md §3). */
 export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
@@ -119,16 +46,7 @@ export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
     const r = lintWorkflow(loadWorkflow(file).def)
     return [...r.errors.map((e) => ({ severity: 'error' as const, message: `${e.where}: ${e.message}` })), ...r.warnings.map((w) => ({ severity: 'warning' as const, message: `${w.where}: ${w.message}` }))]
   }
-  const schema = contentSchemaFor(d.kind)
-  if (!schema) return [{ severity: 'info', message: `${d.kind}: no schema for this kind — the canvas validates it on draw` }]
-  // a field the schema does not know would be dropped silently on draw: say so (river0825/unprose#8)
-  const unknown: DesignFinding[] = unknownContentFields(d.kind, d.content).map((u) => ({ severity: 'warning', message: `unknown field \`${u.field}\` at ${u.path} — it is not part of ${d.kind} and will be ignored` }))
-  const parsed = schema.safeParse(d.content)
-  if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
-  if (d.kind === 'domain-story') return [...unknown, ...checkDomainStory(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
-  if (d.kind === 'ui-mock') return [...unknown, ...checkUiMock(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element }))]
-  if (d.kind !== 'event-storming') return unknown
-  return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
+  return lintDesignContent(d)
 }
 
 export function cmdDesignLint(file: string): boolean {
@@ -147,7 +65,7 @@ type Board = { id: string; title: string; kind: string; items: Record<string, Bo
 
 function canvasApi(base: string) {
   return async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) })
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${(await res.text()).slice(0, 300)}`)
     return res.json() as Promise<T>
   }
@@ -168,10 +86,7 @@ async function resolveBoard(api: Api, ref: string, projectRoot?: string): Promis
   return (await api<{ board: Board }>('GET', `/api/boards/${encodeURIComponent(ref)}`)).board
 }
 
-/** The diagram frame keyed `key` on the board. */
-export function frameOf(board: Pick<Board, 'items'>, key: string): BoardItem | undefined {
-  return Object.values(board.items).find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === key)
-}
+export { frameOf, growFrame, proposalOps }
 
 export interface DrawOptions { board: string; canvas?: string; /** where a NEW frame goes (board coordinates); an existing frame stays where it is */ at?: { x: number; y: number } }
 
@@ -190,11 +105,13 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   // A workflow is drawn with the runner's own projection (graph + block details); the files behind it
   // (agent prompts, scripts) go into the snapshot so the Inspector and Files tab can show them.
   const wf = d.kind === 'workflow' ? withDetails(toGraph(loadWorkflow(abs).def), abs) : undefined
-  const { items: drawn, unresolvedTraces = [] } = await api<{ items: BoardItem[]; unresolvedTraces?: UnresolvedTrace[] }>('POST', `/api/boards/${board.id}/template`, {
+  const { items: served, unresolvedTraces = [] } = await api<{ items: BoardItem[]; unresolvedTraces?: UnresolvedTrace[] }>('POST', `/api/boards/${board.id}/template`, {
     kind: d.kind,
     content: wf ? wf.graph : d.content,
     frame: { key: d.key, title: d.title, source, level: d.level, ...(opts.at ? { at: opts.at } : {}) },
   })
+  // a UI mock's lint findings go on its elements, from the file as written (docs/diagrams.md §6c)
+  const drawn = withDesignFindings(d, served)
   const current = (await api<{ board: Board }>('GET', `/api/boards/${board.id}`)).board
   const { changes } = await api<{ changes: Array<{ ops: Array<{ kind: string; id?: string; patch?: Record<string, unknown> }> }> }>('GET', `/api/boards/${board.id}/changes?since=0&author=user`)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(current, d.key)
@@ -216,63 +133,7 @@ export function unresolvedReport(list: UnresolvedTrace[]): string[] {
   return [`⚠ ${list.length} trace(s) not drawn:`, ...list.map((u) => `  ${u.item} —${u.trace.rel}→ ${u.trace.from}: ${why(u)}`)]
 }
 
-// ── proposals: stories from EventStorming (docs/diagrams.md §4) ─────────────────
-
-const CARD_W = 180
-const CARD_H = 96
-const GAP = 16
-const PAD = 24
-
-/** Where a board item for an EventStorming element lives: `<esKey>.<role>.<element id>`, or `data.element`. */
-function esItemFor(board: Pick<Board, 'items'>, esKey: string, element: string): BoardItem | undefined {
-  return Object.values(board.items).find((it) => it.id.startsWith(`${esKey}.`) && it.type !== 'arrow' && it.type !== 'comment' && (it.data?.element === element || it.id.endsWith(`.${element}`)))
-}
-
-/**
- * Pure: the ops that put story candidates on the story-map frame as pending cards (dashed on the
- * board), each with a pending 來自 trace wire from its EventStorming element. Nothing is written
- * to the story-map file — the person accepts, the studio session writes it, the redraw settles it.
- */
-export function proposalOps(board: Pick<Board, 'items'>, candidates: StoryCandidate[], usmKey: string, esKey: string, now = new Date().toISOString()) {
-  const frame = frameOf(board, usmKey)
-  if (!frame) throw new Error(`no story-map frame keyed "${usmKey}" on this board — draw the story map first (awd design draw <file>)`)
-  const already = new Set(Object.values(board.items).map((it) => (it.data?.pending as { trace?: { from: string } } | undefined)?.trace?.from).filter(Boolean))
-  const fresh = candidates.filter((c) => !already.has(c.traces[0]?.from))
-  const children = Object.values(board.items).filter((it) => it.parent === frame.id)
-  const fx = frame.x ?? 0
-  const fy = frame.y ?? 0
-  const bottom = Math.max(fy + PAD, ...children.map((c) => (c.y ?? 0) + (c.h ?? 0)))
-  const y = bottom + GAP * 2
-  const stamp = { createdBy: 'agent', updatedBy: 'agent', updatedAt: now }
-  const ops: Array<Record<string, unknown>> = []
-  fresh.forEach((c, i) => {
-    const id = `${usmKey}.proposed.${c.id}`
-    const trace = c.traces[0]
-    ops.push({
-      kind: 'add',
-      item: {
-        id, type: 'card', role: 'story', color: 'white', parent: frame.id,
-        x: fx + PAD + i * (CARD_W + GAP), y, w: CARD_W, h: CARD_H,
-        text: c.text,
-        data: {
-          pending: { kind: 'add', trace, story: { id: c.id, text: c.text, acceptance: c.acceptance, traces: c.traces }, activity: c.activity, step: c.step, by: 'agent', at: now },
-          traces: c.traces,
-          acceptance: c.acceptance,
-        },
-        ...stamp,
-      },
-    })
-    const src = trace && esItemFor(board, esKey, c.source.id)
-    if (src) {
-      ops.push({ kind: 'add', item: { id: `${id}.trace`, type: 'arrow', role: 'trace', from: src.id, to: id, label: '來自', x: 0, y: 0, w: 0, h: 0, data: { pending: { kind: 'add', trace } }, ...stamp } })
-    }
-  })
-  const need = y + CARD_H + PAD - fy
-  if (fresh.length && need > (frame.h ?? 0)) ops.push({ kind: 'update', id: frame.id, patch: { h: need } })
-  const right = fx + PAD + fresh.length * (CARD_W + GAP) + PAD - fx
-  if (fresh.length && right > (frame.w ?? 0)) ops.push({ kind: 'update', id: frame.id, patch: { w: right } })
-  return { ops, proposed: fresh.length, skipped: candidates.length - fresh.length }
-}
+// ── proposals: stories from EventStorming (docs/diagrams.md §4) — proposalOps is in @awd/canvas/diagrams ──
 
 export async function proposeStoriesToBoard(esFile: string, usmFile: string, opts: DrawOptions) {
   const base = (opts.canvas || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
@@ -339,20 +200,6 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     return true
   }
   throw new Error('usage: awd design draw|lint|propose-stories|import-egon|export-egon … (docs/diagrams.md)')
-}
-
-/**
- * A frame the person never resized grows to hold what was drawn (a longer timeline must not be squeezed
- * against the old edge); it never shrinks, and a frame the person moved or resized keeps their geometry.
- */
-export function growFrame(frame: BoardItem, drawn: BoardItem[], placed: Set<string>, pad = 20): { kind: 'update'; id: string; patch: { w: number; h: number } } | undefined {
-  if (placed.has(frame.id)) return undefined
-  const boxes = drawn.filter((it) => it.type !== 'arrow' && it.parent === frame.id)
-  if (!boxes.length) return undefined
-  const [fx, fy, fw, fh] = [frame.x ?? 0, frame.y ?? 0, frame.w ?? 0, frame.h ?? 0]
-  const w = Math.max(fw, ...boxes.map((b) => (b.x ?? 0) + (b.w ?? 0) + pad - fx))
-  const h = Math.max(fh, ...boxes.map((b) => (b.y ?? 0) + (b.h ?? 0) + pad - fy))
-  return w > fw || h > fh ? { kind: 'update', id: frame.id, patch: { w, h } } : undefined
 }
 
 // ── Egon.io interop (docs/diagrams.md §6b) ──────────────────────────────────

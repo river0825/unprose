@@ -1,0 +1,309 @@
+/* Remote agents: connect notifications, the sign-in screen, the Connected agents page (docs/canvas.md "Remote agents"). */
+
+.access-stack {
+  position: fixed;
+  /* Top-right of the canvas area: below the header (a board page sets --access-top) or the board list's links,
+     left of the side panel when it is open (--access-right, set by the board page) — never over either. */
+  top: var(--access-top, 88px);
+  right: calc(var(--access-right, 0px) + 12px);
+  z-index: 60;
+  width: min(360px, calc(100vw - var(--access-right, 0px) - 24px));
+  max-height: calc(100vh - var(--access-top, 88px) - 12px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.access-card {
+  background: var(--chrome);
+  border: 1px solid var(--rule-2);
+  border-left: 3px solid var(--agent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.agents-requests .access-card {
+  box-shadow: none;
+  max-width: 520px;
+}
+.access-card-title {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.access-card-meta {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.access-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.access-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.access-field input,
+.access-field select,
+.signin-token input {
+  min-height: 32px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 4px 8px;
+  font-size: 13.5px;
+}
+.access-field input:focus-visible,
+.access-field select:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+.code-input.mono {
+  width: 13ch;
+  font-size: 13.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.access-check {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin: 0 0 8px;
+}
+.access-card-actions {
+  display: flex;
+  gap: 6px;
+}
+.access-error {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin: 4px 0 8px;
+}
+.access-ok {
+  color: var(--user);
+  font-size: 12.5px;
+  margin: 4px 0 8px;
+}
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--rule));
+}
+
+/* ---- sign in ---- */
+.signin-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--paper);
+}
+.signin-card {
+  width: min(480px, 100%);
+  background: var(--chrome);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.signin-card h1 {
+  font-size: 22px;
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+.signin-section {
+  border-top: 1px solid var(--rule);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+.signin-section h2 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+.signin-section p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+.pair-code.mono {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: center;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  border: 1px solid var(--rule-2);
+  user-select: all;
+}
+.signin-token {
+  display: flex;
+  gap: 8px;
+}
+.signin-token input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Connected agents ---- */
+.agents-section {
+  margin: 28px 0 0;
+}
+.agents-section h2 {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+.agents-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.enter-code {
+  margin-top: 12px;
+  max-width: 520px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: var(--chrome);
+}
+.enter-code h3 {
+  font-size: 14.5px;
+  margin: 0 0 2px;
+}
+.enter-code p.muted {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+}
+.enter-code button {
+  margin-bottom: 8px;
+}
+.agents-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.agents-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.agents-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  background: var(--chrome);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.agents-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  line-height: 1.4;
+}
+.agents-table tr:last-child td {
+  border-bottom: 0;
+}
+.agents-table td .muted {
+  font-size: 12.5px;
+}
+.agents-table tr.revoked td {
+  color: var(--ink-3);
+}
+.agents-table .badge-revoked {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.agents-table td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.new-token {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.access-fieldset {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 6px 10px 8px;
+  margin: 0 0 8px;
+  font-size: 13.5px;
+}
+.access-fieldset legend {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 0 4px;
+}
+.access-fieldset label {
+  display: block;
+  margin: 2px 0;
+}
+.created {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.created-warn {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--agent);
+  background: color-mix(in srgb, var(--agent) 10%, var(--chrome));
+  font-size: 13.5px;
+}
+.copyable {
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+}
+.copyable-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px 4px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule);
+}
+.copyable pre {
+  margin: 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--paper);
+}
+.list-head .docs-link + .docs-link {
+  margin-left: 0;
+}
+
+/* Phone: full-width cards at the top, under the header; never wider than the screen. */
+@media (max-width: 720px) {
+  .access-stack {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    top: var(--access-top, 8px);
+    max-height: calc(100vh - var(--access-top, 8px) - 8px);
+  }
+}

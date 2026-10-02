@@ -14,10 +14,14 @@ export function canvasOrigin(url: string): string {
   return `${u.origin}${prefix}`
 }
 
-/** Can the canvas be reached? `GET /api/boards` within `timeoutMs`; the reason when it cannot. */
-export async function probeCanvas(base: string, timeoutMs = 4000): Promise<{ ok: true } | { ok: false; reason: string }> {
+/** Can the canvas be reached? `GET /api/boards` within `timeoutMs`; the reason when it cannot (`auth` when it wants a token). */
+export async function probeCanvas(base: string, timeoutMs = 4000, token?: string): Promise<{ ok: true } | { ok: false; reason: string; auth?: boolean }> {
   try {
-    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs) })
+    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: token ? { authorization: `Bearer ${token}` } : undefined })
+    if (res.status === 401) {
+      const why = ((await res.json().catch(() => ({}))) as { error?: string }).error
+      return { ok: false, auth: true, reason: token ? `the token was refused: ${why ?? 'HTTP 401'}` : 'this canvas wants an access token for requests from elsewhere (UNPROSE_TOKEN)' }
+    }
     if (!res.ok) return { ok: false, reason: `HTTP ${res.status} ${res.statusText}` }
     const body = await res.json().catch(() => undefined)
     if (!body || typeof body !== 'object') return { ok: false, reason: 'the answer is not the canvas API (is this the canvas URL?)' }
@@ -28,10 +32,43 @@ export async function probeCanvas(base: string, timeoutMs = 4000): Promise<{ ok:
   }
 }
 
+export interface CanvasClientOptions {
+  /** An access token (docs/canvas.md "Remote agents"); default `UNPROSE_TOKEN`. */
+  token?: string
+  /** The agent's name for a canvas on this machine (no token): `UNPROSE_AGENT_NAME`. */
+  agentName?: string
+  /** The address people open (board links); default: the address this client calls. */
+  publicUrl?: string
+}
+
 export class CanvasClient {
   readonly baseUrl: string
-  constructor(baseUrl = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400') {
+  /** What board links start with. */
+  readonly publicUrl: string
+  private token?: string
+  private agentName?: string
+  /** Said instead of the canvas's 401 while this agent is not connected yet (the pairing code to type). */
+  authHint?: string
+  /** Called on a 401 (e.g. to start pairing again). */
+  onAuthNeeded?: () => void
+  constructor(baseUrl = process.env.AWD_CANVAS_URL ?? 'http://localhost:4400', opts: CanvasClientOptions = {}) {
     this.baseUrl = canvasOrigin(baseUrl)
+    this.publicUrl = opts.publicUrl ? canvasOrigin(opts.publicUrl) : this.baseUrl
+    this.token = opts.token ?? (process.env.UNPROSE_TOKEN || undefined)
+    this.agentName = opts.agentName ?? (process.env.UNPROSE_AGENT_NAME || undefined)
+  }
+
+  /** Use this token from now on (the device flow hands one over while the MCP server runs). */
+  setToken(token: string) {
+    this.token = token
+  }
+  get hasToken() {
+    return !!this.token
+  }
+
+  /** The headers every call carries: the token, or the local agent's name. */
+  headers(): Record<string, string> {
+    return this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { 'x-unprose-agent': this.agentName } : {}
   }
 
   private async req<T>(method: string, p: string, body?: unknown): Promise<T> {
@@ -39,7 +76,7 @@ export class CanvasClient {
     try {
       res = await fetch(this.baseUrl + p, {
         method,
-        headers: body !== undefined ? { 'content-type': 'application/json' } : undefined,
+        headers: { ...this.headers(), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) },
         body: body !== undefined ? JSON.stringify(body) : undefined,
       })
     } catch (e) {
@@ -51,6 +88,11 @@ export class CanvasClient {
       data = JSON.parse(text)
     } catch {
       // plain text endpoints (outline)
+    }
+    if (res.status === 401) {
+      const hint = this.authHint
+      this.onAuthNeeded?.()
+      if (hint) throw new Error(hint)
     }
     if (!res.ok) throw new Error((data as { error?: string })?.error ?? `${res.status} ${res.statusText}`)
     return data as T
@@ -84,15 +126,24 @@ export class CanvasClient {
   apply(id: string, ops: Op[], author: Author = 'agent', note?: string) {
     return this.req<{ seq: number; change: Change }>('POST', `/api/boards/${encodeURIComponent(id)}/ops`, { author, ops, note })
   }
-  template(id: string, kind: DiagramKind | undefined, content: unknown, at?: { x: number; y: number }, scope?: string) {
-    return this.req<{ items: Item[]; ops: Op[] }>('POST', `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at, scope })
+  template(id: string, kind: DiagramKind | undefined, content: unknown, at?: { x: number; y: number }, scope?: string, frame?: { key: string; title?: string; source?: string; level?: string; at?: { x: number; y: number } }) {
+    return this.req<{ items: Item[]; ops: Op[]; unresolvedTraces?: Array<{ item: string; trace: { from: string; rel: string }; reason: string }> }>('POST', `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at, scope, ...(frame ? { frame } : {}) })
   }
-  diff(id: string, since: number, author?: Author) {
+  /** Board-level fields (title, meta — meta is replaced whole). */
+  updateBoard(id: string, patch: { title?: string; meta?: Record<string, unknown> }) {
+    return this.req<{ board: Board }>('PUT', `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board)
+  }
+  changes(id: string, since = 0, author?: Author) {
+    const q = new URLSearchParams({ since: String(since) })
+    if (author) q.set('author', author)
+    return this.req<{ changes: Change[]; seq: number }>('GET', `/api/boards/${encodeURIComponent(id)}/changes?${q}`)
+  }
+  diff(id: string, since: number, author?: Author | 'others') {
     const q = new URLSearchParams({ since: String(since) })
     if (author) q.set('author', author)
     return this.req<{ since: number; seq: number; lines: string[]; count: number }>('GET', `/api/boards/${encodeURIComponent(id)}/diff?${q}`)
   }
-  wait(id: string, since: number, timeoutMs: number, author?: Author, quietMs?: number, wake?: Wake) {
+  wait(id: string, since: number, timeoutMs: number, author?: Author | 'others', quietMs?: number, wake?: Wake) {
     const q = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) })
     if (author) q.set('author', author)
     if (quietMs !== undefined) q.set('quiet', String(quietMs))
@@ -119,6 +170,6 @@ export class CanvasClient {
     if (at.frame) q.set('frame', at.frame)
     if (at.focus) q.set('focus', at.focus)
     const qs = q.toString()
-    return `${this.baseUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`
+    return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`
   }
 }

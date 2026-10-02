@@ -307,6 +307,9 @@ On a workflow board every flow wire **is one event subscription**: "when A emits
   Boards drawn before this had one wire per block pair; the first redraw replaces them with per-event wires.
 - `owns` / `delegates` wires are agent relations, not events: drawn faint, full strength only while their
   agent (or step) is selected.
+- Catch-all subscriptions (`*` patterns, `resume_on`, cron ticks, fan-outs / hubs of 4+ blocks) are drawn as
+  badges on their blocks instead of long wires — click a badge or tick *Show catch-all wires* to draw them; the
+  Wiring section still lists them. The rule and the *Wires: All / Selected / None* view: [canvas.md → Wires](canvas.md#wires).
 - **A redraw is complete**: `wf.*` items the new drawing no longer has are removed (a step deleted from the
   yaml disappears from the board) — except wires holding a pending edit (below). Comments and hand-drawn
   items are never removed. An updated item keeps its presentation data (`seenBy`, `agentState`,

@@ -4,12 +4,18 @@
 import { useEffect, useState } from 'react'
 import type { Board, Item } from '../../../src/model'
 import { esFindings, type Finding } from './es'
+import { uiFindings } from './uiFindings'
+
+/** Kinds whose frames show findings: the badge on the frame, the list in its panel. */
+export const FINDING_KINDS = new Set(['event-storming', 'domain-story', 'ui-mock'])
 
 const cache = new Map<string, Finding[]>()
 const cacheKey = (board: Board, frameId: string) => `${board.id}:${frameId}:${board.seq}`
 
 /** Sync: the last file-based result for this board state, else the drawn-items reading. */
 export function knownFindings(board: Board, frame: Item, level?: string, kind = 'event-storming'): Finding[] {
+  // a UI mock's findings are on its drawn items already (the drawing ran `awd design lint`'s check)
+  if (kind === 'ui-mock') return uiFindings(board, frame.id)
   return cache.get(cacheKey(board, frame.id)) ?? (kind === 'event-storming' ? esFindings(board, frame.id, level) : [])
 }
 
@@ -19,6 +25,7 @@ export function useFrameFindings(board: Board, frame: Item, key: string, level?:
   useEffect(() => {
     let live = true
     setFound(knownFindings(board, frame, level, kind))
+    if (kind === 'ui-mock') return
     void import('./content').then(({ frameFindings }) => {
       const f = frameFindings(board, frame, key, level, source, kind)
       cache.set(cacheKey(board, frame.id), f)
@@ -29,4 +36,9 @@ export function useFrameFindings(board: Board, frame: Item, key: string, level?:
     }
   }, [board, frame, key, level, source, kind])
   return found
+}
+
+/** How many findings the frame's badge shows; undefined for kinds that have none. */
+export function findingCount(board: Board, frame: Item, level: string | undefined, kind: string): number | undefined {
+  return FINDING_KINDS.has(kind) ? knownFindings(board, frame, level, kind).length : undefined
 }

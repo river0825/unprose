@@ -5,17 +5,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import { runMcp, sessionProjectRoot, type McpOptions } from '@awd/canvas'
-import { drawDesign, exportEgonFile, importEgonFile, lintDesign, parseDesignFile, proposeStoriesToBoard, unresolvedReport, type DesignFinding } from './design.js'
+import { findingLine } from '@awd/canvas/diagrams'
+import { drawDesign, exportEgonFile, importEgonFile, lintDesign, parseDesignFile, proposeStoriesToBoard, unresolvedReport } from './design.js'
 import { START_PROMPTS, promptText } from './prompts.js'
 
 type Server = Parameters<NonNullable<McpOptions['extend']>>[0]
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 const fail = (s: string) => ({ content: [{ type: 'text' as const, text: s }], isError: true })
-
-function findingLine(f: DesignFinding): string {
-  return `${f.severity === 'error' ? '✖' : f.severity === 'warning' ? '⚠' : '·'} ${f.element ? `${f.element}: ` : ''}${f.message}${f.page ? `  (${f.page})` : ''}`
-}
 
 export interface DesignToolOptions {
   /** Where relative paths start (the session's project). */

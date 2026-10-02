@@ -43,7 +43,13 @@ with `awd boards move <board id | title:…> --to <project dir>`.
 `AWD_CANVAS_URL` to its address before the agent starts — a pasted board link (`…/b/<id>`) works too, the
 origin is taken from it. If the MCP server cannot reach the canvas it exits with
 `unprose MCP: cannot reach <url> (<reason>)`; fix the URL or start the canvas, then restart the agent.
-For the CLI, pass `--canvas <url>`.
+For the CLI, pass `--canvas <url>`. A canvas elsewhere wants credentials: without `UNPROSE_TOKEN` your tool
+results say *"Ask the person to type the code ABCD-EFGH on the canvas"* — tell the person exactly that code and
+where (the notification on any canvas page, or Connected agents → Enter a code), then call the tool again.
+Agents on other machines or in the cloud can also connect to `https://<canvas>/mcp` (OAuth; the person approves
+with the code shown in the browser) — there `design_lint` / `design_draw` take the file's text as `content` plus
+its file `name`. Your changes are signed with your agent's name (`UNPROSE_AGENT_NAME` names a local one); with
+other agents on the board, `canvas_wait({ from: 'others' })` also wakes on theirs.
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).

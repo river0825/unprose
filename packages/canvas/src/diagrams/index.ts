@@ -43,6 +43,10 @@ export {
   normalizeUiMock,
   layoutScreen,
   checkUiMock,
+  lintUiMock,
+  attachUiFindings,
+  locateUi,
+  uiPathText,
   walkUi,
   textWidth,
   UI_TYPES,
@@ -64,3 +68,5 @@ export { proposeFromDomainStory, type ProposeFromDomainStoryOptions } from './pr
 export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSpec, type DiagramInfo, type DiagramFrameKind } from '../model.js'
 export { gotoTargets, rankTargets, type GotoTarget } from './goto.js'
 export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'
+export { KIND_ALIASES, designFromObject, yamlCommentHint, lintDesignContent, withDesignFindings, findingLine, frameOf, growFrame, proposalOps, type DesignFile, type DesignFinding } from './designFile.js'
+export { placedByUser, keepUserLayout, isResolved, planRedraw, type RedrawScope, type TemplateOp, type BoardItem as RedrawItem, type UserChange } from './redraw.js'

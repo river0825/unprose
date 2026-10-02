@@ -3,7 +3,7 @@
 // Ids: a screen is `<key>.screen.<screen id>`, an element `<key>.ui.<screen id>.<element id>`; both carry
 // `data.element` ('<screen>' / '<screen>/<element>') for traces and flows.
 import type { Item } from '../model.js'
-import { layoutScreen, normalizeUiMock, walkUi, isDrawnContainer, type UiBox, type UiEl, type UiMockContent } from '../diagrams/uiMock.js'
+import { attachUiFindings, layoutScreen, normalizeUiMock, walkUi, isDrawnContainer, type UiBox, type UiEl, type UiMockContent } from '../diagrams/uiMock.js'
 import { PAD, arrow, make, offsetAll, type RenderOpts } from './util.js'
 
 export { uiMockSchema, type UiMockContent } from '../diagrams/uiMock.js'
@@ -73,7 +73,9 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
     seen.add(`${from}>${to}`)
     items.push(arrow(scope, from, to, now, f.label, 'navigate', { data: { flow: { from: f.from, to: f.to } } }))
   }
-  return offsetAll(items, opts.at)
+  // `awd design lint`'s findings on the elements they are about (the CLI redoes this with the file as written,
+  // which also knows the fields the schema dropped)
+  return attachUiFindings(offsetAll(items, opts.at), raw)
 }
 
 /** What the web needs to draw an element: its props, the screen's look, and where it sits in the file. */

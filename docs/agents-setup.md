@@ -77,7 +77,88 @@ Run the canvas anywhere (a tunnel, a server, another machine) and point the agen
 also works: the MCP server takes the origin from it. On startup the MCP server checks
 `GET <url>/api/boards`; if that fails it exits with `unprose MCP: cannot reach <url> (<reason>). Start
 the canvas (npm start) or set AWD_CANVAS_URL` — in Claude Code that shows up in `/mcp` as a failed
-server with this message. Keep a remote canvas behind an access proxy: it has no authentication yet.
+server with this message.
+
+A canvas elsewhere wants credentials (docs/canvas.md → [Remote agents](canvas.md#remote-agents)). Without
+`UNPROSE_TOKEN` the MCP server asks for a **pairing code** by itself: every tool result says *"Ask the person to
+type the code ABCD-EFGH on the canvas"* until the person types it there (the notification on any open page, or
+**Connected agents → Enter a code**), then it keeps the token in `~/.awd/tokens.json` for next time. Or make a
+token on the canvas page **Connected agents** and pass it:
+
+```bash
+claude mcp add unprose -e AWD_CANVAS_URL=https://canvas.example.com -e UNPROSE_TOKEN=unp_… -e UNPROSE_AGENT_NAME=claude-laptop -- node <unprose>/scripts/mcp.mjs
+```
+
+`UNPROSE_AGENT_NAME` names your agent: its changes read `[7 claude-laptop] …` in the change feed (also for a local
+canvas). Simpler for a canvas elsewhere: connect to its own MCP endpoint, next section.
+
+## Remote agents: another machine or the cloud
+
+The canvas serves MCP itself at **`https://<canvas>/mcp`** (Streamable HTTP). Nothing to install on the agent's
+side. Two ways in:
+
+- **OAuth (approve on connect)** — for clients that open a browser (claude.ai, Claude Code, ChatGPT …): the browser
+  shows *"<client> wants to connect"* and a **pairing code**; every open canvas page shows the same request with a
+  box for the code — type it and press **Allow** (a page opened on the canvas machine, `http://localhost:4400`, can
+  just click Allow). The agent then appears in **Connected agents**, where you can revoke it.
+- **A token** — for clients that can send a header: canvas → **Connected agents** (the *Agents* link on the board
+  list, `http://localhost:4400/agents`) → **New token**: a name, read or read-and-draw, optionally only some
+  projects or boards. The page shows the token once, with the lines below filled in. Tokens are made only on a page
+  opened on the canvas machine.
+
+Set `UNPROSE_PUBLIC_URL=https://<canvas>` on the canvas so the page's setup lines use the tunnel address.
+
+### Claude Code (another machine)
+
+```bash
+claude mcp add --transport http unprose https://canvas.example.com/mcp
+```
+
+then `/mcp` in Claude Code → **unprose → Authenticate**: the browser opens the canvas's connect page with a code;
+type it on the canvas (or click Allow on a page on the canvas machine). With a token instead:
+
+```bash
+claude mcp add --transport http unprose https://canvas.example.com/mcp --header "Authorization: Bearer unp_…"
+```
+
+### claude.ai (custom connector)
+
+Settings → Connectors → **Add custom connector** → URL `https://canvas.example.com/mcp` → **Connect**. The connect
+page shows the code; approve it on the canvas. Works in Claude Desktop and Claude mobile once added.
+
+### ChatGPT (connector)
+
+Settings → Connectors → (developer mode) **Create** → MCP server URL `https://canvas.example.com/mcp`,
+authentication **OAuth** → approve with the code as above.
+
+### Codex
+
+`~/.codex/config.toml`:
+
+```toml
+[mcp_servers.unprose]
+url = "https://canvas.example.com/mcp"
+bearer_token_env_var = "UNPROSE_TOKEN"   # export UNPROSE_TOKEN=unp_… (a token from Connected agents)
+```
+
+Or the stdio server with `AWD_CANVAS_URL` (previous section), which pairs with a code by itself.
+
+### Cursor and other clients
+
+```json
+{ "mcpServers": { "unprose": { "url": "https://canvas.example.com/mcp", "headers": { "Authorization": "Bearer unp_…" } } } }
+```
+
+A client that supports MCP OAuth can leave the header out and approve on connect. A headless agent without a
+browser can use the device flow: `POST https://canvas.example.com/device_authorization` with `client_name=<name>`,
+show the person the `user_code`, poll `POST /token` (`grant_type=urn:ietf:params:oauth:grant-type:device_code`).
+
+### What is different remotely
+
+The canvas cannot read the agent's files, so `design_lint` / `design_draw` / `design_propose_stories` take the
+file's text (`content`) and its name (`name`, e.g. `checkout.es.yaml`); the agent keeps the file as the truth.
+Boards are not opened in a browser on the canvas machine — the tools return the link to give the person.
+`design_egon` and workflow files (`awd graph`) need the local tools.
 
 ## Codex
 
@@ -110,5 +191,9 @@ canvas HTTP API (`docs/canvas.md`).
 - Plugin configs use plain `${CLAUDE_PLUGIN_ROOT}` / `${user_config.KEY}` only — Claude Code substitutes
   `${NAME}` in MCP `command` / `args` / `env` and hook commands, not shell forms like `${VAR:-default}`
   (the export refuses them). `claude plugin validate` passes on the exported tree.
-- The Codex `config.toml` table shape (`[mcp_servers.<name>]` with `command` / `args` / `env`) is the
-  documented form at the time of writing; check your Codex version's docs if it rejects it.
+- The Codex `config.toml` table shape (`[mcp_servers.<name>]` with `command` / `args` / `env`, and `url` +
+  `bearer_token_env_var` for a remote server) is the documented form at the time of writing; check your Codex
+  version's docs if it rejects it.
+- Remote MCP: the OAuth flow was tested end to end with the MCP SDK's own client (what Claude Code uses) through a
+  tunnel-like proxy, and the device flow with the stdio server. The claude.ai, ChatGPT and Cursor steps follow their
+  documented connector setup and were not run against a live canvas here.

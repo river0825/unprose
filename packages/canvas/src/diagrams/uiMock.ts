@@ -5,6 +5,7 @@
 // Pure and builtin-free: the CLI, the server and the web share it.
 import { z } from 'zod'
 import { slugify, traceSchema, type Trace } from './ids.js'
+import { unknownFields } from './unknownFields.js'
 
 /** Layout containers: never drawn themselves, they place their children. */
 export const UI_LAYOUT = ['stack', 'row', 'grid'] as const
@@ -563,4 +564,79 @@ export function checkUiMock(raw: UiMockContent): UiFinding[] {
     if (!screens.has(f.from) && !refs.has(f.from)) out.push({ severity: 'warning', message: `flow from "${f.from}": no such screen or <screen>/<element>` })
   }
   return out
+}
+
+/** A place in the file as `awd design lint` writes it: `screens[0].body[2].children[1]`. */
+export const uiPathText = (p: UiPath) => p.map((k) => (typeof k === 'number' ? `[${k}]` : `.${k}`)).join('').replace(/^\./, '')
+
+/**
+ * Everything `awd design lint` says about a UI mock file that draws: fields the schema does not know (they
+ * would be dropped silently), then `checkUiMock`. Each finding names the element (`<screen>/<element>`, or
+ * the screen) it is about when there is one, so the board can put it on that element.
+ */
+export function lintUiMock(raw: UiMockContent): UiFinding[] {
+  const m = normalizeUiMock(raw)
+  const where = new Map<string, string>()
+  for (const s of m.screens) {
+    where.set(uiPathText(s.path), s.id)
+    for (const e of walkUi(s.body)) where.set(uiPathText(e.path), e.ref)
+  }
+  const owner = (path: string) => {
+    for (let p = path; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, '')) {
+      const hit = where.get(p)
+      if (hit) return hit
+      if (!/(\.[^.[\]]+|\[\d+\])$/.test(p)) break
+    }
+    return undefined
+  }
+  const unknown: UiFinding[] = unknownFields(uiMockSchema, raw).map((u) => {
+    const element = owner(u.path)
+    return { severity: 'warning', message: `unknown field \`${u.field}\` at ${u.path} — it is not part of ui-mock and will be ignored`, ...(element ? { element } : {}) }
+  })
+  return [...unknown, ...checkUiMock(raw)]
+}
+
+/** Where a screen (`<screen>`) or element (`<screen>/<element>`) sits in the file, by the ids the board uses. */
+export function locateUi(m: UiModel, ref: string): UiPath | undefined {
+  const s = m.screens.find((x) => x.id === ref.split('/')[0])
+  if (!s) return undefined
+  if (!ref.includes('/')) return s.path
+  return walkUi(s.body).find((e) => e.ref === ref)?.path
+}
+
+/** A drawn item, as far as findings care: the CLI's and the canvas's item types both fit. */
+interface DrawnItem { id: string; type: string; data?: Record<string, unknown> }
+
+/**
+ * The drawn items with `lintUiMock`'s findings on the element each is about (`data.ui.findings`): a layout
+ * node (stack, row, grid — not drawn) passes its findings to the element or screen that holds it, and a
+ * finding about no element (a flow) goes to the first screen. Earlier findings are replaced. The board marks
+ * those elements and lists the findings on the frame without parsing anything.
+ */
+export function attachUiFindings<T extends DrawnItem>(items: T[], raw: UiMockContent): T[] {
+  const m = normalizeUiMock(raw)
+  const shownAt = new Map<string, string>()
+  const hold = (els: UiEl[], holder: string) =>
+    els.forEach((e) => {
+      const at = isLayout(e.type) ? holder : e.ref
+      shownAt.set(e.ref, at)
+      hold(e.children, at)
+    })
+  for (const s of m.screens) {
+    shownAt.set(s.id, s.id)
+    hold(s.body, s.id)
+  }
+  const found = new Map<string, Array<Pick<UiFinding, 'severity' | 'message'>>>()
+  for (const f of lintUiMock(raw)) {
+    const at = (f.element && shownAt.get(f.element)) || (m.screens[0]?.id ?? '')
+    found.set(at, [...(found.get(at) ?? []), { severity: f.severity, message: f.message }])
+  }
+  return items.map((it) => {
+    const ui = it.data?.ui as Record<string, unknown> | undefined
+    if (it.type !== 'ui' || !ui || typeof it.data?.element !== 'string') return it
+    const { findings: _old, ...rest } = ui
+    const mine = found.get(it.data.element)
+    if (!mine && !_old) return it
+    return { ...it, data: { ...it.data, ui: mine ? { ...rest, findings: mine } : rest } }
+  })
 }

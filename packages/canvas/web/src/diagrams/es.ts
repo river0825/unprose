@@ -80,7 +80,7 @@ export function grammarRule(it: Item): string | undefined {
   }
 }
 
-export interface Finding { elementId: string; message: string; page: string }
+export interface Finding { elementId: string; message: string; page: string; /** UI mock findings: warning or info (the others are all warnings) */ severity?: 'warning' | 'info' }
 
 /** Grammar findings for the EventStorming frame, read off the drawn items. */
 export function esFindings(board: Board, frameId: string, level?: string): Finding[] {

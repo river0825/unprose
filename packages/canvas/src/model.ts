@@ -96,13 +96,20 @@ export interface Change {
   /** Snapshot of each touched item before the change (null = did not exist). */
   before: Record<string, Item | null>
   note?: string
+  /**
+   * Who exactly, when `author` alone does not say it: the name of the agent (an access token or OAuth
+   * client — docs/canvas.md "Remote agents" — or UNPROSE_AGENT_NAME for a local agent) or of the signed-in
+   * person. Absent for the default local agent and the person on this machine.
+   */
+  by?: string
 }
 
 /** Wire messages on the board websocket. */
 export type WsMessage =
   | { type: 'hello'; board: Board }
   | { type: 'change'; change: Change }
-  | { type: 'presence'; author: Author; at: string; watching: boolean }
+  /** `agents`: the names of the agents waiting on this board right now ('agent' for the default local one). */
+  | { type: 'presence'; author: Author; at: string; watching: boolean; agents?: string[] }
   /** Saving this board failed (`ok: false`, keep showing it) or works again (`ok: true`). */
   | { type: 'storage'; ok: boolean; message: string; at: string }
   /**
@@ -110,9 +117,39 @@ export type WsMessage =
    * change — nothing is stored, nothing shows in a diff. `ids` are the items to fit (a frame key resolves to
    * its frame item); empty with `frame` set means a legacy board's whole diagram.
    */
-  | { type: 'focus'; ids: string[]; frame?: string; note?: string; author: Author; at: string }
+  | { type: 'focus'; ids: string[]; frame?: string; note?: string; author: Author; at: string; /** the agent's name (Change.by) */ by?: string }
   /** Upgrading the canvas itself (docs/canvas.md "Updating"): progress for every open page; `restarting` means reconnect. */
   | { type: 'update'; phase: 'checking' | 'installing' | 'building' | 'restarting' | 'done' | 'failed'; message: string; at: string; version?: string }
+  /**
+   * An agent or a browser asks to connect (docs/canvas.md "Remote agents"). Sent on the server socket `/ws` to
+   * pages that may approve: on this machine (one click) or signed in (with the pairing code the requester shows).
+   */
+  | { type: 'access-request'; request: AccessRequestView }
+  /** A pending request was approved, denied or expired: pages drop its notification. */
+  | { type: 'access-resolved'; id: string; status: 'approved' | 'denied' | 'expired' }
+  /** The list of connected agents changed (created, revoked, used for the first time): the agents page reloads it. */
+  | { type: 'access-changed'; at: string }
+
+/**
+ * A pending connect request as an approving page sees it. The pairing code is NOT here: it is shown only on
+ * the requester's side (the agent's authorize page, its tool result, the browser's sign-in page), and the
+ * person types it into the canvas — knowing it proves they are looking at the requester.
+ */
+export interface AccessRequestView {
+  id: string
+  /** 'oauth': an MCP client through OAuth; 'device': an agent without a browser; 'browser': a page reached from elsewhere. */
+  via: 'oauth' | 'device' | 'browser'
+  /** The client's own name (from its registration / request) or a description of the browser. */
+  name: string
+  /** Where the agent will be sent back to (its host), for an OAuth request. */
+  redirectHost?: string
+  /** The scope it asked for. */
+  scope: 'read' | 'write'
+  ip?: string
+  userAgent?: string
+  createdAt: string
+  expiresAt: string
+}
 
 /** Default sticky colour per event-storming role — the book's palette (hotspots are purple, p.307). */
 export const EVENT_STORMING_COLORS: Record<string, ColorToken> = {
@@ -225,11 +262,26 @@ export function seenBy(item: Item): Author[] {
   return Array.isArray(s) ? s.filter((a): a is Author => a === 'agent' || a === 'user') : []
 }
 
-/** The op recording that `who` has read `item`, or undefined when already recorded. */
-export function markSeen(item: Item, who: Author): Op | undefined {
+/** The names of the agents that have read a comment (`data.seenByAgents`; the default local agent is 'agent'). */
+export function seenByAgents(item: Item): string[] {
+  const s = item.data?.seenByAgents
+  return Array.isArray(s) ? s.filter((a): a is string => typeof a === 'string') : []
+}
+
+/**
+ * The op recording that `who` has read `item`, or undefined when already recorded. `agent` names the agent
+ * (docs/canvas.md "Remote agents"): each named agent gets its own receipt in `data.seenByAgents`.
+ */
+export function markSeen(item: Item, who: Author, agent?: string): Op | undefined {
   const seen = seenBy(item)
-  if (seen.includes(who)) return undefined
-  return { kind: 'update', id: item.id, patch: { data: { ...item.data, seenBy: [...seen, who] } } }
+  const names = seenByAgents(item)
+  const needRole = !seen.includes(who)
+  const needName = who === 'agent' && !!agent && !names.includes(agent)
+  if (!needRole && !needName) return undefined
+  const data: Record<string, unknown> = { ...item.data }
+  if (needRole) data.seenBy = [...seen, who]
+  if (needName) data.seenByAgents = [...names, agent]
+  return { kind: 'update', id: item.id, patch: { data } }
 }
 
 /** Unread for `viewer`: a comment the other side wrote that `viewer` has not opened yet. */
@@ -238,12 +290,12 @@ export function isUnread(item: Item, viewer: Author): boolean {
 }
 
 /** `data` keys that are receipts, not meaning: who read a comment, and what the agent is doing about it. */
-const RECEIPTS = new Set(['seenBy', 'agentState'])
+const RECEIPTS = new Set(['seenBy', 'seenByAgents', 'agentState'])
 
 const withoutSeen = (data: Record<string, unknown> | undefined) =>
   JSON.stringify(Object.fromEntries(Object.entries(data ?? {}).filter(([k]) => !RECEIPTS.has(k))))
 
-const PRESENTATION_DATA = new Set(['seenBy', 'agentState', 'fromSide', 'toSide', 'bend'])
+const PRESENTATION_DATA = new Set(['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend'])
 const GEOMETRY = new Set(['x', 'y', 'w', 'h', 'parent', 'fontSize'])
 
 /** `data` without the keys that are presentation, not meaning: read receipts and how a wire is drawn. */

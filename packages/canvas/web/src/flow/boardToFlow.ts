@@ -1,13 +1,14 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react'
 import type { Board, Item } from '../../../src/model'
 import { KIND_NAMES, diagramData } from '../diagrams/frame'
-import { knownFindings } from '../diagrams/findings'
-import { autoSides, type Box } from './route'
+import { findingCount } from '../diagrams/findings'
+import { autoSides, planSides, type Box } from './route'
+import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
 
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
 
-export type ItemNode = Node<{ item: Item; pulse: boolean; open: boolean; replies: Item[]; childCount?: number; diagram?: DiagramBadge }, Item['type'] | 'dsIcon'>
+export type ItemNode = Node<{ item: Item; pulse: boolean; open: boolean; replies: Item[]; childCount?: number; diagram?: DiagramBadge; wireBadges?: WireBadge[] }, Item['type'] | 'dsIcon'>
 
 /** Side of a folded comment's badge. */
 export const BADGE = 26
@@ -62,7 +63,10 @@ export function threadOf(board: Board, id: string): Item[] {
 /** `data.ds` values drawn as Domain Storytelling pictograms. */
 const DS_ICONS = new Set(['actor', 'object', 'legend-actor', 'legend-object', 'legend-activity'])
 
-export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<string>): { nodes: ItemNode[]; edges: Edge[] } {
+/** How catch-all wires are shown (flow/catchAll.ts): as badges (the default) or drawn; `expanded` holds the wires of badges clicked open. */
+export interface CatchAllView { show: boolean; expanded: Set<string> }
+
+export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<string>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
   const items = Object.values(board.items)
   const byId = board.items
   const nodes: ItemNode[] = []
@@ -70,6 +74,12 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
   const visited = new Set<string>()
   const byRoot = threads(board)
   const stacked = kanbanLayout(board)
+  let obs: Array<Box & { id: string }> | undefined
+  const boxes = () => (obs ??= obstacles(board, stacked))
+  // catch-all listeners become badges on their blocks instead of long wires, unless the viewer shows them
+  const catchAllIds = catchAll.show ? new Map() : catchAllWires(board)
+  const badges = wireBadges(board, catchAllIds, catchAll.expanded)
+  const collapsed = (id: string) => catchAllIds.has(id) && !catchAll.expanded.has(id)
 
   const push = (it: Item) => {
     if (visited.has(it.id)) return
@@ -92,7 +102,7 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
       // a kanban card must be able to leave its column; drag-stop re-parents it by where it lands
       extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
-      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it) },
+      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}) },
       // an element the agent proposed (a story from EventStorming) is dashed until the file has it
       ...(it.type !== 'comment' && it.data?.pending ? { className: 'node-pending' } : {}),
       ...(it.data?.ds === 'group' ? { className: 'ds-group' } : it.data?.ds === 'annotation' ? { className: 'ds-annotation' } : {}),
@@ -109,9 +119,10 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
           id: it.id,
           source: it.from,
           target: it.to,
-          ...wireSides(it, byId, stacked),
+          ...wireSides(it, byId, stacked, boxes),
           label: it.label ?? it.text,
           type: 'item',
+          ...(collapsed(it.id) ? { hidden: true } : {}),
           // a trace joins two diagrams (來自 / 組成 / 畫面): dotted, muted, never re-pointed as flow (docs/diagrams.md §2)
           ...(it.role === 'trace' ? { className: 'wire-trace', reconnectable: false } : {}),
           // a workflow wire edited on the board is a proposal until the AI changes the file (docs/studio.md §7)
@@ -157,8 +168,22 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
 
 const boxOf = (it: Item, stacked: Map<string, { x: number; y: number }>): Box => ({ ...(stacked.get(it.id) ?? { x: it.x, y: it.y }), w: it.w, h: it.h })
 
-function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: number; y: number }>): { sourceHandle: string; targetHandle: string } {
-  const auto = autoSides(boxOf(byId[it.from!], stacked), boxOf(byId[it.to!], stacked))
+/** Boxes a wire should not cross: everything but containers, comments and wires, at the position shown. */
+function obstacles(board: Board, stacked: Map<string, { x: number; y: number }>): Array<Box & { id: string }> {
+  return Object.values(board.items)
+    .filter((it) => it.type !== 'arrow' && it.type !== 'comment' && !isContainer(it))
+    .map((it) => ({ id: it.id, ...boxOf(it, stacked) }))
+}
+
+/**
+ * The sides a wire leaves and enters by: what the person (or a template) chose, else the pair whose
+ * route crosses the fewest boxes, then the shortest (route.ts planSides). A domain-story activity floats
+ * between its pictograms, so it keeps the plain facing sides.
+ */
+function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: number; y: number }>, boxes: () => Array<Box & { id: string }>): { sourceHandle: string; targetHandle: string } {
+  const [a, b] = [boxOf(byId[it.from!], stacked), boxOf(byId[it.to!], stacked)]
+  const chosen = typeof it.data?.fromSide === 'string' && typeof it.data?.toSide === 'string'
+  const auto = it.data?.ds || chosen ? autoSides(a, b) : planSides(a, b, boxes().filter((c) => c.id !== it.from && c.id !== it.to))
   return { sourceHandle: side(it.data?.fromSide, auto.fromSide), targetHandle: side(it.data?.toSide, auto.toSide) }
 }
 
@@ -173,7 +198,7 @@ const PORT_GAP = 16
 export function spreadPorts(edges: Edge[], byId: Board['items'], stacked: Map<string, { x: number; y: number }>): void {
   const groups = new Map<string, Array<{ e: Edge; end: 's' | 't'; key: number }>>()
   for (const e of edges) {
-    if (e.type !== 'item') continue
+    if (e.type !== 'item' || e.hidden) continue
     const [src, tgt] = [byId[e.source], byId[e.target]]
     if (!src || !tgt || (e.data as { item?: Item } | undefined)?.item?.data?.ds) continue
     const [sb, tb] = [boxOf(src, stacked), boxOf(tgt, stacked)]
@@ -258,5 +283,5 @@ function isDescendant(board: Board, id: string, ancestor: string): boolean {
 function badgeOf(board: Board, it: Item): DiagramBadge | undefined {
   const d = diagramData(it)
   if (!d) return undefined
-  return { kind: d.kind, name: KIND_NAMES[d.kind] ?? d.kind, key: d.key, findings: d.kind === 'event-storming' || d.kind === 'domain-story' ? knownFindings(board, it, d.level, d.kind).length : undefined }
+  return { kind: d.kind, name: KIND_NAMES[d.kind] ?? d.kind, key: d.key, findings: findingCount(board, it, d.level, d.kind) }
 }

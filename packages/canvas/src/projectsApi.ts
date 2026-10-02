@@ -1,5 +1,4 @@
-// HTTP routes for projects (docs/canvas.md "Projects"). The canvas has no auth yet, so everything that
-// names a directory on this machine — registering a project, moving a board into one — is only
+// HTTP routes for projects (docs/canvas.md "Projects"). Everything that names a directory on this machine — registering a project, moving a board into one — is only
 // accepted from a local caller: loopback address and no proxy/tunnel forwarding headers (a tunnel
 // such as cloudflared connects from localhost but adds them).
 import type http from 'node:http'
@@ -16,11 +15,14 @@ export class ProjectHttpError extends Error {
 
 const FORWARDED = ['x-forwarded-for', 'x-real-ip', 'forwarded', 'cf-connecting-ip', 'cf-ray', 'true-client-ip']
 
-/** A caller on this machine (not through a proxy or tunnel). */
+/**
+ * A caller on this machine (not through a proxy or tunnel). A request that presents a token (`Authorization`)
+ * is judged by its token, wherever it comes from — so it is never "local" (docs/canvas.md "Remote agents").
+ */
 export function isLocalRequest(req: http.IncomingMessage): boolean {
   const addr = req.socket.remoteAddress ?? ''
   const loopback = addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1'
-  return loopback && !FORWARDED.some((h) => req.headers[h] !== undefined)
+  return loopback && !FORWARDED.some((h) => req.headers[h] !== undefined) && req.headers.authorization === undefined
 }
 
 /** What a caller may see of a project: the root path only for local callers. */

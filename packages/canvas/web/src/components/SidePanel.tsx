@@ -49,6 +49,8 @@ interface Props {
   /** a UI mock text proposal → a chat request carrying the diff to the file (docs/diagrams.md §6c) */
   onEditChat: (ids: string[], text: string, model: DiscussModel, edit: EditRequest) => void
   onUndoUiText: (id: string) => void
+  /** a UI mock change made in the panel (a proposed new element); `select` = the item to select after */
+  onUiOps?: (ops: Op[], label: string, select?: string) => void
   onPickWireEvent: (id: string, event: string) => void
   /** drop a proposed (pending) item, e.g. a story the agent proposed (docs/diagrams.md §4) */
   onDismiss: (id: string) => void
@@ -92,7 +94,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onUiOps, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
@@ -184,7 +186,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                   return (
                     <li key={c.seq} className={c.author}>
                       <div className="row">
-                        <span className="who">{who(c.author)}</span>
+                        <span className="who">{c.by ?? who(c.author)}</span>
                         <span className="mono">{c.seq}</span>
                         <span style={{ marginLeft: 'auto' }}>{timeAgo(c.ts)}</span>
                       </div>
@@ -285,6 +287,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                     item={selected}
                     onEditChat={onEditChat}
                     onUndo={onUndoUiText}
+                    onOps={onUiOps}
                     onOpenFile={(path) => {
                       setNav({ path })
                       setTab('files')

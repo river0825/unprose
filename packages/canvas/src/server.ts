@@ -19,6 +19,11 @@ import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { diagramFrameId, isBookkeeping, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { AccessService } from './access.js'
+import { MemoryAccessStore } from './adapters/access/index.js'
+import { canSeeBoard, canSeeProject, canWrite, cleanName, projectForNewBoard, type Grant } from './accessPolicy.js'
+import { accessRoute, localPage, sameOrigin } from './accessRoutes.js'
+import { handleMcp } from './remoteMcp.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // The web UI: next to the bundled server (`dist/web`, the published plugin — unprose#4), else the workspace build.
@@ -54,6 +59,13 @@ export interface ServerOptions {
   update?: UpdateService
   /** Replaces process.exit after a successful upgrade handoff (tests). */
   exit?: (code: number) => void
+  /**
+   * Remote agents (docs/canvas.md "Remote agents"): tokens, OAuth clients, connect requests. Default: kept in
+   * memory, remote auth on (`awd-canvas serve` keeps them in ~/.awd/agents.json).
+   */
+  access?: AccessService
+  /** The address agents and people use from elsewhere (OAuth issuer, board links): UNPROSE_PUBLIC_URL; default from the request. */
+  publicUrl?: string
 }
 
 /** One project the owner allowed studio for, resolved at startup — never taken from a board or a request. */
@@ -136,6 +148,11 @@ function isAuthor(a: unknown): a is Author {
   return a === 'agent' || a === 'user'
 }
 
+/** Requests from elsewhere that bring no credentials (docs/canvas.md "Remote agents"). */
+function needsTokenText(origin: string): string {
+  return `This canvas answers requests from elsewhere only with credentials. Agents: connect your MCP client to ${origin}/mcp — it signs in with OAuth and the person approves it on the canvas by typing the code your browser shows; an agent without a browser: POST ${origin}/device_authorization (client_name=<your name>) and tell the person the user_code to type on the canvas; or send "Authorization: Bearer <token>" with a token from the canvas page Connected agents (AWD_CANVAS_URL + UNPROSE_TOKEN for the stdio MCP server). People: open ${origin} and sign in.`
+}
+
 const WAKES: Wake[] = ['any', 'meaningful', 'handoff']
 
 function assertOps(ops: unknown): Op[] {
@@ -158,6 +175,47 @@ function assertOps(ops: unknown): Op[] {
 
 export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   const store = opts.store ?? createBoardRepository(process.env.AWD_CANVAS_STORE, opts.dir)
+  const access = opts.access ?? new AccessService({ store: new MemoryAccessStore(), remoteAuth: process.env.UNPROSE_REMOTE_AUTH !== 'off' })
+  /** The address agents and people use: configured, else what the request says (a tunnel's forwarding headers first). */
+  const publicOrigin = (req: http.IncomingMessage): string => {
+    const configured = opts.publicUrl ?? process.env.UNPROSE_PUBLIC_URL
+    if (configured) return configured.replace(/\/+$/, '')
+    const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.split(',')[0]?.trim()
+    const proto = first(req.headers['x-forwarded-proto']) || ((req.socket as { encrypted?: boolean }).encrypted ? 'https' : 'http')
+    const host = first(req.headers['x-forwarded-host']) || req.headers.host || `localhost:${listeningPort}`
+    return `${proto}://${host}`
+  }
+  const projectOf = (id: string) => (hasProjects(store) ? store.projectOf(id) : 'personal')
+  const visible = (g: Grant, id: string) => canSeeBoard(g, id, projectOf(id))
+  const needWrite = (g: Grant) => {
+    if (!canWrite(g)) throw new HttpError(403, `${g.name} has read-only access`)
+  }
+  /** The local agent may name itself (UNPROSE_AGENT_NAME → x-unprose-agent); a token's name is its own. */
+  const agentName = (req: http.IncomingMessage, g: Grant): string | undefined => {
+    if (g.as === 'agent') return g.name
+    if (g.kind !== 'local') return undefined
+    const h = req.headers['x-unprose-agent']
+    return typeof h === 'string' && h.trim() ? cleanName(h) : undefined
+  }
+  /** Who a write is from: an agent token always writes as its agent; a person's page and this machine say who they are. */
+  const actor = (req: http.IncomingMessage, g: Grant, asked: unknown, fallback: Author): { author: Author; by?: string } => {
+    if (g.as === 'agent') return { author: 'agent', by: g.name }
+    const author = isAuthor(asked) ? asked : fallback
+    if (g.as === 'browser') return { author, by: g.name }
+    if (author === 'agent') {
+      const by = agentName(req, g)
+      return by ? { author, by } : { author }
+    }
+    return { author }
+  }
+  /** `author` query → the changes filter: 'user' / 'agent', or 'others' = everyone but this agent. */
+  const authorFilter = (req: http.IncomingMessage, g: Grant, raw: string | null): { author?: Author; match?: (c: Change) => boolean } => {
+    if (raw === 'others') {
+      const me = agentName(req, g) ?? 'agent'
+      return { match: (c) => !(c.author === 'agent' && (c.by ?? 'agent') === me) }
+    }
+    return { author: isAuthor(raw) ? raw : undefined }
+  }
   const webDist = opts.webDist ?? WEB_DIST
   // read once per server; the notes do not change while it runs
   let cachedRelease: Release | undefined
@@ -222,10 +280,10 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       req.on('error', reject)
     })
 
-  /** The agent has now read these changes: record receipts on the user's comments, return the board after. */
-  const readByAgent = (id: string, changes: Change[], author: Author | undefined): Board => {
-    const ops = author === 'agent' ? [] : agentSeenOps(store.get(id)!, changes)
-    if (ops.length) store.apply(id, ops, 'agent', 'seen')
+  /** The agent has now read these changes: record receipts on the user's comments (per named agent), return the board after. */
+  const readByAgent = (id: string, changes: Change[], author: Author | undefined, name?: string): Board => {
+    const ops = author === 'agent' ? [] : agentSeenOps(store.get(id)!, changes, name)
+    if (ops.length) store.apply(id, ops, 'agent', 'seen', name)
     return store.get(id)!
   }
 
@@ -279,7 +337,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   const updateRoute = async (req: http.IncomingMessage, res: http.ServerResponse, method: string, sub: string | undefined, url: URL) => {
     const up = opts.update
     const local = isLocalRequest(req)
-    // the canvas has no login: a page reached from elsewhere (a tunnel) must not learn where things live on this machine
+    // a page reached from elsewhere (a tunnel), even signed in, must not learn where things live on this machine
     const reply = (r: http.ServerResponse, status: number, body: unknown) => json(r, status, local ? body : redactPaths(body))
     if (!sub && method === 'GET') {
       if (!up) return reply(res, 200, { current: release().version, available: false, install: 'unknown', supported: false, canUpgrade: false, error: 'update checks are not set up on this server', command: '' })
@@ -290,7 +348,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     }
     if (sub === 'status' && method === 'GET') return reply(res, 200, up ? up.status() : { running: false, log: [] })
     if (!sub && method === 'POST') {
-      if (!local) throw new HttpError(403, 'upgrading is only possible from this machine (the canvas has no login)')
+      if (!local) throw new HttpError(403, 'upgrading is only possible from a page opened on this machine')
       if (!up) throw new HttpError(400, 'update checks are not set up on this server')
       const r = await up.start(handoff())
       return reply(res, r.started ? 202 : 409, r)
@@ -298,22 +356,57 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     throw new HttpError(405, 'method not allowed')
   }
 
+  /** 401 with the way in: the OAuth metadata for MCP clients, the options in words for everyone else. */
+  const unauthorized = (req: http.IncomingMessage, res: http.ServerResponse, mcp: boolean, invalid?: string) => {
+    const o = publicOrigin(req)
+    res.writeHead(401, {
+      'content-type': 'application/json; charset=utf-8',
+      'www-authenticate': `Bearer realm="unprose", resource_metadata="${o}/.well-known/oauth-protected-resource${mcp ? '/mcp' : ''}"${invalid ? ', error="invalid_token"' : ''}`,
+      'access-control-expose-headers': 'www-authenticate',
+    })
+    res.end(JSON.stringify(mcp ? { jsonrpc: '2.0', error: { code: -32001, message: invalid ?? needsTokenText(o) }, id: null } : { error: invalid ?? needsTokenText(o), signIn: true }))
+  }
+
   const handle = async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const method = req.method ?? 'GET'
+    // remote-agents routes set their own headers (OAuth endpoints are CORS-open, the page API is same-origin only)
+    let authResult: Awaited<ReturnType<AccessService['authenticate']>> | undefined
+    const auth = async () => (authResult ??= await access.authenticate(req))
+    if (await accessRoute(req, res, url, method, { access, publicOrigin, projects: () => (hasProjects(store) ? store.projects().map((p) => ({ id: p.id, name: p.name })) : []) }, auth)) return
+
     res.setHeader('access-control-allow-origin', '*')
-    res.setHeader('access-control-allow-headers', 'content-type')
+    res.setHeader('access-control-allow-headers', 'content-type, authorization, mcp-protocol-version, mcp-session-id, x-unprose-agent')
     res.setHeader('access-control-allow-methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    res.setHeader('access-control-expose-headers', 'www-authenticate, mcp-session-id')
     if (method === 'OPTIONS') return void res.writeHead(204).end()
 
     const parts = url.pathname.split('/').filter(Boolean)
+
+    // ---- Remote MCP (Streamable HTTP) ----
+    if (url.pathname === '/mcp') {
+      const { grant, error } = await auth()
+      if (error || !grant) return unauthorized(req, res, true, error)
+      const body = method === 'POST' ? await readBody(req) : undefined
+      return handleMcp(req, res, grant, { access, loopback: `http://127.0.0.1:${listeningPort}`, publicUrl: publicOrigin(req) }, body)
+    }
 
     // ---- API ----
     if (parts[0] === 'api') {
       if (parts[1] === 'kinds' && method === 'GET') return json(res, 200, { kinds: diagramKinds })
       // pid: lets the plugin tell a canvas it started (and may restart after an update) from one the person runs
       if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid })
-      if (parts[1] === 'projects' && !parts[2]) return projectReply(res, () => projectsRoute(store, req, method, () => readBody(req)))
+      const { grant, error } = await auth()
+      if (error || !grant) return unauthorized(req, res, false, error)
+      if (parts[1] === 'projects' && !parts[2]) {
+        return projectReply(res, async () => {
+          const r = await projectsRoute(store, req, method, () => readBody(req))
+          const body = r.body as { projects?: Array<{ id: string }> }
+          if (method !== 'GET' || !body.projects) return r
+          const boardProjects = new Set(store.list().filter((b) => visible(grant, b.id)).map((b) => projectOf(b.id)))
+          return { ...r, body: { projects: body.projects.filter((p) => canSeeProject(grant, p.id) && (!grant.boards?.length || boardProjects.has(p.id))) } }
+        })
+      }
       if (parts[1] === 'update') return updateRoute(req, res, method, parts[2], url)
       if (parts[1] !== 'boards') throw new HttpError(404, 'not found')
       const id = parts[2]
@@ -323,12 +416,14 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (method === 'GET') {
           const only = projectOrError(res, () => resolveProject(store, req, url.searchParams.get('project') ?? undefined))
           if (only === null) return
-          const projectOf = (b: Board) => (hasProjects(store) ? store.projectOf(b.id) : 'personal')
-          return json(res, 200, { boards: store.list().filter((b) => !only || projectOf(b) === only).map((b) => ({ ...summary(b), project: projectOf(b) })) })
+          return json(res, 200, { boards: store.list().filter((b) => (!only || projectOf(b.id) === only) && visible(grant, b.id)).map((b) => ({ ...summary(b), project: projectOf(b.id) })) })
         }
         if (method === 'POST') {
+          needWrite(grant)
           const body = (await readBody(req)) as { title?: string; kind?: DiagramKind; meta?: Record<string, unknown>; items?: Board['items'][string][]; author?: Author; content?: unknown; project?: string; projectRoot?: string }
-          const project = projectOrError(res, () => resolveProject(store, req, body.project, body.projectRoot))
+          const placed = projectForNewBoard(grant, body.project)
+          if (placed.error) throw new HttpError(403, placed.error)
+          const project = projectOrError(res, () => resolveProject(store, req, placed.project, body.projectRoot))
           if (project === null) return
           if (!body.title || typeof body.title !== 'string') throw new HttpError(400, 'title required')
           if (!body.kind || !diagramKinds.includes(body.kind)) throw new HttpError(400, `kind must be one of ${diagramKinds.join(', ')}`)
@@ -338,7 +433,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
             if (!parsed.success) throw new HttpError(400, `invalid content: ${parsed.error.message}`)
             items = render(body.kind, parsed.data)
           }
-          const board = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...(project ? { project } : {}) }, isAuthor(body.author) ? body.author : 'agent')
+          const who = actor(req, grant, body.author, 'agent')
+          const board = store.create({ title: body.title, kind: body.kind, meta: body.meta, items, ...(project ? { project } : {}), ...(who.by ? { by: who.by } : {}) }, who.author)
           return json(res, 201, { board, project: hasProjects(store) ? store.projectOf(board.id) : 'personal' })
         }
         throw new HttpError(405, 'method not allowed')
@@ -346,6 +442,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
 
       const board = store.get(id)
       if (!board) throw new HttpError(404, `board ${id} not found`)
+      if (!visible(grant, id)) throw new HttpError(403, `${grant.name} may not use board ${id}`)
+      // everything that changes the board, or reaches the person's page, needs write access
+      if (method !== 'GET' && sub !== 'template') needWrite(grant)
 
       if (!sub) {
         if (method === 'GET') return json(res, 200, { board })
@@ -361,15 +460,17 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
 
       if (sub === 'ops' && method === 'POST') {
         const body = (await readBody(req)) as { author?: unknown; ops?: unknown; note?: string }
-        if (!isAuthor(body.author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        if (!isAuthor(body.author) && grant.as !== 'agent') throw new HttpError(400, "author must be 'agent' or 'user'")
         const ops = assertOps(body.ops)
-        const change = store.apply(id, ops, body.author, body.note)
+        const who = actor(req, grant, body.author, 'agent')
+        const change = store.apply(id, ops, who.author, body.note, who.by)
         return json(res, 200, { seq: change.seq, change })
       }
       if (sub === 'focus' && method === 'POST') {
         const body = (await readBody(req)) as { ids?: unknown; frame?: unknown; note?: unknown; author?: unknown }
-        const author = body.author ?? 'agent'
-        if (!isAuthor(author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        if (body.author !== undefined && !isAuthor(body.author)) throw new HttpError(400, "author must be 'agent' or 'user'")
+        const who = actor(req, grant, body.author, 'agent')
+        const author = who.author
         if (body.ids !== undefined && !(Array.isArray(body.ids) && body.ids.every((i) => typeof i === 'string'))) throw new HttpError(400, 'ids must be an array of item ids')
         if (body.frame !== undefined && (typeof body.frame !== 'string' || !DIAGRAM_KEY.test(body.frame))) throw new HttpError(400, 'frame must be a diagram key')
         if (body.note !== undefined && typeof body.note !== 'string') throw new HttpError(400, 'note must be a string')
@@ -385,37 +486,36 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         }
         if (!ids.length && !frame) throw new HttpError(400, 'give ids and/or frame')
         const note = (body.note as string | undefined)?.trim().slice(0, 500) || undefined
-        const msg: FocusMessage = { type: 'focus', ids, ...(frame ? { frame } : {}), ...(note ? { note } : {}), author, at: new Date().toISOString() }
+        const msg: FocusMessage = { type: 'focus', ids, ...(frame ? { frame } : {}), ...(note ? { note } : {}), author, ...(who.by ? { by: who.by } : {}), at: new Date().toISOString() }
         return json(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg })
       }
       if (sub === 'changes' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0)
-        const author = url.searchParams.get('author')
-        const changes = store.changes(id, { since, author: isAuthor(author) ? author : undefined })
+        const f = authorFilter(req, grant, url.searchParams.get('author'))
+        const changes = store.changes(id, { since, ...f })
         return json(res, 200, { changes, seq: store.get(id)!.seq })
       }
       if (sub === 'diff' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0)
-        const author = url.searchParams.get('author')
-        const who = isAuthor(author) ? author : undefined
-        const changes = store.changes(id, { since, author: who }).filter((c) => !isBookkeeping(c))
+        const f = authorFilter(req, grant, url.searchParams.get('author'))
+        const changes = store.changes(id, { since, ...f }).filter((c) => !isBookkeeping(c))
         const lines = summarize(store.get(id)!, changes)
-        const cur = readByAgent(id, changes, who)
+        const cur = readByAgent(id, changes, f.author, agentName(req, grant))
         return json(res, 200, { since, seq: cur.seq, lines, count: changes.length })
       }
       if (sub === 'wait' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? board.seq)
         const timeout = Math.min(Number(url.searchParams.get('timeout') ?? 30000), 120000)
-        const author = url.searchParams.get('author')
         const quietRaw = url.searchParams.get('quiet')
         const quietMs = quietRaw === null ? undefined : Math.max(0, Math.min(Number(quietRaw) || 0, 30000))
         const wakeRaw = url.searchParams.get('wake') ?? 'meaningful'
         if (!WAKES.includes(wakeRaw as Wake)) throw new HttpError(400, `wake must be one of ${WAKES.join(', ')}`)
         const wake = wakeRaw as Wake
-        const who = isAuthor(author) ? author : undefined
-        const changes = await store.waitFor(id, since, timeout, who, { quietMs, wake })
+        const f = authorFilter(req, grant, url.searchParams.get('author'))
+        const name = agentName(req, grant)
+        const changes = await store.waitFor(id, since, timeout, f.author, { quietMs, wake, match: f.match, who: name })
         const lines = summarize(store.get(id)!, changes, { collapseMoves: wake !== 'any' })
-        const cur = readByAgent(id, changes, who)
+        const cur = readByAgent(id, changes, f.author, name)
         return json(res, 200, { since, seq: cur.seq, timedOut: changes.length === 0, changes, lines })
       }
       // ---- Kanban: cards as an event source (see docs/canvas.md) ----
@@ -439,14 +539,15 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           if (body.size) data.size = body.size
           if (body.assignee) data.assignee = body.assignee
           if (body.description) data.description = body.description
-          const author: Author = isAuthor(body.author) ? body.author : 'agent'
+          const who = actor(req, grant, body.author, 'agent')
+          const author = who.author
           const now = new Date().toISOString()
           const newId = body.id ? kanbanCardId('kb', body.id) : kanbanCardId('kb', `${body.title}-${Date.now().toString(36)}`)
           if (board.items[newId]) throw new HttpError(409, `card ${newId} already exists`)
           const item: Board['items'][string] = { id: newId, type: 'card', x: spot.x, y: spot.y, w: CARD_W, h, text: body.title, color: 'white', role: 'card', parent: column.id, order: 1e6, data, createdBy: author, updatedBy: author, updatedAt: now }
           const ops: Op[] = [{ kind: 'add', item }]
           if (spot.laneH > column.h) ops.push({ kind: 'update', id: column.id, patch: { h: spot.laneH } })
-          const change = store.apply(id, ops, author, body.note ?? `added card "${body.title}" to ${column.text}`)
+          const change = store.apply(id, ops, author, body.note ?? `added card "${body.title}" to ${column.text}`, who.by)
           return json(res, 201, { card: store.get(id)!.items[newId], seq: change.seq })
         }
         if (cardIdParam && parts[5] === 'move' && method === 'POST') {
@@ -455,13 +556,14 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           const body = (await readBody(req)) as { column?: string; author?: unknown; note?: string }
           const column = findColumn(board, body.column)
           if (!column) throw new HttpError(400, `column required; one of ${columnsOf(board).map((c) => c.text).join(', ')}`)
-          const author: Author = isAuthor(body.author) ? body.author : 'agent'
+          const who = actor(req, grant, body.author, 'agent')
+          const author = who.author
           const fromName = board.items[card.parent ?? '']?.text ?? 'nowhere'
           const without: Board = { ...board, items: { ...board.items, [card.id]: { ...card, parent: '__moving__' } } }
           const spot = bottomOf(without, column, card.h)
           const ops: Op[] = [{ kind: 'update', id: card.id, patch: { x: spot.x, y: spot.y, parent: column.id, order: 1e6 } }]
           if (spot.laneH > column.h) ops.push({ kind: 'update', id: column.id, patch: { h: spot.laneH } })
-          const change = store.apply(id, ops, author, body.note ?? `moved "${card.text}" ${fromName} → ${column.text}`)
+          const change = store.apply(id, ops, author, body.note ?? `moved "${card.text}" ${fromName} → ${column.text}`, who.by)
           return json(res, 200, { card: store.get(id)!.items[card.id], from: fromName, to: column.text, seq: change.seq })
         }
         throw new HttpError(404, 'not found')
@@ -510,6 +612,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         })
         if (method === 'GET') return json(res, 200, studio && project ? view(studio.supervisor.info(project.root)) : { capable: false, running: false, log: [] })
         if (method === 'POST') {
+          // studio starts processes on this machine: never for an agent token
+          if (grant.as === 'agent') throw new HttpError(403, 'agents cannot start or stop studio; the person does that on the canvas')
           if (!studio || !project) throw new HttpError(403, 'studio is not enabled for this project on this server (canvas serve --studio-project <dir>)')
           const body = (await readBody(req)) as { action?: unknown }
           if (body.action === 'start') {
@@ -561,7 +665,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     // ---- UI ----
     if (method !== 'GET') throw new HttpError(405, 'method not allowed')
     const hasUi = fs.existsSync(path.join(webDist, 'index.html'))
-    if (parts[0] === 'b' || parts.length === 0) {
+    if (parts[0] === 'b' || parts.length === 0 || (parts[0] === 'agents' && parts.length === 1)) {
       if (hasUi) return void serveStatic(res, 'index.html')
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       return void res.end(fallbackPage(store.list()))
@@ -587,24 +691,59 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   })
 
   const wss = new WebSocketServer({ noServer: true })
+  const refuse = (socket: import('node:stream').Duplex, status: string) => {
+    socket.write(`HTTP/1.1 ${status}\r\n\r\n`)
+    socket.destroy()
+  }
   server.on('upgrade', (req, socket, head) => {
-    const url = new URL(req.url ?? '/', 'http://localhost')
-    const m = url.pathname.match(/^\/ws\/([^/]+)$/)
-    const board = m && store.get(m[1])
-    if (!board) {
-      socket.write('HTTP/1.1 404 Not Found\r\n\r\n')
-      socket.destroy()
-      return
-    }
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      if (isLocalRequest(req)) localSockets.add(ws)
+    void (async () => {
+      const url = new URL(req.url ?? '/', 'http://localhost')
+      const { grant } = await access.authenticate(req)
+      if (!grant) return refuse(socket, '401 Unauthorized')
+      // the server socket: connect requests for pages that may approve them (docs/canvas.md "Remote agents")
+      if (url.pathname === '/ws') {
+        const approver = localPage(req, grant) || (grant.as === 'browser' && sameOrigin(req))
+        return wss.handleUpgrade(req, socket, head, (ws) => {
+          if (grant.kind === 'local') localSockets.add(ws)
+          serverSockets.add(ws)
+          if (approver) {
+            approvers.add(ws)
+            for (const request of access.pendingViews()) ws.send(JSON.stringify({ type: 'access-request', request } satisfies WsMessage))
+          }
+          const off = () => {
+            serverSockets.delete(ws)
+            approvers.delete(ws)
+          }
+          ws.on('close', off)
+          ws.on('error', off)
+        })
+      }
+      const m = url.pathname.match(/^\/ws\/([^/]+)$/)
+      const board = m && store.get(m[1])
+      if (!board) return refuse(socket, '404 Not Found')
+      if (!visible(grant, board.id)) return refuse(socket, '403 Forbidden')
+      wss.handleUpgrade(req, socket, head, (ws) => onBoardSocket(ws, grant, board.id))
+    })().catch(() => refuse(socket, '500 Internal Server Error'))
+  })
+  /** Pages on the server socket, and those of them that may approve connect requests. */
+  const serverSockets = new Set<WebSocket>()
+  const approvers = new Set<WebSocket>()
+  const offAccess = access.onEvent((e) => {
+    const msg = JSON.stringify(e satisfies WsMessage)
+    for (const ws of e.type === 'access-changed' ? serverSockets : approvers) if (ws.readyState === WebSocket.OPEN) ws.send(msg)
+  })
+  const presence = (id: string): WsMessage => ({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id) })
+  const onBoardSocket = (ws: WebSocket, grant: Grant, boardId: string) => {
+    const board = { id: boardId }
+    {
+      if (grant.kind === 'local') localSockets.add(ws)
       const send = (msg: WsMessage) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg))
       send({ type: 'hello', board: store.get(board.id)! })
-      // Tell the person whether an agent is currently waiting on this board.
-      send({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: store.watchers(board.id) > 0 })
+      // Tell the person whether an agent (which ones) is currently waiting on this board.
+      send(presence(board.id))
       const offChange = store.subscribe(board.id, (change) => send({ type: 'change', change }))
-      const offPresence = store.onPresence((id, n) => {
-        if (id === board.id) send({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: n > 0 })
+      const offPresence = store.onPresence((id) => {
+        if (id === board.id) send(presence(board.id))
       })
       // Saving this board failed or recovered: the page shows "changes are not being saved" (unprose#1).
       const offStorage = store.onStorage((e) => {
@@ -619,8 +758,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       }
       ws.on('close', off)
       ws.on('error', off)
-    })
-  })
+    }
+  }
 
   return new Promise((resolve, reject) => {
     server.once('error', reject)
@@ -639,6 +778,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         close: () =>
           new Promise<void>((r) => {
             stopFollowing()
+            offAccess()
             opts.studio?.supervisor.stopAll()
             for (const c of wss.clients) c.terminate()
             wss.close()

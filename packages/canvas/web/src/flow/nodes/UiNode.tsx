@@ -2,8 +2,10 @@
 // Nothing from the file is rendered as HTML — every value is text in a React element — so a mock written
 // by an agent (or edited by anyone who can reach the canvas) cannot run scripts or load anything.
 import type { NodeProps } from '@xyflow/react'
-import type { CSSProperties, ReactNode } from 'react'
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Item } from '../../../../src/model'
+import { canEditValue, uiPendingOf, uiProposalOf, uiValueOp, type UiPath } from '../../diagrams/uiProposal'
+import { uiFindingsOf } from '../../diagrams/uiFindings'
 import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
@@ -102,6 +104,45 @@ function Words({ item, fallback = '', className }: { item: Item; fallback?: stri
   return <span className={`ui-words ${className ?? ''}`}>{item.text || fallback}</span>
 }
 
+// ── one value inside an element, edited in place: a table cell, a list / tab / link item ─────────────
+interface ValueEdit {
+  /** the value being edited, e.g. ['rows', 1, 2] */
+  editing: UiPath | null
+  /** the value a text proposal is about, marked on the board */
+  proposed?: UiPath
+  start: (sub: UiPath) => void
+  commit: (sub: UiPath, text: string) => void
+  cancel: () => void
+}
+const ValueCtx = createContext<ValueEdit | null>(null)
+const same = (a: UiPath | null | undefined, b: UiPath) => !!a && a.length === b.length && a.every((k, i) => String(k) === String(b[i]))
+
+/** Double-click to change these words: a text proposal for exactly this value in the file. */
+function Val({ sub, text, children }: { sub: UiPath; text: string; children?: ReactNode }) {
+  const v = useContext(ValueCtx)
+  if (v && same(v.editing, sub))
+    return (
+      <span className="ui-val-editing">
+        <EditableText text={text} editing onCommit={(t) => v.commit(sub, t)} onCancel={v.cancel} />
+      </span>
+    )
+  return (
+    <span
+      className={`ui-val ${v && same(v.proposed, sub) ? 'ui-val-proposed' : ''}`}
+      onDoubleClick={
+        v
+          ? (e) => {
+              e.stopPropagation()
+              v.start(sub)
+            }
+          : undefined
+      }
+    >
+      {children ?? text}
+    </span>
+  )
+}
+
 /** `[Done]` in a table cell or list badge reads as a status badge. */
 function Cell({ v }: { v: string | number | undefined }) {
   const s = v === undefined ? '' : String(v)
@@ -154,7 +195,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
           <nav className="ui-navlinks">
             {items.map((l, i) => (
               <span key={i} className={l.active ? 'on' : ''}>
-                {l.text}
+                <Val sub={['items', i]} text={l.text} />
               </span>
             ))}
           </nav>
@@ -167,7 +208,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
           {items.map((l, i) => (
             <div key={i} className={`ui-side-item ${l.active ? 'on' : ''}`}>
               <UiIcon name={l.icon} />
-              <span className="ui-grow">{l.text}</span>
+              <span className="ui-grow"><Val sub={['items', i]} text={l.text} /></span>
               {l.badge ? <span className="ui-count">{l.badge}</span> : null}
             </div>
           ))}
@@ -262,7 +303,9 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
                 <tr key={i}>
                   {r.map((c, j) => (
                     <td key={j}>
-                      <Cell v={c} />
+                      <Val sub={['rows', i, j]} text={c === undefined ? '' : String(c)}>
+                        <Cell v={c} />
+                      </Val>
                     </td>
                   ))}
                 </tr>
@@ -279,7 +322,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
             <div key={i} className={`ui-list-row ${l.active ? 'on' : ''} ${l.meta ? 'two' : ''}`}>
               {l.icon ? <span className="ui-list-icon"><UiIcon name={l.icon} /></span> : null}
               <span className="ui-grow ui-list-text">
-                <span>{l.text}</span>
+                <Val sub={['items', i]} text={l.text} />
                 {l.meta ? <span className="ui-meta">{l.meta}</span> : null}
               </span>
               {l.badge ? <Cell v={/^\[.*\]$/.test(l.badge) ? l.badge : `[${l.badge}]`} /> : null}
@@ -326,7 +369,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
     case 'tabs':
       return items.map((t, i) => (
         <span key={i} className={`ui-tab ${t.active ? 'on' : ''}`}>
-          {t.text}
+          <Val sub={['items', i]} text={t.text} />
           {t.badge ? <span className="ui-count">{t.badge}</span> : null}
         </span>
       ))
@@ -334,7 +377,7 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
       return items.map((t, i) => (
         <span key={i} className={`ui-crumb ${i === items.length - 1 ? 'on' : ''}`}>
           {i > 0 ? <UiIcon name="chevron-right" size={12} /> : null}
-          {t.text}
+          <Val sub={['items', i]} text={t.text} />
         </span>
       ))
     case 'pagination': {
@@ -392,7 +435,27 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse } = data
   const u = uiOf(item) ?? { type: item.role ?? 'text' }
   const edit = useEdit()
-  const editable = UI_EDITABLE.has(u.type)
+  const proposal = uiProposalOf(item)
+  const gone = Boolean(edit.uiRemoved?.has(item.id))
+  const editable = UI_EDITABLE.has(u.type) && !gone
+  const findings = uiFindingsOf(item)
+  const [editingValue, setEditingValue] = useState<UiPath | null>(null)
+  const values: ValueEdit | null =
+    edit.commitOps && Array.isArray(u.path) && !gone && proposal?.kind !== 'add'
+      ? {
+          editing: editingValue,
+          proposed: uiPendingOf(item)?.sub,
+          start: (sub) => {
+            if (canEditValue(item, sub)) setEditingValue(sub)
+          },
+          commit: (sub, text) => {
+            setEditingValue(null)
+            const op = uiValueOp(item, sub, text, new Date().toISOString())
+            if (op) edit.commitOps?.([op], `proposed '${text.slice(0, 40)}'`)
+          },
+          cancel: () => setEditingValue(null),
+        }
+      : null
   const style = {
     ...(u.accent ? { ['--u-accent' as string]: u.accent } : {}),
     ...(u.radius !== undefined ? { ['--u-radius' as string]: `${u.radius}px` } : {}),
@@ -409,6 +472,8 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
     u.bg ? `bg-${u.bg}` : '',
     u.type === 'screen' && u.device ? `d-${u.device}` : '',
     u.type === 'badge' && !u.tone ? `t-${toneOf(item.text ?? '')}` : '',
+    gone ? 'ui-gone' : '',
+    proposal?.kind === 'add' ? 'ui-new' : '',
   ]
   return (
     <Shell
@@ -421,7 +486,17 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
       style={style}
       onDouble={editable ? undefined : () => undefined}
     >
-      {body(item, u, edit.editingId === item.id)}
+      <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id)}</ValueCtx.Provider>
+      {findings.length ? (
+        <span
+          className={`ui-finding-mark ${findings.some((f) => f.severity === 'warning') ? 'warning' : 'info'}`}
+          title={findings.map((f) => `${f.severity}: ${f.message}`).join('\n')}
+          aria-label={`${findings.length} lint finding${findings.length === 1 ? '' : 's'}: ${findings.map((f) => f.message).join('; ')}`}
+          role="img"
+        >
+          {findings.some((f) => f.severity === 'warning') ? '!' : 'i'}
+        </span>
+      ) : null}
     </Shell>
   )
 }

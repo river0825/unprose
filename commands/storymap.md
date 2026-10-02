@@ -2,7 +2,7 @@
 description: Turn an EventStorming into a story map with a first release
 argument-hint: [es file or topic]
 ---
-<!-- generated from packages/cli/src/prompts.ts by `npm run gen:commands`; edit it there -->
+<!-- generated from packages/canvas/src/prompts.ts by `npm run gen:commands`; edit it there -->
 
 Turn $ARGUMENTS (if that is empty: the EventStorming in design/ — ask me if there are several) into a user story map on the Unprose canvas.
 1. Create design/<name>.story-map.yaml if it does not exist: activities from the pivotal events or phases, steps under them.

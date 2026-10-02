@@ -4,7 +4,7 @@ import type { Item } from '../../../src/model'
 import { EditableText } from './EditableText'
 import { useEdit } from './EditContext'
 import { useWireFocus } from './wireFocus'
-import { bestLoop, bestTurn, freeLabelSpot, type Box } from './route'
+import { bend, bestLoop, bestTurn, bestTurnY, freeLabelSpot, isHorizontal, type Box, type Side } from './route'
 import { isContainer } from './boardToFlow'
 import './wires.css'
 
@@ -113,11 +113,19 @@ export function ItemEdge(props: EdgeProps) {
   const allBoxes = useBoxes()
   const routeBoxes = useMemo(() => allBoxes.filter((b) => b.id !== source && b.id !== target), [allBoxes, source, target])
   const prefer = late ? targetX - 22 - 7 * (fromAbove ? (port.ti ?? 0) : (port.tn ?? 1) - 1 - (port.ti ?? 0)) : (sourceX + targetX) / 2
-  // among the turns that cross the fewest boxes, the one nearest the preferred turn
-  const turnAt = !ds && !bendOf(data) && forward && targetX - sourceX > 24 ? bestTurn(sourceX, sourceY, targetX, targetY, routeBoxes, prefer) : undefined
-  // A loop under both boxes (a fix round going back): the one going furthest back runs outermost,
+  const free = !ds && !bendOf(data)
+  // among the turns that cross the fewest boxes, the one nearest the preferred turn (a backward
+  // left → right wire, which planSides picks to stay clear of boxes, turns the same way mirrored)
+  const backward = sourcePosition === 'left' && targetPosition === 'right'
+  const turnAt = free && ((forward && targetX - sourceX > 24) || (backward && sourceX - targetX > 24)) ? bestTurn(sourceX, sourceY, targetX, targetY, routeBoxes, prefer) : undefined
+  // a vertical wire (bottom → top, top → bottom) makes its horizontal run in the best gap too
+  const vertical = (sourcePosition === 'bottom' && targetPosition === 'top' && targetY - sourceY > 24) || (sourcePosition === 'top' && targetPosition === 'bottom' && sourceY - targetY > 24)
+  const turnY = free && vertical ? bestTurnY(sourceX, sourceY, targetX, targetY, routeBoxes, (sourceY + targetY) / 2) : undefined
+  // one side into a perpendicular one (right → top …): a single bend
+  const corner = free && isHorizontal(sourcePosition) !== isHorizontal(targetPosition) ? bend({ x: sourceX, y: sourceY }, sourcePosition as Side, { x: targetX, y: targetY }, targetPosition as Side) : undefined
+  // A loop under (or over) both boxes (a fix round going back): the one going furthest back runs outermost,
   // and it drops below any box in its way rather than through it.
-  const loop = sourcePosition === 'bottom' && targetPosition === 'bottom'
+  const loop = (sourcePosition === 'bottom' && targetPosition === 'bottom') || (sourcePosition === 'top' && targetPosition === 'top')
   const boxOfNode = (n: typeof srcNode) => (n ? { x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? 0, h: n.measured?.height ?? n.height ?? 0 } : undefined)
   const [srcBox, tgtBox] = [boxOfNode(srcNode), boxOfNode(tgtNode)]
   const chosen = loop && !ds && !bendOf(data) && srcBox && tgtBox ? bestLoop(srcBox, tgtBox, routeBoxes, 22 + 9 * ((port.sn ?? 1) - 1 - (port.si ?? 0)), port.s, port.t) : undefined
@@ -127,6 +135,12 @@ export function ItemEdge(props: EdgeProps) {
     ? getStraightPath({ sourceX, sourceY, targetX, targetY })
     : loopY !== undefined
     ? [roundedPath([{ x: sourceX, y: sourceY }, { x: sourceX, y: loopY }, { x: targetX, y: loopY }, { x: targetX, y: targetY }]), (sourceX + targetX) / 2, loopY]
+    : backward && turnAt !== undefined
+    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: turnAt, y: sourceY }, { x: turnAt, y: targetY }, { x: targetX, y: targetY }]), (sourceX + turnAt) / 2, sourceY]
+    : turnY !== undefined
+    ? [roundedPath([{ x: sourceX, y: sourceY }, { x: sourceX, y: turnY }, { x: targetX, y: turnY }, { x: targetX, y: targetY }]), (sourceX + targetX) / 2, turnY]
+    : corner
+    ? [roundedPath(corner), corner[1].x, corner[1].y]
     : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, centerX: turnAt, borderRadius: 8 })
   // the label sits on the wire's own run out of its source (or into its target), never on a box
   const labelText = typeof label === 'string' ? label : ''
@@ -135,9 +149,17 @@ export function ItemEdge(props: EdgeProps) {
   const spot = !labelText
     ? undefined
     : turnAt !== undefined
-    ? freeLabelSpot(sourceX + 4, turnAt - 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt + 4, targetX - 4, targetY, lw, lh, allBoxes)
+    ? backward
+      ? freeLabelSpot(sourceX - 4, turnAt + 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt - 4, targetX + 4, targetY, lw, lh, allBoxes)
+      : freeLabelSpot(sourceX + 4, turnAt - 4, sourceY, lw, lh, allBoxes) ?? freeLabelSpot(turnAt + 4, targetX - 4, targetY, lw, lh, allBoxes)
     : loopY !== undefined
     ? freeLabelSpot(targetX, sourceX, loopY, lw, lh, allBoxes)
+    : turnY !== undefined
+    ? freeLabelSpot(sourceX, targetX, turnY, lw, lh, allBoxes)
+    : corner
+    ? isHorizontal(sourcePosition)
+      ? freeLabelSpot(corner[0].x, corner[1].x, corner[0].y, lw, lh, allBoxes)
+      : freeLabelSpot(corner[1].x, corner[2].x, corner[2].y, lw, lh, allBoxes)
     : undefined
   const [lx, ly] = spot ? [spot.x, spot.y] : [sx, sy]
   const path = point ? curveThrough({ x: sourceX, y: sourceY }, point, { x: targetX, y: targetY }) : stepPath

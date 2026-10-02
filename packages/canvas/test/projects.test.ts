@@ -10,6 +10,8 @@ import { PERSONAL_PROJECT, hasProjects } from '../src/ports/boardRepository.js'
 import { startServer, type RunningServer } from '../src/server.js'
 import { CanvasClient } from '../src/client.js'
 import { sessionProjectRoot } from '../src/mcp.js'
+import { AccessService } from '../src/access.js'
+import { MemoryAccessStore } from '../src/adapters/access/index.js'
 
 const tmp = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `awd-proj-${name}-`))
 const project = (name: string) => {
@@ -113,8 +115,9 @@ test('MCP: the session project is CLAUDE_PROJECT_DIR or the cwd, lifted to its r
 let srv: RunningServer
 let client: CanvasClient
 const personalDir = tmp('srv')
+const access = new AccessService({ store: new MemoryAccessStore() })
 test.before(async () => {
-  srv = await startServer({ port: 0, store: new ProjectsBoardRepository(personalDir), webDist: '/nonexistent' })
+  srv = await startServer({ port: 0, store: new ProjectsBoardRepository(personalDir), webDist: '/nonexistent', access })
   client = new CanvasClient(srv.url)
 })
 after(() => srv.close())
@@ -150,13 +153,17 @@ test('API: register a project, create a board in it, list by project, move a boa
 
 test('API: directories are only named from this machine (no proxy/tunnel headers)', async () => {
   const root = project('secret')
+  // without credentials a tunnel gets nothing at all (docs/canvas.md "Remote agents"); with a token it is an agent — still not this machine
+  const anonymous = await fetch(srv.url + '/api/projects', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify({ root }) })
+  assert.equal(anonymous.status, 401)
+  const { token } = access.createToken({ name: 'tunnel-agent' }, 'test')
   const viaTunnel = (p: string, body: unknown) =>
-    fetch(srv.url + p, { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify(body) })
+    fetch(srv.url + p, { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '203.0.113.9', authorization: `Bearer ${token}` }, body: JSON.stringify(body) })
   assert.equal((await viaTunnel('/api/projects', { root })).status, 403)
   assert.equal((await viaTunnel('/api/boards', { title: 't', kind: 'freeform', projectRoot: root })).status, 403)
   const b = await client.createBoard({ title: 'stay', kind: 'freeform' })
   assert.equal((await viaTunnel(`/api/boards/${b.id}/move`, { projectRoot: root })).status, 403)
-  const listed = await (await fetch(srv.url + '/api/projects', { headers: { 'x-forwarded-for': '203.0.113.9' } })).json()
+  const listed = await (await fetch(srv.url + '/api/projects', { headers: { 'x-forwarded-for': '203.0.113.9', authorization: `Bearer ${token}` } })).json()
   assert.ok(listed.projects.every((p: { root?: string }) => p.root === undefined), 'remote callers do not see local paths')
   // reading and creating in an already registered project by id works from anywhere (like every other board op)
   assert.equal((await viaTunnel('/api/boards', { title: 'remote', kind: 'freeform', project: 'shop' })).status, 201)

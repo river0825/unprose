@@ -151,7 +151,8 @@ More views of the same ideas:
 
 Early and moving fast. Working today: EventStorming, story maps, kanban, wireframes and workflows as
 files; chat on any item, selection, line or board; proposals; read receipts; Studio.
-Next: more diagram kinds, Trello / Jira / Linear sync, sign-in for shared boards, a hosted option.
+Remote and cloud agents connect with approval (pairing code or token).
+Next: more diagram kinds, Trello / Jira / Linear sync, a hosted option.
 
 More reading: [diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
 [workflow format](docs/workflow.md) · [architecture](docs/ARCHITECTURE.md).
@@ -168,10 +169,24 @@ the canvas's own machine (`http://localhost…`); through a tunnel you get the c
 Updating from a terminal works too: after `claude plugin update unprose@unprose`, a canvas running from the plugin
 notices the new version within about ten seconds and restarts on it by itself, keeping its port and boards.
 
+## Remote agents
+
+Agents on another machine and cloud agents (claude.ai connectors, ChatGPT, cloud Codex / Claude Code) connect to
+the canvas's own MCP endpoint, `https://<your canvas>/mcp` — e.g.
+`claude mcp add --transport http unprose https://canvas.example.com/mcp`, or a claude.ai custom connector with that
+URL. When one connects, the agent's browser shows a one-time **pairing code** and every open canvas page shows
+*"<agent> wants to connect"*: type the code and press **Allow** (on the canvas's own machine one click is enough).
+Or make a token on the **Connected agents** page (read or read-and-draw, all or some projects). Each agent's
+changes carry its name, and you can revoke it any time. Details: [docs/canvas.md → Remote agents](docs/canvas.md#remote-agents),
+setup per client: [docs/agents-setup.md](docs/agents-setup.md#remote-agents-another-machine-or-the-cloud).
+
 ## Safety
 
-The board has **no sign-in yet**. Anyone who can reach it can read and edit it. Keep it on
-`localhost`, or put an access proxy in front of it before sharing.
+On its own machine (`http://localhost…`) the canvas needs no sign-in, as before. Everything that comes from
+elsewhere — a tunnel, the LAN — needs a token or a browser signed in with a pairing code; tokens are stored only as
+hashes in `~/.awd/agents.json`. Upgrading, registering projects and moving boards stay possible only on the
+machine itself. Using the canvas through a tunnel already? See the migration notes in
+[docs/canvas.md](docs/canvas.md#migrating-a-canvas-you-use-through-a-tunnel).
 
 ## License
 

@@ -33,10 +33,12 @@ import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
 import { useStoredSet } from './flow/storedSet'
+import { WireBadgeContext, WireControls, MODE_NAMES, useWireView } from './flow/WireControls'
+import { applyWireMode, catchAllWires, type WireBadge } from './flow/catchAll'
 import { useBoard } from './store'
 import { RunOverlay } from './run/RunOverlay'
 import { PanelResizer, usePanelWidth } from './components/PanelResizer'
-import { isUiElement, uiTextOp, uiUndoOps } from './diagrams/uiProposal'
+import { isUiElement, uiRemoveOps, uiRemovedIds, uiTextOp, uiUndoOps } from './diagrams/uiProposal'
 import { addWire, isFlowWire, pendingOf, pickEventOp, relabelOp, removeOps, rewireOp, undoOps } from './inspector/pending'
 import { StudioControl } from './components/StudioControl'
 import { isWorkflowScope } from './diagrams/frame'
@@ -100,6 +102,17 @@ function BoardInner({ id }: { id: string }) {
   const [tool, setTool] = useState<Tool>('select')
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 900)
   const [panelWidth, setPanelWidth] = usePanelWidth()
+  // connect notifications (AccessCenter) sit in the canvas area: below the header, left of the open panel
+  useEffect(() => {
+    const root = document.documentElement.style
+    const phone = window.matchMedia('(max-width: 720px)').matches
+    root.setProperty('--access-top', 'calc(var(--header-h) + 12px)')
+    root.setProperty('--access-right', panelOpen && !phone ? `${panelWidth}px` : '0px')
+    return () => {
+      root.removeProperty('--access-top')
+      root.removeProperty('--access-right')
+    }
+  }, [panelOpen, panelWidth])
   const [nodes, setNodes] = useState<ItemNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [openComments, setOpenComment] = useStoredSet(`awd.canvas.open-comments.${id}`)
@@ -109,6 +122,19 @@ function BoardInner({ id }: { id: string }) {
   const [follow, setFollow] = useState(readFollow)
   const [handed, setHanded] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  // which wires this viewer sees (all / selected / none) and whether catch-all listeners are drawn or badges
+  const [wireView, setWireView, cycleWires] = useWireView()
+  const [expandedWires, setExpandedWires] = useState<Set<string>>(() => new Set())
+  const toggleBadge = useCallback(
+    (b: WireBadge) =>
+      setExpandedWires((prev) => {
+        const next = new Set(prev)
+        for (const w of b.wires) if (b.open) next.delete(w)
+        else next.add(w)
+        return next
+      }),
+    [],
+  )
 
   useEffect(() => {
     if (board) document.title = `${board.title} — awd canvas`
@@ -123,7 +149,8 @@ function BoardInner({ id }: { id: string }) {
   const shown = useMemo(() => (board && draftComment ? { ...board, items: { ...board.items, [draftComment.id]: draftComment } } : board), [board, draftComment])
   // kanban columns line up and grow to hold their cards, as shown (flow/kanbanAlign.ts); geometry for drags and resizes is read from this too
   const laid = useMemo(() => (shown ? alignKanban(shown) : shown), [shown])
-  const derived = useMemo(() => (laid ? boardToFlow(laid, pulse, openComments) : { nodes: [], edges: [] as Edge[] }), [laid, pulse, openComments])
+  const derived = useMemo(() => (laid ? boardToFlow(laid, pulse, openComments, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, pulse, openComments, wireView.catchAll, expandedWires])
+  const hasCatchAll = useMemo(() => (board ? catchAllWires(board).size > 0 : false), [board])
   useEffect(() => {
     setNodes((prev) => {
       const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
@@ -158,14 +185,15 @@ function BoardInner({ id }: { id: string }) {
     if (!board) return edges
     const sel = new Set(selectedIds)
     const hover = new Set([...panelHover, ...flashIds])
-    return edges.map((e) => {
+    // the viewer's wire mode (flow/catchAll.ts applyWireMode): hidden wires are not drawn, so a copied image follows too
+    return applyWireMode(edges, wireView.mode, selectedIds, board).map((e) => {
       const role = board.items[e.id]?.role
       const lit = hover.has(e.id) ? ' panel-hover' : ''
       if (role !== 'owns' && role !== 'delegates') return lit ? { ...e, className: `${e.className ?? ''}${lit}` } : e
       const on = e.selected || sel.has(e.source) || sel.has(e.target)
       return { ...e, className: (on ? 'wire-agent on' : 'wire-agent') + lit }
     })
-  }, [board, edges, selectedIds, panelHover, flashIds])
+  }, [board, edges, selectedIds, panelHover, flashIds, wireView.mode])
 
   const onNodesChange = useCallback((changes: NodeChange<ItemNode>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns))
@@ -441,6 +469,9 @@ function BoardInner({ id }: { id: string }) {
       // a flow wire picked on its own is not removed: its removal is proposed (docs/studio.md §7);
       // one already proposed for removal stays as it is (Undo in the panel takes it back)
       const now = new Date().toISOString()
+      // a UI mock element is not removed either: its removal from the file is proposed (docs/diagrams.md §6c)
+      const ui = uiRemoveOps(board, targets, now)
+      targets = targets.filter((t) => !ui.handled.includes(t))
       const flowWires = targets.filter((t) => isFlowWire(board, board.items[t]))
       const proposed = flowWires.filter((t) => pendingOf(board.items[t])?.kind !== 'remove')
       const ids = new Set<string>()
@@ -454,15 +485,17 @@ function BoardInner({ id }: { id: string }) {
         }
       }
       for (const it of Object.values(board.items)) if (it.type === 'comment' && ids.has(threadRoot(board, it.id)?.id ?? '')) ids.add(it.id)
-      const ops: Op[] = proposed.flatMap((t) => removeOps(board, board.items[t], now))
+      const ops: Op[] = [...ui.ops, ...proposed.flatMap((t) => removeOps(board, board.items[t], now))]
       for (const i of ids) if (!ops.some((o) => o.kind === 'update' && o.id === i)) ops.push({ kind: 'remove', id: i })
       if (!ops.length) return
       void commit(
         ops,
-        proposed.length && ids.size === 0 ? `proposed removing ${proposed.length} wire${proposed.length === 1 ? '' : 's'}` : `deleted ${ids.size} item${ids.size === 1 ? '' : 's'}`,
+        ui.ops.length && ids.size === 0 && !proposed.length
+          ? `proposed removing ${ui.ops.length} element${ui.ops.length === 1 ? '' : 's'}`
+          : proposed.length && ids.size === 0 ? `proposed removing ${proposed.length} wire${proposed.length === 1 ? '' : 's'}` : `deleted ${ids.size} item${ids.size === 1 ? '' : 's'}`,
       )
-      // keep a wire whose removal was just proposed selected, so the panel shows the proposal
-      select(ids.size === 0 ? flowWires : [])
+      // keep a wire (or UI element) whose removal was just proposed selected, so the panel shows the proposal
+      select(ids.size === 0 ? [...ui.handled, ...flowWires] : [])
     },
     [board, commit, select],
   )
@@ -606,6 +639,7 @@ function BoardInner({ id }: { id: string }) {
     [select],
   )
 
+  const uiRemoved = useMemo(() => (board ? uiRemovedIds(board) : new Set<string>()), [board])
   const editApi = useMemo<EditApi>(
     () => ({
       editingId,
@@ -660,8 +694,10 @@ function BoardInner({ id }: { id: string }) {
         select([iid])
         setSourceRequest({ id: iid, mode, n: Date.now() })
       },
+      commitOps: (ops, label) => void commit(ops, label),
+      uiRemoved,
     }),
-    [editingId, board, draftComment, commit, tool, addComment, openMenu, handoff, select, startEdit, commitLabel, resize, bend, setCommentOpen],
+    [editingId, board, draftComment, commit, tool, addComment, openMenu, handoff, select, startEdit, commitLabel, resize, bend, setCommentOpen, uiRemoved],
   )
 
   // ---- keyboard (capture phase so arrow keys reach us before React Flow's own handler)
@@ -737,10 +773,11 @@ function BoardInner({ id }: { id: string }) {
       else if (e.key === 'f') addItem('frame')
       else if (e.key === 'c') setTool((t) => (t === 'comment' ? 'select' : 'comment'))
       else if (e.key === '1') flow.fitView({ padding: 0.15, duration: 300 })
+      else if (e.key === 'w') store.toast(`Wires: ${MODE_NAMES[cycleWires()].toLowerCase()}`)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires])
 
   // first load → fit, or centre the deep-linked item (?focus=<id>)
   const fitted = useRef(false)
@@ -817,6 +854,7 @@ function BoardInner({ id }: { id: string }) {
       />
       <div className="canvas-wrap" ref={wrapRef} onDoubleClick={onWrapDoubleClick}>
         <EditContext.Provider value={editApi}>
+        <WireBadgeContext.Provider value={toggleBadge}>
           <ReactFlow
             nodes={shownNodes}
             edges={shownEdges}
@@ -862,9 +900,11 @@ function BoardInner({ id }: { id: string }) {
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
+            <WireControls view={wireView} onChange={setWireView} hasCatchAll={hasCatchAll} />
             <FrozenHeaders board={laid ?? board} />
             <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
           </ReactFlow>
+        </WireBadgeContext.Provider>
         </EditContext.Provider>
         {Object.keys(board.items).length === 0 && !draftComment && <EmptyBoardHint />}
         <RunOverlay board={board} />
@@ -911,7 +951,13 @@ function BoardInner({ id }: { id: string }) {
           onEditChat={(ids, text, model, edit) => void addComment(ids[0], text, { discuss: { model, about: ids, edit } })}
           onUndoUiText={(iid) => {
             const it = board.items[iid]
-            if (it) void commit(uiUndoOps(it), 'undid a text proposal')
+            if (it) void commit(uiUndoOps(it), 'undid a proposal')
+          }}
+          onUiOps={(ops, label, sel) => {
+            // select what was just added once it is on the board
+            void commit(ops, label).then(() => {
+              if (sel) select([sel])
+            })
           }}
           onDismiss={(id) => void commit([{ kind: 'remove', id }], 'dismissed a proposed story')}
           onPickWireEvent={pickWireEvent}
@@ -1034,9 +1080,9 @@ function Header({
       )}
       {kind && <span className="kind">{kind}</span>}
       <span className="spacer" />
-      <span className="presence" role="status">
+      <span className="presence" role="status" title={store.agentNames.length > 1 ? `Watching: ${store.agentNames.join(', ')}` : undefined}>
         <span className={`dot ${store.agentWatching ? 'watching' : ''}`} aria-hidden="true" />
-        <span className="label">{store.agentWatching ? 'Agent is watching' : 'Agent is away'}</span>
+        <span className="label">{watchingLabel(store.agentWatching, store.agentNames)}</span>
       </span>
       {store.board && <StudioControl boardId={store.board.id} />}
       {handed ? (
@@ -1059,6 +1105,18 @@ function Header({
           Go to…
         </button>
       )}
+      <a
+        className="home"
+        href="/agents"
+        aria-label="Connected agents"
+        title="Connected agents: tokens, connect requests"
+        onClick={(e) => {
+          e.preventDefault()
+          navigate('/agents')
+        }}
+      >
+        Agents
+      </a>
       <a className="home" href="/docs">
         Docs
       </a>
@@ -1074,6 +1132,14 @@ function Header({
       </button>
     </header>
   )
+}
+
+/** "Agent is watching", "codex-laptop is watching", "2 agents are watching". */
+export function watchingLabel(watching: boolean, names: string[]): string {
+  if (!watching) return 'Agent is away'
+  const named = names.filter((n) => n !== 'agent')
+  if (names.length > 1) return `${names.length} agents are watching`
+  return named.length === 1 ? `${named[0]} is watching` : 'Agent is watching'
 }
 
 export function navigate(path: string) {

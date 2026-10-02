@@ -6,7 +6,7 @@ import { useState } from 'react'
 import type { Board, Item } from '../../../src/model'
 import { KIND_NAMES, diagramOf, membersOf, type DiagramInfo } from '../diagrams/frame'
 import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/es'
-import { useFrameFindings } from '../diagrams/findings'
+import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
 import { REL_NAMES, tracesOf } from '../diagrams/traces'
 import { pendingOf, type Pending } from '../inspector/pending'
 import { MODELS, type DiscussModel } from '../inspector/detail'
@@ -59,7 +59,7 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         <dd>{count}</dd>
       </dl>
       <FreezeToggle board={board} diagramKey={diagram.key} />
-      {diagram.kind === 'event-storming' || diagram.kind === 'domain-story' ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
+      {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
     </section>
   )
 }
@@ -77,29 +77,39 @@ function FreezeToggle({ board, diagramKey }: { board: Board; diagramKey: string 
   )
 }
 
+const ALL_CLEAR: Record<string, string> = {
+  'domain-story': 'Every actor takes part, every work object is in a sentence, and every reference resolves.',
+  'ui-mock': 'awd design lint finds nothing: every field is known, every goto and flow has its screen, tables are even.',
+}
+
 function Findings({ findings, board, onSelect, kind }: { findings: Finding[]; board: Board; onSelect: (id: string) => void; kind: string }) {
   return (
     <section className="insp-sec">
       <h3>
-        Grammar <span className="muted">({findings.length ? `${findings.length} to look at` : 'nothing to fix'})</span>
+        {kind === 'ui-mock' ? 'Checks' : 'Grammar'} <span className="muted">({findings.length ? `${findings.length} to look at` : 'nothing to fix'})</span>
       </h3>
       {findings.length ? (
         <ul className="dg-findings">
-          {findings.map((f, i) => (
-            <li key={`${f.elementId}-${i}`}>
-              <button type="button" className="link" data-item-link={f.elementId} onClick={() => onSelect(f.elementId)} disabled={!board.items[f.elementId]}>
-                {f.message}
-              </button>{' '}
-              <span className="muted">{f.page}</span>
-            </li>
-          ))}
+          {findings.map((f, i) => {
+            const it = board.items[f.elementId]
+            return (
+              <li key={`${f.elementId}-${i}`}>
+                {f.severity === 'info' ? <span className="dg-sev info">info</span> : kind === 'ui-mock' ? <span className="dg-sev warning">warning</span> : null}{' '}
+                {it ? (
+                  // a click shows the element on the board (the panel stays on the frame); › opens its details
+                  <PanelLink id={it.id} name={nameOf(it)} className="link dg-finding" onSelect={onSelect}>
+                    {f.message}
+                  </PanelLink>
+                ) : (
+                  <span>{f.message}</span>
+                )}{' '}
+                {f.page ? <span className="muted">{f.page}</span> : it && kind === 'ui-mock' && it.data?.element ? <span className="muted mono">{String(it.data.element)}</span> : null}
+              </li>
+            )
+          })}
         </ul>
       ) : (
-        <p className="muted">
-          {kind === 'domain-story'
-            ? 'Every actor takes part, every work object is in a sentence, and every reference resolves.'
-            : 'Every command has its system, every event→command its policy, and no hotspot is open.'}
-        </p>
+        <p className="muted">{ALL_CLEAR[kind] ?? 'Every command has its system, every event→command its policy, and no hotspot is open.'}</p>
       )}
     </section>
   )

@@ -71,6 +71,16 @@ export function BoardList() {
     <main className="list-page">
       <div className="list-head">
         <h1>Boards</h1>
+        <a
+          className="docs-link"
+          href="/agents"
+          onClick={(e) => {
+            e.preventDefault()
+            navigate('/agents')
+          }}
+        >
+          Agents
+        </a>
         <a className="docs-link" href="/docs">
           Docs
         </a>

@@ -2,7 +2,7 @@
 description: Run an EventStorming of a process on the canvas
 argument-hint: <process or domain>
 ---
-<!-- generated from packages/cli/src/prompts.ts by `npm run gen:commands`; edit it there -->
+<!-- generated from packages/canvas/src/prompts.ts by `npm run gen:commands`; edit it there -->
 
 Run an EventStorming with me on the Unprose canvas about: $ARGUMENTS (if that is empty: a process in this project — ask me which one).
 1. If the scope is unclear, ask me at most three short questions (where the flow starts and ends, who is involved).

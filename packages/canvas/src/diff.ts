@@ -85,7 +85,8 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
   const find = finder(board, changes)
   for (const ch of changes) {
     if (isBookkeeping(ch)) continue
-    const who = ch.author
+    // a named agent or person signs its lines: "[7 codex-laptop] …"
+    const who = ch.by ?? ch.author
     const prefix = `[${ch.seq} ${who}]`
     const removed = new Set(ch.ops.flatMap((op) => (op.kind === 'remove' ? [op.id] : [])))
     const removedRoot = (it: Item | null | undefined) => {
@@ -233,7 +234,7 @@ export function cardMoves(board: Board, changes: Change[]): CardMove[] {
 }
 
 /** Read receipts for the user comments the agent has just been shown in `changes`. */
-export function agentSeenOps(board: Board, changes: Change[]): Op[] {
+export function agentSeenOps(board: Board, changes: Change[], agent?: string): Op[] {
   const ids = new Set<string>()
   for (const ch of changes) {
     if (ch.author !== 'user' || isBookkeeping(ch)) continue
@@ -242,7 +243,7 @@ export function agentSeenOps(board: Board, changes: Change[]): Op[] {
   const ops: Op[] = []
   for (const id of ids) {
     const it = board.items[id]
-    const op = it?.type === 'comment' && it.createdBy === 'user' && it.text?.trim() ? markSeen(it, 'agent') : undefined
+    const op = it?.type === 'comment' && it.createdBy === 'user' && it.text?.trim() ? markSeen(it, 'agent', agent) : undefined
     if (op) ops.push(op)
   }
   return ops

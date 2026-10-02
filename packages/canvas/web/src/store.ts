@@ -23,6 +23,8 @@ export interface BoardStore {
   connected: boolean
   /** true while an agent is blocked in canvas_wait on this board */
   agentWatching: boolean
+  /** The names of the agents waiting on this board (docs/canvas.md "Remote agents"); 'agent' is the default local one. */
+  agentNames: string[]
   /** Set while the server cannot save this board (disk gone, permissions…); cleared when saving works again. */
   storageError: string | null
   /** The latest "look here" request (canvas_focus / POST /focus); null once gone to or dismissed. */
@@ -87,6 +89,7 @@ export function useBoard(id: string): BoardStore {
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [agentWatching, setAgentWatching] = useState(false)
+  const [agentNames, setAgentNames] = useState<string[]>([])
   const [storageError, setStorageError] = useState<string | null>(null)
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null)
   const [changes, setChanges] = useState<Change[]>([])
@@ -161,7 +164,10 @@ export function useBoard(id: string): BoardStore {
     const stop = connectBoard(id, {
       onStatus: (open) => {
         setConnected(open)
-        if (!open) setAgentWatching(false)
+        if (!open) {
+          setAgentWatching(false)
+          setAgentNames([])
+        }
       },
       onMessage: (m: WsMessage) => {
         if (cancelled) return
@@ -178,7 +184,10 @@ export function useBoard(id: string): BoardStore {
         } else if (m.type === 'change') {
           foldChange(m.change)
         } else if (m.type === 'presence') {
-          if (m.author === 'agent') setAgentWatching(Boolean(m.watching))
+          if (m.author === 'agent') {
+            setAgentWatching(Boolean(m.watching))
+            setAgentNames(m.watching ? (m.agents ?? []) : [])
+          }
         } else if (m.type === 'focus') {
           setFocusRequest(m) // only the latest one is kept
         } else if (m.type === 'update') {
@@ -277,6 +286,7 @@ export function useBoard(id: string): BoardStore {
     error,
     connected,
     agentWatching,
+    agentNames,
     storageError,
     focusRequest,
     clearFocus: () => setFocusRequest(null),

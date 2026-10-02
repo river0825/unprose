@@ -27,7 +27,9 @@ are ignored). One canvas serves several projects; `awd boards move <board> --to 
 Register the MCP server `unprose` in your agent (see `docs/agents-setup.md`): it runs
 `node scripts/mcp.mjs` and talks to the canvas at `AWD_CANVAS_URL` (default `http://localhost:4400`).
 For a canvas elsewhere (tunnel, another host) set `AWD_CANVAS_URL=https://canvas.example.com` — a pasted
-board link works too. If it cannot be reached, the MCP server exits with
+board link works too (a canvas elsewhere wants a token — `UNPROSE_TOKEN` — or a pairing code the person types on
+the canvas; agents on other machines or in the cloud can use the canvas's own endpoint `<canvas>/mcp`, see
+`docs/canvas.md` → Remote agents). If it cannot be reached, the MCP server exits with
 `unprose MCP: cannot reach <url> (<reason>)` instead of a bare "Connection closed". The CLI takes
 `--canvas <url>`.
 

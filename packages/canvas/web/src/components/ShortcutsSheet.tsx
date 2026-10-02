@@ -49,6 +49,7 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       [`${MOD} Z`, 'Undo'],
       [`${MOD} Shift Z`, 'Redo'],
       ['1', 'Fit the whole board'],
+      ['W', 'Wires: all → selected only → none (also in the bottom-right corner)'],
       ['?', 'This list'],
     ],
   },

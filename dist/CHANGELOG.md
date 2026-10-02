@@ -6,6 +6,68 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-02
+
+> **Using the canvas through a tunnel? Read this first.** On its own machine (`http://localhost…`) nothing changes.
+> Through a tunnel or the LAN, the canvas now answers only with credentials: your browser shows a sign-in page and
+> agents pointed at the tunnel get `401`. To fix it:
+> 1. **Your browser:** choose *Ask to be let in* and approve it once from a page on `http://localhost:4400` (away
+>    from the machine: `ssh -L 4400:localhost:4400 <machine>` and open `http://localhost:4400` there), or paste a
+>    token made on the *Connected agents* page.
+> 2. **Your agents:** give them a token (`UNPROSE_TOKEN`), let the stdio MCP server show you a pairing code to type
+>    on the canvas, or connect them to `https://<tunnel>/mcp` (OAuth, approved with a code).
+> 3. **Set `UNPROSE_PUBLIC_URL=https://<tunnel>`** on the canvas so setup lines and OAuth use the tunnel address.
+>
+> Escape hatch: `UNPROSE_REMOTE_AUTH=off` restores the old open canvas (only behind your own access proxy).
+> Details: docs/canvas.md → *Migrating a canvas you use through a tunnel*.
+
+### Added
+- **Remote agents — design with agents on other machines and in the cloud.** The canvas serves MCP itself at
+  `https://<canvas>/mcp` (Streamable HTTP): claude.ai custom connectors, ChatGPT connectors, Claude Code
+  (`claude mcp add --transport http unprose https://<canvas>/mcp`), Codex, Cursor. Connecting uses OAuth 2.1
+  (discovery, dynamic registration, PKCE, refresh tokens): the agent's browser shows a one-time **pairing code**, every
+  open canvas page shows *"<agent> wants to connect"* — type the code and press Allow (one click on the canvas's own
+  machine). Agents without a browser get the same code through the device flow; the stdio MCP server pointed at a
+  remote canvas asks for one by itself. Over remote MCP `design_lint` / `design_draw` / `design_propose_stories`
+  take the file's text, and the start prompts are MCP prompts.
+- **Connected agents page** (`/agents`, *Agents* on the board list): every agent and browser let in — how, scope,
+  projects, created, last used, from where — make tokens (shown once, with setup lines for Claude Code, Codex,
+  claude.ai and the stdio server), approve waiting requests or enter a code, revoke.
+- **Who did what:** changes made with a token carry the agent's name (`[7 codex-laptop] …` in diffs and the change
+  feed), the board header names the agents watching, read receipts are per agent, and `canvas_wait({ from: 'others' })`
+  / `canvas_diff({ author: 'others' })` show the other agents' changes. A local agent can name itself with
+  `UNPROSE_AGENT_NAME`.
+- **Scopes:** read-only or read-and-draw, all or some projects or boards; a limited token sees only what it was given.
+- **UI mock frames show their lint findings.** What `awd design lint` says about a `.ui.yaml` (unknown fields, a
+  `goto` to no screen, a ragged table, an unknown icon …) is marked on the element it is about, counted on the frame
+  ("N to check") and listed in the frame's panel; a click shows the element on the board.
+- **Remove and add UI mock elements as proposals.** Delete on an element keeps it on the board, struck through, as
+  a proposal to remove it from the file; the panel's *Add element* proposes a new button, input, text, heading … in
+  the selected screen or container (or after the selected element), dashed, with its words editable. Each shows the
+  diff to the file — only the element's lines change, comments and formatting stay — with Ask AI to apply and Undo.
+- **Edit table cells and list items in place.** Double-click a cell, a list item, a tab or a navbar link on a UI
+  mock to change its words: a text proposal whose diff touches only that value.
+- **Wires: All / Selected / None.** A small control in the board's bottom-right corner (or **W**) picks which
+  wires are drawn: every one, only those of the selected blocks, or none (a wire picked in the Inspector is still
+  drawn). Remembered per viewer; nothing is stored on the board, and Copy as image follows what is shown.
+- **Catch-all listeners become badges.** On workflow boards `*.failed` listeners, cron `tick` sweeps, a trigger's
+  `resume: <event>` to every human step, and hubs (one event to 4+ blocks, or a block listening to 4+ blocks) are
+  drawn as small badges on their blocks — `on *.failed`, `resume: card.moved`, `card.moved → 2 blocks` — instead of
+  long wires across the graph. Click a badge to draw its wires, or tick *Show catch-all wires*. The rule is in
+  docs/canvas.md → Wires.
+
+### Changed
+- **Requests from elsewhere need credentials.** On its own machine the canvas works as before, with no token. Through
+  a tunnel or the LAN, the API, the board sockets and `/mcp` need a token or a browser signed in with a pairing code;
+  without one they answer `401` saying how to connect. Using the canvas through a tunnel? Sign each browser in once
+  (or set `UNPROSE_REMOTE_AUTH=off` to keep the old open canvas behind your own access proxy) — see
+  docs/canvas.md → *Migrating a canvas you use through a tunnel*. Tokens are stored only as hashes in
+  `~/.awd/agents.json`; the CLI and the stdio MCP server send `UNPROSE_TOKEN`.
+- **Wires cross fewer boxes.** A wire whose sides nobody chose now tries every pair of sides (and a loop over or
+  under) and takes the route that crosses the fewest boxes, then the shortest — e.g. `human-review.bounced` on
+  card-pipeline no longer goes up into `review` through `qa`.
+- The board's corner controls sit above a workflow board's folded run drawer instead of under it.
+
 ## [0.7.1] — 2026-10-02
 
 ### Changed
@@ -294,7 +356,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/river0825/unprose/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/river0825/unprose/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/river0825/unprose/compare/v0.6.7...v0.7.0
 [0.6.7]: https://github.com/river0825/unprose/compare/v0.6.6...v0.6.7

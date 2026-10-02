@@ -14,6 +14,8 @@ import { UpdateService } from './updater.js'
 import { detectInstall } from './updatePolicy.js'
 import { findRelease } from './release.js'
 import { runMcp } from './mcp.js'
+import { AccessService } from './access.js'
+import { defaultAgentsFile, FileAccessStore } from './adapters/access/index.js'
 import { CanvasClient } from './client.js'
 import { render, diagramKinds, contentSchemas } from './templates/index.js'
 import { demoBoards } from './demo.js'
@@ -25,6 +27,9 @@ const USAGE = `awd-canvas — a shared canvas for agents and humans
         boards dir: --dir, else $AWD_BOARDS_DIR, else $XDG_DATA_HOME/awd/boards, else ~/.awd/boards
         [--project <dir>]...   serve these projects' boards too (stored in <dir>/.unprose/boards; also registered over the API)
         [--studio-project <dir>]... [--studio-cmd "<command with {project}>"]   let the web start/stop "awd studio" for these projects only
+        [--agents-file <file>]   remote agents' tokens (hashes only), default $UNPROSE_AGENTS_FILE, else ~/.awd/agents.json
+        requests from elsewhere (a tunnel, the LAN) need a token or a signed-in browser; UNPROSE_REMOTE_AUTH=off restores the open canvas;
+        UNPROSE_PUBLIC_URL=https://… is the address agents use (OAuth issuer, board links)
         (--studio <workflow.yaml> still works: it means that file's repo)
   awd-canvas mcp                                    MCP stdio server over a running canvas server (AWD_CANVAS_URL)
   awd-canvas render <kind> <content.json>           print the items a template produces
@@ -126,9 +131,13 @@ async function main() {
         const p = store.registerProject(root) // fails loudly on a typo, at startup
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`)
       }
-      const s = await startServer({ port, store, studio, update: updateService(process.env) })
+      const agentsFile = path.resolve(flag(args, '--agents-file') ?? defaultAgentsFile())
+      const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== 'off'
+      const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth })
+      const s = await startServer({ port, store, studio, update: updateService(process.env), access })
       const where = storeKind === 'memory' ? 'in memory' : `in ${(s.store as { dir?: string }).dir ?? dir}`
       console.log(`awd-canvas listening on ${s.url}  (boards ${where})`)
+      console.log(remoteAuth ? `  remote agents: ${s.url}/mcp — requests from elsewhere need a token or approval (tokens in ${agentsFile})` : '  remote auth is OFF (UNPROSE_REMOTE_AUTH=off): anyone who reaches this server can read and write')
       for (const p of studio?.projects ?? []) console.log(`  studio can be started from the web for boards of ${p.root}`)
       if (args.includes('--open') && process.platform === 'darwin') execFile('open', [s.url], () => {})
       // Studio children never outlive the server, however it goes down.

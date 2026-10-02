@@ -577,6 +577,7 @@ flowchart LR
 | `MemoryStore` | `runtime/src/ports/memory.ts` | driven | `FileMemoryStore`（`<store>/memory/<agent>.ndjson`，從 `memory.learned` 事件重建）· `MemoryMemoryStore` | ai executor（recall）· Engine（`syncMemory`）· `awd memory` |
 | （出站 HTTP，無 port）`canvasCards` | `runtime/src/adapters/canvas/cards.ts` | driven | 對 canvas 的 `POST /cards` / `PUT` 做冪等 upsert；只有 `awd reflect --to-board` 用 | 反省 decision 層 |
 | `BoardRepository` | `canvas/src/ports/boardRepository.ts` | driven | `FileBoardRepository`（`<id>.json` + `<id>.changes.ndjson`）· `MemoryBoardRepository` | HTTP server · WS · MCP（經 HTTP）· CLI |
+| `AccessStore` | `canvas/src/ports/accessStore.ts` | driven | `FileAccessStore`（`~/.awd/agents.json`，0600，只存 sha-256）· `MemoryAccessStore` | `AccessService`（`access.ts`：token、OAuth、配對碼）· HTTP server · `/mcp`；規則在純函數的 `accessPolicy.ts`（docs/canvas.md → Remote agents） |
 
 Composition root：`runtime/src/index.ts` 的 `createRuntime({ workflow, store: 'file' | 'memory', worker, port })` 是唯一同時認識所有 adapter 的地方；CLI 的 `awd run --store memory`、golden test、`awd-canvas serve --store memory`（或 `AWD_CANVAS_STORE=memory`）都只是換一個名字。舊的進入點（`runtime/src/engine.ts`、`eventStore.ts`、`workers/*.ts`、`canvas/src/store.ts`）全部保留為相容 shim，內容只有 re-export。
 
@@ -698,6 +699,7 @@ packages/
   cli/src/index.ts   awd lint | graph | run | agents | memory | reflect | emit | status | replay | test
   canvas/src/        model · ports/boardRepository · adapters/boards/ · templates/（含 kanban、workflow 的 Agents frame）
                      diff（cardMoves）· place · thumb · server · mcp · cli · demo · docs
+                     accessPolicy（純）· access · accessRoutes（OAuth、配對碼）· remoteMcp（/mcp）· designTools · ports/accessStore · adapters/access/
   canvas/web/src/    React Flow UI；run/（RunOverlay）；flow/（nodes、kanban 版面）
 examples/card-pipeline/
   workflow.yaml · agents: + agents/architect.md · roles/ · scripts/（含 board_move.sh、reflect_to_board.sh）

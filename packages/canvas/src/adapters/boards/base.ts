@@ -3,7 +3,7 @@
 // Adapters implement the four persistence hooks.
 
 import { applyOps, isBookkeeping, isLayoutOnly, newId, type Author, type Board, type Change, type Op, type Wake } from '../../model.js'
-import { HANDOFF_NOTE, NotFound, type BoardRepository, type ChangeListener, type ChangesQuery, type CreateBoardInput, type PresenceListener, type StorageListener } from '../../ports/boardRepository.js'
+import { HANDOFF_NOTE, NotFound, type BoardRepository, type ChangeListener, type ChangesQuery, type CreateBoardInput, type PresenceListener, type StorageListener, type WaitOptions } from '../../ports/boardRepository.js'
 
 function wakes(c: Change, wake: Wake): boolean {
   if (c.note === HANDOFF_NOTE) return true
@@ -14,7 +14,8 @@ function wakes(c: Change, wake: Wake): boolean {
 export abstract class BoardRepositoryBase implements BoardRepository {
   protected boards = new Map<string, Board>()
   private subs = new Map<string, Set<ChangeListener>>()
-  private watching = new Map<string, number>()
+  /** Pending waits per board, counted per agent name. */
+  private watching = new Map<string, Map<string, number>>()
   private presenceSubs = new Set<PresenceListener>()
   private storageSubs = new Set<StorageListener>()
   /** Boards whose last save failed: the next good save announces the recovery. */
@@ -107,18 +108,18 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     this.save(id, () => this.persist(board))
     this.boards.set(id, board)
     if (input.items?.length) {
-      this.apply(id, input.items.map((item) => ({ kind: 'add', item }) as Op), author, `create: ${input.title}`)
+      this.apply(id, input.items.map((item) => ({ kind: 'add', item }) as Op), author, `create: ${input.title}`, input.by)
       board = this.boards.get(id)!
     }
     return board
   }
 
-  apply(id: string, ops: Op[], author: Author, note?: string): Change {
+  apply(id: string, ops: Op[], author: Author, note?: string, by?: string): Change {
     const board = this.boards.get(id)
     if (!board) throw new NotFound(`board ${id} not found`)
     const now = new Date().toISOString()
     const { board: next, before } = applyOps(board, ops, author, now)
-    const change: Change = { seq: board.seq + 1, ts: now, author, boardId: id, ops, before, note }
+    const change: Change = { seq: board.seq + 1, ts: now, author, boardId: id, ops, before, note, ...(by ? { by } : {}) }
     const updated: Board = { ...next, seq: change.seq }
     this.save(id, () => {
       this.appendLog(change)
@@ -147,7 +148,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   changes(id: string, q: ChangesQuery = {}): Change[] {
     if (!this.boards.has(id)) throw new NotFound(`board ${id} not found`)
     const since = q.since ?? 0
-    return this.readLog(id).filter((c) => c.seq > since && (!q.author || c.author === q.author))
+    return this.readLog(id).filter((c) => c.seq > since && (!q.author || c.author === q.author) && (!q.match || q.match(c)))
   }
 
   subscribe(id: string, fn: ChangeListener): () => void {
@@ -156,13 +157,14 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     return () => this.subs.get(id)?.delete(fn)
   }
 
-  waitFor(id: string, since: number, timeoutMs: number, author?: Author, opts: { quietMs?: number; wake?: Wake } = {}): Promise<Change[]> {
+  waitFor(id: string, since: number, timeoutMs: number, author?: Author, opts: WaitOptions = {}): Promise<Change[]> {
     const quietMs = opts.quietMs ?? 2500
     const wake = opts.wake ?? 'meaningful'
-    const matching = () => this.changes(id, { since, author }).filter((c) => !isBookkeeping(c))
+    const who = opts.who || 'agent'
+    const matching = () => this.changes(id, { since, author, match: opts.match }).filter((c) => !isBookkeeping(c))
     const existing = matching()
     if (existing.some((c) => c.note === HANDOFF_NOTE)) return Promise.resolve(existing)
-    this.setWatching(id, +1)
+    this.setWatching(id, who, +1)
     return new Promise((resolve) => {
       let woke = existing.some((c) => wakes(c, wake))
       let quiet: ReturnType<typeof setTimeout> | undefined
@@ -170,7 +172,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
         clearTimeout(deadline)
         if (quiet) clearTimeout(quiet)
         off()
-        this.setWatching(id, -1)
+        this.setWatching(id, who, -1)
         resolve(result)
       }
       const armQuiet = () => {
@@ -178,7 +180,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
         quiet = setTimeout(() => finish(matching()), quietMs)
       }
       const off = this.subscribe(id, (c) => {
-        if ((author && c.author !== author) || !wakes(c, wake)) return
+        if ((author && c.author !== author) || (opts.match && !opts.match(c)) || !wakes(c, wake)) return
         woke = true
         if (c.note === HANDOFF_NOTE) finish(matching())
         else armQuiet()
@@ -189,7 +191,13 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   }
 
   watchers(id: string): number {
-    return this.watching.get(id) ?? 0
+    let n = 0
+    for (const c of this.watching.get(id)?.values() ?? []) n += c
+    return n
+  }
+
+  watcherNames(id: string): string[] {
+    return [...(this.watching.get(id)?.entries() ?? [])].filter(([, c]) => c > 0).map(([name]) => name).sort()
   }
 
   onPresence(fn: PresenceListener): () => void {
@@ -197,12 +205,17 @@ export abstract class BoardRepositoryBase implements BoardRepository {
     return () => void this.presenceSubs.delete(fn)
   }
 
-  private setWatching(id: string, delta: number) {
-    const n = Math.max(0, (this.watching.get(id) ?? 0) + delta)
-    this.watching.set(id, n)
+  private setWatching(id: string, who: string, delta: number) {
+    let per = this.watching.get(id)
+    if (!per) this.watching.set(id, (per = new Map()))
+    const c = Math.max(0, (per.get(who) ?? 0) + delta)
+    if (c) per.set(who, c)
+    else per.delete(who)
+    const n = this.watchers(id)
+    const names = this.watcherNames(id)
     for (const fn of this.presenceSubs) {
       try {
-        fn(id, n)
+        fn(id, n, names)
       } catch {
         // never let a listener break the wait
       }

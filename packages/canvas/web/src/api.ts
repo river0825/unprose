@@ -1,6 +1,8 @@
 import type { Author, Board, Change, Op, WsMessage } from '../../src/model'
 
 async function json<T>(res: Response): Promise<T> {
+  // signed out (or never signed in) from elsewhere: the app asks who it is again and shows the sign-in screen
+  if (res.status === 401) window.dispatchEvent(new Event('unprose:signin'))
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text.slice(0, 200)}` : ''}`)

@@ -1,4 +1,4 @@
-/* Focus + context for wires (wireFocus.ts): the hovered or selected box's wires stand out, the rest step back. */
+/* Focus + context for wires (wireFocus.ts): the selected box's wires stand out, the rest step back. Hover changes nothing. */
 .react-flow__edge-path.wire-focus-off {
   opacity: 0.1;
   transition: opacity 140ms ease-out;
@@ -16,4 +16,118 @@
   .react-flow__edge-path:not(.wire-focus-off) {
     transition: none;
   }
+}
+
+/* "Wires: all / selected / none" (WireControls.tsx), left of the zoom controls in the bottom-right corner */
+.react-flow__panel.wire-controls {
+  margin-right: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.wire-modes {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  overflow: hidden;
+}
+.wire-modes-label {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--ink-3);
+  border-right: 1px solid var(--rule);
+}
+.wire-modes button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  min-height: 28px;
+  padding: 0 9px;
+  cursor: pointer;
+}
+.wire-modes button + button {
+  border-left: 1px solid var(--rule);
+}
+.wire-modes button:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.wire-modes button.on {
+  background: var(--marker-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+.wire-modes button:focus-visible,
+.wire-catchall input:focus-visible,
+.wire-badge:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+.wire-catchall {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  cursor: pointer;
+}
+
+/* catch-all listeners as badges (catchAll.ts): listeners above the block, emitters below it */
+.wire-badges {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  pointer-events: none;
+}
+.wire-badges.in {
+  bottom: calc(100% + 3px);
+  justify-content: flex-start;
+}
+.wire-badges.out {
+  top: calc(100% + 3px);
+  justify-content: flex-end;
+}
+.wire-badge {
+  pointer-events: all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border: 1px dashed var(--rule-2);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.wire-badge:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.wire-badge.open {
+  border-style: solid;
+  border-color: var(--marker);
+  color: var(--ink);
+}
+
+/* a workflow board's folded run drawer covers the bottom of the canvas: keep the corner controls above it */
+.canvas-wrap:has(.run-drawer:not(.open)) .react-flow__panel.bottom.right {
+  margin-bottom: 60px;
 }

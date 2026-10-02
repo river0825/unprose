@@ -3,6 +3,15 @@
 import path from 'node:path'
 
 export type Api = <T>(method: string, p: string, body?: unknown) => Promise<T>
+
+/**
+ * What every call to the canvas carries: `UNPROSE_TOKEN` for a canvas elsewhere (docs/canvas.md "Remote
+ * agents"), else `UNPROSE_AGENT_NAME` so a local canvas can sign this agent's changes with its name.
+ */
+export function canvasHeaders(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  if (env.UNPROSE_TOKEN) return { authorization: `Bearer ${env.UNPROSE_TOKEN}` }
+  return env.UNPROSE_AGENT_NAME ? { 'x-unprose-agent': env.UNPROSE_AGENT_NAME } : {}
+}
 type Summary = { id: string; title: string; kind: string; project?: string }
 
 /** Register `root` as a project on the canvas; undefined when the canvas does not take it (remote, old server, memory store). */
@@ -40,7 +49,7 @@ export async function cmdBoards(args: string[], flags: Record<string, string | b
   }
   const base = ((typeof flags.canvas === 'string' && flags.canvas) || process.env.AWD_CANVAS_URL || 'http://localhost:4400').replace(/\/$/, '')
   const api: Api = async <T,>(method: string, p: string, body?: unknown): Promise<T> => {
-    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await fetch(base + p, { method, headers: { 'content-type': 'application/json', ...canvasHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) })
     const text = await res.text()
     if (!res.ok) throw new Error(`${method} ${p} → ${res.status} ${text.slice(0, 300)}`)
     return JSON.parse(text) as T

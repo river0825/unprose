@@ -8,6 +8,7 @@ import { useEdit } from '../EditContext'
 import { SCALES_FONT, fontOf } from '../font'
 import { DsIconNode } from './DsIconNode'
 import { UiNode } from './UiNode'
+import { WireBadges } from '../WireControls'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -85,10 +86,25 @@ export function Shell({
     >
       {handles && SIDES.map((side) => <Handle key={side} id={side} type="source" position={side} />)}
       <Tether />
-      {item.type !== 'comment' && item.type !== 'arrow' && item.data?.pending ? <span className="node-tag" aria-label="proposed, not in the file yet">proposed</span> : null}
+      {item.type !== 'comment' && item.type !== 'arrow' && item.data?.pending ? <ProposedTag kind={(item.data.pending as { kind?: string }).kind} /> : null}
       {children}
     </div>
     </>
+  )
+}
+
+/** "proposed" on an item the file does not have yet; a removal says so. */
+function ProposedTag({ kind }: { kind?: string }) {
+  if (kind === 'remove')
+    return (
+      <span className="node-tag remove" aria-label="proposed for removal, still in the file">
+        remove · proposed
+      </span>
+    )
+  return (
+    <span className="node-tag" aria-label="proposed, not in the file yet">
+      proposed
+    </span>
   )
 }
 
@@ -174,7 +190,7 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
         ) : null}
         {edit.editingId === item.id ? <Text item={item} /> : item.text}
         {data.diagram?.findings ? (
-          <span className="dg-findings-count" title="Grammar findings — select the frame to see them">
+          <span className="dg-findings-count" title={data.diagram.kind === 'ui-mock' ? 'awd design lint findings — select the frame to see them' : 'Grammar findings — select the frame to see them'}>
             {data.diagram.findings} to check
           </span>
         ) : null}
@@ -250,6 +266,7 @@ export function CardNode({ data, selected }: NodeProps<ItemNode>) {
       <Text item={item} placeholder="Write here" />
       {script && <ScriptButton item={item} file={script.file} />}
       <RoleLabel role={item.role} />
+      <WireBadges badges={data.wireBadges} />
     </Shell>
   )
 }
