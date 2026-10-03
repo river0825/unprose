@@ -24,6 +24,14 @@ if (missing.length) {
   process.exit(1)
 }
 
+// PNG snapshots: the bundle has no node_modules, so the canvas downloads resvg's native for its platform, pinned to
+// the lockfile's version + sha512 (packages/canvas/src/resvgPins.ts) — refuse to ship pins that drifted from it
+const { pinsSource, currentLock, PINS_FILE } = await import('./resvg-pins.mjs')
+if (fs.readFileSync(PINS_FILE, 'utf8') !== pinsSource(currentLock())) {
+  console.error('bundle: packages/canvas/src/resvgPins.ts is out of date with package-lock.json — run `node scripts/resvg-pins.mjs` and `npm run build`')
+  process.exit(1)
+}
+
 fs.rmSync(out, { recursive: true, force: true })
 fs.mkdirSync(out, { recursive: true })
 const common = {

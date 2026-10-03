@@ -6,6 +6,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import WebSocket from 'ws'
+import type { WsMessage } from '../src/model.js'
 import { startServer, type RunningServer } from '../src/server.js'
 import { AccessService, MAX_CODE_ATTEMPTS } from '../src/access.js'
 import { MemoryAccessStore } from '../src/adapters/access/index.js'
@@ -157,4 +159,44 @@ test('manage-rights requests: five wrong codes lock them; the same per-address l
   const c2 = await remoteBrowser('198.51.100.52')
   statuses.push((await send('POST', '/api/access/manage-request', {}, { 'x-forwarded-for': ip, 'cf-connecting-ip': ip, cookie: c2 })).status)
   assert.deepEqual(statuses, [429])
+})
+
+test('the server socket: connect requests reach every page that may approve, manage-rights requests only pages that may manage', async () => {
+  const at = (ip: string, extra: Record<string, string> = {}) => ({ 'x-forwarded-for': ip, 'cf-connecting-ip': ip, ...extra })
+  const listen = async (headers: Record<string, string>) => {
+    const heard: WsMessage[] = []
+    const ws = new WebSocket(`ws://127.0.0.1:${srv.port}/ws`, { headers })
+    ws.on('message', (d) => heard.push(JSON.parse(String(d))))
+    await new Promise((r) => ws.once('open', r))
+    return { ws, heard }
+  }
+  const requests = (heard: WsMessage[]) => heard.flatMap((m) => (m.type === 'access-request' ? [m.request] : []))
+  const plain = await listen(at('198.51.100.70', { cookie: await remoteBrowser('198.51.100.70') }))
+  const manager = await listen(at('198.51.100.71', { cookie: await remoteBrowser('198.51.100.71', true) }))
+  const local = await listen({ host: 'localhost', origin: 'http://localhost' })
+
+  // a browser asks for manage rights; another browser asks to connect
+  const asker = await remoteBrowser('198.51.100.76') // signed in from one address, asks from another
+  assert.equal((await send('POST', '/api/access/manage-request', {}, at('198.51.100.72', { cookie: asker }))).status, 200)
+  assert.equal((await send('POST', '/api/access/signin', {}, at('198.51.100.73'))).status, 200)
+  await new Promise((r) => setTimeout(r, 80))
+
+  // the two requests of this test (the sign-ins above, and earlier tests, are requests too)
+  const vias = (heard: WsMessage[]) => [...new Set(requests(heard).filter((r) => r.ip === '198.51.100.72' || r.ip === '198.51.100.73').map((r) => `${r.via} ${r.ip}`))].sort()
+  assert.deepEqual(vias(plain.heard), ['browser 198.51.100.73'], 'a signed-in browser without manage rights: the connect request only')
+  assert.ok(!requests(plain.heard).some((r) => r.via === 'manage'), 'nothing about who asked for manage rights, or from where')
+  assert.deepEqual(vias(manager.heard), ['browser 198.51.100.73', 'manage 198.51.100.72'], 'a browser with manage rights: both')
+  assert.deepEqual(vias(local.heard), ['browser 198.51.100.73', 'manage 198.51.100.72'], 'this machine: both')
+
+  // a page that opens later gets the pending requests it may see, by the same rule
+  const late = await listen(at('198.51.100.70', { cookie: await remoteBrowser('198.51.100.74') }))
+  const lateManager = await listen(at('198.51.100.71', { cookie: await remoteBrowser('198.51.100.75', true) }))
+  await new Promise((r) => setTimeout(r, 80))
+  assert.ok(requests(late.heard).some((r) => r.via === 'browser' && r.ip === '198.51.100.73'))
+  assert.ok(!requests(late.heard).some((r) => r.via === 'manage'), 'no manage-rights requests in the backlog of a page that may not manage')
+  assert.ok(requests(lateManager.heard).some((r) => r.via === 'manage' && r.ip === '198.51.100.72'))
+
+  const ref = access.pendingViews().find((p) => p.via === 'manage' && p.ip === '198.51.100.72')!.id
+  assert.equal((await send('POST', `/api/access/requests/${ref}`, { allow: false }, localPage())).status, 200)
+  for (const s of [plain, manager, local, late, lateManager]) s.ws.close()
 })

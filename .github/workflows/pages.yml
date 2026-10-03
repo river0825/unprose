@@ -1,0 +1,41 @@
+# Publish the project website (site/) to GitHub Pages on every push to main.
+# Static files, no build: the only step fills the footer's version from package.json.
+name: pages
+on:
+  push:
+    branches: [main]
+    paths: [site/**, package.json, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # only the public repository has Pages
+    if: github.repository == 'river0825/unprose'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: stamp the version
+        run: |
+          set -euo pipefail
+          v="$(node -p "require('./package.json').version")"
+          for f in site/index.html site/zh-TW/index.html; do
+            sed -i "s#<span data-version></span>#<span data-version> · v$v</span>#" "$f"
+          done
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

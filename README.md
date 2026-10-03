@@ -2,7 +2,7 @@
 
 **Talk designs through with your AI agent on a shared board, not in walls of text.**
 
-[繁體中文](README.zh-TW.md) · Works with Claude Code, Codex and any MCP agent · Apache-2.0
+[Website](https://river0825.github.io/unprose/) · [繁體中文](README.zh-TW.md) · Works with Claude Code, Codex and any MCP agent · Apache-2.0
 
 ![Ask about an item on the board; the agent answers in the thread and updates the diagram](docs/images/demo.gif)
 

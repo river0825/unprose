@@ -2,7 +2,7 @@
 
 **和你的 AI agent 在同一張 board 上討論設計，而不是來回貼一大段文字。**
 
-[English](README.md) · 支援 Claude Code、Codex 和任何 MCP agent · Apache-2.0
+[網站](https://river0825.github.io/unprose/zh-TW/) · [English](README.md) · 支援 Claude Code、Codex 和任何 MCP agent · Apache-2.0
 
 ![在 board 上針對某個項目提問，agent 在對話串回覆並更新圖](docs/images/demo.gif)
 

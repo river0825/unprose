@@ -283,7 +283,7 @@ export class CanvasClient {
     return this.req<{ findings: Array<{ id: string; kind: string; message: string; suggestion: string; others?: string[]; frame?: string }>; checked: number; frame?: string; counts: Record<string, number> }>('GET', `/api/boards/${encodeURIComponent(id)}/layout?${q}`)
   }
   /** A server-side render: PNG bytes when the canvas can rasterize, else the SVG text; `info` says what is in it. */
-  async snapshot(id: string, o: { frame?: string; ids?: string[]; scale?: number; maxPx?: number; theme?: 'light' | 'dark'; format?: 'png' | 'svg' } = {}): Promise<{ mime: string; png?: Buffer; svg?: string; info: { width: number; height: number; scale: number; items: number; region: { x: number; y: number; w: number; h: number }; notes: string[] } }> {
+  async snapshot(id: string, o: { frame?: string; ids?: string[]; scale?: number; maxPx?: number; theme?: 'light' | 'dark'; format?: 'png' | 'svg' } = {}): Promise<{ mime: string; png?: Buffer; svg?: string; info: { width: number; height: number; scale: number; items: number; region: { x: number; y: number; w: number; h: number }; notes: string[]; renderer?: string } }> {
     const q = new URLSearchParams()
     addQuery(q, o)
     let res: Response
@@ -298,7 +298,7 @@ export class CanvasClient {
       throw new Error(body.error ?? `${res.status} ${res.statusText}`)
     }
     const mime = (res.headers.get('content-type') ?? '').split(';')[0]
-    let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [] as string[] }
+    let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [] as string[], renderer: undefined as string | undefined }
     try {
       info = { ...info, ...(JSON.parse(res.headers.get('x-unprose-snapshot') ?? '{}') as Partial<typeof info>) }
     } catch {

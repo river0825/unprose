@@ -6,6 +6,39 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-10-03
+
+### Added
+- **`canvas_snapshot` returns a PNG on every install.** resvg (`@resvg/resvg-js`) is now an optional dependency of the
+  canvas, so a checkout draws PNGs out of the box. The plugin, which ships a bundle without `node_modules`, downloads
+  this platform's prebuilt resvg native (~2 MB) from the npm registry on the first PNG request, once, into
+  `${CLAUDE_PLUGIN_DATA}/native/resvg/<version>/`:
+  - pinned to the exact version and sha512 integrity in `package-lock.json` (baked into the build,
+    `scripts/resvg-pins.mjs`); a tarball that does not match is never unpacked;
+  - only the `.node` file is extracted — no install scripts run; a lock keeps two canvases from downloading at once;
+  - offline, an unsupported platform or a mismatch → the SVG with a one-line reason, as before.
+  - `UNPROSE_SNAPSHOT_PNG=never-download` never uses the network, `download` prefers the downloaded native, `0` turns
+    PNG off; `UNPROSE_NPM_REGISTRY` sets a mirror.
+- The snapshot says which renderer drew it (`renderer: resvg 2.6.2 (npm package …)`, `… (downloaded native, <path>)`
+  or `svg`; HTTP: `renderer` in `x-unprose-snapshot`).
+- **Project website** at https://river0825.github.io/unprose/ (English and 繁體中文): a static page in `site/`, deployed to
+  GitHub Pages from the public repository by `.github/workflows/pages.yml`; linked from both READMEs.
+
+### Fixed
+- **Redrawing an unchanged kanban moves nothing.** The first redraw of a kanban frame used to shift every column
+  and card 20 px up and left (`awd design draw --dry-run` listed "x, y" on each): a new frame grew out by its
+  padding around content that starts at its corner, and the redraw then drew from the frame's corner. Content
+  that starts closer to the frame's corner than its padding is now moved in by the difference on the first draw
+  and every redraw alike, so a redraw of an unchanged file — also with a moved or locked column — changes nothing.
+- **Requests for manage rights reach only pages that may manage.** The `/ws` socket sent them (the requester's
+  name and address) to every page that may approve connect requests, including signed-in browsers without manage
+  rights. Now only pages on the canvas machine and browsers with manage rights get them (also in the backlog sent
+  when a page connects); connect requests still go to every page that may approve, and pages opened from
+  elsewhere still get them without local paths.
+- A snapshot whose notes held a non-ASCII character (a reason's dash) failed with "Invalid character in header
+  content"; the `x-unprose-snapshot` header now escapes it.
+
+
 ## [0.11.0] — 2026-10-02
 
 ### Changed
@@ -609,7 +642,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/river0825/unprose/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/river0825/unprose/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/river0825/unprose/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/river0825/unprose/compare/v0.9.1...v0.9.2

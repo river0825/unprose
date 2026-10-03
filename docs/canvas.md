@@ -10,7 +10,7 @@ packages/canvas/
   src/templates/          pure render(kind, content) → Item[]   (the agent never computes pixels) — seven kinds
   src/diff.ts             summarize(changes) → lines the agent reads · filterChanges / diffSummary / pageLines · cardMoves(board, changes)
   src/outline.ts · read.ts   the outline (diagram frame → lane / column → items) · readBoard: filters, formats, pages, size cap
-  src/snapshot.ts · raster.ts   server-side SVG of a frame / items / the board (PNG with the optional @resvg/resvg-js)
+  src/snapshot.ts · raster.ts   server-side SVG of a frame / items / the board; PNG with resvg (npm package, else a pinned download)
   src/layoutCheck.ts · shown.ts · textMetrics.ts   layout findings · where the page draws things (kanban) · text metrics
   src/place.ts · thumb.ts · docs.ts   auto-place agent comments · board thumbnails · the /docs site
   src/server.ts           HTTP + WebSocket API, serves web/dist and /docs
@@ -70,7 +70,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
 | `canvas_wait` | `id, since, timeoutSec = 300 (≤ 1800), quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, untilMention = false, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short. `untilMention: true` wakes only when you are addressed personally (an @mention, a reply in a thread you were mentioned or asked in, a proposal to files you hold). Nothing for you within `timeoutSec`: one line, `nothing new on b_x (seq 93; 2 change(s) for others) — wait again with since: 93` ([Watching cheaply](#watching-cheaply)) |
-| `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image when the canvas has a rasterizer, else the SVG text ([Seeing the board](#seeing-the-board)) |
+| `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image (resvg), else the SVG text; the result names the renderer ([Seeing the board](#seeing-the-board)) |
 | `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden / on a card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban) — each with a suggestion; the same list is in the frame panel |
 | `canvas_approve` | `code, scope?, name?, board?` | **local agent only** (never on `/mcp`): approve a connect request by the pairing code the person read out; logged on `board` ([Who may approve and manage](#who-may-approve-and-manage)) |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
@@ -214,15 +214,41 @@ and labels (traces dotted, proposals dashed), comment badges with their message 
 the union of `ids` (a container brings its contents), or the whole board; it is scaled down to fit `maxPx` (at most
 4000) with a note saying so. Colours are literal (no CSS variables), so any SVG rasterizer can draw it.
 
-**PNG** needs a rasterizer: when the optional package [`@resvg/resvg-js`](https://github.com/yisibl/resvg-js) is
-installed next to the canvas, the tool returns an MCP image (`image/png`); without it, the SVG text, and the result says
-so (`UNPROSE_SNAPSHOT_PNG=0` turns PNG off). Over HTTP: `GET /api/boards/:id/snapshot?frame=&ids=&scale=&maxPx=&theme=&format=png|svg`
-→ `image/png` or `image/svg+xml`, with `x-unprose-snapshot: { width, height, scale, items, region, notes }`.
+**PNG** is drawn by [resvg](https://github.com/yisibl/resvg-js) (`src/raster.ts`). The canvas finds it on the first PNG
+request, once, in this order:
+
+1. **the npm package `@resvg/resvg-js`** — an optional dependency of `@awd/canvas`, so a checkout (`npm install`) has it
+   for its platform;
+2. **a native it downloaded before**, in `${CLAUDE_PLUGIN_DATA:-~/.awd/plugin}/native/resvg/<version>/` — the plugin
+   ships an esbuild bundle without `node_modules`, and a native addon cannot be bundled;
+3. **a download** of this platform's prebuilt `@resvg/resvg-js-<platform>-<arch>` tarball (~2 MB) from the npm registry
+   (darwin arm64 / x64, linux x64 / arm64 glibc / musl, linux arm, win32 x64 / arm64 / ia32, android arm64 / arm). Its
+   exact version and sha512 integrity come from `package-lock.json`, baked into the build (`src/resvgPins.ts`, written
+   by `node scripts/resvg-pins.mjs`; the bundle and the tests refuse pins that drifted from the lockfile). The tarball
+   is checked against that sha512 before anything is unpacked; only its one `.node` file is extracted (no install
+   scripts, no other files, no links), written atomically next to a manifest with its sha-256, and loaded from there.
+   A lock directory keeps two canvases from downloading at once.
+
+If none works — offline, a platform resvg does not publish, an integrity mismatch — the snapshot is the SVG text with a
+one-line reason (a failed download is tried again after 10 minutes). The result says what drew it: `renderer: resvg
+2.6.2 (npm package @resvg/resvg-js)`, `resvg 2.6.2 (downloaded native, <path>)` or `svg`. Size and scale limits are the
+same for both.
+
+| `UNPROSE_SNAPSHOT_PNG` | |
+|---|---|
+| unset / `auto` | package → downloaded native → download |
+| `never-download` | package → downloaded native; never the network (air-gapped machines) |
+| `download` | skip the package, use (or fetch) the downloaded native — what a plugin install does, from a checkout |
+| `0` | no PNG, always SVG |
+
+`UNPROSE_NPM_REGISTRY` points the download at a mirror (default `https://registry.npmjs.org`); the sha512 still has to
+match. Over HTTP: `GET /api/boards/:id/snapshot?frame=&ids=&scale=&maxPx=&theme=&format=png|svg` → `image/png` or
+`image/svg+xml`, with `x-unprose-snapshot: { width, height, scale, items, region, notes, renderer }`.
 
 ```
 canvas_snapshot({ id, frame: "studio-kanban" })
-snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region x 7396 y -48 w 1200 h 716
-[image/png]   — or, without a rasterizer: "No PNG on this canvas — SVG follows (4402 characters): <svg …"
+snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region x 7396 y -48 w 1200 h 716, renderer: resvg 2.6.2 (npm package @resvg/resvg-js)
+[image/png]   — or, without a rasterizer: "…, renderer: svg / no PNG rasterizer: <why> / No PNG on this canvas — SVG follows (4402 characters): <svg …"
 ```
 
 **Layout check.** `canvas_check_layout { id, frame?, limit? }` (`GET /api/boards/:id/layout?frame=` → `{ findings, counts,
@@ -272,7 +298,7 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | Focus the person's page ("look here") | – (the person navigates; Go-to palette) | – | `canvas_focus` | `canvas_focus` |
 | Board settings: context, *Answered by* | header menu (sets it), context panel | – | `canvas_context` (context; *Answered by* only as a suggestion) | same |
 | Ask another agent | `@name` in a comment | – | `canvas_ask` | `canvas_ask` |
-| **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG with the optional `@resvg/resvg-js` installed next to the canvas, else SVG) | `canvas_snapshot` (same) |
+| **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG via resvg: the npm package in a checkout, a pinned, sha512-checked native download for the plugin; else SVG with the reason; the result names the renderer) | `canvas_snapshot` (same) |
 | **Layout check** (overlaps, cut-off text, oversized, drawn elsewhere) | frame panel → *Layout* | `GET /api/boards/:id/layout` | `canvas_check_layout` | `canvas_check_layout` |
 | Replay a board's history | Replay bar | – (`awd replay` replays a *workflow's* event log) | – | – |
 | Approve a pairing code / OAuth client | Connected agents → *Enter a code*, the notification | – | `canvas_approve` (the agent on the canvas machine only, a code the person read out; logged) | – (never) |
@@ -753,7 +779,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | GET | `/api/boards/:id/changes` | `?since=N&author=&frame=&from=&kinds=` | `{ changes: Change[], seq }` — `frame` / `from` / `kinds` keep only the ops that pass ([Reading big boards](#reading-big-boards)) |
 | GET | `/api/boards/:id/diff` | `?since=N&author=&frame=&from=&kinds=&summary=1&last=&limit=&cursor=&maxChars=&moves=each` | `{ lines: string[], count, total, from, seq, nextCursor?, more?, summary? }` — a page of lines under the size cap (40 000 characters by default); with `summary=1`, `summary` (counts by who × kind × frame + the last lines) and no lines |
 | GET | `/api/boards/:id/read` | `?format=outline\|json\|summary&frame=&types=&ids=&text=&fields=&limit=&cursor=&maxChars=&items=1` | `{ format, text, matched, seq, nextCursor?, more? }` (`items=1`: also the json page as an array) |
-| GET | `/api/boards/:id/snapshot` | `?frame=&ids=&scale=&maxPx=&theme=light\|dark&format=png\|svg` | `image/png` (with `@resvg/resvg-js`) or `image/svg+xml`; header `x-unprose-snapshot: { width, height, scale, items, region, notes }` |
+| GET | `/api/boards/:id/snapshot` | `?frame=&ids=&scale=&maxPx=&theme=light\|dark&format=png\|svg` | `image/png` (resvg) or `image/svg+xml`; header `x-unprose-snapshot: { width, height, scale, items, region, notes, renderer }` (non-ASCII as `\u` escapes) |
 | GET | `/api/boards/:id/layout` | `?frame=&limit=` | `{ findings: [{ id, kind, message, suggestion, others?, frame? }], counts, checked, frame?, lines }` |
 | POST | `/api/approve` | `{ code, scope?: 'read', name?, board? }` | `{ status, approved: { name, via, scope, ip }, audit, seq? }` — the local agent only (`canvas_approve`); `403` for tokens, sessions, browsers and anything not from loopback, `404` an unknown code, `429` after ten wrong ones |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
@@ -786,7 +812,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | POST/GET | `/api/access/manage-request` · `/api/access/manage-request/:id` | | a signed-in browser that may not manage asks for the right → `{ id, code, expiresAt }` · its status (`pending` / `approved` / `denied` / `expired`); approved with `/api/access/requests/:id` or `/api/access/approve` by a page that manages |
 | GET | `/api/access/feedback` | | `{ feedback }` — the agents page's *Feedback from agents* (manage only) |
 | GET/POST | `/api/access/requests` · `/api/access/requests/:id` · `/api/access/approve` | `{ allow, scope?, projects?, boards?, name?, code?, manage? }` · `{ code, … }` | pending requests · allow / deny one · allow the one whose code this is |
-| WS | `/ws` | | the server socket: `access-request` / `access-resolved` (pages that may approve), `access-changed` |
+| WS | `/ws` | | the server socket: `access-request` / `access-resolved` (pages that may approve; a request for manage rights only to pages that may manage), `access-changed` |
 | WS | `/ws/:id` | | `{ type:'hello', board }` then `{ type:'change', change }` per change |
 
 Every `Change` carries `before` — a snapshot of each touched item before the change — so diffs never need a second read, and `by` when a named agent or person made it. CORS is open for the board API and the OAuth endpoints; the approve / manage API (`/api/access/…`) is same-origin only. From elsewhere every `/api` route except `version` and `kinds` needs credentials ([Remote agents](#remote-agents)); `?author=others` on `changes` / `diff` / `wait` means everyone but the calling agent.

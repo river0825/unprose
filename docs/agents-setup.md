@@ -59,6 +59,9 @@ when it starts):
      "a canvas vX is already running … not started by the plugin; restart it to get vY".
    `/reload-plugins` does not run the SessionStart hook, but it restarts the MCP server, which runs this check.
    A remote canvas is never started or stopped; you only get a note if its version differs.
+   The PNG rasterizer for `canvas_snapshot` is not part of the runtime: the canvas downloads it later, on the first
+   PNG request, into `${CLAUDE_PLUGIN_DATA}/native/resvg/<version>/` (checked against the lockfile's sha512; see
+   docs/canvas.md "Seeing the board").
 3. The `canvas_autostart` option (or `AWD_CANVAS_AUTOSTART=0`) turns step 2 off (you start the canvas yourself). The hook prints at most a few
    short lines, and nothing when all is well. Its log: `${CLAUDE_PLUGIN_DATA}/canvas.log`.
 
@@ -334,8 +337,11 @@ canvas_wait { id, since, frame: "checkout-es", kinds: ["comment"] }   → wake o
 
 **Look before you ask the person to look.** After you draw or redraw by hand (`canvas_apply`, `canvas_add_items`):
 
-- `canvas_snapshot { id, frame: "<key>" }` is a picture of the frame as the page draws it: a PNG image when the canvas
-  has `@resvg/resvg-js` installed, the SVG text otherwise. Check the sizes, the overlaps and the text that does not fit.
+- `canvas_snapshot { id, frame: "<key>" }` is a picture of the frame as the page draws it: a PNG image, else the SVG
+  text with the reason. A checkout has resvg from npm; the plugin downloads this platform's prebuilt resvg native
+  (~2 MB, pinned version + sha512 from the lockfile) once, on the first PNG request, into
+  `${CLAUDE_PLUGIN_DATA}/native/resvg/<version>/` (`UNPROSE_SNAPSHOT_PNG=never-download` keeps it off the network,
+  `0` turns PNG off — docs/canvas.md "Seeing the board"). Check the sizes, the overlaps and the text that does not fit.
 - `canvas_check_layout { id, frame: "<key>" }` gives the same problems in words, each with a fix:
   - stickies far larger than the template's 160×110 (do not scale them up to fill space);
   - text cut off in its box;

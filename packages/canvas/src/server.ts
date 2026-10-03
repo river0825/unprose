@@ -180,6 +180,11 @@ export function blockedUserAgent(ua: string | undefined): boolean {
 }
 
 /** One sentence for a 401 / 403 when the caller's User-Agent would be blocked behind Cloudflare (docs/agents-setup.md). */
+/** JSON for an HTTP header: non-ASCII (a reason's dash, a path) as \u escapes — header values must be Latin-1. */
+export function headerJson(v: unknown): string {
+  return JSON.stringify(v).replace(/[^\x20-\x7e]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+}
+
 function userAgentHint(req: http.IncomingMessage): string {
   const ua = req.headers['user-agent']
   return blockedUserAgent(typeof ua === 'string' ? ua : undefined)
@@ -984,15 +989,15 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const theme = url.searchParams.get('theme') ?? 'light'
         if (theme !== 'light' && theme !== 'dark') throw new HttpError(400, 'theme must be light or dark')
         const snap = agentScale(() => renderSnapshot(board, { frame: url.searchParams.get('frame') || undefined, ids: listParam(url, 'ids'), scale: numParam(url, 'scale'), maxPx: numParam(url, 'maxPx'), theme }))
-        const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes }
-        const head = { 'cache-control': 'no-store', 'x-unprose-snapshot': JSON.stringify(info), 'access-control-expose-headers': 'www-authenticate, mcp-session-id, x-unprose-snapshot' }
+        const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes, renderer: 'svg' }
+        const head = { 'cache-control': 'no-store', 'x-unprose-snapshot': headerJson(info), 'access-control-expose-headers': 'www-authenticate, mcp-session-id, x-unprose-snapshot' }
         if (format === 'png') {
           const r = await svgToPng(snap.svg)
           if (r.png) {
-            res.writeHead(200, { 'content-type': 'image/png', ...head })
+            res.writeHead(200, { 'content-type': 'image/png', ...head, 'x-unprose-snapshot': headerJson({ ...info, renderer: r.renderer }) })
             return void res.end(r.png)
           }
-          res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', ...head, 'x-unprose-snapshot': JSON.stringify({ ...info, notes: [...snap.notes, r.why] }) })
+          res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', ...head, 'x-unprose-snapshot': headerJson({ ...info, notes: [...snap.notes, r.why] }) })
           return void res.end(snap.svg)
         }
         res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', ...head })
@@ -1126,15 +1131,17 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       const url = new URL(req.url ?? '/', 'http://localhost')
       const { grant } = await access.authenticate(req)
       if (!grant) return refuse(socket, '401 Unauthorized')
-      // the server socket: connect requests for pages that may approve them (docs/canvas.md "Remote agents")
+      // the server socket: connect requests for pages that may approve them, requests for manage rights only for
+      // pages that may manage (docs/canvas.md "Remote agents", "Who may approve and manage")
       if (url.pathname === '/ws') {
-        const approver = localPage(req, grant) || (grant.as === 'browser' && sameOrigin(req))
+        const local = localPage(req, grant)
+        const approver = local || (grant.as === 'browser' && sameOrigin(req))
         return wss.handleUpgrade(req, socket, head, (ws) => {
           if (grant.kind === 'local') localSockets.add(ws)
           serverSockets.add(ws)
           if (approver) {
-            approvers.add(ws)
-            for (const request of access.pendingViews()) ws.send(JSON.stringify({ type: 'access-request', request } satisfies WsMessage))
+            approvers.set(ws, local ? 'local' : (grant.agentId ?? ''))
+            for (const request of access.pendingViews({ manage: managesNow(ws) })) sendAccess(ws, { type: 'access-request', request })
           }
           const off = () => {
             serverSockets.delete(ws)
@@ -1151,12 +1158,23 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       wss.handleUpgrade(req, socket, head, (ws) => onBoardSocket(ws, grant, board.id))
     })().catch(() => refuse(socket, '500 Internal Server Error'))
   })
-  /** Pages on the server socket, and those of them that may approve connect requests. */
+  /** Pages on the server socket, and those of them that may approve connect requests ('local', or the browser session's id). */
   const serverSockets = new Set<WebSocket>()
-  const approvers = new Set<WebSocket>()
+  const approvers = new Map<WebSocket, string>()
+  /** May this approving page manage agents — now (manage rights can be given or the session revoked while it is open)? */
+  const managesNow = (ws: WebSocket): boolean => {
+    const who = approvers.get(ws)
+    if (who === 'local') return true
+    return !!who && access.list().some((a) => a.id === who && a.manage && !a.revokedAt)
+  }
+  // a page opened from elsewhere never sees this machine's paths
+  const sendAccess = (ws: WebSocket, e: WsMessage) => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(localSockets.has(ws) ? e : redactPaths(e)))
+  }
   const offAccess = access.onEvent((e) => {
-    const msg = JSON.stringify(e satisfies WsMessage)
-    for (const ws of e.type === 'access-changed' ? serverSockets : approvers) if (ws.readyState === WebSocket.OPEN) ws.send(msg)
+    if (e.type === 'access-changed') for (const ws of serverSockets) sendAccess(ws, e)
+    // a request for manage rights (who asks, from which address) goes only to pages that may give that right
+    else for (const ws of approvers.keys()) if (e.type !== 'access-request' || e.request.via !== 'manage' || managesNow(ws)) sendAccess(ws, e)
   })
   const presence = (id: string): WsMessage => ({ type: 'presence', author: 'agent', at: new Date().toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id), seen: store.watcherSeen(id) })
   const onBoardSocket = (ws: WebSocket, grant: Grant, boardId: string) => {

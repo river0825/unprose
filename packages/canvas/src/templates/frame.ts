@@ -32,7 +32,7 @@ function rightOfEverything(boardItems: Record<string, Item>): { x: number; y: nu
  */
 export function placeInFrame(boardItems: Record<string, Item>, req: FrameRequest, rendered: Item[], now: string): { frame: Item; items: Item[] } {
   const frameId = diagramFrameId(req.key)
-  const children = rendered.map((it) => (it.type === 'arrow' || it.parent ? it : { ...it, parent: frameId }))
+  const children = inset(rendered, frameOrigin(boardItems, req)).map((it) => (it.type === 'arrow' || it.parent ? it : { ...it, parent: frameId }))
   const diagram: DiagramSpec = { kind: req.kind, key: req.key, ...(req.source ? { source: req.source } : {}), ...(req.level ? { level: req.level } : {}) }
   const existing = boardItems[frameId]
   let frame: Item
@@ -44,6 +44,21 @@ export function placeInFrame(boardItems: Record<string, Item>, req: FrameRequest
     frame = fit(base, children.filter((c) => c.type !== 'arrow'), PAD / 2, LANE_HEADER)
   }
   return { frame, items: [frame, ...children] }
+}
+
+/**
+ * Content rendered at `origin` that starts closer to it than the frame's padding (a kanban's columns start at
+ * 0,0) is moved in by the difference — on the first draw and on every redraw alike, so the frame fitted around a
+ * new drawing is anchored at `origin` and a redraw of an unchanged file lands exactly where the first draw put it
+ * (before, the new frame grew out by the padding and the redraw, drawing from the frame's corner, shifted the
+ * whole kanban up and left by it).
+ */
+function inset(rendered: Item[], origin: { x: number; y: number }): Item[] {
+  const boxes = rendered.filter((it) => it.type !== 'arrow')
+  if (!boxes.length) return rendered
+  const dx = Math.max(0, origin.x + PAD / 2 - Math.min(...boxes.map((b) => b.x)))
+  const dy = Math.max(0, origin.y + PAD / 2 - Math.min(...boxes.map((b) => b.y)))
+  return dx || dy ? rendered.map((it) => (it.type === 'arrow' ? it : { ...it, x: it.x + dx, y: it.y + dy })) : rendered
 }
 
 /** A trace that could not be drawn: its target is not on the board (or the ref is malformed). */

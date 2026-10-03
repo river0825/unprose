@@ -123,7 +123,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? 'this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)' : 'local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)'}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     '- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects',
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Planned for agents (update when merged): canvas_snapshot (an image), canvas_approve (approve a pairing)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
     'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).',
@@ -168,7 +168,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.11.0' },
+    { name: 'unprose', version: '0.12.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -421,7 +421,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     {
       title: 'See the board (an image of a frame, items or the whole board)',
       description:
-        'A server-side picture of the board as the page draws it — stickies with their colours and wrapped text, cards, lanes, kanban columns (cards where they stack), frames, wires, UI mock elements, Domain Storytelling pictograms, comment badges. Use it after drawing or redrawing to check the layout with your own eyes (sizes, overlaps, text that does not fit), and before telling the person "have a look". Pass a diagram `frame` key or item `ids` for detail; the whole board is scaled down to fit `maxPx`. Returns a PNG image when the canvas can rasterize, otherwise the SVG text (the result says which). Pair it with canvas_check_layout for the findings in words.',
+        'A server-side picture of the board as the page draws it — stickies with their colours and wrapped text, cards, lanes, kanban columns (cards where they stack), frames, wires, UI mock elements, Domain Storytelling pictograms, comment badges. Use it after drawing or redrawing to check the layout with your own eyes (sizes, overlaps, text that does not fit), and before telling the person "have a look". Pass a diagram `frame` key or item `ids` for detail; the whole board is scaled down to fit `maxPx`. Returns a PNG image when the canvas can rasterize (resvg: the installed npm package, else a pinned, integrity-checked native the canvas downloads once), otherwise the SVG text; the result says which renderer drew it and, for SVG, why. Pair it with canvas_check_layout for the findings in words.',
       inputSchema: {
         id: z.string().describe('board id'),
         frame: z.string().optional().describe('a diagram key (e.g. "studio-es") or a frame / lane / column item id'),
@@ -435,7 +435,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     async ({ id, frame, ids, scale, maxPx, theme, format }) => {
       const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format })
       const i = s.info
-      const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : 'the whole board'}: ${i.width}×${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}${i.notes.length ? `\n${i.notes.filter(Boolean).join('\n')}` : ''}`
+      const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : 'the whole board'}: ${i.width}×${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}, renderer: ${s.png ? (i.renderer ?? 'resvg') : 'svg'}${i.notes.length ? `\n${i.notes.filter(Boolean).join('\n')}` : ''}`
       if (s.png) return { content: [{ type: 'text' as const, text: head }, { type: 'image' as const, data: s.png.toString('base64'), mimeType: 'image/png' }] }
       const svg = s.svg ?? ''
       if (svg.length > 200_000) return text(`${head}\nThe SVG is ${svg.length} characters — too big to return; ask for a frame or ids, or a smaller maxPx.`)

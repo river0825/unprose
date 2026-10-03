@@ -253,7 +253,11 @@ test('snapshot and layout routes: an SVG (or PNG) of a frame with info, findings
   if (type.startsWith('image/svg')) {
     assert.match(await res.text(), /^<svg /)
     assert.ok(info.notes.some((n: string) => /rasterizer/.test(n)), 'says why it is not a PNG')
-  } else assert.equal(type, 'image/png')
+    assert.equal(info.renderer, 'svg')
+  } else {
+    assert.equal(type, 'image/png')
+    assert.match(info.renderer, /^resvg /, 'says which renderer drew it')
+  }
   const svg = await client.snapshot(board.id, { frame: 'shop-ui', format: 'svg' })
   assert.match(svg.svg!, /Open board/)
   assert.equal((await fetch(`${base}/api/boards/${board.id}/snapshot?frame=nope`)).status, 404)

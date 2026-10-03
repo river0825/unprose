@@ -56,7 +56,8 @@ and annotate, and a rule set that keeps it honest:
   position*), then what the person moved, else the file; items in the frame you did not draw are kept (docs/diagrams.md
   "What a redraw keeps"). Only the web UI
   copies a board as an image, replays it, approves pairing codes, manages tokens, upgrades and sets "Answered by"
-  (planned for agents: `canvas_snapshot`, `canvas_approve`).
+  (agents have `canvas_snapshot` to see a board as an image, and the local agent on the canvas machine has
+  `canvas_approve` for pairing codes).
 - Slash commands the person can type: `/unprose:help`, `/unprose:eventstorm <topic>`, `/unprose:storymap`,
   `/unprose:kanban`, `/unprose:wireframe <page>`, `/unprose:domain-story <topic>`, `/unprose:review`. Suggest the
   one that fits when someone is unsure how to start.

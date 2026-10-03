@@ -152,3 +152,36 @@ test('design_draw dryRun: a readable plan, no board created, nothing written; th
   assert.ok(b1.items['codex-note'], "another agent's card in the frame survives the redraw")
   assert.equal(Object.values(b1.items).some((i) => i.text === 'Delta'), false)
 })
+
+test('a redraw of an unchanged kanban changes nothing — not on the first redraw, not with a moved or a locked column', async () => {
+  const claude = new CanvasClient(srv.url, { agentName: 'claude-a' })
+  const file = `columns:\n  - { name: Todo }\n  - { name: Doing }\n  - { name: Done }\ncards:\n  - { title: One, column: Todo }\n  - { title: Two, column: Doing }\n`
+  const nothing = async () => {
+    const p = await previewDesignContent(claude, 'still.kanban.yaml', file, 'title:Still')
+    assert.deepEqual([p.plan!.added, p.plan!.updated, p.plan!.removed], [[], [], []], p.lines.join('\n'))
+    return p
+  }
+  const geometry = (b: { items: Record<string, { x: number; y: number; w: number; h: number }> }) => Object.fromEntries(Object.entries(b.items).map(([id, i]) => [id, [i.x, i.y, i.w, i.h]]))
+  const r = await drawDesignContent(claude, 'still.kanban.yaml', file, 'title:Still')
+  const first = await claude.getBoard(r.boardId)
+  // the frame sits where the drawing was anchored; the columns start inside its padding (before: the first redraw
+  // moved every column and card up and left by that padding)
+  const frame = Object.values(first.items).find((i) => i.type === 'frame')!
+  const cols = Object.values(first.items).filter((i) => i.type === 'lane').sort((a, b) => a.x - b.x)
+  assert.deepEqual([cols[0].x - frame.x, cols[0].y - frame.y], [20, 64])
+  assert.match((await nothing()).lines.join('\n'), /^ {2}\d+ unchanged$/m)
+  await drawDesignContent(claude, 'still.kanban.yaml', file, 'title:Still')
+  assert.deepEqual(geometry(await claude.getBoard(r.boardId)), geometry(first), 'the real redraw moves nothing either')
+  await nothing()
+
+  // the person moves a column, then locks another: still nothing to update, and the redraw keeps both
+  await claude.apply(r.boardId, [{ kind: 'update', id: cols[2].id, patch: { x: cols[2].x + 200, y: cols[2].y + 30 } }], 'user')
+  assert.deepEqual((await nothing()).plan!.keptMoved.map((l) => l.id), [cols[2].id])
+  await claude.apply(r.boardId, [{ kind: 'update', id: cols[1].id, patch: { y: cols[1].y + 40, data: { ...cols[1].data, lock: 'layout', lockedBy: 'person' } } }], 'user')
+  const p = await nothing()
+  assert.ok(p.plan!.keptLocked.some((l) => l.id === cols[1].id), p.lines.join('\n'))
+  const before = geometry(await claude.getBoard(r.boardId))
+  await drawDesignContent(claude, 'still.kanban.yaml', file, 'title:Still')
+  assert.deepEqual(geometry(await claude.getBoard(r.boardId)), before, 'the redraw keeps the moved and the locked column, and moves nothing else')
+  await nothing()
+})

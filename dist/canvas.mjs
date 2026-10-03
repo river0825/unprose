@@ -192,7 +192,7 @@ var require_limiter = __commonJS({
 var require_permessage_deflate = __commonJS({
   "node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
-    var zlib = __require("zlib");
+    var zlib2 = __require("zlib");
     var bufferUtil = require_buffer_util();
     var Limiter = require_limiter();
     var { kStatusCode } = require_constants();
@@ -459,8 +459,8 @@ var require_permessage_deflate = __commonJS({
         const endpoint = this._isServer ? "client" : "server";
         if (!this._inflate) {
           const key = `${endpoint}_max_window_bits`;
-          const windowBits = typeof this.params[key] !== "number" ? zlib.Z_DEFAULT_WINDOWBITS : this.params[key];
-          this._inflate = zlib.createInflateRaw({
+          const windowBits = typeof this.params[key] !== "number" ? zlib2.Z_DEFAULT_WINDOWBITS : this.params[key];
+          this._inflate = zlib2.createInflateRaw({
             ...this._options.zlibInflateOptions,
             windowBits
           });
@@ -510,8 +510,8 @@ var require_permessage_deflate = __commonJS({
         const endpoint = this._isServer ? "server" : "client";
         if (!this._deflate) {
           const key = `${endpoint}_max_window_bits`;
-          const windowBits = typeof this.params[key] !== "number" ? zlib.Z_DEFAULT_WINDOWBITS : this.params[key];
-          this._deflate = zlib.createDeflateRaw({
+          const windowBits = typeof this.params[key] !== "number" ? zlib2.Z_DEFAULT_WINDOWBITS : this.params[key];
+          this._deflate = zlib2.createDeflateRaw({
             ...this._options.zlibDeflateOptions,
             windowBits
           });
@@ -521,7 +521,7 @@ var require_permessage_deflate = __commonJS({
         }
         this._deflate[kCallback] = callback;
         this._deflate.write(data);
-        this._deflate.flush(zlib.Z_SYNC_FLUSH, () => {
+        this._deflate.flush(zlib2.Z_SYNC_FLUSH, () => {
           if (!this._deflate) {
             return;
           }
@@ -3904,17 +3904,17 @@ var require_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node4, visitor, path14) {
-      const ctrl = callVisitor(key, node4, visitor, path14);
+    function visit_(key, node4, visitor, path15) {
+      const ctrl = callVisitor(key, node4, visitor, path15);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path14, ctrl);
-        return visit_(key, ctrl, visitor, path14);
+        replaceNode(key, path15, ctrl);
+        return visit_(key, ctrl, visitor, path15);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path14 = Object.freeze(path14.concat(node4));
+          path15 = Object.freeze(path15.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = visit_(i, node4.items[i], visitor, path14);
+            const ci = visit_(i, node4.items[i], visitor, path15);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3925,13 +3925,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path14 = Object.freeze(path14.concat(node4));
-          const ck = visit_("key", node4.key, visitor, path14);
+          path15 = Object.freeze(path15.concat(node4));
+          const ck = visit_("key", node4.key, visitor, path15);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = visit_("value", node4.value, visitor, path14);
+          const cv = visit_("value", node4.value, visitor, path15);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -3952,17 +3952,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node4, visitor, path14) {
-      const ctrl = await callVisitor(key, node4, visitor, path14);
+    async function visitAsync_(key, node4, visitor, path15) {
+      const ctrl = await callVisitor(key, node4, visitor, path15);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path14, ctrl);
-        return visitAsync_(key, ctrl, visitor, path14);
+        replaceNode(key, path15, ctrl);
+        return visitAsync_(key, ctrl, visitor, path15);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path14 = Object.freeze(path14.concat(node4));
+          path15 = Object.freeze(path15.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = await visitAsync_(i, node4.items[i], visitor, path14);
+            const ci = await visitAsync_(i, node4.items[i], visitor, path15);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3973,13 +3973,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path14 = Object.freeze(path14.concat(node4));
-          const ck = await visitAsync_("key", node4.key, visitor, path14);
+          path15 = Object.freeze(path15.concat(node4));
+          const ck = await visitAsync_("key", node4.key, visitor, path15);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = await visitAsync_("value", node4.value, visitor, path14);
+          const cv = await visitAsync_("value", node4.value, visitor, path15);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -4006,23 +4006,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node4, visitor, path14) {
+    function callVisitor(key, node4, visitor, path15) {
       if (typeof visitor === "function")
-        return visitor(key, node4, path14);
+        return visitor(key, node4, path15);
       if (identity.isMap(node4))
-        return visitor.Map?.(key, node4, path14);
+        return visitor.Map?.(key, node4, path15);
       if (identity.isSeq(node4))
-        return visitor.Seq?.(key, node4, path14);
+        return visitor.Seq?.(key, node4, path15);
       if (identity.isPair(node4))
-        return visitor.Pair?.(key, node4, path14);
+        return visitor.Pair?.(key, node4, path15);
       if (identity.isScalar(node4))
-        return visitor.Scalar?.(key, node4, path14);
+        return visitor.Scalar?.(key, node4, path15);
       if (identity.isAlias(node4))
-        return visitor.Alias?.(key, node4, path14);
+        return visitor.Alias?.(key, node4, path15);
       return void 0;
     }
-    function replaceNode(key, path14, node4) {
-      const parent = path14[path14.length - 1];
+    function replaceNode(key, path15, node4) {
+      const parent = path15[path15.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node4;
       } else if (identity.isPair(parent)) {
@@ -4634,10 +4634,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path14, value) {
+    function collectionFromPath(schema, path15, value) {
       let v2 = value;
-      for (let i = path14.length - 1; i >= 0; --i) {
-        const k2 = path14[i];
+      for (let i = path15.length - 1; i >= 0; --i) {
+        const k2 = path15[i];
         if (typeof k2 === "number" && Number.isInteger(k2) && k2 >= 0) {
           const a = [];
           a[k2] = v2;
@@ -4656,7 +4656,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path14) => path14 == null || typeof path14 === "object" && !!path14[Symbol.iterator]().next().done;
+    var isEmptyPath = (path15) => path15 == null || typeof path15 === "object" && !!path15[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -4686,11 +4686,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path14, value) {
-        if (isEmptyPath(path14))
+      addIn(path15, value) {
+        if (isEmptyPath(path15))
           this.add(value);
         else {
-          const [key, ...rest] = path14;
+          const [key, ...rest] = path15;
           const node4 = this.get(key, true);
           if (identity.isCollection(node4))
             node4.addIn(rest, value);
@@ -4704,8 +4704,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path14) {
-        const [key, ...rest] = path14;
+      deleteIn(path15) {
+        const [key, ...rest] = path15;
         if (rest.length === 0)
           return this.delete(key);
         const node4 = this.get(key, true);
@@ -4719,8 +4719,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path14, keepScalar) {
-        const [key, ...rest] = path14;
+      getIn(path15, keepScalar) {
+        const [key, ...rest] = path15;
         const node4 = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node4) ? node4.value : node4;
@@ -4738,8 +4738,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path14) {
-        const [key, ...rest] = path14;
+      hasIn(path15) {
+        const [key, ...rest] = path15;
         if (rest.length === 0)
           return this.has(key);
         const node4 = this.get(key, true);
@@ -4749,8 +4749,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path14, value) {
-        const [key, ...rest] = path14;
+      setIn(path15, value) {
+        const [key, ...rest] = path15;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -7265,9 +7265,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path14, value) {
+      addIn(path15, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path14, value);
+          this.contents.addIn(path15, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -7342,14 +7342,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path14) {
-        if (Collection.isEmptyPath(path14)) {
+      deleteIn(path15) {
+        if (Collection.isEmptyPath(path15)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path14) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path15) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -7364,10 +7364,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path14, keepScalar) {
-        if (Collection.isEmptyPath(path14))
+      getIn(path15, keepScalar) {
+        if (Collection.isEmptyPath(path15))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path14, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path15, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -7378,10 +7378,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path14) {
-        if (Collection.isEmptyPath(path14))
+      hasIn(path15) {
+        if (Collection.isEmptyPath(path15))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path14) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path15) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -7398,13 +7398,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path14, value) {
-        if (Collection.isEmptyPath(path14)) {
+      setIn(path15, value) {
+        if (Collection.isEmptyPath(path15)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path14), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path15), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path14, value);
+          this.contents.setIn(path15, value);
         }
       }
       /**
@@ -9365,9 +9365,9 @@ var require_cst_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path14) => {
+    visit2.itemAtPath = (cst, path15) => {
       let item = cst;
-      for (const [field, index] of path14) {
+      for (const [field, index] of path15) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -9376,23 +9376,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path14) => {
-      const parent = visit2.itemAtPath(cst, path14.slice(0, -1));
-      const field = path14[path14.length - 1][0];
+    visit2.parentCollection = (cst, path15) => {
+      const parent = visit2.itemAtPath(cst, path15.slice(0, -1));
+      const field = path15[path15.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path14, item, visitor) {
-      let ctrl = visitor(item, path14);
+    function _visit(path15, item, visitor) {
+      let ctrl = visitor(item, path15);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path14.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path15.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -9403,10 +9403,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path14);
+            ctrl = ctrl(item, path15);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path14) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path15) : ctrl;
     }
     exports.visit = visit2;
   }
@@ -10708,14 +10708,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs13 = this.flowScalar(this.type);
+              const fs14 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map2.items.push({ start, key: fs13, sep: [] });
+                map2.items.push({ start, key: fs14, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs13);
+                this.stack.push(fs14);
               } else {
-                Object.assign(it, { key: fs13, sep: [] });
+                Object.assign(it, { key: fs14, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -10843,13 +10843,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs13 = this.flowScalar(this.type);
+              const fs14 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs13, sep: [] });
+                fc.items.push({ start: [], key: fs14, sep: [] });
               else if (it.sep)
-                this.stack.push(fs13);
+                this.stack.push(fs14);
               else
-                Object.assign(it, { key: fs13, sep: [] });
+                Object.assign(it, { key: fs14, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -14386,8 +14386,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path14) {
-      let input2 = path14;
+    function removeDotSegments(path15) {
+      let input2 = path15;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -14796,8 +14796,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path14 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path14 && path14 !== "/" ? path14 : void 0;
+        const path15 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path15 && path15 !== "/" ? path15 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -18310,12 +18310,12 @@ var require_dist2 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs13, exportName) {
+    function addFormats(ajv, list2, fs14, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs13[f]);
+        ajv.addFormat(f, fs14[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -18324,16 +18324,16 @@ var require_dist2 = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs12 from "node:fs";
-import os7 from "node:os";
-import path13 from "node:path";
+import fs13 from "node:fs";
+import os8 from "node:os";
+import path14 from "node:path";
 import { execFile as execFile4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
 import http from "node:http";
-import fs8 from "node:fs";
-import path9 from "node:path";
+import fs9 from "node:fs";
+import path10 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/ws/wrapper.mjs
@@ -19296,12 +19296,12 @@ function joinLines(lines2) {
   return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
 `).join("");
 }
-function unifiedDiff(before, after, path14 = "file", context = 3) {
+function unifiedDiff(before, after, path15 = "file", context = 3) {
   if (before === after)
     return "";
   const ops = lineOps(splitLines(before), splitLines(after));
   const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
-  const out = [`--- a/${path14}`, `+++ b/${path14}`];
+  const out = [`--- a/${path15}`, `+++ b/${path15}`];
   let k2 = 0;
   while (k2 < changed.length) {
     const lo = Math.max(0, changed[k2] - context);
@@ -21566,10 +21566,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path14) {
-  if (!path14)
+function getElementAtPath(obj, path15) {
+  if (!path15)
     return obj;
-  return path14.reduce((acc, key) => acc?.[key], obj);
+  return path15.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -21909,11 +21909,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path14, issues) {
+function prefixIssues(path15, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path14);
+    iss.path.unshift(path15);
     return iss;
   });
 }
@@ -22363,16 +22363,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path14 = []) => {
+  const processError = (error63, path15 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path15, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
       } else {
-        const fullpath = [...path14, ...issue2.path];
+        const fullpath = [...path15, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -22411,17 +22411,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path14 = []) => {
+  const processError = (error63, path15 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path15, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
       } else {
-        const fullpath = [...path14, ...issue2.path];
+        const fullpath = [...path15, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -22460,8 +22460,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path14 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path14) {
+  const path15 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path15) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -39563,13 +39563,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path14 = ref2.slice(1).split("/").filter(Boolean);
-  if (path14.length === 0) {
+  const path15 = ref2.slice(1).split("/").filter(Boolean);
+  if (path15.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path14[0] === defsKey) {
-    const key = path14[1] === void 0 ? void 0 : decodeJSONPointerSegment(path14[1]);
+  if (path15[0] === defsKey) {
+    const key = path15[1] === void 0 ? void 0 : decodeJSONPointerSegment(path15[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -42412,29 +42412,29 @@ function labelHits(x2, y2, w2, h, boxes, gap = EDGE_LABEL.gap) {
   const r2 = { x: x2 - w2 / 2, y: y2 - h / 2, w: w2, h };
   return boxes.filter((b2) => hit(r2, b2, gap));
 }
-function pointAlong(path14, t) {
-  const lens = path14.slice(1).map((p, i) => Math.hypot(p.x - path14[i].x, p.y - path14[i].y));
+function pointAlong(path15, t) {
+  const lens = path15.slice(1).map((p, i) => Math.hypot(p.x - path15[i].x, p.y - path15[i].y));
   const total = lens.reduce((a, b2) => a + b2, 0);
   let d = total * t;
   for (let i = 0; i < lens.length; i++) {
     if (d <= lens[i] || i === lens.length - 1) {
       const k2 = lens[i] ? Math.min(1, d / lens[i]) : 0;
-      return { x: path14[i].x + (path14[i + 1].x - path14[i].x) * k2, y: path14[i].y + (path14[i + 1].y - path14[i].y) * k2 };
+      return { x: path15[i].x + (path15[i + 1].x - path15[i].x) * k2, y: path15[i].y + (path15[i + 1].y - path15[i].y) * k2 };
     }
     d -= lens[i];
   }
-  return path14[0];
+  return path15[0];
 }
 var FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
-function spots(path14, at2) {
+function spots(path15, at2) {
   const out = [];
-  const segs = path14.slice(1).map((b2, i) => ({ a: path14[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
+  const segs = path15.slice(1).map((b2, i) => ({ a: path15[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
   const dirOf = (s) => {
     const l = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) || 1;
     return { x: (s.b.x - s.a.x) / l, y: (s.b.y - s.a.y) / l };
   };
   if (at2 !== void 0 && segs.length) {
-    const p = pointAlong(path14, at2);
+    const p = pointAlong(path15, at2);
     const seg = segs.find((s) => Math.abs((s.b.x - s.a.x) * (p.y - s.a.y) - (s.b.y - s.a.y) * (p.x - s.a.x)) < 1 && p.x >= Math.min(s.a.x, s.b.x) - 1 && p.x <= Math.max(s.a.x, s.b.x) + 1 && p.y >= Math.min(s.a.y, s.b.y) - 1 && p.y <= Math.max(s.a.y, s.b.y) + 1) ?? segs[0];
     out.push({ p, dir: dirOf(seg) });
   }
@@ -42445,13 +42445,13 @@ function spots(path14, at2) {
       out.push({ p: { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }, dir: dirOf(s) });
   return out;
 }
-function placeEdgeLabel(text3, path14, boxes, o = {}) {
+function placeEdgeLabel(text3, path15, boxes, o = {}) {
   const full = text3.replace(/\s+/g, " ").trim();
-  if (!full || path14.length < 2)
+  if (!full || path15.length < 2)
     return void 0;
   const font = o.font ?? EDGE_LABEL.font;
-  const xs = path14.map((p) => p.x);
-  const ys = path14.map((p) => p.y);
+  const xs = path15.map((p) => p.x);
+  const ys = path15.map((p) => p.y);
   const m2 = EDGE_LABEL.maxW;
   const near = boxes.filter((b2) => b2.x < Math.max(...xs) + m2 && b2.x + b2.w > Math.min(...xs) - m2 && b2.y < Math.max(...ys) + m2 && b2.y + b2.h > Math.min(...ys) - m2);
   const variants = [];
@@ -42475,7 +42475,7 @@ function placeEdgeLabel(text3, path14, boxes, o = {}) {
     push(l.cut ? "cut" : o.short ? "short" : "full", l.lines);
     push("cut", [cutLine(src, w2, font)]);
   }
-  const tries = spots(path14, o.at);
+  const tries = spots(path15, o.at);
   for (const v2 of variants) {
     const { w: w2, h } = labelSize(v2.lines, font);
     for (const p of o.prefer ?? [])
@@ -42499,7 +42499,7 @@ function placeEdgeLabel(text3, path14, boxes, o = {}) {
     }
   }
   const D2 = EDGE_LABEL.dot;
-  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path14, 0.5);
+  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path15, 0.5);
   return { mode: "dot", x: dotAt.x, y: dotAt.y, w: D2, h: D2, lines: [], text: full, font };
 }
 
@@ -42788,8 +42788,8 @@ function unwrap(s) {
   return s;
 }
 var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at = (path14, key) => typeof key === "number" ? `${path14}[${key}]` : path14 ? `${path14}.${key}` : key;
-function unknownFields(schema, value, path14 = "") {
+var at = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
+function unknownFields(schema, value, path15 = "") {
   const s = unwrap(schema);
   const d = def(s);
   if (d.type === "object" && isPlainObject2(value)) {
@@ -42798,16 +42798,16 @@ function unknownFields(schema, value, path14 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at(path14, k2)));
+        out.push(...unknownFields(shape[k2], v2, at(path15, k2)));
       else if (!open2)
-        out.push({ path: path14 || "(root)", field: k2 });
+        out.push({ path: path15 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path14, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path15, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path14, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path15, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -42815,7 +42815,7 @@ function unknownFields(schema, value, path14 = "") {
     });
     if (!fits.length)
       return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path14) })).sort((a, b2) => a.extra.length - b2.extra.length);
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path15) })).sort((a, b2) => a.extra.length - b2.extra.length);
     return ranked[0].extra;
   }
   return [];
@@ -43003,7 +43003,7 @@ function normalizeUiMock(raw) {
       used.add(id);
       return id;
     };
-    const el = (n4, path14) => {
+    const el = (n4, path15) => {
       const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, ...props } = n4;
       const words = text3 ?? label2;
       const id = alloc(n4.id, words, type);
@@ -43013,8 +43013,8 @@ function normalizeUiMock(raw) {
         type,
         ...words !== void 0 ? { text: words } : {},
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
-        path: path14,
-        children: (children ?? []).map((ch, i) => el(ch, [...path14, "children", i])),
+        path: path15,
+        children: (children ?? []).map((ch, i) => el(ch, [...path15, "children", i])),
         props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
@@ -43334,8 +43334,8 @@ function lintUiMock(raw) {
     for (const e of walkUi(s.body))
       where.set(uiPathText(e.path), e.ref);
   }
-  const owner = (path14) => {
-    for (let p = path14; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+  const owner = (path15) => {
+    for (let p = path15; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
       const hit2 = where.get(p);
       if (hit2)
         return hit2;
@@ -43481,7 +43481,7 @@ function rightOfEverything(boardItems) {
 }
 function placeInFrame(boardItems, req, rendered, now) {
   const frameId = diagramFrameId(req.key);
-  const children = rendered.map((it) => it.type === "arrow" || it.parent ? it : { ...it, parent: frameId });
+  const children = inset(rendered, frameOrigin(boardItems, req)).map((it) => it.type === "arrow" || it.parent ? it : { ...it, parent: frameId });
   const diagram = { kind: req.kind, key: req.key, ...req.source ? { source: req.source } : {}, ...req.level ? { level: req.level } : {} };
   const existing = boardItems[frameId];
   let frame;
@@ -43493,6 +43493,14 @@ function placeInFrame(boardItems, req, rendered, now) {
     frame = fit(base, children.filter((c) => c.type !== "arrow"), PAD / 2, LANE_HEADER);
   }
   return { frame, items: [frame, ...children] };
+}
+function inset(rendered, origin) {
+  const boxes = rendered.filter((it) => it.type !== "arrow");
+  if (!boxes.length)
+    return rendered;
+  const dx = Math.max(0, origin.x + PAD / 2 - Math.min(...boxes.map((b2) => b2.x)));
+  const dy = Math.max(0, origin.y + PAD / 2 - Math.min(...boxes.map((b2) => b2.y)));
+  return dx || dy ? rendered.map((it) => it.type === "arrow" ? it : { ...it, x: it.x + dx, y: it.y + dy }) : rendered;
 }
 var legacyCardSuffix = (element) => element.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
 function traceTarget(pool, ref2) {
@@ -45533,10 +45541,10 @@ function boardFiles(board) {
   const add = (files, from) => {
     if (!files || typeof files !== "object")
       return;
-    for (const [path14, text3] of Object.entries(files)) {
-      if (typeof text3 !== "string" || out.has(path14))
+    for (const [path15, text3] of Object.entries(files)) {
+      if (typeof text3 !== "string" || out.has(path15))
         continue;
-      out.set(path14, { path: path14, text: text3, sha: sha1(text3), truncated: truncated.has(path14), from });
+      out.set(path15, { path: path15, text: text3, sha: sha1(text3), truncated: truncated.has(path15), from });
     }
   };
   add(wf?.files, { workflow: true });
@@ -45932,8 +45940,8 @@ var shortUa = (ua) => {
   if (!ua)
     return "A browser";
   const b2 = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
-  const os8 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
-  return `${b2}${os8 ? ` on ${os8}` : ""}`;
+  const os9 = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  return `${b2}${os9 ? ` on ${os9}` : ""}`;
 };
 var AccessService = class {
   opts;
@@ -50736,7 +50744,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.11.0";
+var VERSION = "0.12.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -51003,8 +51011,8 @@ var CanvasClient = class {
   files(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r2) => r2.files);
   }
-  file(id, path14) {
-    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path14)}`).then((r2) => r2.file);
+  file(id, path15) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path15)}`).then((r2) => r2.file);
   }
   /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
   propose(id, input2) {
@@ -51040,7 +51048,7 @@ var CanvasClient = class {
       throw new Error(body.error ?? `${res.status} ${res.statusText}`);
     }
     const mime = (res.headers.get("content-type") ?? "").split(";")[0];
-    let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [] };
+    let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [], renderer: void 0 };
     try {
       info = { ...info, ...JSON.parse(res.headers.get("x-unprose-snapshot") ?? "{}") };
     } catch {
@@ -52302,8 +52310,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path14, errorMaps, issueData } = params;
-  const fullPath = [...path14, ...issueData.path || []];
+  const { data, path: path15, errorMaps, issueData } = params;
+  const fullPath = [...path15, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -52418,11 +52426,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path14, key) {
+  constructor(parent, value, path15, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path14;
+    this._path = path15;
     this._key = key;
   }
   get path() {
@@ -55973,11 +55981,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path14) {
-  if (path14.length === 0) {
+function getDotPath(path15) {
+  if (path15.length === 0) {
     return "object root";
   }
-  return path14.reduce((acc, seg, index) => {
+  return path15.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -60106,7 +60114,7 @@ function helpText(o) {
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? "this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)" : "local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)"}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     "- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects",
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Planned for agents (update when merged): canvas_snapshot (an image), canvas_approve (approve a pairing)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
     `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
@@ -60131,7 +60139,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.11.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.12.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60335,7 +60343,7 @@ ${r2.lines.join("\n")}${page3}`);
   });
   server.registerTool("canvas_snapshot", {
     title: "See the board (an image of a frame, items or the whole board)",
-    description: 'A server-side picture of the board as the page draws it \u2014 stickies with their colours and wrapped text, cards, lanes, kanban columns (cards where they stack), frames, wires, UI mock elements, Domain Storytelling pictograms, comment badges. Use it after drawing or redrawing to check the layout with your own eyes (sizes, overlaps, text that does not fit), and before telling the person "have a look". Pass a diagram `frame` key or item `ids` for detail; the whole board is scaled down to fit `maxPx`. Returns a PNG image when the canvas can rasterize, otherwise the SVG text (the result says which). Pair it with canvas_check_layout for the findings in words.',
+    description: 'A server-side picture of the board as the page draws it \u2014 stickies with their colours and wrapped text, cards, lanes, kanban columns (cards where they stack), frames, wires, UI mock elements, Domain Storytelling pictograms, comment badges. Use it after drawing or redrawing to check the layout with your own eyes (sizes, overlaps, text that does not fit), and before telling the person "have a look". Pass a diagram `frame` key or item `ids` for detail; the whole board is scaled down to fit `maxPx`. Returns a PNG image when the canvas can rasterize (resvg: the installed npm package, else a pinned, integrity-checked native the canvas downloads once), otherwise the SVG text; the result says which renderer drew it and, for SVG, why. Pair it with canvas_check_layout for the findings in words.',
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe('a diagram key (e.g. "studio-es") or a frame / lane / column item id'),
@@ -60348,7 +60356,7 @@ ${r2.lines.join("\n")}${page3}`);
   }, async ({ id, frame, ids, scale, maxPx, theme, format }) => {
     const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format });
     const i = s.info;
-    const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : "the whole board"}: ${i.width}\xD7${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}${i.notes.length ? `
+    const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : "the whole board"}: ${i.width}\xD7${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}, renderer: ${s.png ? i.renderer ?? "resvg" : "svg"}${i.notes.length ? `
 ${i.notes.filter(Boolean).join("\n")}` : ""}`;
     if (s.png)
       return { content: [{ type: "text", text: head }, { type: "image", data: s.png.toString("base64"), mimeType: "image/png" }] };
@@ -61453,9 +61461,9 @@ function drawText(c, it) {
   const { p } = c;
   const bx = boxOf(it);
   if (it.data?.ds === "annotation") {
-    const path14 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
+    const path15 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
     const lines2 = c.text && it.text ? wrap(it.text, bx.w - 16, 12.5) : [];
-    return `<path d="${path14}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + 8, y: bx.y + 4, font: 12.5, lh: 16, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 8) / 16)) });
+    return `<path d="${path15}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + 8, y: bx.y + 4, font: 12.5, lh: 16, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 8) / 16)) });
   }
   if (it.role === "release-cut")
     return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n3(bx.x + 4)}" y="${n3(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
@@ -62112,29 +62120,315 @@ function layoutLines(report, _board, max = 60) {
 }
 
 // packages/canvas/dist/raster.js
-var loaded;
-var RESVG = "@resvg/resvg-js";
-function loadResvg() {
-  loaded ??= import(RESVG).then((m2) => m2 && typeof m2.Resvg === "function" ? m2 : m2.default).catch(() => void 0);
-  return loaded;
+import crypto5 from "node:crypto";
+import fs8 from "node:fs";
+import { createRequire } from "node:module";
+import os6 from "node:os";
+import path9 from "node:path";
+import zlib from "node:zlib";
+
+// packages/canvas/dist/resvgPins.js
+var RESVG_VERSION = "2.6.2";
+var RESVG_PINS = [
+  { "name": "@resvg/resvg-js-android-arm-eabi", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-android-arm-eabi/-/resvg-js-android-arm-eabi-2.6.2.tgz", "integrity": "sha512-FrJibrAk6v29eabIPgcTUMPXiEz8ssrAk7TXxsiZzww9UTQ1Z5KAbFJs+Z0Ez+VZTYgnE5IQJqBcoSiMebtPHA==", "os": ["android"], "cpu": ["arm"] },
+  { "name": "@resvg/resvg-js-android-arm64", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-android-arm64/-/resvg-js-android-arm64-2.6.2.tgz", "integrity": "sha512-VcOKezEhm2VqzXpcIJoITuvUS/fcjIw5NA/w3tjzWyzmvoCdd+QXIqy3FBGulWdClvp4g+IfUemigrkLThSjAQ==", "os": ["android"], "cpu": ["arm64"] },
+  { "name": "@resvg/resvg-js-darwin-arm64", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-darwin-arm64/-/resvg-js-darwin-arm64-2.6.2.tgz", "integrity": "sha512-nmok2LnAd6nLUKI16aEB9ydMC6Lidiiq2m1nEBDR1LaaP7FGs4AJ90qDraxX+CWlVuRlvNjyYJTNv8qFjtL9+A==", "os": ["darwin"], "cpu": ["arm64"] },
+  { "name": "@resvg/resvg-js-darwin-x64", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-darwin-x64/-/resvg-js-darwin-x64-2.6.2.tgz", "integrity": "sha512-GInyZLjgWDfsVT6+SHxQVRwNzV0AuA1uqGsOAW+0th56J7Nh6bHHKXHBWzUrihxMetcFDmQMAX1tZ1fZDYSRsw==", "os": ["darwin"], "cpu": ["x64"] },
+  { "name": "@resvg/resvg-js-linux-arm-gnueabihf", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-linux-arm-gnueabihf/-/resvg-js-linux-arm-gnueabihf-2.6.2.tgz", "integrity": "sha512-YIV3u/R9zJbpqTTNwTZM5/ocWetDKGsro0SWp70eGEM9eV2MerWyBRZnQIgzU3YBnSBQ1RcxRZvY/UxwESfZIw==", "os": ["linux"], "cpu": ["arm"] },
+  { "name": "@resvg/resvg-js-linux-arm64-gnu", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-linux-arm64-gnu/-/resvg-js-linux-arm64-gnu-2.6.2.tgz", "integrity": "sha512-zc2BlJSim7YR4FZDQ8OUoJg5holYzdiYMeobb9pJuGDidGL9KZUv7SbiD4E8oZogtYY42UZEap7dqkkYuA91pg==", "os": ["linux"], "cpu": ["arm64"], "libc": ["glibc"] },
+  { "name": "@resvg/resvg-js-linux-arm64-musl", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-linux-arm64-musl/-/resvg-js-linux-arm64-musl-2.6.2.tgz", "integrity": "sha512-3h3dLPWNgSsD4lQBJPb4f+kvdOSJHa5PjTYVsWHxLUzH4IFTJUAnmuWpw4KqyQ3NA5QCyhw4TWgxk3jRkQxEKg==", "os": ["linux"], "cpu": ["arm64"], "libc": ["musl"] },
+  { "name": "@resvg/resvg-js-linux-x64-gnu", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-linux-x64-gnu/-/resvg-js-linux-x64-gnu-2.6.2.tgz", "integrity": "sha512-IVUe+ckIerA7xMZ50duAZzwf1U7khQe2E0QpUxu5MBJNao5RqC0zwV/Zm965vw6D3gGFUl7j4m+oJjubBVoftw==", "os": ["linux"], "cpu": ["x64"], "libc": ["glibc"] },
+  { "name": "@resvg/resvg-js-linux-x64-musl", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-linux-x64-musl/-/resvg-js-linux-x64-musl-2.6.2.tgz", "integrity": "sha512-UOf83vqTzoYQO9SZ0fPl2ZIFtNIz/Rr/y+7X8XRX1ZnBYsQ/tTb+cj9TE+KHOdmlTFBxhYzVkP2lRByCzqi4jQ==", "os": ["linux"], "cpu": ["x64"], "libc": ["musl"] },
+  { "name": "@resvg/resvg-js-win32-arm64-msvc", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-win32-arm64-msvc/-/resvg-js-win32-arm64-msvc-2.6.2.tgz", "integrity": "sha512-7C/RSgCa+7vqZ7qAbItfiaAWhyRSoD4l4BQAbVDqRRsRgY+S+hgS3in0Rxr7IorKUpGE69X48q6/nOAuTJQxeQ==", "os": ["win32"], "cpu": ["arm64"] },
+  { "name": "@resvg/resvg-js-win32-ia32-msvc", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-win32-ia32-msvc/-/resvg-js-win32-ia32-msvc-2.6.2.tgz", "integrity": "sha512-har4aPAlvjnLcil40AC77YDIk6loMawuJwFINEM7n0pZviwMkMvjb2W5ZirsNOZY4aDbo5tLx0wNMREp5Brk+w==", "os": ["win32"], "cpu": ["ia32"] },
+  { "name": "@resvg/resvg-js-win32-x64-msvc", "version": "2.6.2", "resolved": "https://registry.npmjs.org/@resvg/resvg-js-win32-x64-msvc/-/resvg-js-win32-x64-msvc-2.6.2.tgz", "integrity": "sha512-ZXtYhtUr5SSaBrUDq7DiyjOFJqBVL/dOBN7N/qmi/pO0IgiWW/f/ue3nbvu9joWE5aAKDoIzy/CxsY0suwGosQ==", "os": ["win32"], "cpu": ["x64"] }
+];
+
+// packages/canvas/dist/raster.js
+function pngMode(env = process.env) {
+  const v2 = (env.UNPROSE_SNAPSHOT_PNG ?? "").trim().toLowerCase();
+  if (v2 === "0" || v2 === "off" || v2 === "false" || v2 === "no")
+    return "off";
+  if (v2 === "never-download" || v2 === "no-download")
+    return "never-download";
+  if (v2 === "download")
+    return "download";
+  return "auto";
 }
-async function svgToPng(svg) {
-  if (process.env.UNPROSE_SNAPSHOT_PNG === "0")
-    return { why: "PNG output is turned off on this canvas (UNPROSE_SNAPSHOT_PNG=0)" };
-  const m2 = await loadResvg();
-  if (!m2)
-    return { why: `this canvas has no PNG rasterizer (the optional package ${RESVG} is not installed), so the snapshot is SVG` };
+var RESVG = "@resvg/resvg-js";
+var REGISTRY = "https://registry.npmjs.org";
+var MAX_TARBALL = 50 * 1024 * 1024;
+var STALE_LOCK_MS = 12e4;
+var nodeRequire = createRequire(import.meta.url);
+function defaultLibc() {
+  if (process.platform !== "linux")
+    return void 0;
   try {
-    const png = new m2.Resvg(svg, { font: { loadSystemFonts: true, defaultFontFamily: "Helvetica" }, background: "rgba(0,0,0,0)" }).render().asPng();
-    return { png: Buffer.from(png) };
-  } catch (e) {
-    return { why: `rasterizing failed (${e.message}); here is the SVG` };
+    const header = process.report?.getReport()?.header;
+    return header?.glibcVersionRuntime ? "glibc" : "musl";
+  } catch {
+    return "glibc";
   }
+}
+async function defaultImportPackage() {
+  try {
+    const m2 = await import(RESVG);
+    return m2 && typeof m2.Resvg === "function" ? m2 : m2.default && typeof m2.default.Resvg === "function" ? m2.default : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function packageVersion() {
+  try {
+    return nodeRequire(`${RESVG}/package.json`).version;
+  } catch {
+    return void 0;
+  }
+}
+function defaultDeps(env = process.env) {
+  return {
+    env,
+    dataDir: env.CLAUDE_PLUGIN_DATA || path9.join(os6.homedir(), ".awd", "plugin"),
+    pins: RESVG_PINS,
+    version: RESVG_VERSION,
+    platform: process.platform,
+    arch: process.arch,
+    libc: defaultLibc,
+    importPackage: defaultImportPackage,
+    loadNative: (file2) => nodeRequire(file2),
+    fetch: (...a) => fetch(...a),
+    now: Date.now,
+    retryMs: 10 * 6e4,
+    lockWaitMs: 9e4,
+    timeoutMs: 6e4
+  };
+}
+function selectPin(pins, platform, arch, libc) {
+  return pins.find((p) => p.os.includes(platform) && p.cpu.includes(arch) && (!p.libc || libc !== void 0 && p.libc.includes(libc)));
+}
+function checkIntegrity(data, integrity) {
+  const want = integrity.split(/\s+/).filter((s) => s.startsWith("sha512-")).map((s) => Buffer.from(s.slice("sha512-".length).replace(/\?.*$/, ""), "base64"));
+  if (!want.length)
+    return false;
+  const got = crypto5.createHash("sha512").update(data).digest();
+  return want.some((w2) => w2.length === got.length && crypto5.timingSafeEqual(w2, got));
+}
+function extractNative(tgz) {
+  const tar = zlib.gunzipSync(tgz, { maxOutputLength: 4 * MAX_TARBALL });
+  const cstr = (b2) => {
+    const z3 = b2.indexOf(0);
+    return b2.subarray(0, z3 < 0 ? b2.length : z3).toString("utf8");
+  };
+  const found = [];
+  let pkg;
+  let paxPath;
+  for (let off = 0; off + 512 <= tar.length; ) {
+    const h = tar.subarray(off, off + 512);
+    if (h.every((b2) => b2 === 0))
+      break;
+    const sizeField = cstr(h.subarray(124, 136)).trim();
+    if (!/^[0-7]*$/.test(sizeField))
+      throw new Error("unreadable tar header");
+    const size2 = parseInt(sizeField || "0", 8);
+    const type = String.fromCharCode(h[156] || 48);
+    const isUstar = h.subarray(257, 262).toString("latin1") === "ustar";
+    const prefix = isUstar ? cstr(h.subarray(345, 500)) : "";
+    const name = paxPath ?? (prefix ? `${prefix}/${cstr(h.subarray(0, 100))}` : cstr(h.subarray(0, 100)));
+    const body = tar.subarray(off + 512, off + 512 + size2);
+    if (body.length < size2)
+      throw new Error("truncated tarball");
+    off += 512 + Math.ceil(size2 / 512) * 512;
+    if (type === "x") {
+      paxPath = /(?:^|\n)\d+ path=([^\n]*)\n/.exec(body.toString("utf8"))?.[1];
+      continue;
+    }
+    paxPath = void 0;
+    if (type !== "0")
+      continue;
+    if (/^package\/[\w.-]+\.node$/.test(name))
+      found.push({ file: name.slice("package/".length), data: Buffer.from(body) });
+    else if (name === "package/package.json") {
+      try {
+        pkg = JSON.parse(body.toString("utf8"));
+      } catch {
+      }
+    }
+  }
+  if (found.length !== 1)
+    throw new Error(found.length ? "more than one .node file in the tarball" : "no .node file in the tarball");
+  return { ...found[0], pkg };
+}
+var sha256 = (b2) => crypto5.createHash("sha256").update(b2).digest("hex");
+var short4 = (msg) => msg.replace(/\s+/g, " ").trim().slice(0, 160);
+var NO = "no PNG rasterizer";
+function createRasterizer(over = {}) {
+  const d = { ...defaultDeps(over.env), ...over };
+  let ok;
+  let failed;
+  let inflight;
+  const fromNative = (m2, renderer) => ({ render: (svg, opts) => new m2.Resvg(svg, JSON.stringify(opts)).render().asPng(), renderer });
+  const nativeDir = () => path9.join(d.dataDir, "native", "resvg", d.version);
+  const manifestPath = (pin) => path9.join(nativeDir(), `${pin.name.replace(/^@resvg\//, "")}.json`);
+  function cached2(pin) {
+    let man;
+    try {
+      man = JSON.parse(fs8.readFileSync(manifestPath(pin), "utf8"));
+    } catch {
+      return void 0;
+    }
+    if (man.name !== pin.name || man.version !== pin.version || man.integrity !== pin.integrity || !/^[\w.-]+\.node$/.test(man.file))
+      return void 0;
+    const file2 = path9.join(nativeDir(), man.file);
+    let data;
+    try {
+      data = fs8.readFileSync(file2);
+    } catch {
+      return void 0;
+    }
+    if (sha256(data) !== man.sha256)
+      return void 0;
+    return fromNative(d.loadNative(file2), `resvg ${pin.version} (downloaded native, ${file2})`);
+  }
+  async function download(pin) {
+    const base = (d.env.UNPROSE_NPM_REGISTRY || REGISTRY).replace(/\/+$/, "");
+    const url2 = pin.resolved.startsWith(REGISTRY) ? base + pin.resolved.slice(REGISTRY.length) : pin.resolved;
+    const res = await d.fetch(url2, { signal: AbortSignal.timeout(d.timeoutMs), redirect: "follow", headers: { "user-agent": userAgent("snapshot") } });
+    if (!res.ok)
+      throw new Error(`${res.status} ${res.statusText} for ${url2}`);
+    const len = Number(res.headers.get("content-length") ?? 0);
+    if (len > MAX_TARBALL)
+      throw new Error(`the tarball is ${len} bytes \u2014 too big`);
+    const tgz = Buffer.from(await res.arrayBuffer());
+    if (tgz.length > MAX_TARBALL)
+      throw new Error(`the tarball is ${tgz.length} bytes \u2014 too big`);
+    if (!checkIntegrity(tgz, pin.integrity))
+      throw new IntegrityError(`${pin.name}@${pin.version} failed its integrity check (its sha512 is not the one in package-lock.json) \u2014 nothing was installed`);
+    const { file: file2, data, pkg } = extractNative(tgz);
+    if (pkg && (pkg.name !== pin.name || pkg.version !== pin.version))
+      throw new IntegrityError(`the tarball says it is ${pkg.name}@${pkg.version}, not ${pin.name}@${pin.version}`);
+    const dir = nativeDir();
+    fs8.mkdirSync(dir, { recursive: true });
+    const tmp = path9.join(dir, `.${file2}.tmp-${process.pid}`);
+    fs8.writeFileSync(tmp, data, { mode: 420 });
+    fs8.renameSync(tmp, path9.join(dir, file2));
+    const man = { name: pin.name, version: pin.version, integrity: pin.integrity, file: file2, sha256: sha256(data) };
+    const mtmp = `${manifestPath(pin)}.tmp-${process.pid}`;
+    fs8.writeFileSync(mtmp, JSON.stringify(man, null, 2) + "\n");
+    fs8.renameSync(mtmp, manifestPath(pin));
+  }
+  async function downloadLocked(pin) {
+    fs8.mkdirSync(nativeDir(), { recursive: true });
+    const lock = path9.join(nativeDir(), `.lock-${pin.name.replace(/^@resvg\//, "")}`);
+    const deadline = d.now() + d.lockWaitMs;
+    for (; ; ) {
+      try {
+        fs8.mkdirSync(lock);
+        break;
+      } catch (e) {
+        if (e.code !== "EEXIST")
+          throw e;
+      }
+      try {
+        if (d.now() - fs8.statSync(lock).mtimeMs > STALE_LOCK_MS) {
+          fs8.rmSync(lock, { recursive: true, force: true });
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      const done = cached2(pin);
+      if (done)
+        return done;
+      if (d.now() > deadline)
+        throw new Error("another process has been downloading it for too long");
+      await new Promise((r2) => setTimeout(r2, 200));
+    }
+    try {
+      const done = cached2(pin);
+      if (done)
+        return done;
+      await download(pin);
+      const now = cached2(pin);
+      if (!now)
+        throw new Error("the downloaded native did not verify");
+      return now;
+    } finally {
+      fs8.rmSync(lock, { recursive: true, force: true });
+    }
+  }
+  async function load() {
+    const mode = pngMode(d.env);
+    if (mode !== "download") {
+      const m2 = await d.importPackage();
+      if (m2) {
+        const v2 = packageVersion();
+        return { render: (svg, opts) => new m2.Resvg(svg, opts).render().asPng(), renderer: `resvg${v2 ? ` ${v2}` : ""} (npm package ${RESVG})` };
+      }
+    }
+    const libc = d.platform === "linux" ? d.libc() : void 0;
+    const pin = selectPin(d.pins, d.platform, d.arch, libc);
+    if (!pin)
+      return { why: `${NO}: resvg publishes no prebuilt native for ${d.platform}-${d.arch}${libc ? `-${libc}` : ""} and ${RESVG} is not installed, so the snapshot is SVG` };
+    try {
+      const c = cached2(pin);
+      if (c)
+        return c;
+    } catch (e) {
+      return { why: `${NO}: the downloaded ${pin.name} would not load (${short4(e.message)}), so the snapshot is SVG` };
+    }
+    if (mode === "never-download")
+      return { why: `${NO}: ${RESVG} is not installed and downloading it is off (UNPROSE_SNAPSHOT_PNG=never-download), so the snapshot is SVG` };
+    try {
+      return await downloadLocked(pin);
+    } catch (e) {
+      const msg = short4(e.message);
+      if (e instanceof IntegrityError)
+        return { why: `${NO}: ${msg}; the snapshot is SVG` };
+      return { why: `${NO}: could not get ${pin.name}@${pin.version} from the npm registry (${msg}), so the snapshot is SVG \u2014 tried again in ${Math.round(d.retryMs / 6e4)} min` };
+    }
+  }
+  async function rasterizer() {
+    if (ok)
+      return ok;
+    if (failed && d.now() - failed.at < d.retryMs)
+      return { why: failed.why };
+    inflight ??= load().then((r2) => {
+      inflight = void 0;
+      if ("render" in r2) {
+        ok = Promise.resolve(r2);
+        failed = void 0;
+      } else
+        failed = { at: d.now(), why: r2.why };
+      return r2;
+    });
+    return inflight;
+  }
+  async function svgToPng2(svg) {
+    if (pngMode(d.env) === "off")
+      return { why: "PNG output is turned off on this canvas (UNPROSE_SNAPSHOT_PNG=0), so the snapshot is SVG", renderer: "svg" };
+    const r2 = await rasterizer();
+    if (!("render" in r2))
+      return { why: r2.why, renderer: "svg" };
+    try {
+      const png = r2.render(svg, { font: { loadSystemFonts: true, defaultFontFamily: "Helvetica" }, background: "rgba(0,0,0,0)" });
+      return { png: Buffer.from(png), renderer: r2.renderer };
+    } catch (e) {
+      return { why: `rasterizing failed (${short4(e.message)}); here is the SVG`, renderer: "svg" };
+    }
+  }
+  return { svgToPng: svgToPng2, rasterizer };
+}
+var IntegrityError = class extends Error {
+};
+var shared;
+function svgToPng(svg) {
+  shared ??= createRasterizer();
+  return shared.svgToPng(svg);
 }
 
 // packages/canvas/dist/server.js
-var __dirname3 = path9.dirname(fileURLToPath3(import.meta.url));
-var WEB_DIST = [path9.join(__dirname3, "web"), path9.resolve(__dirname3, "../web/dist")].find((d) => fs8.existsSync(path9.join(d, "index.html"))) ?? path9.resolve(__dirname3, "../web/dist");
+var __dirname3 = path10.dirname(fileURLToPath3(import.meta.url));
+var WEB_DIST = [path10.join(__dirname3, "web"), path10.resolve(__dirname3, "../web/dist")].find((d) => fs9.existsSync(path10.join(d, "index.html"))) ?? path10.resolve(__dirname3, "../web/dist");
 var MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -62157,18 +62451,18 @@ function studioArgv(template, project) {
 }
 var realOf = (p) => {
   try {
-    return fs8.realpathSync(p);
+    return fs9.realpathSync(p);
   } catch {
-    return path9.resolve(p);
+    return path10.resolve(p);
   }
 };
 function studioProjectOf(board, projects) {
   const claims = [board.meta?.project?.root, board.meta?.workflow?.file, ...diagramRoots(board.meta)];
   for (const c of claims) {
-    if (typeof c !== "string" || !path9.isAbsolute(c))
+    if (typeof c !== "string" || !path10.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit2 = projects.find((p) => want === p.root || want.startsWith(p.root + path9.sep));
+    const hit2 = projects.find((p) => want === p.root || want.startsWith(p.root + path10.sep));
     if (hit2)
       return hit2;
   }
@@ -62176,7 +62470,7 @@ function studioProjectOf(board, projects) {
 }
 function studioSessions(p) {
   try {
-    const j2 = JSON.parse(fs8.readFileSync(path9.join(p.root, ".awd", "studio", "status.json"), "utf8"));
+    const j2 = JSON.parse(fs9.readFileSync(path10.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
     const n4 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
@@ -62197,6 +62491,9 @@ function isAuthor(a) {
 }
 function blockedUserAgent(ua) {
   return !ua || !ua.trim() || /^(python-urllib|python-requests|curl|wget|go-http-client|java\/|libwww-perl)/i.test(ua.trim());
+}
+function headerJson(v2) {
+  return JSON.stringify(v2).replace(/[^\x20-\x7e]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }
 function userAgentHint(req) {
   const ua = req.headers["user-agent"];
@@ -62442,12 +62739,12 @@ function startServer(opts = {}) {
     return store.get(id);
   };
   const serveStatic = (res, rel) => {
-    const safe = path9.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-    const file2 = path9.join(webDist, safe);
-    if (!file2.startsWith(webDist) || !fs8.existsSync(file2) || fs8.statSync(file2).isDirectory())
+    const safe = path10.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+    const file2 = path10.join(webDist, safe);
+    if (!file2.startsWith(webDist) || !fs9.existsSync(file2) || fs9.statSync(file2).isDirectory())
       return false;
-    res.writeHead(200, { "content-type": MIME[path9.extname(file2)] ?? "application/octet-stream" });
-    fs8.createReadStream(file2).pipe(res);
+    res.writeHead(200, { "content-type": MIME[path10.extname(file2)] ?? "application/octet-stream" });
+    fs9.createReadStream(file2).pipe(res);
     return true;
   };
   const fallbackPage = (boards) => `<!doctype html><meta charset="utf-8"><title>awd-canvas</title>
@@ -63026,15 +63323,15 @@ function startServer(opts = {}) {
         if (theme !== "light" && theme !== "dark")
           throw new HttpError(400, "theme must be light or dark");
         const snap = agentScale(() => renderSnapshot(board, { frame: url2.searchParams.get("frame") || void 0, ids: listParam(url2, "ids"), scale: numParam(url2, "scale"), maxPx: numParam(url2, "maxPx"), theme }));
-        const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes };
-        const head = { "cache-control": "no-store", "x-unprose-snapshot": JSON.stringify(info), "access-control-expose-headers": "www-authenticate, mcp-session-id, x-unprose-snapshot" };
+        const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes, renderer: "svg" };
+        const head = { "cache-control": "no-store", "x-unprose-snapshot": headerJson(info), "access-control-expose-headers": "www-authenticate, mcp-session-id, x-unprose-snapshot" };
         if (format === "png") {
           const r2 = await svgToPng(snap.svg);
           if (r2.png) {
-            res.writeHead(200, { "content-type": "image/png", ...head });
+            res.writeHead(200, { "content-type": "image/png", ...head, "x-unprose-snapshot": headerJson({ ...info, renderer: r2.renderer }) });
             return void res.end(r2.png);
           }
-          res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", ...head, "x-unprose-snapshot": JSON.stringify({ ...info, notes: [...snap.notes, r2.why] }) });
+          res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", ...head, "x-unprose-snapshot": headerJson({ ...info, notes: [...snap.notes, r2.why] }) });
           return void res.end(snap.svg);
         }
         res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", ...head });
@@ -63094,7 +63391,7 @@ function startServer(opts = {}) {
               args,
               cwd: project.root,
               env: { AWD_CANVAS_URL: `http://localhost:${port()}` },
-              logFile: studio.logDir ? path9.join(studio.logDir, `studio-${project.name}.log`) : void 0
+              logFile: studio.logDir ? path10.join(studio.logDir, `studio-${project.name}.log`) : void 0
             });
             return json4(res, 200, view(info));
           }
@@ -63127,8 +63424,8 @@ function startServer(opts = {}) {
         const file2 = resolveDocAsset(docsDir, decodeURIComponent(parts.slice(2).join("/")));
         if (!file2)
           throw new HttpError(404, "asset not found");
-        res.writeHead(200, { "content-type": MIME[path9.extname(file2)] ?? "application/octet-stream" });
-        return void fs8.createReadStream(file2).pipe(res);
+        res.writeHead(200, { "content-type": MIME[path10.extname(file2)] ?? "application/octet-stream" });
+        return void fs9.createReadStream(file2).pipe(res);
       }
       const rendered = renderDoc(docsDir, decodeURIComponent(parts[1]).replace(/\.md$/, ""));
       if (!rendered)
@@ -63137,7 +63434,7 @@ function startServer(opts = {}) {
     }
     if (method !== "GET")
       throw new HttpError(405, "method not allowed");
-    const hasUi = fs8.existsSync(path9.join(webDist, "index.html"));
+    const hasUi = fs9.existsSync(path10.join(webDist, "index.html"));
     if (parts[0] === "b" || parts.length === 0 || parts[0] === "agents" && parts.length === 1) {
       if (hasUi)
         return void serveStatic(res, "index.html");
@@ -63179,15 +63476,16 @@ function startServer(opts = {}) {
       if (!grant)
         return refuse(socket, "401 Unauthorized");
       if (url2.pathname === "/ws") {
-        const approver = localPage(req, grant) || grant.as === "browser" && sameOrigin(req);
+        const local = localPage(req, grant);
+        const approver = local || grant.as === "browser" && sameOrigin(req);
         return wss.handleUpgrade(req, socket, head, (ws) => {
           if (grant.kind === "local")
             localSockets.add(ws);
           serverSockets.add(ws);
           if (approver) {
-            approvers.add(ws);
-            for (const request of access.pendingViews())
-              ws.send(JSON.stringify({ type: "access-request", request }));
+            approvers.set(ws, local ? "local" : grant.agentId ?? "");
+            for (const request of access.pendingViews({ manage: managesNow(ws) }))
+              sendAccess(ws, { type: "access-request", request });
           }
           const off = () => {
             serverSockets.delete(ws);
@@ -63207,12 +63505,25 @@ function startServer(opts = {}) {
     })().catch(() => refuse(socket, "500 Internal Server Error"));
   });
   const serverSockets = /* @__PURE__ */ new Set();
-  const approvers = /* @__PURE__ */ new Set();
+  const approvers = /* @__PURE__ */ new Map();
+  const managesNow = (ws) => {
+    const who3 = approvers.get(ws);
+    if (who3 === "local")
+      return true;
+    return !!who3 && access.list().some((a) => a.id === who3 && a.manage && !a.revokedAt);
+  };
+  const sendAccess = (ws, e) => {
+    if (ws.readyState === import_websocket.default.OPEN)
+      ws.send(JSON.stringify(localSockets.has(ws) ? e : redactPaths(e)));
+  };
   const offAccess = access.onEvent((e) => {
-    const msg = JSON.stringify(e);
-    for (const ws of e.type === "access-changed" ? serverSockets : approvers)
-      if (ws.readyState === import_websocket.default.OPEN)
-        ws.send(msg);
+    if (e.type === "access-changed")
+      for (const ws of serverSockets)
+        sendAccess(ws, e);
+    else
+      for (const ws of approvers.keys())
+        if (e.type !== "access-request" || e.request.via !== "manage" || managesNow(ws))
+          sendAccess(ws, e);
   });
   const presence = (id) => ({ type: "presence", author: "agent", at: (/* @__PURE__ */ new Date()).toISOString(), watching: store.watchers(id) > 0, agents: store.watcherNames(id), seen: store.watcherSeen(id) });
   const onBoardSocket = (ws, grant, boardId) => {
@@ -63337,8 +63648,8 @@ function agentScale(run) {
 
 // packages/canvas/dist/adapters/process/spawn.js
 import { spawn } from "node:child_process";
-import fs9 from "node:fs";
-import path10 from "node:path";
+import fs10 from "node:fs";
+import path11 from "node:path";
 
 // packages/canvas/dist/ports/processSupervisor.js
 var LOG_LINES = 50;
@@ -63356,8 +63667,8 @@ var SpawnSupervisor = class {
       return this.info(key);
     const e = { running: true, since: (/* @__PURE__ */ new Date()).toISOString(), log: cur?.log ?? [] };
     if (spec.logFile) {
-      fs9.mkdirSync(path10.dirname(spec.logFile), { recursive: true });
-      e.file = fs9.createWriteStream(spec.logFile, { flags: "a" });
+      fs10.mkdirSync(path11.dirname(spec.logFile), { recursive: true });
+      e.file = fs10.createWriteStream(spec.logFile, { flags: "a" });
     }
     this.entries.set(key, e);
     const push = (line) => {
@@ -63479,9 +63790,9 @@ var GitHubReleaseSource = class {
 // packages/canvas/dist/adapters/update/installer.js
 import { createHash as createHash3 } from "node:crypto";
 import { execFile as execFile3, spawn as spawn2 } from "node:child_process";
-import fs10 from "node:fs";
-import os6 from "node:os";
-import path11 from "node:path";
+import fs11 from "node:fs";
+import os7 from "node:os";
+import path12 from "node:path";
 var lines = (onLine) => {
   let rest = "";
   return (chunk) => {
@@ -63515,48 +63826,48 @@ var ChildInstaller = class {
   async downloadRuntime(version2, dir, onLine) {
     const name = `unprose-runtime-v${version2}.tgz`;
     const base = (process.env.AWD_RUNTIME_URL || this.o.base || `https://github.com/${this.o.repo}/releases/download`).replace(/\/$/, "");
-    const tmp = fs10.mkdtempSync(path11.join(os6.tmpdir(), "unprose-upgrade-"));
+    const tmp = fs11.mkdtempSync(path12.join(os7.tmpdir(), "unprose-upgrade-"));
     try {
-      const tgz = path11.join(tmp, name);
-      const sum = path11.join(tmp, `${name}.sha256`);
+      const tgz = path12.join(tmp, name);
+      const sum = path12.join(tmp, `${name}.sha256`);
       try {
         for (const [file2, url2] of [[tgz, `${base}/v${version2}/${name}`], [sum, `${base}/v${version2}/${name}.sha256`]]) {
           onLine(`downloading ${url2}`);
           const r2 = await fetch(url2, { headers: { "user-agent": userAgent("canvas") } });
           if (!r2.ok)
             throw new Error(`HTTP ${r2.status} for ${url2}`);
-          fs10.writeFileSync(file2, Buffer.from(await r2.arrayBuffer()));
+          fs11.writeFileSync(file2, Buffer.from(await r2.arrayBuffer()));
         }
       } catch (e) {
         onLine(`direct download failed (${e.message}); trying gh release download`);
         await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
       }
-      const want = fs10.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
-      const got = createHash3("sha256").update(fs10.readFileSync(tgz)).digest("hex");
+      const want = fs11.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
+      const got = createHash3("sha256").update(fs11.readFileSync(tgz)).digest("hex");
       if (!want || want !== got)
         throw new Error(`checksum mismatch for ${name}`);
-      const out = path11.join(tmp, "x");
-      fs10.mkdirSync(out);
+      const out = path12.join(tmp, "x");
+      fs11.mkdirSync(out);
       await execText("tar", ["-xzf", tgz, "-C", out]);
-      fs10.mkdirSync(path11.dirname(dir), { recursive: true });
-      fs10.rmSync(dir, { recursive: true, force: true });
-      fs10.renameSync(out, dir);
+      fs11.mkdirSync(path12.dirname(dir), { recursive: true });
+      fs11.rmSync(dir, { recursive: true, force: true });
+      fs11.renameSync(out, dir);
       onLine(`unpacked into ${dir}`);
     } finally {
-      fs10.rmSync(tmp, { recursive: true, force: true });
+      fs11.rmSync(tmp, { recursive: true, force: true });
     }
   }
   exists(p) {
-    return fs10.existsSync(p);
+    return fs11.existsSync(p);
   }
 };
 var ProcessLauncher = class {
   spawnDetached(entry, args, env, logFile) {
-    fs10.mkdirSync(path11.dirname(logFile), { recursive: true });
-    const fd = fs10.openSync(logFile, "a");
+    fs11.mkdirSync(path12.dirname(logFile), { recursive: true });
+    const fd = fs11.openSync(logFile, "a");
     const child = spawn2(process.execPath, [entry, ...args], { detached: true, stdio: ["ignore", fd, fd], env });
     child.unref();
-    fs10.closeSync(fd);
+    fs11.closeSync(fd);
     return child.pid ?? -1;
   }
   async probeVersion(port) {
@@ -63606,8 +63917,8 @@ var FakeUpdateSource = class {
 };
 
 // packages/canvas/dist/updater.js
-import fs11 from "node:fs";
-import path12 from "node:path";
+import fs12 from "node:fs";
+import path13 from "node:path";
 var SIX_HOURS = 6 * 60 * 60 * 1e3;
 var ERROR_TTL = 30 * 60 * 1e3;
 var REFRESH_THROTTLE = 30 * 1e3;
@@ -63622,7 +63933,7 @@ var UpdateService = class {
     this.o = o;
     try {
       if (o.cacheFile) {
-        const c = JSON.parse(fs11.readFileSync(o.cacheFile, "utf8"));
+        const c = JSON.parse(fs12.readFileSync(o.cacheFile, "utf8"));
         if (c.current === o.current)
           this.cache = c;
       }
@@ -63663,8 +63974,8 @@ var UpdateService = class {
       this.cache = c;
       try {
         if (this.o.cacheFile) {
-          fs11.mkdirSync(path12.dirname(this.o.cacheFile), { recursive: true });
-          fs11.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
+          fs12.mkdirSync(path13.dirname(this.o.cacheFile), { recursive: true });
+          fs12.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
         }
       } catch {
       }
@@ -63777,12 +64088,12 @@ var UpdateService = class {
       return void 0;
     let json4;
     try {
-      json4 = JSON.parse(fs11.readFileSync(installedFile, "utf8"));
+      json4 = JSON.parse(fs12.readFileSync(installedFile, "utf8"));
     } catch {
       return void 0;
     }
     const found = installedUpdate(json4, install.root, this.o.current, (p) => this.o.installer.exists(p));
-    return found && { version: found.version, entry: path12.join(found.root, "scripts", "canvas.mjs") };
+    return found && { version: found.version, entry: path13.join(found.root, "scripts", "canvas.mjs") };
   }
   /**
    * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
@@ -63828,12 +64139,12 @@ var UpdateService = class {
     if (!f)
       return;
     try {
-      const s = JSON.parse(fs11.readFileSync(f, "utf8"));
+      const s = JSON.parse(fs12.readFileSync(f, "utf8"));
       if (s.pid !== (this.o.pid ?? process.pid))
         return;
-      const root = this.o.install.kind === "plugin" ? path12.dirname(path12.dirname(entry)) : s.root;
-      const runtime = this.o.install.kind === "plugin" ? path12.join(String(root), "dist") : path12.dirname(entry);
-      fs11.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
+      const root = this.o.install.kind === "plugin" ? path13.dirname(path13.dirname(entry)) : s.root;
+      const runtime = this.o.install.kind === "plugin" ? path13.join(String(root), "dist") : path13.dirname(entry);
+      fs12.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
     } catch {
     }
   }
@@ -64099,43 +64410,43 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path13.dirname(d)) {
-    if (fs12.existsSync(path13.join(d, ".git")))
+  for (let d = dir; ; d = path14.dirname(d)) {
+    if (fs13.existsSync(path14.join(d, ".git")))
       return d;
-    if (path13.dirname(d) === d)
+    if (path14.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path13.dirname(path13.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path14.dirname(path14.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs12.realpathSync(path13.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path13.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs13.realpathSync(path14.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path14.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs12.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs13.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path13.join(os7.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path14.join(os8.homedir(), "Library", "Logs", "awd") };
 }
 function updateService(env) {
   const repo = env.UNPROSE_UPDATE_REPO || "river0825/unprose";
   const entry = (() => {
     try {
-      return fs12.realpathSync(process.argv[1] ?? "");
+      return fs13.realpathSync(process.argv[1] ?? "");
     } catch {
       return process.argv[1] ?? "";
     }
   })();
-  const install = detectInstall(entry, env, (p) => fs12.existsSync(p));
+  const install = detectInstall(entry, env, (p) => fs13.existsSync(p));
   const current = findRelease().version;
   const off = env.UNPROSE_UPDATE_CHECK === "0";
   const fake = env.UNPROSE_UPDATE_FAKE_LATEST;
   const source = off ? void 0 : fake ? new FakeUpdateSource({ version: fake, source: "fake (UNPROSE_UPDATE_FAKE_LATEST)", notes: `### Added
 - A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env });
-  const home = os7.homedir();
-  const stateFile = env.CLAUDE_PLUGIN_DATA ? path13.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path13.join(home, ".awd", "plugin", "canvas.json");
+  const home = os8.homedir();
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path14.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path14.join(home, ".awd", "plugin", "canvas.json");
   return new UpdateService({
     current,
     install,
@@ -64145,10 +64456,10 @@ function updateService(env) {
     entry,
     argv: process.argv.slice(2),
     env: Object.fromEntries(Object.entries(env).filter((e) => typeof e[1] === "string")),
-    cacheFile: fake ? void 0 : path13.join(home, ".awd", "update-check.json"),
-    logFile: path13.join(home, ".awd", "canvas-upgrade.log"),
+    cacheFile: fake ? void 0 : path14.join(home, ".awd", "update-check.json"),
+    logFile: path14.join(home, ".awd", "canvas-upgrade.log"),
     stateFile,
-    installedFile: path13.join(env.CLAUDE_CONFIG_DIR || path13.join(home, ".claude"), "plugins", "installed_plugins.json"),
+    installedFile: path14.join(env.CLAUDE_CONFIG_DIR || path14.join(home, ".claude"), "plugins", "installed_plugins.json"),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
   });
 }
@@ -64163,7 +64474,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path13.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path14.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -64175,7 +64486,7 @@ async function main() {
         const p = store.registerProject(root);
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
       }
-      const agentsFile = path13.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
+      const agentsFile = path14.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
       const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== "off";
       const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth });
       const feedback = new FileFeedbackStore(defaultFeedbackFile(agentsFile));
@@ -64200,7 +64511,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs12.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs13.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;
