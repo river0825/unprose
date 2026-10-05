@@ -5,6 +5,11 @@ import { KIND_NAMES, diagramData } from '../diagrams/frame'
 import { findingCount } from '../diagrams/findings'
 import { autoSides, planSides, type Box } from './route'
 import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
+import { planWires } from '../../../src/wireGeometry'
+import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
+
+/** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
+export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
 
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
@@ -196,7 +201,23 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
     }
   }
   spreadPorts(edges, byId, stacked)
+  planDsWires(board, edges, stacked)
   return { nodes, edges }
+}
+
+/** Domain-story verbs and number circles placed together, so they keep off each other (docs/diagrams.md §6b "No collisions"). */
+function planDsWires(board: Board, edges: Edge[], stacked: Map<string, { x: number; y: number }>): void {
+  const ds = edges.filter((e) => e.type === 'item' && !e.hidden && (e.data as { item?: Item } | undefined)?.item?.data?.ds)
+  if (!ds.length) return
+  const items: Board['items'] = {}
+  for (const it of Object.values(board.items)) items[it.id] = stacked.has(it.id) ? { ...it, ...stacked.get(it.id)! } : it
+  const plan = planWires({ items }, ds.map((e) => e.id))
+  for (const e of ds) {
+    const p = plan.get(e.id)
+    const it = (e.data as { item: Item }).item
+    if (!p) continue
+    ;(e.data as { dsPlan?: DsWirePlan }).dsPlan = { ...(p.seq ? { seq: p.seq } : {}), ...(p.label ? { label: p.label } : {}), from: boxOf(items[it.from!], stacked), to: boxOf(items[it.to!], stacked) }
+  }
 }
 
 const boxOf = (it: Item, stacked: Map<string, { x: number; y: number }>): Box => ({ ...(stacked.get(it.id) ?? { x: it.x, y: it.y }), w: it.w, h: it.h })

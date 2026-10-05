@@ -24569,8 +24569,8 @@ var $ZodXor = /* @__PURE__ */ $constructor("$ZodXor", (inst, def2) => {
     });
   };
 });
-function getDiscriminatedOption(union3, value) {
-  const internals = union3._zod;
+function getDiscriminatedOption(union4, value) {
+  const internals = union4._zod;
   let map2 = internals.bag.optionsMap;
   if (!map2) {
     map2 = discriminatorMap(internals.def);
@@ -36602,12 +36602,12 @@ function foldIntersection(json4) {
   if (!unions.length) {
     folded = foldObjects(allOf);
   } else {
-    const union3 = unions[0];
-    const keyword = UNION_KEYS.find((k2) => Array.isArray(union3[k2]));
-    if (Object.keys(union3).length !== 1)
+    const union4 = unions[0];
+    const keyword = UNION_KEYS.find((k2) => Array.isArray(union4[k2]));
+    if (Object.keys(union4).length !== 1)
       return;
-    const rest = allOf.filter((m2) => m2 !== union3);
-    const branches = union3[keyword].map((branch) => foldObjects([...rest, branch]));
+    const rest = allOf.filter((m2) => m2 !== union4);
+    const branches = union4[keyword].map((branch) => foldObjects([...rest, branch]));
     if (branches.some((b2) => !b2))
       return;
     folded = { [keyword]: branches };
@@ -42195,12 +42195,30 @@ function circled(n4) {
   return n4 >= 1 && n4 <= 20 ? String.fromCodePoint(9312 + n4 - 1) : `(${n4})`;
 }
 var QUICK_START = "domainstorytelling.org/quick-start-guide";
+var NOTE_RECOMMENDED = 120;
+function displayWidth(text3) {
+  let n4 = 0;
+  for (const ch of text3)
+    n4 += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
+  return n4;
+}
 function checkDomainStory(content) {
   const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
   const out = [];
   for (const u3 of m2.unresolved)
     out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START });
+  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   for (const s of m2.sentences) {
+    if (s.to.includes(s.actor)) {
+      const others = s.to.filter((r2) => r2 !== s.actor);
+      out.push({
+        rule: "self-receiver",
+        severity: "warning",
+        element: s.id,
+        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
+        page: QUICK_START
+      });
+    }
     if (!s.objectText)
       out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START });
   }
@@ -42214,6 +42232,28 @@ function checkDomainStory(content) {
     const same2 = m2.sentences.filter((s) => s.seq === n4);
     if (same2.length > 1)
       out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n4)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+  }
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
+  for (let i = 0; i < m2.groups.length; i++)
+    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
+      const [a, b2] = [m2.groups[i], m2.groups[j2]];
+      const sa = new Set(a.members);
+      const sb = new Set(b2.members);
+      const shared2 = [...sa].filter((x2) => sb.has(x2));
+      if (!shared2.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
+        continue;
+      out.push({
+        rule: "groups-overlap",
+        severity: "warning",
+        element: b2.id,
+        message: `groups "${a.text}" and "${b2.text}" share ${shared2.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
+        page: QUICK_START
+      });
+    }
+  for (const n4 of m2.annotations) {
+    const w2 = displayWidth(n4.text);
+    if (w2 > NOTE_RECOMMENDED)
+      out.push({ rule: "note-long", severity: "warning", element: n4.id, message: `note on "${name(n4.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START });
   }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
@@ -42231,7 +42271,7 @@ function checkDomainStory(content) {
 // packages/canvas/dist/textMetrics.js
 function defaultFont(it) {
   if (it.type === "text")
-    return it.role === "title" || it.role === "heading" ? 22 : 15;
+    return it.role === "title" || it.role === "heading" ? 22 : it.role === "annotation" ? 12.5 : 15;
   if (it.type === "sticky" && it.role === "actor")
     return 12.5;
   if (it.type === "card" && it.role === "card")
@@ -42250,6 +42290,8 @@ function textBoxOf(it) {
         return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 };
       return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 };
     case "text":
+      if (it.role === "annotation")
+        return { font, lineHeight: lh(1.5), weight: 400, padTop: 6, padRight: 8, padBottom: 6, padLeft: 10 };
       return { font, lineHeight: lh(1.5), weight: it.role === "title" || it.role === "heading" ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
     case "frame":
     case "lane":
@@ -42333,6 +42375,14 @@ function fitText(it) {
   const needH = Math.ceil(lines2.length * box.lineHeight + box.padTop + box.padBottom);
   const clipped = text3.trim() !== "" && (box.nowrap ? measure(lines2[0], box.font, box.weight) > innerW + 1 : lines2.length > fits);
   return { box, lines: lines2, fits, clipped, needH, innerW };
+}
+function sizeToText(it, text3, o) {
+  const box = textBoxOf(it);
+  const padX = box.padLeft + box.padRight;
+  const longest = Math.max(0, ...text3.replace(/\r\n/g, "\n").split("\n").map((l) => measure(l, box.font, box.weight)));
+  const w2 = Math.ceil(Math.min(o.maxW, Math.max(o.minW, longest + padX + 6)));
+  const { needH } = fitText({ ...it, w: w2, h: 0, text: text3 });
+  return { w: w2, h: Math.max(o.minH ?? 0, needH + 4) };
 }
 
 // packages/canvas/dist/edgeLabel.js
@@ -42531,10 +42581,52 @@ function dsGeometry(m2) {
     nudge: Math.round(BASE.nudge * f)
   };
 }
-var NOTE_W = 200;
-var NOTE_H = 64;
+var NOTE_MIN_W = 160;
+var NOTE_MAX_W = 280;
+var NOTE_MIN_H = 40;
+var GROUP_PAD_X = 28;
+var GROUP_PAD_TOP = 30;
+var GROUP_PAD_BOTTOM = 22;
+var GROUP_NEST = 18;
+var GROUP_TITLE_H = 26;
 var centre = (b2) => ({ x: b2.x + b2.w / 2, y: b2.y + b2.h / 2 });
 var overlaps = (a, b2, gap = 16) => a.x < b2.x + b2.w + gap && b2.x < a.x + a.w + gap && a.y < b2.y + b2.h + gap && b2.y < a.y + a.h + gap;
+var receiversOf = (s) => s.to.filter((r2) => r2 !== s.actor);
+function segmentHitsBox(p, q2, b2, pad = 0) {
+  const [x0, y0, x1, y1] = [b2.x - pad, b2.y - pad, b2.x + b2.w + pad, b2.y + b2.h + pad];
+  let t0 = 0;
+  let t1 = 1;
+  const dx = q2.x - p.x;
+  const dy = q2.y - p.y;
+  for (const [pp, qq] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
+    if (pp === 0) {
+      if (qq < 0)
+        return false;
+      continue;
+    }
+    const r2 = qq / pp;
+    if (pp < 0)
+      t0 = Math.max(t0, r2);
+    else
+      t1 = Math.min(t1, r2);
+    if (t0 > t1)
+      return false;
+  }
+  return true;
+}
+function nearestFree(at2, w2, h, boxes, step, start = { x: 0, y: 1 }) {
+  const box = (p) => ({ x: p.x - w2 / 2, y: p.y - h / 2, w: w2, h });
+  const a0 = Math.atan2(start.y, start.x);
+  for (let ring = 1; ring <= 40; ring++) {
+    for (let k2 = 0; k2 < 12; k2++) {
+      const a = a0 + Math.ceil(k2 / 2) * (k2 % 2 ? 1 : -1) * Math.PI / 6;
+      const b2 = box({ x: at2.x + Math.cos(a) * ring * step, y: at2.y + Math.sin(a) * ring * step });
+      if (!boxes.some((o) => overlaps(o, b2)))
+        return b2;
+    }
+  }
+  return box({ x: at2.x, y: at2.y + 41 * step });
+}
 function countCrossings(segs) {
   const same2 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
   const orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
@@ -42576,7 +42668,7 @@ function layoutWith(m2, sentences, order, pref, g2) {
     put(id, c, pr);
   };
   for (const s of sentences) {
-    const cast = [s.actor, ...s.to];
+    const cast = [s.actor, ...receiversOf(s)];
     for (const id of cast) {
       if (cell.has(id))
         continue;
@@ -42593,10 +42685,10 @@ function layoutWith(m2, sentences, order, pref, g2) {
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
   const wayCount = /* @__PURE__ */ new Map();
-  const wayKey = (s) => [s.actor, ...[...s.to].sort()].join(">");
+  const wayKey = (s) => [s.actor, ...receiversOf(s).sort()].join(">");
   const wayIndex = /* @__PURE__ */ new Map();
   for (const s of sentences)
-    if (s.objectText && s.to.length)
+    if (s.objectText && receiversOf(s).length)
       wayCount.set(wayKey(s), (wayCount.get(wayKey(s)) ?? 0) + 1);
   const object3 = /* @__PURE__ */ new Map();
   for (const s of sentences) {
@@ -42605,11 +42697,12 @@ function layoutWith(m2, sentences, order, pref, g2) {
     const a = centre(actor.get(s.actor));
     let at2;
     let perp;
-    if (s.to.length) {
-      const rs = s.to.map((r2) => centre(actor.get(r2)));
+    const recv = receiversOf(s);
+    if (recv.length) {
+      const rs = recv.map((r2) => centre(actor.get(r2)));
       const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
-      const len = Math.hypot(t.x - a.x, t.y - a.y) || 1;
-      perp = { x: -(t.y - a.y) / len, y: (t.x - a.x) / len };
+      const len = Math.hypot(t.x - a.x, t.y - a.y);
+      perp = len ? { x: -(t.y - a.y) / len, y: (t.x - a.x) / len } : { x: 0, y: 1 };
       const n4 = wayCount.get(wayKey(s)) ?? 1;
       const k2 = wayIndex.get(wayKey(s)) ?? 0;
       wayIndex.set(wayKey(s), k2 + 1);
@@ -42618,19 +42711,17 @@ function layoutWith(m2, sentences, order, pref, g2) {
     } else {
       perp = { x: 0, y: 1 };
       at2 = { x: a.x + g2.slot, y: a.y };
-      for (const [dx, dy] of SLOTS) {
-        const cand = { x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 };
-        if (free({ x: cand.x - ICON_W / 2, y: cand.y - ICON_H / 2, w: ICON_W, h: ICON_H })) {
-          at2 = cand;
-          break;
-        }
-      }
+      const own2 = actor.get(s.actor);
+      const slots = SLOTS.map(([dx, dy]) => ({ x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 })).filter((c) => free({ x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }));
+      at2 = slots.find((c) => !boxes.some((o) => o !== own2 && segmentHitsBox(a, c, o, -10))) ?? slots[0] ?? at2;
     }
     let box = { x: at2.x - ICON_W / 2, y: at2.y - ICON_H / 2, w: ICON_W, h: ICON_H };
     for (let step = 1; !free(box) && step <= 12; step++) {
       const d = Math.ceil(step / 2) * g2.nudge * (step % 2 ? 1 : -1);
       box = { x: at2.x + perp.x * d - ICON_W / 2, y: at2.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H };
     }
+    if (!free(box))
+      box = nearestFree(at2, ICON_W, ICON_H, boxes, g2.nudge, perp);
     boxes.push(box);
     object3.set(s.id, box);
   }
@@ -42640,14 +42731,21 @@ function layoutWith(m2, sentences, order, pref, g2) {
     const o = object3.get(s.id);
     if (o) {
       segs.push([a, centre(o)]);
-      for (const r2 of s.to)
+      for (const r2 of receiversOf(s))
         segs.push([centre(o), centre(actor.get(r2))]);
     } else
-      for (const r2 of s.to)
+      for (const r2 of receiversOf(s))
         segs.push([a, centre(actor.get(r2))]);
   }
-  return { actor, object: object3, crossings: countCrossings(segs) };
+  const all = [...actor.values(), ...object3.values()];
+  let through = 0;
+  for (const [p, q2] of segs)
+    for (const b2 of all)
+      if (!samePt(centre(b2), p) && !samePt(centre(b2), q2) && segmentHitsBox(p, q2, b2, -10))
+        through++;
+  return { actor, object: object3, crossings: countCrossings(segs) + 2 * through };
 }
+var samePt = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
 function facing(from, to) {
   const a = centre(from);
   const b2 = centre(to);
@@ -42698,52 +42796,58 @@ function renderDomainStory(raw, opts = {}) {
     const base = { seq: s.seq, sentence: read, ds: true };
     const from = actorItem.get(s.actor);
     const box = best.object.get(s.id);
+    const self = s.to.includes(s.actor);
     if (box && s.objectText) {
-      const o = make({ id: itemId("object", s.id), type: "card", ...box, text: s.objectText, role: "work-object", order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ds: "object", ...s.object ? { workObject: s.object } : {}, ...s.traces.length ? { traces: s.traces } : {}, ...s.note ? { note: s.note } : {} } }, now);
+      const o = make({ id: itemId("object", s.id), type: "card", ...box, text: s.objectText, role: "work-object", order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ds: "object", ...s.object ? { workObject: s.object } : {}, ...s.traces.length ? { traces: s.traces } : {}, ...s.note ? { note: s.note } : {}, ...self ? { self: true } : {} } }, now);
       objectItem.set(s.id, o);
       items.push(o);
       items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
-      for (const r2 of s.to) {
+      for (const r2 of receiversOf(s)) {
         const to = actorItem.get(r2);
         items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r2}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
       }
     } else {
-      for (const [k2, r2] of s.to.entries()) {
+      for (const [k2, r2] of receiversOf(s).entries()) {
         const to = actorItem.get(r2);
         items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r2}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
       }
     }
   }
   const placed = [...actorItem.values(), ...objectItem.values()];
+  const segs = items.filter((i) => i.type === "arrow").flatMap((a) => {
+    const f = [...actorItem.values(), ...objectItem.values()].find((x2) => x2.id === a.from);
+    const t = [...actorItem.values(), ...objectItem.values()].find((x2) => x2.id === a.to);
+    return f && t ? [[centre(f), centre(t)]] : [];
+  });
   for (const n4 of m2.annotations) {
     const target = actorItem.get(n4.on) ?? objectItem.get(n4.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n4.on);
     const base = target ?? { x: 0, y: 0, w: 0, h: 0 };
-    const candidates = [
-      { x: base.x + base.w + 60, y: base.y - 10 },
-      { x: base.x + base.w + 60, y: base.y + base.h - 20 },
-      { x: base.x - NOTE_W - 60, y: base.y - 10 },
-      { x: base.x, y: base.y + base.h + 40 },
-      { x: base.x, y: base.y - NOTE_H - 40 }
-    ];
-    let at2 = candidates.find((p) => !placed.some((o) => overlaps(o, { ...p, w: NOTE_W, h: NOTE_H }))) ?? candidates[0];
-    for (let k2 = 0; placed.some((o) => overlaps(o, { ...at2, w: NOTE_W, h: NOTE_H })) && k2 < 12; k2++)
-      at2 = { x: at2.x, y: at2.y + NOTE_H + 20 };
-    const note = make({ id: itemId("note", n4.id), type: "text", x: at2.x, y: at2.y, w: NOTE_W, h: NOTE_H, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
+    const { w: nw, h: nh } = sizeToText({ type: "text", role: "annotation" }, n4.text, { minW: NOTE_MIN_W, maxW: NOTE_MAX_W, minH: NOTE_MIN_H });
+    const candidates = [];
+    for (const d of [60, 150, 260, 380])
+      candidates.push({ x: base.x + base.w + d, y: base.y - 10 }, { x: base.x + base.w + d, y: base.y + base.h - nh + 10 }, { x: base.x - nw - d, y: base.y - 10 }, { x: base.x - nw - d, y: base.y + base.h - nh + 10 }, { x: base.x + base.w / 2 - nw / 2, y: base.y + base.h + d - 20 }, { x: base.x + base.w / 2 - nw / 2, y: base.y - nh - d + 20 }, { x: base.x + base.w + d * 0.7, y: base.y - nh - d * 0.5 }, { x: base.x + base.w + d * 0.7, y: base.y + base.h + d * 0.5 }, { x: base.x - nw - d * 0.7, y: base.y - nh - d * 0.5 }, { x: base.x - nw - d * 0.7, y: base.y + base.h + d * 0.5 });
+    const clear = (p) => !placed.some((o) => overlaps(o, { ...p, w: nw, h: nh }));
+    const cuts = (p) => segs.filter(([a, b2]) => segmentHitsBox(a, b2, { ...p, w: nw, h: nh }, 4)).length;
+    const tc = centre(base);
+    const score = (p) => cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
+    let at2 = candidates.filter(clear).sort((p, q2) => score(p) - score(q2))[0] ?? candidates[0];
+    for (let k2 = 0; !clear(at2) && k2 < 60; k2++)
+      at2 = { x: at2.x, y: at2.y + 40 };
+    const note = make({ id: itemId("note", n4.id), type: "text", x: at2.x, y: at2.y, w: nw, h: nh, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
     placed.push(note);
     items.push(note);
     if (target)
       items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
   }
   const outlines = [];
+  const memberItems = (members2) => members2.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
+  const shaped = groupOutlines(m2.groups.map((g3) => ({ id: g3.id, members: [...new Set(memberItems(g3.members).map((i) => i.id))], boxes: memberItems(g3.members) })));
   for (const g3 of m2.groups) {
-    const members2 = g3.members.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
-    if (!members2.length)
+    const o = shaped.get(g3.id);
+    if (!o)
       continue;
-    const x0 = Math.min(...members2.map((b2) => b2.x)) - 36;
-    const y0 = Math.min(...members2.map((b2) => b2.y)) - 48;
-    const x1 = Math.max(...members2.map((b2) => b2.x + b2.w)) + 36;
-    const y1 = Math.max(...members2.map((b2) => b2.y + b2.h)) + 30;
-    outlines.push(make({ id: itemId("group", g3.id), type: "frame", x: x0, y: y0, w: x1 - x0, h: y1 - y0, text: g3.text, color: "grey", role: "group", data: { element: g3.id, members: g3.members, ds: "group" } }, now));
+    const extra = { ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, ...o.overlaps.length ? { overlaps: o.overlaps } : {} };
+    outlines.push(make({ id: itemId("group", g3.id), type: "frame", ...o.box, text: g3.text, color: "grey", role: "group", data: { element: g3.id, members: g3.members, ds: "group", ...extra } }, now));
   }
   const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
   const minX = Math.min(...all.map((i) => i.x));
@@ -42768,6 +42872,78 @@ function renderDomainStory(raw, opts = {}) {
   if (facets.length)
     legend2.push(make({ id: itemId("scope", "scope"), type: "text", x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(" \xB7 ")}`, role: "scope", data: { scope: m2.scope } }, now));
   return offsetAll([...shifted, ...legend2], opts.at);
+}
+var union2 = (bs) => {
+  const x0 = Math.min(...bs.map((b2) => b2.x));
+  const y0 = Math.min(...bs.map((b2) => b2.y));
+  return { x: x0, y: y0, w: Math.max(...bs.map((b2) => b2.x + b2.w)) - x0, h: Math.max(...bs.map((b2) => b2.y + b2.h)) - y0 };
+};
+var withTitle = (b2) => ({ x: b2.x, y: b2.y - GROUP_TITLE_H, w: b2.w, h: b2.h + GROUP_TITLE_H });
+var intersects = (a, b2, tol = 0) => Math.min(a.x + a.w, b2.x + b2.w) - Math.max(a.x, b2.x) > tol && Math.min(a.y + a.h, b2.y + b2.h) - Math.max(a.y, b2.y) > tol;
+function groupOutlines(groups) {
+  const out = /* @__PURE__ */ new Map();
+  const live = groups.filter((g2) => g2.boxes.length);
+  const subset = (a, b2) => [...a].every((x2) => b2.has(x2));
+  const order = [...live].sort((a, b2) => a.members.length - b2.members.length);
+  for (const g2 of order) {
+    const set2 = new Set(g2.members);
+    const raw = union2(g2.boxes);
+    const inner = [...out.entries()].filter(([, o]) => !o.nestedIn && subset(o.set, set2));
+    const core = union2([raw, ...inner.map(([, o]) => ({ x: o.box.x - GROUP_NEST, y: o.box.y - GROUP_NEST - GROUP_TITLE_H, w: o.box.w + 2 * GROUP_NEST, h: o.box.h + 2 * GROUP_NEST + GROUP_TITLE_H }))]);
+    for (const [id, o] of inner)
+      o.nestedIn = g2.id === id ? void 0 : g2.id;
+    const box = { x: core.x - GROUP_PAD_X, y: core.y - GROUP_PAD_TOP, w: core.w + 2 * GROUP_PAD_X, h: core.h + GROUP_PAD_TOP + GROUP_PAD_BOTTOM };
+    out.set(g2.id, { box, core, set: set2, overlaps: [] });
+  }
+  const ids = live.map((g2) => g2.id);
+  const related = (a, b2) => {
+    const up = (x2, y2) => {
+      for (let cur = out.get(x2)?.nestedIn, k2 = 0; cur && k2 < 50; cur = out.get(cur)?.nestedIn, k2++)
+        if (cur === y2)
+          return true;
+      return false;
+    };
+    return up(a, b2) || up(b2, a);
+  };
+  for (let pass = 0; pass < 2; pass++)
+    for (let i = 0; i < ids.length; i++)
+      for (let j2 = i + 1; j2 < ids.length; j2++) {
+        const A = out.get(ids[i]);
+        const B2 = out.get(ids[j2]);
+        if (related(ids[i], ids[j2]) || !intersects(withTitle(A.box), withTitle(B2.box)))
+          continue;
+        if ([...A.set].some((x2) => B2.set.has(x2)))
+          continue;
+        const gx = Math.max(B2.core.x - (A.core.x + A.core.w), A.core.x - (B2.core.x + B2.core.w));
+        const gy = Math.max(B2.core.y - GROUP_TITLE_H - (A.core.y + A.core.h), A.core.y - GROUP_TITLE_H - (B2.core.y + B2.core.h));
+        if (gx <= 8 && gy <= 8)
+          continue;
+        if (gx >= gy) {
+          const [L2, R] = A.core.x < B2.core.x ? [A, B2] : [B2, A];
+          const mid = (L2.core.x + L2.core.w + R.core.x) / 2;
+          const right = Math.max(L2.core.x + L2.core.w + 4, Math.min(L2.box.x + L2.box.w, mid - 4));
+          L2.box = { ...L2.box, w: right - L2.box.x };
+          const left = Math.min(R.core.x - 4, Math.max(R.box.x, mid + 4));
+          R.box = { ...R.box, x: left, w: R.box.x + R.box.w - left };
+        } else {
+          const [T2, U2] = A.core.y < B2.core.y ? [A, B2] : [B2, A];
+          const mid = (T2.core.y + T2.core.h + U2.core.y - GROUP_TITLE_H) / 2;
+          const bottom = Math.max(T2.core.y + T2.core.h + 4, Math.min(T2.box.y + T2.box.h, mid - 4));
+          T2.box = { ...T2.box, h: bottom - T2.box.y };
+          const top = Math.min(U2.core.y - 4, Math.max(U2.box.y, mid + 4 + GROUP_TITLE_H));
+          U2.box = { ...U2.box, y: top, h: U2.box.y + U2.box.h - top };
+        }
+      }
+  for (let i = 0; i < ids.length; i++)
+    for (let j2 = i + 1; j2 < ids.length; j2++) {
+      const A = out.get(ids[i]);
+      const B2 = out.get(ids[j2]);
+      if (related(ids[i], ids[j2]) || !intersects(withTitle(A.box), withTitle(B2.box), 2))
+        continue;
+      A.overlaps.push(ids[j2]);
+      B2.overlaps.push(ids[i]);
+    }
+  return new Map([...out].map(([id, o]) => [id, { box: o.box, ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, overlaps: o.overlaps }]));
 }
 
 // packages/canvas/dist/diagrams/unknownFields.js
@@ -50744,7 +50920,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.12.0";
+var VERSION = "0.13.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -60139,7 +60315,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.12.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.13.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60370,7 +60546,7 @@ ${svg}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -60380,7 +60556,7 @@ ${svg}`);
     const r2 = await client.layout(id, frame, limit ?? 60);
     const lines2 = r2.lines;
     if (!r2.findings.length)
-      return text2(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r2.checked} items checked \u2014 nothing overlaps, nothing is cut off or out of place.`);
+      return text2(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r2.checked} items${r2.wires ? ` and ${r2.wires} wires` : ""} checked \u2014 nothing overlaps, collides, is cut off or out of place.`);
     return text2((lines2 ?? r2.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
   });
   if (!opts.remote) {
@@ -61084,11 +61260,12 @@ function wireShape(b2, it) {
   const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
   return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds };
 }
-function dsSeqAt(s) {
+function dsSeqAt(s, along = 24) {
   const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
-  const along = Math.min(24, len / 3);
-  return { x: s.p1.x + (s.p2.x - s.p1.x) / len * along, y: s.p1.y + (s.p2.y - s.p1.y) / len * along };
+  const d = Math.min(along, len / 3);
+  return { x: s.p1.x + (s.p2.x - s.p1.x) / len * d, y: s.p1.y + (s.p2.y - s.p1.y) / len * d };
 }
+var DS_SEQ = 22;
 function dsVerbAt(s) {
   const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
   const ux = (s.p2.x - s.p1.x) / len;
@@ -61113,11 +61290,61 @@ function wireLabel(it, shape, boxes) {
   const ds = shape.ds && it.role !== "annotation-link";
   const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
   if (shape.bend) {
-    const placed = placeEdgeLabel(text3, [shape.bend, { x: shape.bend.x + 0.01, y: shape.bend.y }], [], { font, short: ctl.short });
-    return { ...placed, x: shape.bend.x, y: shape.bend.y, dragged: true };
+    const whole = labelLines(text3, EDGE_LABEL.maxW, font);
+    const { w: w2, h } = labelSize(whole.lines, font);
+    return { mode: whole.cut ? "cut" : "full", x: shape.bend.x, y: shape.bend.y, w: w2, h, lines: whole.lines, text: text3.replace(/\s+/g, " ").trim(), font, dragged: true };
   }
   const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
   return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
+}
+var seqBox = (p) => ({ x: p.x - DS_SEQ / 2, y: p.y - DS_SEQ / 2, w: DS_SEQ, h: DS_SEQ });
+function planWires(b2, ids) {
+  const out = /* @__PURE__ */ new Map();
+  const wanted = ids ? new Set(ids) : void 0;
+  const wires = Object.values(b2.items).filter((it) => it.type === "arrow" && (!wanted || wanted.has(it.id))).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
+  const obstacles = labelObstacles(b2);
+  const seqOf = (it) => typeof it.data?.seq === "number" ? it.data.seq : Infinity;
+  const ds = [];
+  for (const it of wires) {
+    const shape = wireShape(b2, it);
+    if (!shape)
+      continue;
+    out.set(it.id, { shape });
+    if (shape.ds && it.role !== "annotation-link")
+      ds.push({ it, shape });
+    else
+      out.get(it.id).label = wireLabel(it, shape, obstacles);
+  }
+  ds.sort((x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1));
+  const titles = Object.values(b2.items).filter((g2) => g2.type === "frame" && g2.data?.ds === "group" && g2.text).map((g2) => ({ x: g2.x, y: g2.y - 24, w: measure(g2.text, 13.5, 600) + 6, h: 20 }));
+  const circles = [];
+  for (const { it, shape } of ds) {
+    if (it.role !== "activity" || typeof it.data?.seq !== "number")
+      continue;
+    const len = Math.hypot(shape.p2.x - shape.p1.x, shape.p2.y - shape.p1.y);
+    const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
+    const along = (d) => ({ x: shape.p1.x + (shape.p2.x - shape.p1.x) / (len || 1) * d, y: shape.p1.y + (shape.p2.y - shape.p1.y) / (len || 1) * d });
+    let at2 = dsSeqAt(shape);
+    for (let d = Math.min(24, len / 3); d <= Math.max(24, len * 0.42); d += 8) {
+      const p = along(d);
+      if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
+        at2 = p;
+        break;
+      }
+    }
+    circles.push(seqBox(at2));
+    out.get(it.id).seq = at2;
+  }
+  const placed = [];
+  for (const { it, shape } of ds) {
+    const label2 = wireLabel(it, shape, [...obstacles, ...circles, ...titles, ...placed]);
+    if (!label2)
+      continue;
+    out.get(it.id).label = label2;
+    if (label2.mode !== "dot")
+      placed.push({ x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h });
+  }
+  return out;
 }
 
 // packages/canvas/dist/snapshot.js
@@ -61258,7 +61485,7 @@ function boxOf(it) {
     return { x: it.x, y: it.y, w: BADGE, h: BADGE };
   return { x: it.x, y: it.y, w: it.w, h: it.h };
 }
-function union2(boxes) {
+function union3(boxes) {
   if (!boxes.length)
     return void 0;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -61320,7 +61547,7 @@ function select(b2, opts) {
     ids = new Set(all.filter(drawable).map((i) => i.id));
   }
   const drawn = [...ids].map((id) => b2.items[id]);
-  let region = union2(drawn.map(needOf)) ?? { x: 0, y: 0, w: 400, h: 300 };
+  let region = union3(drawn.map(needOf)) ?? { x: 0, y: 0, w: 400, h: 300 };
   if (root)
     region = needOf(root);
   for (const c of all) {
@@ -61333,7 +61560,7 @@ function select(b2, opts) {
       ids.add(c.id);
   }
   if (!root)
-    region = union2([...ids].map((id) => needOf(b2.items[id]))) ?? region;
+    region = union3([...ids].map((id) => needOf(b2.items[id]))) ?? region;
   for (const a of all)
     if (a.type === "arrow" && a.from && a.to && ids.has(a.from) && ids.has(a.to))
       ids.add(a.id);
@@ -61462,8 +61689,9 @@ function drawText(c, it) {
   const bx = boxOf(it);
   if (it.data?.ds === "annotation") {
     const path15 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
-    const lines2 = c.text && it.text ? wrap(it.text, bx.w - 16, 12.5) : [];
-    return `<path d="${path15}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + 8, y: bx.y + 4, font: 12.5, lh: 16, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 8) / 16)) });
+    const fit2 = fitText(it);
+    const lines2 = c.text && it.text ? fit2.lines : [];
+    return `<path d="${path15}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + fit2.box.padLeft, y: bx.y + fit2.box.padTop, font: fit2.box.font, lh: fit2.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit2.fits) });
   }
   if (it.role === "release-cut")
     return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n3(bx.x + 4)}" y="${n3(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
@@ -61748,9 +61976,10 @@ function rootOf3(b2, it) {
 }
 function drawArrow(c, it) {
   const { p } = c;
-  const shape = wireShape(c.b, it);
-  if (!shape)
+  const planned = (c.plan ??= planWires(c.b)).get(it.id);
+  if (!planned)
     return "";
+  const shape = planned.shape;
   const ds = shape.ds;
   const pending = !!it.data?.pending && it.role !== "trace";
   let stroke = p.ink2;
@@ -61768,11 +61997,11 @@ function drawArrow(c, it) {
   if (pending)
     stroke = p.marker, dash = "6 4", marker = "marker";
   const parts = [`<path d="${shape.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ""}${marker ? ` marker-end="url(#ah-${marker})"` : ""}${it.role === "trace" || it.role === "owns" ? ' stroke-opacity="0.8"' : ""}/>`];
-  if (ds && it.role === "activity" && c.text && typeof it.data?.seq === "number") {
-    const at2 = dsSeqAt(shape);
+  if (ds && it.role === "activity" && c.text && typeof it.data?.seq === "number" && planned.seq) {
+    const at2 = planned.seq;
     parts.push(`<circle cx="${n3(at2.x)}" cy="${n3(at2.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n3(at2.x)}" y="${n3(at2.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`);
   }
-  const label2 = c.text ? wireLabel(it, shape, c.boxes ?? (c.boxes = labelObstacles(c.b))) : void 0;
+  const label2 = c.text ? planned.label : void 0;
   if (label2?.mode === "dot") {
     parts.push(`<circle cx="${n3(label2.x)}" cy="${n3(label2.y)}" r="${n3(EDGE_LABEL.dot / 2 - 1)}" fill="${p.paper}" stroke="${ds ? p.ink : p.ink2}" stroke-width="1.4"><title>${esc3(label2.text)}</title></circle>`);
   } else if (label2) {
@@ -61874,7 +62103,7 @@ var LayoutError = class extends Error {
     this.status = status;
   }
 };
-var KINDS = ["clipped", "overlap", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout"];
+var KINDS = ["clipped", "overlap", "group", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout"];
 var OVERLAP_TOL = 6;
 var CONTAINER_COVER = 25;
 var OUTSIDE_TOL = 6;
@@ -61882,6 +62111,9 @@ var OVERSIZE_RATIO = 3;
 var OVERSIZE_STICKIES = 3;
 var MOVED_TOL = 8;
 var DECOR_ROLES = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
+var isDsGroup = (it) => it.type === "frame" && it.data?.ds === "group";
+var GROUP_TITLE = 26;
+var MARK_TOL = 2;
 var SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
 var isContainer3 = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
 var isLane = (it) => !!it && it.type === "lane";
@@ -61937,6 +62169,8 @@ function checkLayout(board, opts = {}) {
         const a = sibs[i];
         const b2 = sibs[j2];
         if (isContainer3(a) !== isContainer3(b2))
+          continue;
+        if (isDsGroup(a) && isDsGroup(b2))
           continue;
         const ox = Math.min(a.x + a.w, b2.x + b2.w) - Math.max(a.x, b2.x);
         const oy = Math.min(a.y + a.h, b2.y + b2.h) - Math.max(a.y, b2.y);
@@ -62038,18 +62272,57 @@ function checkLayout(board, opts = {}) {
       });
     }
   }
+  const dsGroups = items.filter(isDsGroup);
+  const titled = (g2) => ({ x: g2.x, y: g2.y - GROUP_TITLE, w: g2.w, h: g2.h + GROUP_TITLE });
+  const contains = (o, i) => o.x <= i.x + 1 && o.y <= i.y - GROUP_TITLE + 1 && o.x + o.w >= i.x + i.w - 1 && o.y + o.h >= i.y + i.h - 1;
+  for (let i = 0; i < dsGroups.length; i++)
+    for (let j2 = i + 1; j2 < dsGroups.length; j2++) {
+      const [ga, gb] = byReading(dsGroups[i], dsGroups[j2]) <= 0 ? [dsGroups[i], dsGroups[j2]] : [dsGroups[j2], dsGroups[i]];
+      if (contains(ga, gb) || contains(gb, ga))
+        continue;
+      const ta = titled(ga);
+      const tb = titled(gb);
+      const ox = Math.min(ta.x + ta.w, tb.x + tb.w) - Math.max(ta.x, tb.x);
+      const oy = Math.min(ta.y + ta.h, tb.y + tb.h) - Math.max(ta.y, tb.y);
+      if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
+        continue;
+      const ma = new Set(Array.isArray(ga.data?.members) ? ga.data.members : []);
+      const shared2 = (Array.isArray(gb.data?.members) ? gb.data.members : []).filter((m2) => ma.has(m2));
+      add(gb, {
+        kind: "group",
+        message: `the outline of ${nameOf2(gb)} overlaps the outline of ${nameOf2(ga)} (${r(ox)}\xD7${r(oy)} px)${shared2.length ? `: they share ${shared2.slice(0, 4).join(", ")}` : ""}`,
+        suggestion: shared2.length ? "a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other \u2014 it is then drawn inside it)" : `move ${nameOf2(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf2(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
+        others: [ga.id]
+      });
+    }
   const obstacles = labelObstacles(shown);
+  const plan = planWires(shown);
+  const marks = [];
+  let wires = 0;
+  const seqName = (w2) => typeof w2.data?.seq === "number" ? `number circle ${w2.data.seq}` : "number circle";
   for (const w2 of Object.values(shown.items)) {
     if (w2.type !== "arrow" || !w2.from || !w2.to || !inScope.has(w2.from) || !inScope.has(w2.to))
       continue;
-    const text3 = wireText(w2);
-    const shape = text3 ? wireShape(shown, w2) : void 0;
-    const label2 = shape ? wireLabel(w2, shape, obstacles) : void 0;
-    if (!label2 || !shape)
-      continue;
+    wires++;
+    const planned = plan.get(w2.id);
     const a = shown.items[w2.from];
     const z3 = shown.items[w2.to];
+    const text3 = wireText(w2);
+    if (planned?.seq) {
+      const box = seqBox(planned.seq);
+      marks.push({ wire: w2, what: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)}`, box, circle: true });
+      const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w2.from && o.id !== w2.to);
+      if (on.length) {
+        const names = on.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        add(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
+      }
+    }
+    const label2 = planned?.label;
+    if (!label2 || !text3)
+      continue;
     const what = `label "${short3(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
+    if (label2.mode !== "dot")
+      marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
     if (label2.dragged) {
       const covered = labelHits(label2.x, label2.y, label2.w, label2.h, obstacles, 0);
       if (!covered.length)
@@ -62077,6 +62350,17 @@ function checkLayout(board, opts = {}) {
       others: [a.id, z3.id]
     });
   }
+  for (let i = 0; i < marks.length; i++)
+    for (let j2 = i + 1; j2 < marks.length; j2++) {
+      const [m1, m2] = [marks[i], marks[j2]];
+      const ox = Math.min(m1.box.x + m1.box.w, m2.box.x + m2.box.w) - Math.max(m1.box.x, m2.box.x);
+      const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y);
+      if (ox <= MARK_TOL || oy <= MARK_TOL)
+        continue;
+      const z3 = shown.items[m2.wire.to];
+      const fix = m2.wire.data?.bend ? "drag that label onto a free stretch of its wire, or clear data.bend" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
+      add(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
+    }
   for (const d of shownDifferences(board)) {
     if (!inScope.has(d.id))
       continue;
@@ -62097,7 +62381,7 @@ function checkLayout(board, opts = {}) {
   const pos = (id) => shown.items[id] ?? board.items[id];
   found.sort((a, b2) => KINDS.indexOf(a.kind) - KINDS.indexOf(b2.kind) || byReading(pos(a.id), pos(b2.id)));
   const limit = opts.limit ?? 200;
-  return { findings: found.slice(0, limit), checked: items.length, ...key ? { frame: key } : {}, counts };
+  return { findings: found.slice(0, limit), checked: items.length, wires, ...key ? { frame: key } : {}, counts };
 }
 function byReading(a, b2) {
   const ra = Math.round(a.y / 60);
@@ -62107,11 +62391,12 @@ function byReading(a, b2) {
 function layoutLines(report, _board, max = 60) {
   const total = KINDS.reduce((n4, k2) => n4 + report.counts[k2], 0);
   const where = report.frame ? ` in ${report.frame}` : "";
+  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ""} checked`;
   if (!total)
-    return [`Layout${where}: nothing overlaps, sticks out or is cut off (${report.checked} items checked).`];
+    return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`];
   const parts = KINDS.filter((k2) => report.counts[k2]).map((k2) => `${report.counts[k2]} ${k2}`);
   const shown = report.findings.slice(0, max);
-  const out = [`Layout${where}: ${total} finding(s) \u2014 ${parts.join(", ")} (${report.checked} items checked; positions as the page draws them)`];
+  const out = [`Layout${where}: ${total} finding(s) \u2014 ${parts.join(", ")} (${checked}; positions as the page draws them)`];
   for (const f of shown)
     out.push(`- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`);
   if (total > shown.length)

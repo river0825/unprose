@@ -6,7 +6,7 @@ import { useEdit } from './EditContext'
 import { useWireFocus } from './wireFocus'
 import { bend, bestLoop, bestTurn, bestTurnY, isHorizontal, type Box, type Side } from './route'
 import { EDGE_LABEL, isLabelObstacle, labelControl, labelLines, placeEdgeLabel, pointAlong } from '../../../src/edgeLabel'
-import { isContainer } from './boardToFlow'
+import { isContainer, type DsWirePlan } from './boardToFlow'
 import './wires.css'
 
 type Point = { x: number; y: number }
@@ -159,10 +159,15 @@ export function ItemEdge(props: EdgeProps) {
     ? [roundedPath(runs)]
     : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, centerX: turnAt, borderRadius: 8 })
   const path = point ? curveThrough(S, point, T) : stepPath
+  // A domain story's numbers and verbs are placed for the whole board (boardToFlow planDsWires), so they keep off each
+  // other; while its ends are where that plan put them it is used as is, else (mid-drag) placed live for this wire alone.
+  const dsPlan = (data as { dsPlan?: DsWirePlan } | undefined)?.dsPlan
+  const near = (a: { x: number; y: number; w: number; h: number } | undefined, b: { x: number; y: number; w: number; h: number }) => !!a && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5
+  const planned = ds && dsPlan && near(srcBox, dsPlan.from) && near(tgtBox, dsPlan.to) ? dsPlan : undefined
   // the circle sits a little along the line, clear of the actor icon and its name
   const len = Math.hypot(targetX - sourceX, targetY - sourceY) || 1
   const along = Math.min(24, len / 3)
-  const seqAt = { x: sourceX + ((targetX - sourceX) / len) * along, y: sourceY + ((targetY - sourceY) / len) * along }
+  const seqAt = planned?.seq ?? { x: sourceX + ((targetX - sourceX) / len) * along, y: sourceY + ((targetY - sourceY) / len) * along }
   // A domain-story verb sits beside its line (as in Egon.io), past the number circle, so neither covers the other.
   const dsVerbAt = () => {
     const ux = (targetX - sourceX) / len
@@ -179,11 +184,12 @@ export function ItemEdge(props: EdgeProps) {
   const labelText = typeof label === 'string' ? label : ''
   const font = ds && own?.role !== 'annotation-link' ? EDGE_LABEL.dsFont : EDGE_LABEL.font
   const ctl = labelControl(own?.data)
-  const placed = useMemo(
-    () => (labelText && !point ? placeEdgeLabel(labelText, runs, allBoxes, { font, at: ctl.at, short: ctl.short, prefer: ds && own?.role === 'activity' ? [dsVerbAt()] : undefined }) : undefined),
+  const live = useMemo(
+    () => (labelText && !point && !planned ? placeEdgeLabel(labelText, runs, allBoxes, { font, at: ctl.at, short: ctl.short, prefer: ds && own?.role === 'activity' ? [dsVerbAt()] : undefined }) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [labelText, point?.x, point?.y, JSON.stringify(runs), allBoxes, font, ctl.at, ctl.short, ds],
+    [labelText, point?.x, point?.y, JSON.stringify(runs), allBoxes, font, ctl.at, ctl.short, ds, !!planned],
   )
+  const placed = planned && labelText && !point ? planned.label : live
   const whole = useMemo(() => (labelText ? labelLines(labelText, EDGE_LABEL.maxW, font).lines : []), [labelText, font])
   const at = point ?? (placed ? { x: placed.x, y: placed.y } : pointAlong(runs, 0.5))
   // a workflow wire changed on the board and not yet in the file (docs/studio.md §7)

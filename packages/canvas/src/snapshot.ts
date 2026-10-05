@@ -8,8 +8,8 @@
 import type { Board, ColorToken, Item } from './model.js'
 import { shownBoard } from './shown.js'
 import { fitText, measure, wrap } from './textMetrics.js'
-import { EDGE_LABEL, type LabelBox } from './edgeLabel.js'
-import { dsSeqAt, labelObstacles, wireLabel, wireShape } from './wireGeometry.js'
+import { EDGE_LABEL } from './edgeLabel.js'
+import { planWires, type WirePlan } from './wireGeometry.js'
 
 export interface SnapshotOptions {
   /** A diagram key (`studio-es`), a frame id (`diagram.studio-es`) or any container item id. */
@@ -128,8 +128,8 @@ interface Ctx {
   p: Palette
   text: boolean
   out: string[]
-  /** the boxes wire labels may not cover (computed once, on the first labelled wire) */
-  boxes?: LabelBox[]
+  /** every wire's shape, label and number circle, placed for the whole board (wireGeometry.ts planWires; computed once) */
+  plan?: Map<string, WirePlan>
 }
 
 const uiOf = (it: Item | undefined) => (it?.type === 'ui' ? (it.data?.ui as Record<string, unknown> | undefined) : undefined)
@@ -400,8 +400,10 @@ function drawText(c: Ctx, it: Item): string {
   const bx = boxOf(it)
   if (it.data?.ds === 'annotation') {
     const path = `M${n(bx.x + bx.w)} ${n(bx.y)}H${n(bx.x)}V${n(bx.y + bx.h)}H${n(bx.x + bx.w)}`
-    const lines = c.text && it.text ? wrap(it.text, bx.w - 16, 12.5) : []
-    return `<path d="${path}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines, { x: bx.x + 8, y: bx.y + 4, font: 12.5, lh: 16, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - 8) / 16)) })
+    // the page's text box for an annotation (textMetrics.ts): what is cut there is cut here
+    const fit = fitText(it)
+    const lines = c.text && it.text ? fit.lines : []
+    return `<path d="${path}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines, { x: bx.x + fit.box.padLeft, y: bx.y + fit.box.padTop, font: fit.box.font, lh: fit.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit.fits) })
   }
   if (it.role === 'release-cut') return `<line x1="${n(bx.x)}" y1="${n(bx.y + bx.h / 2)}" x2="${n(bx.x + bx.w)}" y2="${n(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n(bx.x + 4)}" y="${n(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc(it.text)}</text>` : '')
   return itemText(c, it, p.ink)
@@ -669,8 +671,9 @@ function rootOf(b: Board, it: Item): string {
 
 function drawArrow(c: Ctx, it: Item): string {
   const { p } = c
-  const shape = wireShape(c.b, it)
-  if (!shape) return ''
+  const planned = (c.plan ??= planWires(c.b)).get(it.id)
+  if (!planned) return ''
+  const shape = planned.shape
   const ds = shape.ds
   const pending = !!it.data?.pending && it.role !== 'trace'
   let stroke = p.ink2
@@ -683,13 +686,13 @@ function drawArrow(c: Ctx, it: Item): string {
   else if (it.role === 'owns' || it.role === 'delegates') ((stroke = p.agent), (dash = it.role === 'owns' ? '3 5' : '6 4'), (marker = 'agent'))
   if (pending) ((stroke = p.marker), (dash = '6 4'), (marker = 'marker'))
   const parts = [`<path d="${shape.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ''}${marker ? ` marker-end="url(#ah-${marker})"` : ''}${it.role === 'trace' || it.role === 'owns' ? ' stroke-opacity="0.8"' : ''}/>`]
-  if (ds && it.role === 'activity' && c.text && typeof it.data?.seq === 'number') {
-    // the sequence number sits a little along the line, clear of the actor
-    const at = dsSeqAt(shape)
+  if (ds && it.role === 'activity' && c.text && typeof it.data?.seq === 'number' && planned.seq) {
+    // the sequence number sits a little along the line, clear of the actor and of the other numbers
+    const at = planned.seq
     parts.push(`<circle cx="${n(at.x)}" cy="${n(at.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n(at.x)}" y="${n(at.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`)
   }
   // the label: smaller than card text, on a light backing, never on a card (edgeLabel.ts); a dot when it fits nowhere
-  const label = c.text ? wireLabel(it, shape, c.boxes ?? (c.boxes = labelObstacles(c.b))) : undefined
+  const label = c.text ? planned.label : undefined
   if (label?.mode === 'dot') {
     parts.push(`<circle cx="${n(label.x)}" cy="${n(label.y)}" r="${n(EDGE_LABEL.dot / 2 - 1)}" fill="${p.paper}" stroke="${ds ? p.ink : p.ink2}" stroke-width="1.4"><title>${esc(label.text)}</title></circle>`)
   } else if (label) {

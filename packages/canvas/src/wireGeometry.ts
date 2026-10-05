@@ -3,7 +3,8 @@
 // the sides it leaves and enters by, a domain-story activity as a straight line cut at each pictogram, a dragged
 // bend as a curve through that point. The label follows edgeLabel.ts. Pure (bundled by the web with layoutCheck).
 import type { Board, Item } from './model.js'
-import { EDGE_LABEL, isLabelObstacle, labelControl, placeEdgeLabel, type LabelBox, type PlacedLabel, type Pt } from './edgeLabel.js'
+import { measure } from './textMetrics.js'
+import { EDGE_LABEL, isLabelObstacle, labelControl, labelHits, labelLines, labelSize, placeEdgeLabel, type LabelBox, type PlacedLabel, type Pt } from './edgeLabel.js'
 
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 const SIDES = new Set(['top', 'right', 'bottom', 'left'])
@@ -84,12 +85,15 @@ export function wireShape(b: Pick<Board, 'items'>, it: Item): WireShape | undefi
   return { d: points.map((p, i) => `${i ? 'L' : 'M'}${n(p.x)} ${n(p.y)}`).join(''), points, p1, p2, ds }
 }
 
-/** A domain-story activity's number circle, a little along the line from its actor. */
-export function dsSeqAt(s: WireShape): Pt {
+/** A domain-story activity's number circle, a little along the line from its actor (`along` px; default 24). */
+export function dsSeqAt(s: WireShape, along = 24): Pt {
   const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1
-  const along = Math.min(24, len / 3)
-  return { x: s.p1.x + ((s.p2.x - s.p1.x) / len) * along, y: s.p1.y + ((s.p2.y - s.p1.y) / len) * along }
+  const d = Math.min(along, len / 3)
+  return { x: s.p1.x + ((s.p2.x - s.p1.x) / len) * d, y: s.p1.y + ((s.p2.y - s.p1.y) / len) * d }
 }
+
+/** The number circle: 22 px on the page (inspector.css .ds-seq), r 11 in the snapshot. */
+export const DS_SEQ = 22
 
 /** A domain-story verb's first choice: beside its line on the side facing up (or left), past the number. */
 export function dsVerbAt(s: WireShape): Pt {
@@ -119,7 +123,7 @@ export interface WireLabel extends PlacedLabel {
   dragged?: boolean
 }
 
-/** Where a wire's label goes (edgeLabel.ts), or undefined for an unlabelled wire. */
+/** Where a wire's label goes (edgeLabel.ts), or undefined for an unlabelled wire. Alone: it does not know the other wires' labels (planWires does). */
 export function wireLabel(it: Item, shape: WireShape, boxes: LabelBox[]): WireLabel | undefined {
   const text = wireText(it)
   if (!text) return undefined
@@ -128,9 +132,80 @@ export function wireLabel(it: Item, shape: WireShape, boxes: LabelBox[]): WireLa
   const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font
   if (shape.bend) {
     // the person put it there: shown whole (two lines at most) where they dragged it
-    const placed = placeEdgeLabel(text, [shape.bend, { x: shape.bend.x + 0.01, y: shape.bend.y }], [], { font, short: ctl.short })!
-    return { ...placed, x: shape.bend.x, y: shape.bend.y, dragged: true }
+    const whole = labelLines(text, EDGE_LABEL.maxW, font)
+    const { w, h } = labelSize(whole.lines, font)
+    return { mode: whole.cut ? 'cut' : 'full', x: shape.bend.x, y: shape.bend.y, w, h, lines: whole.lines, text: text.replace(/\s+/g, ' ').trim(), font, dragged: true }
   }
   const prefer = ds && it.role === 'activity' ? [dsVerbAt(shape)] : undefined
   return placeEdgeLabel(text, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer })
+}
+
+export interface WirePlan {
+  shape: WireShape
+  label?: WireLabel
+  /** a domain-story activity's number circle (its centre) */
+  seq?: Pt
+}
+
+/** A circle's box at centre p. */
+export const seqBox = (p: Pt): LabelBox => ({ x: p.x - DS_SEQ / 2, y: p.y - DS_SEQ / 2, w: DS_SEQ, h: DS_SEQ })
+
+/**
+ * Every wire's shape, label and (domain story) number circle, placed for the board as a whole — one rule for the page
+ * (web ItemEdge via boardToFlow), the snapshot and the layout check. Domain-story wires are placed together so their
+ * verbs and number circles keep off each other as well as off the pictograms: first the number circles, in sequence
+ * order, each at its arrow's start (moved a little further along when that spot is taken by another circle); then the
+ * verbs, in sequence order, each avoiding the pictograms, every circle and the verbs already placed. Other wires' labels
+ * are placed on their own, as before (edgeLabel.ts). `b` is the board as the page shows it (shownBoard); `ids` limits
+ * the wires (default: all).
+ */
+export function planWires(b: Pick<Board, 'items'>, ids?: Iterable<string>): Map<string, WirePlan> {
+  const out = new Map<string, WirePlan>()
+  const wanted = ids ? new Set(ids) : undefined
+  const wires = Object.values(b.items)
+    .filter((it) => it.type === 'arrow' && (!wanted || wanted.has(it.id)))
+    .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+  const obstacles = labelObstacles(b)
+  const seqOf = (it: Item) => (typeof it.data?.seq === 'number' ? (it.data.seq as number) : Infinity)
+  const ds: Array<{ it: Item; shape: WireShape }> = []
+  for (const it of wires) {
+    const shape = wireShape(b, it)
+    if (!shape) continue
+    out.set(it.id, { shape })
+    if (shape.ds && it.role !== 'annotation-link') ds.push({ it, shape })
+    else out.get(it.id)!.label = wireLabel(it, shape, obstacles)
+  }
+  ds.sort((x, y) => seqOf(x.it) - seqOf(y.it) || (x.it.id < y.it.id ? -1 : 1))
+  // a domain-story group's title, above its outline
+  const titles: LabelBox[] = Object.values(b.items)
+    .filter((g) => g.type === 'frame' && g.data?.ds === 'group' && g.text)
+    .map((g) => ({ x: g.x, y: g.y - 24, w: measure(g.text!, 13.5, 600) + 6, h: 20 }))
+  // number circles: at the arrow's start, a little further along while another circle, a group title or a pictogram that
+  // is not the arrow's own end is in the way
+  const circles: LabelBox[] = []
+  for (const { it, shape } of ds) {
+    if (it.role !== 'activity' || typeof it.data?.seq !== 'number') continue
+    const len = Math.hypot(shape.p2.x - shape.p1.x, shape.p2.y - shape.p1.y)
+    const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to)
+    const along = (d: number) => ({ x: shape.p1.x + ((shape.p2.x - shape.p1.x) / (len || 1)) * d, y: shape.p1.y + ((shape.p2.y - shape.p1.y) / (len || 1)) * d })
+    let at = dsSeqAt(shape)
+    for (let d = Math.min(24, len / 3); d <= Math.max(24, len * 0.42); d += 8) {
+      const p = along(d)
+      if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
+        at = p
+        break
+      }
+    }
+    circles.push(seqBox(at))
+    out.get(it.id)!.seq = at
+  }
+  // verbs: off the pictograms, every circle, the group titles and the verbs placed before
+  const placed: LabelBox[] = []
+  for (const { it, shape } of ds) {
+    const label = wireLabel(it, shape, [...obstacles, ...circles, ...titles, ...placed])
+    if (!label) continue
+    out.get(it.id)!.label = label
+    if (label.mode !== 'dot') placed.push({ x: label.x - label.w / 2, y: label.y - label.h / 2, w: label.w, h: label.h })
+  }
+  return out
 }

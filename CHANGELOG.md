@@ -6,6 +6,30 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-10-05
+
+### Fixed
+- **Domain stories no longer draw things on top of each other** (docs/diagrams.md §6b "No collisions"), from a real
+  board an agent reported:
+  - an actor that sends to itself (`actor: cl, to: cl`) used to put the actor and those work objects at the very same
+    spot; the work object now sits beside the actor (on a free slot whose arrow passes no other pictogram) and the
+    redundant return arrow is left out. No two pictograms ever share a spot: a final pass moves a work object to the
+    nearest free place.
+  - group outlines shrink-wrap their members; a group whose members all belong to another is drawn inside it, groups
+    that would touch are trimmed apart, and groups that share members are marked (`data.overlaps`).
+  - annotations are sized from their text (wrapped within 280 px, the height grows) instead of a fixed 200×64 box that
+    cut long bilingual notes; the page, the snapshot and the layout check now measure them alike (12.5 px).
+  - verbs and sequence-number circles are placed for the whole story (`planWires`, shared by the page, the snapshot
+    and the layout check): circles at their arrow's start, moved along when taken; verbs off the pictograms, the
+    circles, the group titles and each other.
+  - a label the person dragged is measured whole (it used to count as a 10 px dot in the snapshot and the check).
+- **`awd design lint` for domain stories** warns on sentences sent to their own actor (`self-receiver`), on groups that
+  share members (`groups-overlap`) and on notes over 120 characters (`note-long`, CJK counting double).
+- **`canvas_check_layout` sees wires and groups.** It now checks domain-story number circles (on a pictogram, on each
+  other), labels on circles or other labels (every diagram kind), domain-story group outlines against each other
+  (new kind `group`), and annotation text against its box, and says how many wires it checked ("… items and … wires
+  checked") — it used to report "nothing overlaps" on a board full of collisions.
+
 ## [0.12.0] — 2026-10-03
 
 ### Added
@@ -642,7 +666,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/river0825/unprose/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/river0825/unprose/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/river0825/unprose/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/river0825/unprose/compare/v0.9.2...v0.10.0

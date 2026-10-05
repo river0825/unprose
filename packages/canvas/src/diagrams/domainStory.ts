@@ -184,7 +184,16 @@ export function circled(n: number): string {
 
 const QUICK_START = 'domainstorytelling.org/quick-start-guide'
 
-export type DsRule = 'unresolved-reference' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom'
+export type DsRule = 'unresolved-reference' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long'
+
+/** A note longer than this (in display width: a CJK character counts as two) crowds the story (§6b "No collisions"). */
+export const NOTE_RECOMMENDED = 120
+/** Display width of a text: wide (CJK, full-width) characters count as two. */
+export function displayWidth(text: string): number {
+  let n = 0
+  for (const ch of text) n += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1
+  return n
+}
 export interface DsFinding {
   rule: DsRule
   severity: 'warning' | 'info'
@@ -199,7 +208,18 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
   const m = 'dsModel' in content ? content : normalizeDomainStory(content)
   const out: DsFinding[] = []
   for (const u of m.unresolved) out.push({ rule: 'unresolved-reference', severity: 'warning', element: u.element, message: `${u.field} "${u.ref}" matches no ${u.field === 'actor' || u.field === 'to' ? 'actor (drawn as a person)' : 'element'}`, page: QUICK_START })
+  const actorName = (id: string) => m.actors.find((a) => a.id === id)?.text ?? id
   for (const s of m.sentences) {
+    if (s.to.includes(s.actor)) {
+      const others = s.to.filter((r) => r !== s.actor)
+      out.push({
+        rule: 'self-receiver',
+        severity: 'warning',
+        element: s.id,
+        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? 'the board draws its work object beside the actor and leaves out the arrow back' : 'with no work object and no other receiver, nothing can be drawn for it'} — omit the redundant \`to: ${s.actor}\` (an internal step: actor → activity → work object)${others.length ? '' : ', or name the actor who really receives it'}`,
+        page: QUICK_START,
+      })
+    }
     if (!s.objectText) out.push({ rule: 'sentence-without-object', severity: 'info', element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object — a sentence is actor → activity → work object`, page: QUICK_START })
   }
   const seqs = [...new Set(m.sentences.map((s) => s.seq))].sort((a, b) => a - b)
@@ -210,6 +230,27 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
   for (const n of seqs) {
     const same = m.sentences.filter((s) => s.seq === n)
     if (same.length > 1) out.push({ rule: 'sequence-shared', severity: 'info', element: same[1].id, message: `${circled(n)} is used by ${same.length} sentences — read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: 'egon.io' })
+  }
+  // groups sharing members (neither inside the other) cannot get separate outlines
+  const name = (id: string) => m.actors.find((a) => a.id === id)?.text ?? m.workObjects.find((o) => o.id === id)?.text ?? m.sentences.find((x) => x.id === id)?.objectText ?? id
+  for (let i = 0; i < m.groups.length; i++)
+    for (let j = i + 1; j < m.groups.length; j++) {
+      const [a, b] = [m.groups[i], m.groups[j]]
+      const sa = new Set(a.members)
+      const sb = new Set(b.members)
+      const shared = [...sa].filter((x) => sb.has(x))
+      if (!shared.length || [...sa].every((x) => sb.has(x)) || [...sb].every((x) => sa.has(x))) continue
+      out.push({
+        rule: 'groups-overlap',
+        severity: 'warning',
+        element: b.id,
+        message: `groups "${a.text}" and "${b.text}" share ${shared.map((x) => `"${name(x)}"`).join(', ')}, so their outlines overlap — keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
+        page: QUICK_START,
+      })
+    }
+  for (const n of m.annotations) {
+    const w = displayWidth(n.text)
+    if (w > NOTE_RECOMMENDED) out.push({ rule: 'note-long', severity: 'warning', element: n.id, message: `note on "${name(n.on)}" is long (${w} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story — keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START })
   }
   for (const o of m.workObjects) {
     if (!m.sentences.some((s) => s.object === o.id)) out.push({ rule: 'work-object-unused', severity: 'warning', element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START })

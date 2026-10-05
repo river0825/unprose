@@ -168,7 +168,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.12.0' },
+    { name: 'unprose', version: '0.13.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -448,7 +448,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     {
       title: 'Check the layout of a board or frame',
       description:
-        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with …, or only a dot) or that were dragged onto a card — with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
+        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with …, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect — with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
       inputSchema: {
         id: z.string().describe('board id'),
         frame: z.string().optional().describe('a diagram key or frame / lane id; default the whole board'),
@@ -458,7 +458,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     async ({ id, frame, limit }) => {
       const r = await client.layout(id, frame, limit ?? 60)
       const lines = (r as { lines?: string[] }).lines
-      if (!r.findings.length) return text(`layout of ${frame ? `frame ${frame}` : 'the board'}: ${r.checked} items checked — nothing overlaps, nothing is cut off or out of place.`)
+      if (!r.findings.length) return text(`layout of ${frame ? `frame ${frame}` : 'the board'}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ''} checked — nothing overlaps, collides, is cut off or out of place.`)
       return text((lines ?? r.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} — ${f.suggestion}`)).join('\n'))
     },
   )

@@ -22,7 +22,7 @@ export interface TextBox {
 
 /** The stylesheet's default size for an item (the same rule as web/src/flow/font.ts). */
 export function defaultFont(it: Pick<Item, 'type' | 'role'>): number {
-  if (it.type === 'text') return it.role === 'title' || it.role === 'heading' ? 22 : 15
+  if (it.type === 'text') return it.role === 'title' || it.role === 'heading' ? 22 : it.role === 'annotation' ? 12.5 : 15
   if (it.type === 'sticky' && it.role === 'actor') return 12.5
   if (it.type === 'card' && it.role === 'card') return 13.5
   return 13
@@ -41,6 +41,8 @@ export function textBoxOf(it: Pick<Item, 'type' | 'role' | 'fontSize'>): TextBox
       if (it.role === 'card') return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 }
       return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 }
     case 'text':
+      // a domain-story annotation (inspector.css .ds-annotation): 4 px / 8 px padding inside a 2 px bracket on the left, top and bottom
+      if (it.role === 'annotation') return { font, lineHeight: lh(1.5), weight: 400, padTop: 6, padRight: 8, padBottom: 6, padLeft: 10 }
       return { font, lineHeight: lh(1.5), weight: it.role === 'title' || it.role === 'heading' ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 }
     case 'frame':
     case 'lane':
@@ -126,4 +128,18 @@ export function fitText(it: Pick<Item, 'type' | 'role' | 'fontSize' | 'w' | 'h' 
   const needH = Math.ceil(lines.length * box.lineHeight + box.padTop + box.padBottom)
   const clipped = text.trim() !== '' && (box.nowrap ? measure(lines[0], box.font, box.weight) > innerW + 1 : lines.length > fits)
   return { box, lines, fits, clipped, needH, innerW }
+}
+
+/**
+ * The box a text needs: as wide as its longest line (between `minW` and `maxW`), wrapping within `maxW`, and as tall as
+ * its wrapped lines (at least `minH`). For items sized from their text, e.g. a domain-story annotation.
+ */
+export function sizeToText(it: Pick<Item, 'type' | 'role' | 'fontSize'>, text: string, o: { minW: number; maxW: number; minH?: number }): { w: number; h: number } {
+  const box = textBoxOf(it)
+  const padX = box.padLeft + box.padRight
+  const longest = Math.max(0, ...text.replace(/\r\n/g, '\n').split('\n').map((l) => measure(l, box.font, box.weight)))
+  // a little slack: the page's font is a bit wider or narrower than the estimate
+  const w = Math.ceil(Math.min(o.maxW, Math.max(o.minW, longest + padX + 6)))
+  const { needH } = fitText({ ...it, w, h: 0, text })
+  return { w, h: Math.max(o.minH ?? 0, needH + 4) }
 }

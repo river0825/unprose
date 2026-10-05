@@ -891,7 +891,7 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .react-flow__node.selected .item.ds-icon, .react-flow__node:focus-visible .item.ds-icon { outline: 2px solid var(--marker); outline-offset: 2px; border-radius: 10px; background: color-mix(in srgb, var(--marker) 6%, transparent); }
 .ds-seq { position: absolute; pointer-events: none; width: 22px; height: 22px; border-radius: 50%; border: 1.6px solid var(--ink); background: var(--paper); color: var(--ink); font: 600 12px/19px var(--font-ui); text-align: center; z-index: 1600; }
 .edge-label.ds-verb { font-family: var(--font-ui); font-size: 12px; line-height: 15px; color: var(--ink); background: color-mix(in srgb, var(--paper) 80%, transparent); padding: 1px 4px; border-radius: 3px; }
-.react-flow__node.ds-annotation .item { border-left: 2px solid var(--ink-2); border-top: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); border-radius: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; color: var(--ink); }
+.react-flow__node.ds-annotation .item { border-left: 2px solid var(--ink-2); border-top: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); border-radius: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
 .react-flow__node.ds-group .item { border: 1.6px dashed var(--ink-3) !important; border-radius: 18px !important; background: transparent !important; }
 .react-flow__edge.ds-note-link .react-flow__edge-path { stroke-dasharray: 5 5; }
 

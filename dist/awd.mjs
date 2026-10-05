@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.12.0";
+    VERSION2 = "0.13.0";
   }
 });
 
@@ -57861,12 +57861,29 @@ function normalizeDomainStory(raw) {
 function circled(n) {
   return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
 }
+function displayWidth(text3) {
+  let n = 0;
+  for (const ch of text3)
+    n += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
+  return n;
+}
 function checkDomainStory(content) {
   const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
   const out = [];
   for (const u3 of m2.unresolved)
     out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START });
+  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   for (const s of m2.sentences) {
+    if (s.to.includes(s.actor)) {
+      const others = s.to.filter((r) => r !== s.actor);
+      out.push({
+        rule: "self-receiver",
+        severity: "warning",
+        element: s.id,
+        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
+        page: QUICK_START
+      });
+    }
     if (!s.objectText)
       out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START });
   }
@@ -57881,6 +57898,28 @@ function checkDomainStory(content) {
     if (same2.length > 1)
       out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
   }
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
+  for (let i = 0; i < m2.groups.length; i++)
+    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
+      const [a, b2] = [m2.groups[i], m2.groups[j2]];
+      const sa = new Set(a.members);
+      const sb = new Set(b2.members);
+      const shared = [...sa].filter((x2) => sb.has(x2));
+      if (!shared.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
+        continue;
+      out.push({
+        rule: "groups-overlap",
+        severity: "warning",
+        element: b2.id,
+        message: `groups "${a.text}" and "${b2.text}" share ${shared.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
+        page: QUICK_START
+      });
+    }
+  for (const n of m2.annotations) {
+    const w2 = displayWidth(n.text);
+    if (w2 > NOTE_RECOMMENDED)
+      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START });
+  }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
       out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START });
@@ -57893,7 +57932,7 @@ function checkDomainStory(content) {
   }
   return out;
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START;
+var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
@@ -57946,6 +57985,7 @@ var init_domainStory = __esm({
       }).optional()
     });
     QUICK_START = "domainstorytelling.org/quick-start-guide";
+    NOTE_RECOMMENDED = 120;
   }
 });
 
@@ -76688,7 +76728,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.12.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.13.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -76919,7 +76959,7 @@ ${svg2}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -76929,7 +76969,7 @@ ${svg2}`);
     const r = await client.layout(id, frame, limit2 ?? 60);
     const lines = r.lines;
     if (!r.findings.length)
-      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r.checked} items checked \u2014 nothing overlaps, nothing is cut off or out of place.`);
+      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ""} checked \u2014 nothing overlaps, collides, is cut off or out of place.`);
     return text((lines ?? r.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
   });
   if (!opts.remote) {
@@ -77270,6 +77310,7 @@ var init_shown = __esm({
 // packages/canvas/dist/wireGeometry.js
 var init_wireGeometry = __esm({
   "packages/canvas/dist/wireGeometry.js"() {
+    init_textMetrics();
     init_edgeLabel();
   }
 });

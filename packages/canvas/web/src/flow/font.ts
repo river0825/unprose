@@ -5,7 +5,8 @@ export const SCALES_FONT = new Set<Item['type']>(['text', 'sticky', 'card'])
 
 /** The stylesheet's default size for an item (styles.css: .text-item, .sticky, .card). */
 function defaultFont(it: Item): number {
-  if (it.type === 'text') return it.role === 'title' || it.role === 'heading' ? 22 : 15
+  // a domain-story annotation (inspector.css .ds-annotation, src/textMetrics.ts)
+  if (it.type === 'text') return it.role === 'title' || it.role === 'heading' ? 22 : it.role === 'annotation' ? 12.5 : 15
   if (it.type === 'sticky' && it.role === 'actor') return 12.5
   return 13
 }

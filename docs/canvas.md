@@ -252,15 +252,16 @@ snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region 
 ```
 
 **Layout check.** `canvas_check_layout { id, frame?, limit? }` (`GET /api/boards/:id/layout?frame=` → `{ findings, counts,
-checked, lines }`, `src/layoutCheck.ts`) is pure geometry on the positions as drawn: items overlapping their siblings,
+checked, wires, lines }`, `src/layoutCheck.ts`) is pure geometry on the positions as drawn: items overlapping their siblings,
 text likely cut off (the same text metrics), items outside their parent or off their lane, items 3× the median of
 their siblings or far larger than the template sticky (160×110), wire labels that do not fit beside their wire (cut
-with …, or only a dot — [Wires → Wire labels](#wires)) or were dragged onto a card, and items drawn elsewhere than
+with …, or only a dot — [Wires → Wire labels](#wires)) or were dragged onto a card, labels and domain-story number
+circles that sit on each other or on a pictogram, domain-story group outlines that intersect (kind `group`), and items drawn elsewhere than
 stored (a kanban card's x / y are not where it shows — its stored y only orders the column). Each finding says what to do. The frame panel on
 the page lists the same findings under **Layout**.
 
 ```
-Layout: 5 finding(s) — 5 clipped (198 items checked; positions as the page draws them)
+Layout: 5 finding(s) — 5 clipped (198 items and 64 wires checked; positions as the page draws them)
 - [clipped] text of hotspot "改 workflow.yaml 要重啟 awd run；…" likely cut off: needs ~6 lines at 13 px, the 120×80 box fits 3 #runner-es.hotspot.… — make it 44 px taller (h 124), or wider, or shorten the text
 - [label] label "updates · 更新視圖" of the wire event "Conflict found" → read-model "Configuration conflicts" has no free spot beside the wire (the gap is 40 px, the label needs ~112): the page shows only a dot there, the text on hover #cl.w2 — move read-model "Configuration conflicts" 72 px right (to x 512) to make room, or give it a short form in data.label.short (about 4 characters fit), or shorten the label
 - [moved-by-layout] card "Drop legacy_contacts table" is stored at 1170,410 but the page draws it at 1188,164 … — set y to reorder (x is ignored)

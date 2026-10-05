@@ -302,6 +302,31 @@ layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or
   (460 × 330 px actor pitch; long verbs may crowd). `gapX` / `gapY` (px, 240–2000 / 180–2000) set the actor
   grid's pitch outright. Spacing only changes positions, never ids, so a redraw still keeps what the person
   moved or locked ("What a redraw keeps").
+- **No collisions.** The layout makes sure nothing is drawn on top of something else:
+  - an actor that **sends to itself** (`actor: cl, to: cl`) gets its work object **beside** it, in a free slot whose
+    arrow passes no other pictogram, and **no return arrow** (it would run back over the activity arrow); the lint
+    warns (`self-receiver`) — omit the redundant `to` (an internal step: actor → activity → work object) or name the
+    real receiver. Without a work object such a sentence has nothing to point at and is not drawn;
+  - **no two pictograms share a spot**: a work object that finds no free place on its way is moved to the nearest
+    free place around it, with the same metrics as everything else; layouts whose arrows run through pictograms
+    count as worse when the placement preferences are compared;
+  - **annotations are as big as their text**: measured with the text metrics (12.5 px, the page's size), wrapped
+    within 280 px, the height grows with the lines — nothing is cropped. They sit beside what they explain, off the
+    pictograms and other notes, where they cross the fewest arrows. The lint warns on a note over 120 characters
+    (`note-long`, a CJK character counts as 2): keep the gist on the board, the detail in a sentence's `note`;
+  - **group outlines** shrink-wrap their members with padding (the title above the outline counts too). A group
+    whose members all belong to another group is drawn **inside** it (`data.nestedIn`); two groups whose outlines
+    would still touch are trimmed apart where their members leave room. Groups that **share members** (neither
+    inside the other) cannot have separate outlines: the outline carries `data.overlaps` and the lint warns
+    (`groups-overlap`) — keep each shared element in one group, or make one group a sub-group;
+  - **verbs and number circles** are placed for the board as a whole (`wireGeometry.ts` `planWires`, the same for the
+    page, the snapshot and the layout check): first the number circles in sequence order, each at its arrow's start
+    and a little further along when another circle or a pictogram is there; then the verbs in sequence order, each
+    beside its line (the free run past its number), off the pictograms, every circle, the group titles and the
+    verbs already placed (edgeLabel.ts rules: wrap, cut with …, else a dot that shows the verb on hover).
+  - `canvas_check_layout` reports what is left: pictograms on each other, group outlines that intersect (with the
+    shared members), annotation text cut off by its box, number circles on a pictogram or on each other, labels on
+    circles or on other labels (every diagram kind's wires) — each with a plain-words fix.
 - A sentence **without a work object** is one numbered arrow from actor to actor; its element id rides on that
   arrow, traces into it resolve to its actor, and its own traces are drawn from its actor.
 - Each work object carries its sentence's element id and the sentence read out ("⑤ You approves proposal to
@@ -310,7 +335,8 @@ layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or
   not used.
 - Grammar check (lint and the frame panel): unknown actor or element, a sentence with no work object, gaps
   and shared numbers (shared = parallel activities: Egon allows them, the site does not describe them), work
-  objects in no sentence, actors who neither act nor receive, custom actor kinds.
+  objects in no sentence, actors who neither act nor receive, custom actor kinds; and, for the drawing, sentences
+  sent to their own actor, groups sharing members, notes longer than recommended ("No collisions" above).
 - **Egon.io interop**: `awd design import-egon <story.egn | story.egn.svg> --out design/<name>.domain-story.yaml`
   and `awd design export-egon <file> --out <story.egn>` (with plain icons of our own for the names used).
 - **Into a story map** (our rule — the site gives none): `awd design propose-stories <domain-story file> --into

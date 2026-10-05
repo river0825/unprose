@@ -1,18 +1,19 @@
 // The layout check (docs/canvas.md "Seeing the board"): pure geometry on where the web draws things — items that
 // overlap their siblings, text that is likely cut off, items outside their parent or off their lane, items far
 // larger than their siblings (or than the template's sticky), and items the page draws somewhere other than their
-// stored coordinates (kanban stacking). Each finding says what to do in plain words. Shared by the server
+// stored coordinates (kanban stacking), wire labels and domain-story number circles that collide with each other or
+// with a card, domain-story group outlines that intersect. Each finding says what to do in plain words. Shared by the server
 // (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
 import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
 import { EDGE_LABEL, labelControl, labelHits, labelLines, labelSize } from './edgeLabel.js'
-import { labelObstacles, wireLabel, wireShape, wireText } from './wireGeometry.js'
+import { DS_SEQ, labelObstacles, planWires, seqBox, wireText } from './wireGeometry.js'
 /** The template sticky (templates/util.ts STICKY_W × STICKY_H) — not imported: util.ts pulls node:crypto, and the web bundles this file. */
 const STICKY_W = 160
 const STICKY_H = 110
 
-export type LayoutKind = 'overlap' | 'clipped' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout'
+export type LayoutKind = 'overlap' | 'clipped' | 'group' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout'
 
 export interface LayoutFinding {
   /** the item the finding is about */
@@ -31,6 +32,8 @@ export interface LayoutReport {
   findings: LayoutFinding[]
   /** how many items were looked at */
   checked: number
+  /** how many wires were looked at (their labels and number circles) */
+  wires: number
   frame?: string
   /** findings per kind, before `limit` */
   counts: Record<LayoutKind, number>
@@ -45,7 +48,7 @@ export class LayoutError extends Error {
   }
 }
 
-const KINDS: LayoutKind[] = ['clipped', 'overlap', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout']
+const KINDS: LayoutKind[] = ['clipped', 'overlap', 'group', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout']
 
 /** Overlaps smaller than this (in both directions) are hairline touches, not overlaps. */
 const OVERLAP_TOL = 6
@@ -61,6 +64,12 @@ const OVERSIZE_STICKIES = 3
 const MOVED_TOL = 8
 /** Markers and decorations: never part of an overlap. */
 const DECOR_ROLES = new Set(['pivotal', 'release-cut', 'phase', 'legend-title', 'scope'])
+/** A domain-story group outline (templates/domain-story.ts): checked against the other groups on its own rule. */
+const isDsGroup = (it: Item) => it.type === 'frame' && it.data?.ds === 'group'
+/** The band above a group outline that holds its title (templates/domain-story.ts GROUP_TITLE_H). */
+const GROUP_TITLE = 26
+/** Labels / number circles overlapping by less than this (both ways) only touch. */
+const MARK_TOL = 2
 /** Roles whose size follows their content by design (a backbone activity spans its steps). */
 const SPANNING_ROLES = new Set(['activity', 'phase', 'legend-title', 'scope', 'release-cut', 'title', 'heading', 'annotation'])
 
@@ -122,6 +131,7 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
         const b = sibs[j]
         // a container and an item drawn on it (no parent link) is not an overlap; two containers can be
         if (isContainer(a) !== isContainer(b)) continue
+        if (isDsGroup(a) && isDsGroup(b)) continue // the group rule below
         const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
         const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
         if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL) continue
@@ -227,17 +237,60 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
     }
   }
 
-  // ---- wire labels: on a card, cut short, or only a dot (edgeLabel.ts — the page and the snapshot place them alike) ----
+  // ---- domain-story group outlines that intersect (one inside the other is fine) ----
+  const dsGroups = items.filter(isDsGroup)
+  const titled = (g: Item) => ({ x: g.x, y: g.y - GROUP_TITLE, w: g.w, h: g.h + GROUP_TITLE })
+  const contains = (o: Item, i: Item) => o.x <= i.x + 1 && o.y <= i.y - GROUP_TITLE + 1 && o.x + o.w >= i.x + i.w - 1 && o.y + o.h >= i.y + i.h - 1
+  for (let i = 0; i < dsGroups.length; i++)
+    for (let j = i + 1; j < dsGroups.length; j++) {
+      const [ga, gb] = byReading(dsGroups[i], dsGroups[j]) <= 0 ? [dsGroups[i], dsGroups[j]] : [dsGroups[j], dsGroups[i]]
+      if (contains(ga, gb) || contains(gb, ga)) continue
+      const ta = titled(ga)
+      const tb = titled(gb)
+      const ox = Math.min(ta.x + ta.w, tb.x + tb.w) - Math.max(ta.x, tb.x)
+      const oy = Math.min(ta.y + ta.h, tb.y + tb.h) - Math.max(ta.y, tb.y)
+      if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL) continue
+      const ma = new Set(Array.isArray(ga.data?.members) ? (ga.data.members as string[]) : [])
+      const shared = (Array.isArray(gb.data?.members) ? (gb.data.members as string[]) : []).filter((m) => ma.has(m))
+      add(gb, {
+        kind: 'group',
+        message: `the outline of ${nameOf(gb)} overlaps the outline of ${nameOf(ga)} (${r(ox)}×${r(oy)} px)${shared.length ? `: they share ${shared.slice(0, 4).join(', ')}` : ''}`,
+        suggestion: shared.length
+          ? 'a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other — it is then drawn inside it)'
+          : `move ${nameOf(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
+        others: [ga.id],
+      })
+    }
+
+  // ---- wires: labels on a card, cut short or only a dot; labels and number circles on each other (wireGeometry.ts planWires —
+  // the page and the snapshot place them alike) ----
   const obstacles = labelObstacles(shown)
+  const plan = planWires(shown)
+  type Mark = { wire: Item; what: string; box: { x: number; y: number; w: number; h: number }; circle: boolean }
+  const marks: Mark[] = []
+  let wires = 0
+  const seqName = (w: Item) => (typeof w.data?.seq === 'number' ? `number circle ${w.data.seq}` : 'number circle')
   for (const w of Object.values(shown.items)) {
     if (w.type !== 'arrow' || !w.from || !w.to || !inScope.has(w.from) || !inScope.has(w.to)) continue
-    const text = wireText(w)
-    const shape = text ? wireShape(shown, w) : undefined
-    const label = shape ? wireLabel(w, shape, obstacles) : undefined
-    if (!label || !shape) continue
+    wires++
+    const planned = plan.get(w.id)
     const a = shown.items[w.from]
     const z = shown.items[w.to]
+    const text = wireText(w)
+    if (planned?.seq) {
+      const box = seqBox(planned.seq)
+      marks.push({ wire: w, what: `${seqName(w)} of the arrow ${nameOf(a)} → ${nameOf(z)}`, box, circle: true })
+      // on a pictogram or card that is not one of its arrow's ends
+      const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w.from && o.id !== w.to)
+      if (on.length) {
+        const names = on.slice(0, 3).map((o) => nameOf(shown.items[o.id])).join(', ')
+        add(w, { kind: 'label', message: `${seqName(w)} of the arrow ${nameOf(a)} → ${nameOf(z)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf(z)} so the arrow leaves ${nameOf(a)} at another angle)`, others: on.map((o) => o.id) })
+      }
+    }
+    const label = planned?.label
+    if (!label || !text) continue
     const what = `label "${short(text, 32)}" of the wire ${nameOf(a)} → ${nameOf(z)}`
+    if (label.mode !== 'dot') marks.push({ wire: w, what, box: { x: label.x - label.w / 2, y: label.y - label.h / 2, w: label.w, h: label.h }, circle: false })
     if (label.dragged) {
       const covered = labelHits(label.x, label.y, label.w, label.h, obstacles, 0)
       if (!covered.length) continue
@@ -267,6 +320,21 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
       others: [a.id, z.id],
     })
   }
+  // labels and number circles on each other (a wire's own label and circle included)
+  for (let i = 0; i < marks.length; i++)
+    for (let j = i + 1; j < marks.length; j++) {
+      const [m1, m2] = [marks[i], marks[j]]
+      const ox = Math.min(m1.box.x + m1.box.w, m2.box.x + m2.box.w) - Math.max(m1.box.x, m2.box.x)
+      const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y)
+      if (ox <= MARK_TOL || oy <= MARK_TOL) continue
+      const z = shown.items[m2.wire.to!]
+      const fix = m2.wire.data?.bend
+        ? 'drag that label onto a free stretch of its wire, or clear data.bend'
+        : m1.wire.from === m2.wire.from
+          ? `the two arrows leave ${nameOf(shown.items[m1.wire.from!])} at nearly the same angle: move ${nameOf(z)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story`
+          : `move ${nameOf(z)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`
+      add(m2.wire, { kind: 'label', message: `${m2.what} ${m1.circle || m2.circle ? 'collides with' : 'overlaps'} ${m1.wire.id === m2.wire.id ? 'its own ' : ''}${m1.what} (${r(ox)}×${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] })
+    }
 
   // ---- drawn somewhere else than stored ----
   for (const d of shownDifferences(board)) {
@@ -289,7 +357,7 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
   const pos = (id: string) => shown.items[id] ?? board.items[id]
   found.sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || byReading(pos(a.id), pos(b.id)))
   const limit = opts.limit ?? 200
-  return { findings: found.slice(0, limit), checked: items.length, ...(key ? { frame: key } : {}), counts }
+  return { findings: found.slice(0, limit), checked: items.length, wires, ...(key ? { frame: key } : {}), counts }
 }
 
 function byReading(a: Item, b: Item): number {
@@ -302,10 +370,11 @@ function byReading(a: Item, b: Item): number {
 export function layoutLines(report: LayoutReport, _board: Board, max = 60): string[] {
   const total = KINDS.reduce((n, k) => n + report.counts[k], 0)
   const where = report.frame ? ` in ${report.frame}` : ''
-  if (!total) return [`Layout${where}: nothing overlaps, sticks out or is cut off (${report.checked} items checked).`]
+  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ''} checked`
+  if (!total) return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`]
   const parts = KINDS.filter((k) => report.counts[k]).map((k) => `${report.counts[k]} ${k}`)
   const shown = report.findings.slice(0, max)
-  const out = [`Layout${where}: ${total} finding(s) — ${parts.join(', ')} (${report.checked} items checked; positions as the page draws them)`]
+  const out = [`Layout${where}: ${total} finding(s) — ${parts.join(', ')} (${checked}; positions as the page draws them)`]
   for (const f of shown) out.push(`- [${f.kind}] ${f.message} #${f.id} — ${f.suggestion}`)
   if (total > shown.length) out.push(`… ${total - shown.length} more (pass frame to look at one diagram, or fix these and check again)`)
   return out
