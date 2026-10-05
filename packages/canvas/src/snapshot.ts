@@ -24,6 +24,8 @@ export interface SnapshotOptions {
   maxPx?: number
   /** Padding around the region, in board units (default 24). */
   pad?: number
+  /** Trace wires between diagrams: drawn (`all`, the default) or left out (`none`) so they do not cover the content. */
+  traces?: 'all' | 'none'
 }
 
 export interface Snapshot {
@@ -759,7 +761,7 @@ export function renderSnapshot(board: Board, opts: SnapshotOptions = {}): Snapsh
   const byPos = (x: Item, y: Item) => x.y - y.y || x.x - y.x || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)
   const containers = items.filter((i) => i.type !== 'arrow' && i.type !== 'comment' && isContainer(i)).sort((x, y) => depthOf(b, x) - depthOf(b, y) || y.w * y.h - x.w * x.h || byPos(x, y))
   const plain = items.filter((i) => i.type !== 'arrow' && i.type !== 'comment' && !isContainer(i)).sort((x, y) => depthOf(b, x) - depthOf(b, y) || byPos(x, y))
-  const wires = items.filter((i) => i.type === 'arrow').sort((x, y) => (x.id < y.id ? -1 : 1))
+  const wires = items.filter((i) => i.type === 'arrow' && (opts.traces !== 'none' || i.role !== 'trace')).sort((x, y) => (x.id < y.id ? -1 : 1))
   const comments = items.filter((i) => i.type === 'comment').sort(byPos)
   const body = [...containers, ...plain, ...wires, ...comments].map((it) => drawItem(c, it)).join('\n')
   const head = (name: string, col: string) => `<marker id="ah-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker>`

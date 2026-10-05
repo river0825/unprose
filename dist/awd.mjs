@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.14.0";
+    VERSION2 = "0.15.0";
   }
 });
 
@@ -76886,7 +76886,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.14.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.15.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -77098,10 +77098,11 @@ ${r.lines.join("\n")}${page}`);
       scale: external_exports.number().min(0.05).max(4).optional().describe("pixels per board unit (default: fit maxPx, at most 1)"),
       maxPx: external_exports.number().int().min(200).max(4e3).optional().describe("longest side in pixels (default 2000)"),
       theme: external_exports.enum(["light", "dark"]).default("light"),
+      traces: external_exports.enum(["all", "none"]).optional().describe("trace wires between diagrams: 'all' (default) draws them, 'none' leaves them out so they do not cover the content (canvas_read_board still lists them)"),
       format: external_exports.enum(["png", "svg"]).default("png").describe("png (an image you can look at) or svg (text)")
     }
-  }, async ({ id, frame, ids, scale, maxPx, theme, format }) => {
-    const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format });
+  }, async ({ id, frame, ids, scale, maxPx, theme, format, traces: traces2 }) => {
+    const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format, traces: traces2 });
     const i = s.info;
     const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : "the whole board"}: ${i.width}\xD7${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}, renderer: ${s.png ? i.renderer ?? "resvg" : "svg"}${i.notes.length ? `
 ${i.notes.filter(Boolean).join("\n")}` : ""}`;

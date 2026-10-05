@@ -1960,3 +1960,126 @@ kbd {
   border: 0;
   padding: 0 4px;
 }
+
+/* ---------- trace view (flow/traceView.ts; docs/canvas.md → Traces) ----------
+   Quiet by design (docs/DESIGN-SYSTEM.md: one accent, used for focus and selection): traces and their aids are
+   graphite, never marker blue, and nothing here is bolder than the content it annotates. */
+.react-flow__edge.wire-trace.trace-faded .react-flow__edge-path {
+  opacity: 0.18;
+}
+/* a bundle is still a trace: the same dotted graphite line, only a little heavier, with its count as the label */
+.react-flow__edge.wire-trace.trace-bundle .react-flow__edge-path {
+  stroke-dasharray: 2 5;
+  stroke-width: 2;
+  cursor: pointer;
+}
+.react-flow__edge.wire-trace.trace-bundle.open .react-flow__edge-path {
+  stroke-width: 1.25;
+}
+/* an element that has traces: a faint count beside its top-right corner — no pill, no border; it darkens when the
+   element is pointed at or selected */
+.react-flow__node.has-traces::after {
+  content: var(--trace-badge);
+  position: absolute;
+  top: -13px;
+  right: 0;
+  color: var(--ink-3);
+  font-size: 9.5px;
+  line-height: 12px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0.7;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease);
+}
+.react-flow__node.has-traces:hover::after,
+.react-flow__node.has-traces.selected::after {
+  color: var(--ink-2);
+  opacity: 1;
+}
+/* the settings of the lines live behind one quiet button in the corner (flow/WireControls.tsx) */
+.view-settings {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.view-toggle {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  color: var(--ink-3);
+  font: inherit;
+  min-height: 28px;
+  padding: 0 9px;
+  cursor: pointer;
+}
+.view-toggle:hover,
+.view-toggle[aria-expanded='true'] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.view-toggle:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+.view-pop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+  white-space: nowrap;
+}
+.view-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.trace-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px 4px;
+  border-bottom: 1px solid var(--rule);
+  align-self: stretch;
+}
+/* relations are plain words: ink when shown, struck through when switched off — no filled chips */
+.trace-options .trace-rel,
+.trace-options .trace-rel[aria-pressed='true'] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+  font: inherit;
+  padding: 2px 1px;
+  cursor: pointer;
+}
+.trace-rel:hover {
+  color: var(--ink);
+}
+.trace-rel[aria-pressed='false'] {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.trace-rel:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+
+/* the same work object drawn again in another sentence of a domain story (diagrams/sameObject.ts): the selection
+   wash without the ring — it is related to what is selected, not selected itself */
+.react-flow__node.same-object .item.ds-icon {
+  border-radius: 10px;
+  background: var(--marker-soft);
+  transition: background 120ms var(--ease);
+}

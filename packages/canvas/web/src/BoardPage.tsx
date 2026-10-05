@@ -35,7 +35,9 @@ import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
 import { useStoredSet } from './flow/storedSet'
-import { WireBadgeContext, WireControls, MODE_NAMES, useWireView } from './flow/WireControls'
+import { TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useTraceView, useWireView } from './flow/WireControls'
+import { applyTraceView, traceCounts, TRACE_MODES } from './flow/traceView'
+import { sameWorkObject } from './diagrams/sameObject'
 import { applyWireMode, catchAllWires, type WireBadge } from './flow/catchAll'
 import { useBoard } from './store'
 import { RunOverlay } from './run/RunOverlay'
@@ -132,6 +134,10 @@ function BoardInner({ id }: { id: string }) {
   // which wires this viewer sees (all / selected / none) and whether catch-all listeners are drawn or badges
   const [wireView, setWireView, cycleWires] = useWireView()
   const [expandedWires, setExpandedWires] = useState<Set<string>>(() => new Set())
+  // which traces this viewer sees (flow/traceView.ts); a hovered element shows its traces like a selected one
+  const [traceView, setTraceView] = useTraceView()
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  const [openBundles, setOpenBundles] = useState<Set<string>>(() => new Set())
   const toggleBadge = useCallback(
     (b: WireBadge) =>
       setExpandedWires((prev) => {
@@ -180,11 +186,25 @@ function BoardInner({ id }: { id: string }) {
   const onHoverItems = useCallback((ids: string[]) => setPanelHover((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids)), [])
   // "show it on the board" from a panel link: the view moves there and the item flashes for a moment
   const [flashIds, setFlashIds] = useState<string[]>([])
+  const hasTraces = useMemo(() => (board ? Object.values(board.items).some((it) => it.type === 'arrow' && it.role === 'trace') : false), [board])
+  const traceBadges = useMemo(() => (board && hasTraces && traceView.badges ? traceCounts(board, traceView) : undefined), [board, hasTraces, traceView])
+  // a domain story draws one work object once per sentence: selecting or pointing at one lights up the others
+  const sameObject = useMemo(() => {
+    const out = new Set<string>()
+    if (board) for (const id of hoverId ? [...selectedIds, hoverId] : selectedIds) for (const o of sameWorkObject(board, board.items[id])) out.add(o.id)
+    return out
+  }, [board, selectedIds, hoverId])
   const shownNodes = useMemo(() => {
-    if (!panelHover.length && !flashIds.length) return nodes
+    if (!panelHover.length && !flashIds.length && !traceBadges?.size && !sameObject.size) return nodes
     const on = new Set([...panelHover, ...flashIds])
-    return nodes.map((n) => (on.has(n.id) ? { ...n, className: `${n.className ?? ''} panel-hover` } : n))
-  }, [nodes, panelHover, flashIds])
+    return nodes.map((n) => {
+      const count = traceBadges?.get(n.id)
+      if (sameObject.has(n.id)) n = { ...n, className: `${n.className ?? ''} same-object` }
+      if (!on.has(n.id) && !count) return n
+      // the badge is drawn by CSS from the count (styles.css .has-traces), so every kind of node gets it
+      return { ...n, className: `${n.className ?? ''}${on.has(n.id) ? ' panel-hover' : ''}${count ? ' has-traces' : ''}`, ...(count ? { style: { ...n.style, '--trace-badge': `"↗ ${count}"` } as CSSProperties } : {}) }
+    })
+  }, [nodes, panelHover, flashIds, traceBadges, sameObject])
 
   // owns / delegates wires are agent relations, not events: faint unless one of their ends is selected (docs/studio.md §7)
   const shownEdges = useMemo(() => {
@@ -193,14 +213,15 @@ function BoardInner({ id }: { id: string }) {
     const sel = new Set(selectedIds)
     const hover = new Set([...panelHover, ...flashIds])
     // the viewer's wire mode (flow/catchAll.ts applyWireMode): hidden wires are not drawn, so a copied image follows too
-    return applyWireMode(edges, wireView.mode, selectedIds, board).map((e) => {
+    const traced = hasTraces ? applyTraceView(edges, traceView, hoverId ? [...selectedIds, hoverId] : selectedIds, board, openBundles) : edges
+    return applyWireMode(traced, wireView.mode, selectedIds, board).map((e) => {
       const role = board.items[e.id]?.role
       const lit = hover.has(e.id) ? ' panel-hover' : ''
       if (role !== 'owns' && role !== 'delegates') return lit ? { ...e, className: `${e.className ?? ''}${lit}` } : e
       const on = e.selected || sel.has(e.source) || sel.has(e.target)
       return { ...e, className: (on ? 'wire-agent on' : 'wire-agent') + lit }
     })
-  }, [board, edges, selectedIds, panelHover, flashIds, wireView.mode])
+  }, [board, edges, selectedIds, panelHover, flashIds, wireView.mode, hasTraces, traceView, hoverId, openBundles])
 
   // a domain story being replayed (flow/replay.ts): only this viewer's view changes, nothing is stored
   const replayView = useReplay()
@@ -837,10 +858,15 @@ function BoardInner({ id }: { id: string }) {
       else if (e.key === 'c') setTool((t) => (t === 'comment' ? 'select' : 'comment'))
       else if (e.key === '1') flow.fitView({ padding: 0.15, duration: 300 })
       else if (e.key === 'w') store.toast(`Wires: ${MODE_NAMES[cycleWires()].toLowerCase()}`)
+      else if (e.key === 'W') {
+        const next = TRACE_MODES[(TRACE_MODES.indexOf(traceView.mode) + 1) % TRACE_MODES.length]
+        setTraceView({ mode: next })
+        store.toast(`Traces: ${TRACE_MODE_NAMES[next].toLowerCase()}`)
+      }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView])
 
   // first load → fit, or centre the deep-linked item (?focus=<id>)
   const fitted = useRef(false)
@@ -944,6 +970,13 @@ function BoardInner({ id }: { id: string }) {
               startEdit(edge.id)
             }}
             onSelectionChange={onSelectionChange}
+            onNodeMouseEnter={(_, n) => (hasTraces || (n.data as { item?: Item }).item?.data?.ds === 'object') && setHoverId(n.id)}
+            onNodeMouseLeave={() => setHoverId(null)}
+            onEdgeClick={(_, edge) => {
+              // a bundle stands for all the traces between two diagrams: a click draws them, another folds them back
+              const key = (edge.data as { bundle?: { key: string } } | undefined)?.bundle?.key
+              if (key) setOpenBundles((prev) => { const next = new Set(prev); if (!next.delete(key)) next.add(key); return next })
+            }}
             onSelectionStart={onSelectionStart}
             onSelectionEnd={onSelectionEnd}
             onNodeDragStop={onNodeDragStop}
@@ -977,7 +1010,9 @@ function BoardInner({ id }: { id: string }) {
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
-            <WireControls view={wireView} onChange={setWireView} hasCatchAll={hasCatchAll} />
+            <WireControls view={wireView} onChange={setWireView} hasCatchAll={hasCatchAll} traces={hasTraces ? TRACE_MODE_NAMES[traceView.mode].toLowerCase() : undefined}>
+              {hasTraces ? <TraceControls view={traceView} onChange={setTraceView} /> : null}
+            </WireControls>
             <FrozenHeaders board={laid ?? board} />
             <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
           </ReactFlow>

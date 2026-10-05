@@ -134,3 +134,12 @@ test('UI mock elements and domain-story pictograms draw recognisably', () => {
 test('deterministic: the same board gives the same svg', () => {
   assert.equal(renderSnapshot(twoFrames()).svg, renderSnapshot(twoFrames()).svg)
 })
+
+test('traces can be left out of a snapshot', () => {
+  const b = twoFrames()
+  b.items['t.1'] = item({ id: 't.1', type: 'arrow', role: 'trace', from: 'sm.story.x', to: 'es.command.b', label: 'derived-from' })
+  const dotted = (svg: string) => (svg.match(/stroke-dasharray="2 4"/g) ?? []).length
+  assert.equal(dotted(renderSnapshot(b).svg), 1)
+  assert.equal(dotted(renderSnapshot(b, { traces: 'none' }).svg), 0)
+  assert.ok(renderSnapshot(b, { traces: 'none' }).svg.includes('produces'), 'other wires stay')
+})

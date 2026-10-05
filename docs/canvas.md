@@ -1104,15 +1104,34 @@ nothing here is stored on the board, and a copied image shows what is shown.
   reports a label that is cut, hidden as a dot or dragged onto a card (`[label]`), with how far to move a card or a
   `short` to give.
 - **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
-- **Wires: All / Selected / None** (bottom-right corner, **W** cycles; remembered per viewer in this browser).
+- **One button in the bottom-right corner** says what is drawn (`Traces: selected · Wires: all`) and opens the
+  settings below; Escape or a click elsewhere closes them.
+- **Wires: All / Selected / None** (**W** cycles; remembered per viewer in this browser).
   *Selected* draws only the wires touching the selected blocks (others are hidden, not faded); *None* hides
-  every wire. A wire picked in the Inspector's Wiring list is drawn in any mode.
+  every wire. A wire picked in the Inspector's Wiring list is drawn in any mode. Trace wires are not wires of the
+  flow and have their own switch:
+- **Traces: All / Faded / Bundled / Selected / None** (in the same settings, shown when the board has traces;
+  **Shift+W** cycles; remembered per viewer in this browser). Traces say how elements of different diagrams belong
+  together, and a board with several diagrams has more of them than anyone can read at once, so the viewer chooses:
+  - *Selected* (the default): only the traces of the selected element — or of the one the pointer is on;
+  - *All*: every trace; *Faded*: every trace faintly, those of the selected or hovered element in full;
+  - *Bundled*: one thicker line per pair of diagrams, labelled with how many traces it stands for (`5 traces`);
+    click it to draw them all, again to fold them back. A trace inside one diagram, or the only one between two,
+    is drawn as it is; the traces of the selection are always drawn;
+  - *None*: no trace. A trace picked in the Inspector's Traces list is drawn in every mode.
+
+  Under the modes: *Counts* puts a faint `↗ n` beside the corner of every element that
+  has traces, so a hidden trace can still be found (select the element to see where it goes; the Inspector lists
+  them). The four relations — 來自 derived-from, 組成 groups, 畫面 shows, 相關 relates — can be switched off (struck
+  through): their traces are neither drawn nor counted. All of it is graphite and
+  no bolder than the content: marker blue stays for focus and selection. For a picture without traces an agent passes `traces: 'none'` to `canvas_snapshot`
+  (`GET …/snapshot?traces=none`); the default draws them.
 - **Catch-all listeners are badges.** On a workflow board a subscription that listens to (or fans out across)
   many blocks is drawn as a small badge instead of a long wire: on the listener above its top edge
   (`on *.failed`, `resume: card.moved`, `on tick`, `on 8 events · 5 blocks` for a hub) and on the emitting block
   below its bottom edge (`card.moved → 2 blocks`, `3 events → park`); the badge's tooltip lists every wire.
-  Click a badge to draw its wires again (click again to fold them back), or tick **Show catch-all wires** next to
-  the mode buttons. The Inspector's Wiring section lists them as before. The rule — a flow wire carrying
+  Click a badge to draw its wires again (click again to fold them back), or tick **Show catch-all wires** in the
+  settings. The Inspector's Wiring section lists them as before. The rule — a flow wire carrying
   `data.event` is a catch-all when:
   1. its event pattern contains `*` (`*.failed`, `build.*`);
   2. it is a human step's `resume_on` (`data.event.resume`) — the trigger wakes a waiting step, it does not start one;

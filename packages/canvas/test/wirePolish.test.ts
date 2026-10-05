@@ -158,3 +158,57 @@ test('applyWireMode: selected draws only the selection\'s wires, none draws none
   const picked = edges.map((x) => (x.id === 'zx' || x.id === 'yz' ? { ...x, selected: true } : x))
   assert.deepEqual(vis(applyWireMode(picked, 'none', [], b)), ['yz', 'zx', 'tether:cm'])
 })
+
+test('trace view: all, faded, bundled per pair of diagrams, selected only, none; badges count; relations filter', async () => {
+  const { applyTraceView, traceCounts, bundleKey, diagramOf, DEFAULT_TRACE_VIEW } = await import('../web/src/flow/traceView.js')
+  const frame = (id: string) => item({ id, type: 'frame', role: 'diagram' })
+  const el = (id: string, parent: string) => item({ id, type: 'card', parent })
+  const trace = (id: string, from: string, to: string, rel = 'derived-from') => item({ id, type: 'arrow', role: 'trace', from, to, label: rel })
+  const b = board([
+    frame('es'), frame('map'), frame('ui'),
+    el('cmd1', 'es'), el('cmd2', 'es'), el('story1', 'map'), el('story2', 'map'), el('screen', 'ui'),
+    trace('t1', 'story1', 'cmd1'), trace('t2', 'story2', 'cmd2'), trace('t3', 'story2', 'cmd1', 'relates'),
+    trace('t4', 'screen', 'story1', 'shows'), trace('t5', 'story1', 'story2', 'relates'),
+    item({ id: 'flow', type: 'arrow', from: 'cmd1', to: 'cmd2' }),
+  ])
+  const e = (id: string, extra: Partial<Edge> = {}): Edge => ({ id, source: b.items[id].from!, target: b.items[id].to!, type: 'item', ...(b.items[id].role === 'trace' ? { className: 'wire-trace' } : {}), ...extra })
+  const edges = ['t1', 't2', 't3', 't4', 't5', 'flow'].map((id) => e(id))
+  const vis = (es: Edge[]) => es.filter((x) => !x.hidden).map((x) => x.id)
+  const view = (patch: object) => ({ ...DEFAULT_TRACE_VIEW, ...patch })
+
+  assert.equal(diagramOf(b, 'story1'), 'map')
+  assert.equal(bundleKey(b, b.items.t1), 'es|map')
+  assert.equal(bundleKey(b, b.items.t5), '', 'inside one diagram: not bundled')
+
+  assert.equal(applyTraceView(edges, view({ mode: 'all' }), [], b), edges, 'nothing to change in "all"')
+  // selected (the default): only the traces of the selected or hovered element; other wires are not touched
+  assert.deepEqual(vis(applyTraceView(edges, DEFAULT_TRACE_VIEW, [], b)), ['flow'])
+  assert.deepEqual(vis(applyTraceView(edges, DEFAULT_TRACE_VIEW, ['story1'], b)), ['t1', 't4', 't5', 'flow'])
+  assert.deepEqual(vis(applyTraceView(edges, view({ mode: 'none' }), ['story1'], b)), ['flow'])
+  // a trace picked in the Inspector is drawn in every mode
+  assert.deepEqual(vis(applyTraceView(edges.map((x) => (x.id === 't2' ? { ...x, selected: true } : x)), view({ mode: 'none' }), [], b)), ['t2', 'flow'])
+  // faded: all drawn, those away from the selection faint
+  const faded = applyTraceView(edges, view({ mode: 'faded' }), ['story1'], b)
+  assert.deepEqual(vis(faded), ['t1', 't2', 't3', 't4', 't5', 'flow'])
+  assert.deepEqual(faded.filter((x) => x.className?.includes('trace-faded')).map((x) => x.id), ['t2', 't3'])
+  // bundled: one line stands for the three es ↔ map traces; a single trace and one inside a diagram stay as they are
+  const bundled = applyTraceView(edges, view({ mode: 'bundled' }), [], b)
+  assert.deepEqual(vis(bundled), ['t1', 't4', 't5', 'flow'])
+  const stand = bundled.find((x) => x.id === 't1')!
+  assert.equal(stand.label, '3 traces')
+  assert.deepEqual((stand.data as { bundle: object }).bundle, { key: 'es|map', count: 3, open: false })
+  assert.match(stand.className!, /trace-bundle/)
+  assert.deepEqual(vis(applyTraceView(edges, view({ mode: 'bundled' }), [], b, new Set(['es|map']))), ['t1', 't2', 't3', 't4', 't5', 'flow'], 'a clicked bundle draws its traces')
+  assert.deepEqual(vis(applyTraceView(edges, view({ mode: 'bundled' }), ['story2'], b)), ['t1', 't2', 't3', 't4', 't5', 'flow'], 'the selection\'s traces are drawn too')
+  // leaving bundled takes the bundle off again
+  const back = applyTraceView(bundled, view({ mode: 'all' }), [], b).find((x) => x.id === 't1')!
+  assert.equal((back.data as { bundle?: object }).bundle, undefined)
+  assert.equal(back.className, 'wire-trace')
+  // relations: "relates" off hides and does not count those traces
+  const noRelates = view({ mode: 'all', rels: { ...DEFAULT_TRACE_VIEW.rels, relates: false } })
+  assert.deepEqual(vis(applyTraceView(edges, noRelates, [], b)), ['t1', 't2', 't4', 'flow'])
+  assert.deepEqual(Object.fromEntries(traceCounts(b, DEFAULT_TRACE_VIEW)), { story1: 3, cmd1: 2, story2: 3, cmd2: 1, screen: 1 })
+  assert.equal(traceCounts(b, noRelates).get('story2'), 1)
+  // the wire mode no longer hides traces
+  assert.deepEqual(vis(applyWireMode(edges, 'none', [], b)), ['t1', 't2', 't3', 't4', 't5'])
+})

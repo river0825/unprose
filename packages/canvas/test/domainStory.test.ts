@@ -258,3 +258,25 @@ test("icons of the story's own: only plain shapes are drawn, on the board, in th
   assert.match(egon.iconSet.workObjects.Flask, /<path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"\/><circle cx="12" cy="16" r="1"\/><\/svg>$/)
   assert.doesNotMatch(egon.iconSet.workObjects.Flask, /script|onload|image|javascript/)
 })
+
+test('the same work object in several sentences: its pictograms know each other', async () => {
+  const { sameWorkObject } = await import('../web/src/diagrams/sameObject.js')
+  const content: DomainStoryContent = {
+    actors: ['Operator', { text: 'App', kind: 'system' }],
+    workObjects: [{ id: 'experiment', text: 'Experiment E-01' }],
+    sentences: [
+      { actor: 'Operator', verb: 'creates', object: 'experiment', to: 'App' },
+      { actor: 'Operator', verb: 'writes', object: 'note' },
+      { actor: 'Operator', verb: 'submits', object: 'experiment', to: 'App' },
+      { actor: 'Operator', verb: 'files', object: 'note' },
+      { actor: 'Operator', verb: 'activates', object: 'experiment', to: 'App' },
+    ],
+  }
+  const items = renderDomainStory(content, { scope: 'ds', now })
+  const b = { id: 'b', title: 't', kind: 'freeform', seq: 1, createdAt: now, updatedAt: now, items: Object.fromEntries(items.map((i) => [i.id, i])) } as never
+  const objects = items.filter((i) => i.role === 'work-object')
+  const seqs = (of: Item) => sameWorkObject(b, of).map((o) => o.data?.seq)
+  assert.deepEqual(seqs(objects.find((o) => o.data?.seq === 3)!), [1, 5], 'a declared work object, by its id')
+  assert.deepEqual(seqs(objects.find((o) => o.data?.seq === 2)!), [4], 'an undeclared one, by its name')
+  assert.deepEqual(sameWorkObject(b, items.find((i) => i.role === 'actor')), [], 'actors appear once')
+})

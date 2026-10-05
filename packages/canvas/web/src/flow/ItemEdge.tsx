@@ -201,7 +201,8 @@ export function ItemEdge(props: EdgeProps) {
   const sourceSelected = srcNode?.selected
   const targetSelected = tgtNode?.selected
   const focus = useWireFocus(source, target, selected)
-  const quiet = (isTrace && !selected && !editing && !sourceSelected && !targetSelected) || (focus === 'off' && !editing)
+  const bundle = !!(data as { bundle?: unknown } | undefined)?.bundle
+  const quiet = (isTrace && !bundle && !selected && !editing && !sourceSelected && !targetSelected) || (focus === 'off' && !editing)
   // a domain story being replayed: the current sentence's number and verb stand out, what is still to come is faint (flow/replay.ts)
   const replayed = (data as { replay?: string } | undefined)?.replay
   const rc = replayed ? ` replay-${replayed}` : ''

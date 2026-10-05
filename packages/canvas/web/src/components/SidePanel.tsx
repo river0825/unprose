@@ -71,7 +71,7 @@ function linkIds(target: EventTarget | null): string[] {
 /** Shown by the Event section already, or drawing detail: not repeated as raw data rows. */
 const WIRE_KEYS = new Set(['event', 'pending', 'fromSide', 'toSide', 'bend'])
 /** Shown by the diagram panels (frame spec, proposal, traces): not repeated as raw data rows. */
-const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces', 'ui', 'element'])
+const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces', 'icon', 'ui', 'element'])
 
 const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 

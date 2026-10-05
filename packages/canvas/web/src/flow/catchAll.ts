@@ -130,13 +130,14 @@ const NO_PICK = new Set<Item['type']>(['frame', 'lane', 'comment'])
 /**
  * Apply the viewer's wire mode: in `selected` only wires touching a selected block are drawn, in `none`
  * no wire is; a wire that is itself selected (e.g. picked in the Inspector's Wiring list) is always drawn.
- * Comment tethers are not wires and stay. Returns the same array when nothing changes.
+ * Comment tethers are not wires and stay; trace wires follow the trace view instead. Returns the same array when nothing changes.
  */
 export function applyWireMode(edges: Edge[], mode: WireMode, selected: string[], board: Board): Edge[] {
   const picked = new Set(selected.filter((id) => board.items[id] && !NO_PICK.has(board.items[id].type)))
   let changed = false
   const out = edges.map((e) => {
-    if (e.type !== 'item') return e
+    // traces have their own view (flow/traceView.ts)
+    if (e.type !== 'item' || board.items[e.id]?.role === 'trace') return e
     const show = e.selected || (!e.hidden && (mode === 'all' || (mode === 'selected' && (picked.has(e.source) || picked.has(e.target)))))
     if (show === !e.hidden) return e
     changed = true

@@ -169,7 +169,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.14.0' },
+    { name: 'unprose', version: '0.15.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -430,11 +430,12 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         scale: z.number().min(0.05).max(4).optional().describe('pixels per board unit (default: fit maxPx, at most 1)'),
         maxPx: z.number().int().min(200).max(4000).optional().describe('longest side in pixels (default 2000)'),
         theme: z.enum(['light', 'dark']).default('light'),
+        traces: z.enum(['all', 'none']).optional().describe("trace wires between diagrams: 'all' (default) draws them, 'none' leaves them out so they do not cover the content (canvas_read_board still lists them)"),
         format: z.enum(['png', 'svg']).default('png').describe('png (an image you can look at) or svg (text)'),
       },
     },
-    async ({ id, frame, ids, scale, maxPx, theme, format }) => {
-      const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format })
+    async ({ id, frame, ids, scale, maxPx, theme, format, traces }) => {
+      const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format, traces })
       const i = s.info
       const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : 'the whole board'}: ${i.width}×${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}, renderer: ${s.png ? (i.renderer ?? 'resvg') : 'svg'}${i.notes.length ? `\n${i.notes.filter(Boolean).join('\n')}` : ''}`
       if (s.png) return { content: [{ type: 'text' as const, text: head }, { type: 'image' as const, data: s.png.toString('base64'), mimeType: 'image/png' }] }

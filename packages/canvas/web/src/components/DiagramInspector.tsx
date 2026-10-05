@@ -9,6 +9,7 @@ import { KIND_NAMES, diagramOf, membersOf, type DiagramInfo } from '../diagrams/
 import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/es'
 import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
 import { REL_NAMES, tracesOf } from '../diagrams/traces'
+import { sameWorkObject } from '../diagrams/sameObject'
 import { pendingOf, type Pending } from '../inspector/pending'
 import { deletedOf, describeDeleted } from '../diagrams/deleteProposal'
 import { MODELS, type DiscussModel } from '../inspector/detail'
@@ -196,6 +197,7 @@ export function DiagramElementPanel({
   const nb = diagram.kind === 'event-storming' && diagram.frame ? neighboursOf(board, diagram.frame.id, item) : undefined
   const rule = diagram.kind === 'event-storming' ? grammarRule(item) : undefined
   const pending = pendingOf(item)
+  const same = sameWorkObject(board, item)
   if (!info && !traces.length && !pending) return null
   return (
     <section className="dg-panel" aria-label="Diagram element">
@@ -212,6 +214,16 @@ export function DiagramElementPanel({
         <p className="dg-sentence">
           <span className="muted">Sentence</span> {item.data.sentence}
         </p>
+      ) : null}
+      {same.length ? (
+        <div className="dg-nb dg-same" title="A domain story draws a work object once per sentence that touches it: these are the same thing">
+          <span className="muted">Same work object, also in</span>{' '}
+          {same.map((o) => (
+            <PanelLink key={o.id} id={o.id} name={typeof o.data?.sentence === 'string' ? o.data.sentence : (o.text ?? o.id)} className="wire-block" onSelect={onSelect}>
+              {typeof o.data?.sentence === 'string' ? o.data.sentence : `sentence ${String(o.data?.seq ?? '?')}`}
+            </PanelLink>
+          ))}
+        </div>
       ) : null}
       {typeof item.data?.note === 'string' ? <p className="muted">{item.data.note}</p> : null}
       {pending?.kind === 'add' && item.type !== 'arrow' ? <StoryProposal board={board} item={item} pending={pending} onProposalChat={onProposalChat} onDismiss={onDismiss} /> : null}

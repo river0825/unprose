@@ -6,6 +6,25 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-10-05
+
+### Added
+- **A switch for trace wires** (docs/canvas.md → Wires): **Traces: All / Faded / Bundled / Selected / None**
+  (Shift+W cycles; per viewer). *Selected* draws only the traces of the selected or hovered element,
+  *Faded* draws the others faintly, *Bundled* draws one line per pair of diagrams with the number of traces it stands
+  for (click to open it). *Counts* marks every element that has traces with a faint `↗ n`, and the four
+  relations (來自 / 組成 / 畫面 / 相關) can be switched off.
+- `canvas_snapshot` takes `traces: 'none'` (`?traces=none`) for a picture without trace wires.
+- **Domain stories: the same work object lights up everywhere.** A work object is drawn once per sentence that
+  touches it; selecting or pointing at one now puts the selection wash behind the others, and the Inspector lists the sentences
+  ("Same work object, also in …"), so "is this the same one?" no longer needs asking.
+
+### Changed
+- **The line settings are one button in the bottom-right corner** (`Traces: selected · Wires: all`) that opens the
+  trace view, the wire modes and the catch-all switch, instead of rows of buttons always on the board.
+- **Traces are drawn for the selection only by default** — a board with several diagrams had too many dotted lines
+  to read. Choose *All* to see them as before. The **Wires** modes no longer hide or show traces.
+
 ## [0.14.0] — 2026-10-05
 
 ### Added
@@ -694,7 +713,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/river0825/unprose/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/river0825/unprose/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/river0825/unprose/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/river0825/unprose/compare/v0.11.0...v0.12.0

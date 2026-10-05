@@ -988,7 +988,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (format !== 'png' && format !== 'svg') throw new HttpError(400, 'format must be png or svg')
         const theme = url.searchParams.get('theme') ?? 'light'
         if (theme !== 'light' && theme !== 'dark') throw new HttpError(400, 'theme must be light or dark')
-        const snap = agentScale(() => renderSnapshot(board, { frame: url.searchParams.get('frame') || undefined, ids: listParam(url, 'ids'), scale: numParam(url, 'scale'), maxPx: numParam(url, 'maxPx'), theme }))
+        const traces = url.searchParams.get('traces') ?? 'all'
+        if (traces !== 'all' && traces !== 'none') throw new HttpError(400, 'traces must be all or none')
+        const snap = agentScale(() => renderSnapshot(board, { frame: url.searchParams.get('frame') || undefined, ids: listParam(url, 'ids'), scale: numParam(url, 'scale'), maxPx: numParam(url, 'maxPx'), theme, traces }))
         const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes, renderer: 'svg' }
         const head = { 'cache-control': 'no-store', 'x-unprose-snapshot': headerJson(info), 'access-control-expose-headers': 'www-authenticate, mcp-session-id, x-unprose-snapshot' }
         if (format === 'png') {

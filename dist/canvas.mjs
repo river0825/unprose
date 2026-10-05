@@ -51035,7 +51035,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.14.0";
+var VERSION = "0.15.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -60456,7 +60456,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.14.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.15.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60668,10 +60668,11 @@ ${r2.lines.join("\n")}${page3}`);
       scale: external_exports.number().min(0.05).max(4).optional().describe("pixels per board unit (default: fit maxPx, at most 1)"),
       maxPx: external_exports.number().int().min(200).max(4e3).optional().describe("longest side in pixels (default 2000)"),
       theme: external_exports.enum(["light", "dark"]).default("light"),
+      traces: external_exports.enum(["all", "none"]).optional().describe("trace wires between diagrams: 'all' (default) draws them, 'none' leaves them out so they do not cover the content (canvas_read_board still lists them)"),
       format: external_exports.enum(["png", "svg"]).default("png").describe("png (an image you can look at) or svg (text)")
     }
-  }, async ({ id, frame, ids, scale, maxPx, theme, format }) => {
-    const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format });
+  }, async ({ id, frame, ids, scale, maxPx, theme, format, traces: traces2 }) => {
+    const s = await client.snapshot(id, { frame, ids, scale, maxPx, theme, format, traces: traces2 });
     const i = s.info;
     const head = `snapshot of ${frame ? `frame ${frame}` : ids?.length ? `${ids.length} item(s)` : "the whole board"}: ${i.width}\xD7${i.height} px at scale ${Math.round(i.scale * 100) / 100}, ${i.items} items, board region x ${Math.round(i.region.x)} y ${Math.round(i.region.y)} w ${Math.round(i.region.w)} h ${Math.round(i.region.h)}, renderer: ${s.png ? i.renderer ?? "resvg" : "svg"}${i.notes.length ? `
 ${i.notes.filter(Boolean).join("\n")}` : ""}`;
@@ -62219,7 +62220,7 @@ function renderSnapshot(board, opts = {}) {
   const byPos2 = (x2, y2) => x2.y - y2.y || x2.x - y2.x || (x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
   const containers = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && isContainer2(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || y2.w * y2.h - x2.w * x2.h || byPos2(x2, y2));
   const plain = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && !isContainer2(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || byPos2(x2, y2));
-  const wires = items.filter((i) => i.type === "arrow").sort((x2, y2) => x2.id < y2.id ? -1 : 1);
+  const wires = items.filter((i) => i.type === "arrow" && (opts.traces !== "none" || i.role !== "trace")).sort((x2, y2) => x2.id < y2.id ? -1 : 1);
   const comments = items.filter((i) => i.type === "comment").sort(byPos2);
   const body = [...containers, ...plain, ...wires, ...comments].map((it) => drawItem(c, it)).join("\n");
   const head = (name, col) => `<marker id="ah-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker>`;
@@ -63749,7 +63750,10 @@ function startServer(opts = {}) {
         const theme = url2.searchParams.get("theme") ?? "light";
         if (theme !== "light" && theme !== "dark")
           throw new HttpError(400, "theme must be light or dark");
-        const snap = agentScale(() => renderSnapshot(board, { frame: url2.searchParams.get("frame") || void 0, ids: listParam(url2, "ids"), scale: numParam(url2, "scale"), maxPx: numParam(url2, "maxPx"), theme }));
+        const traces2 = url2.searchParams.get("traces") ?? "all";
+        if (traces2 !== "all" && traces2 !== "none")
+          throw new HttpError(400, "traces must be all or none");
+        const snap = agentScale(() => renderSnapshot(board, { frame: url2.searchParams.get("frame") || void 0, ids: listParam(url2, "ids"), scale: numParam(url2, "scale"), maxPx: numParam(url2, "maxPx"), theme, traces: traces2 }));
         const info = { width: snap.width, height: snap.height, scale: snap.scale, items: snap.items, region: snap.region, notes: snap.notes, renderer: "svg" };
         const head = { "cache-control": "no-store", "x-unprose-snapshot": headerJson(info), "access-control-expose-headers": "www-authenticate, mcp-session-id, x-unprose-snapshot" };
         if (format === "png") {

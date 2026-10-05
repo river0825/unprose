@@ -347,6 +347,12 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   a sentence that reads like a choice ("if", "or"); a work object that reads like an outcome ("check passed")
   instead of a thing; no work object coming back in a second sentence; every work object drawn with the same
   icon; a kind with no icon. `/unprose:critique` (the `critique` prompt) has an agent read a story this way.
+- **The same work object, drawn again**: the method draws a work object once per sentence that touches it, so one
+  thing appears several times under the same name. To make that visible (our display aid, not part of the
+  notation), selecting or pointing at one of them puts the selection wash behind the others (no ring: they are related to
+  the selection, not selected), and the
+  Inspector lists them: "Same work object, also in ③ … ⑥ …". Two pictograms are the same when they come from the
+  same declared work object (`workObjects[].id`), else when they have the same name, inside one story.
 - **Icons of your own** (`icons:`; Egon.io has them too — "upload your own icons", "square SVG images"): a name →
   an SVG line drawing on a 24 × 24 box, used as an actor's or a work object's `kind`. Only plain shapes are read
   out of it — `path` (`d`), `circle`, `ellipse`, `rect`, `line`, `polyline`, `polygon` with plain numbers, at most 40
