@@ -44,7 +44,7 @@ test('grammar: unknown actors, missing work objects, sequence gaps and shared nu
     ],
   })
   const rules = findings.map((f) => f.rule).sort()
-  assert.deepEqual(rules, ['actor-unused', 'sentence-without-object', 'sequence-gap', 'sequence-shared', 'unresolved-reference', 'work-object-unused'])
+  assert.deepEqual(rules, ['actor-unused', 'scope-missing', 'sentence-without-object', 'sequence-gap', 'sequence-shared', 'unresolved-reference', 'work-object-unused'])
   assert.ok(findings.every((f) => f.page), 'every finding says where the rule comes from')
   assert.deepEqual(checkDomainStory(story).filter((f) => f.severity === 'warning'), [])
 })
@@ -185,4 +185,76 @@ test('a trace into a sentence without a work object reaches its actor', async ()
   const { wires, unresolved } = resolveTraces([story], board, now)
   assert.deepEqual(unresolved, [])
   assert.equal(wires[0].to, 'k.actor.b')
+})
+
+test('review hints: scope, one concrete case, work objects that are things, come back and have their own icons', () => {
+  const rules = (c: DomainStoryContent) => checkDomainStory(c).map((f) => f.rule)
+  const base = { scope: { granularity: 'coarse-grained', time: 'to-be', purity: 'digitalized' }, actors: ['Operator', { text: 'App', kind: 'system' }] } as const
+  const findings = checkDomainStory({
+    ...base,
+    workObjects: ['segments', 'cadence', 'settings', 'Validation passed / 檢查通過', { text: 'experiment', kind: 'flask' }],
+    sentences: [
+      { actor: 'Operator', verb: 'selects', object: 'segments', to: 'App', toLabel: 'in' },
+      { actor: 'App', verb: 'creates', object: 'cadence', to: 'Operator' },
+      { actor: 'Operator', verb: 'configures or skips', object: 'settings', to: 'App' },
+      { actor: 'App', verb: 'returns', object: 'Validation passed / 檢查通過', to: 'Operator' },
+      { actor: 'Operator', verb: 'activates', object: 'experiment', to: 'App' },
+    ],
+  })
+  assert.deepEqual(findings.map((f) => f.rule).sort(), ['conditional', 'icon-unknown', 'request-response', 'work-object-outcome', 'work-objects-never-repeat'])
+  assert.ok(findings.every((f) => f.severity === 'info' && f.page))
+
+  // the same thing coming back under one name, with icons that differ: nothing to say
+  assert.deepEqual(rules({ ...base, actors: [...base.actors, 'Marketing lead'], workObjects: [{ text: 'experiment', kind: 'digital' }, { text: 'check result', kind: 'info' }], sentences: [
+    { actor: 'Marketing lead', verb: 'asks for', object: 'experiment', to: 'Operator' },
+    { actor: 'App', verb: 'returns', object: 'check result', to: 'Operator' },
+    { actor: 'Operator', verb: 'activates', object: 'experiment', to: 'App' },
+    { actor: 'App', verb: 'runs', object: 'experiment' },
+  ] }), [])
+  // a state on the thing is fine ("signed contract"); three different things with one icon are not told apart
+  assert.deepEqual(rules({ ...base, sentences: [
+    { actor: 'Operator', verb: 'files', object: 'signed contract', to: 'App' },
+    { actor: 'App', verb: 'sends', object: 'invoice', to: 'Operator' },
+    { actor: 'Operator', verb: 'pays', object: 'bill', to: 'App' },
+  ] }), ['work-objects-one-icon'])
+  // a user and a system answering each other, sentence after sentence, is a screen flow
+  assert.match(findings.find((f) => f.rule === 'request-response')!.message, /between "Operator" and "App"/)
+  // pure means no software systems; a story that states no scope is asked for it
+  const pure = checkDomainStory({ ...base, scope: { granularity: 'fine-grained', time: 'as-is', purity: 'pure' }, sentences: [{ actor: 'Operator', verb: 'opens', object: 'form', to: 'App' }] })
+  assert.deepEqual(pure.map((f) => [f.rule, f.severity]), [['scope-purity', 'warning']])
+  assert.match(checkDomainStory({ actors: ['A'], sentences: [{ actor: 'A', verb: 'writes', object: 'note' }] }).find((f) => f.rule === 'scope-missing')!.message, /granularity \(coarse-, medium- or fine-grained\), time .* purity/)
+})
+
+test("icons of the story's own: only plain shapes are drawn, on the board, in the snapshot and in Egon", async () => {
+  const { parseDsIcon, dsGlyphMarkup } = await import('../src/diagrams/dsIcons.js')
+  const { toEgon } = await import('../src/diagrams/egon.js')
+  const flask = '<svg viewBox="0 0 24 24" onload="alert(1)"><script>alert(1)</script><path d="M9 3h6M10 3v6l-5 10h14l-5-10V3" style="fill:url(x)"/><circle cx="12" cy="16" r="1" onclick="x()"/><image href="http://x/y.png"/><path d="javascript:alert(1)"/></svg>'
+  const glyph = parseDsIcon(flask)!
+  assert.deepEqual(glyph.shapes, [{ tag: 'path', attrs: { d: 'M9 3h6M10 3v6l-5 10h14l-5-10V3' } }, { tag: 'circle', attrs: { cx: '12', cy: '16', r: '1' } }])
+  assert.equal(dsGlyphMarkup(glyph), '<path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"/><circle cx="12" cy="16" r="1"/>')
+  assert.match(dsGlyphMarkup(parseDsIcon('<svg viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40"/></svg>')!), /^<g transform="translate\(0 0\) scale\(0\.5\) translate\(0 0\)"><rect /)
+  assert.equal(parseDsIcon('<svg><text>hi</text></svg>'), undefined)
+  assert.equal(parseDsIcon('<path d="M0 0' + ' L1 1'.repeat(2000) + '"/>'), undefined, 'too long')
+
+  const content: DomainStoryContent = {
+    scope: { granularity: 'coarse-grained', time: 'to-be', purity: 'pure' },
+    actors: ['Operator'],
+    workObjects: [{ text: 'experiment', kind: 'flask' }, { text: 'broken', kind: 'empty' }],
+    sentences: [{ actor: 'Operator', verb: 'sets up', object: 'experiment' }, { actor: 'Operator', verb: 'drops', object: 'broken' }],
+    icons: { flask, empty: '<svg><text>x</text></svg>' },
+  }
+  assert.deepEqual(unknownContentFields('domain-story', content), [])
+  assert.deepEqual(checkDomainStory(content).map((f) => [f.rule, f.severity]), [['icon-invalid', 'warning']])
+  const items = renderDomainStory(content, { scope: 'ds', now })
+  const drawn = items.find((i) => i.role === 'work-object' && i.text === 'experiment')!
+  assert.equal(drawn.data?.kind, 'flask')
+  assert.equal(drawn.data?.icon, flask)
+  assert.equal(items.find((i) => i.role === 'actor')!.data?.icon, undefined)
+  const { renderSnapshot } = await import('../src/snapshot.js')
+  const picture = renderSnapshot({ id: 'b', title: 't', kind: 'freeform', seq: 1, createdAt: now, updatedAt: now, items: Object.fromEntries(items.map((i) => [i.id, i])) }).svg
+  assert.ok(picture.includes('<path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"/><circle cx="12" cy="16" r="1"/>'), 'the snapshot draws the shapes')
+  assert.doesNotMatch(picture, /script|onload|onclick|javascript/)
+  const egon = toEgon(content) as { iconSet: { workObjects: Record<string, string> } }
+  assert.match(egon.iconSet.workObjects.Flask, /<path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"\/><circle cx="12" cy="16" r="1"\/><\/svg>$/)
+  assert.doesNotMatch(egon.iconSet.workObjects.Flask, /script|onload|image|javascript/)
 })

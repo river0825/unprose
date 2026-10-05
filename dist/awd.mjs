@@ -321,26 +321,26 @@ var require_directives = __commonJS({
           this.tags = Object.assign({}, _Directives.defaultTags);
           this.atNextDocument = false;
         }
-        const parts = line.trim().split(/[ \t]+/);
-        const name = parts.shift();
+        const parts2 = line.trim().split(/[ \t]+/);
+        const name = parts2.shift();
         switch (name) {
           case "%TAG": {
-            if (parts.length !== 2) {
+            if (parts2.length !== 2) {
               onError(0, "%TAG directive should contain exactly two parts");
-              if (parts.length < 2)
+              if (parts2.length < 2)
                 return false;
             }
-            const [handle, prefix] = parts;
+            const [handle, prefix] = parts2;
             this.tags[handle] = prefix;
             return true;
           }
           case "%YAML": {
             this.yaml.explicit = true;
-            if (parts.length !== 1) {
+            if (parts2.length !== 1) {
               onError(0, "%YAML directive should contain exactly one part");
               return false;
             }
-            const [version2] = parts;
+            const [version2] = parts2;
             if (version2 === "1.1" || version2 === "1.2") {
               this.yaml.version = version2;
               return true;
@@ -2393,9 +2393,9 @@ var require_stringifyNumber = __commonJS({
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
         return String(value);
-      const num = typeof value === "number" ? value : Number(value);
-      if (!isFinite(num))
-        return isNaN(num) ? ".nan" : num < 0 ? "-.inf" : ".inf";
+      const num2 = typeof value === "number" ? value : Number(value);
+      if (!isFinite(num2))
+        return isNaN(num2) ? ".nan" : num2 < 0 ? "-.inf" : ".inf";
       let n = Object.is(value, -0) ? "-0" : JSON.stringify(value);
       if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n) && !n.includes("e")) {
         let i = n.indexOf(".");
@@ -2435,8 +2435,8 @@ var require_float = __commonJS({
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
       resolve: (str5) => parseFloat(str5),
       stringify(node3) {
-        const num = Number(node3.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node3);
+        const num2 = Number(node3.value);
+        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node3);
       }
     };
     var float = {
@@ -2875,8 +2875,8 @@ var require_float2 = __commonJS({
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
       resolve: (str5) => parseFloat(str5.replace(/_/g, "")),
       stringify(node3) {
-        const num = Number(node3.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node3);
+        const num2 = Number(node3.value);
+        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node3);
       }
     };
     var float = {
@@ -3077,36 +3077,36 @@ var require_timestamp = __commonJS({
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str5, asBigInt) {
       const sign = str5[0];
-      const parts = sign === "-" || sign === "+" ? str5.substring(1) : str5;
-      const num = (n) => asBigInt ? BigInt(n) : Number(n);
-      const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num(60) + num(p), num(0));
-      return sign === "-" ? num(-1) * res : res;
+      const parts2 = sign === "-" || sign === "+" ? str5.substring(1) : str5;
+      const num2 = (n) => asBigInt ? BigInt(n) : Number(n);
+      const res = parts2.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num2(60) + num2(p), num2(0));
+      return sign === "-" ? num2(-1) * res : res;
     }
     function stringifySexagesimal(node3) {
       let { value } = node3;
-      let num = (n) => n;
+      let num2 = (n) => n;
       if (typeof value === "bigint")
-        num = (n) => BigInt(n);
+        num2 = (n) => BigInt(n);
       else if (isNaN(value) || !isFinite(value))
         return stringifyNumber.stringifyNumber(node3);
       let sign = "";
       if (value < 0) {
         sign = "-";
-        value *= num(-1);
+        value *= num2(-1);
       }
-      const _60 = num(60);
-      const parts = [value % _60];
+      const _60 = num2(60);
+      const parts2 = [value % _60];
       if (value < 60) {
-        parts.unshift(0);
+        parts2.unshift(0);
       } else {
-        value = (value - parts[0]) / _60;
-        parts.unshift(value % _60);
+        value = (value - parts2[0]) / _60;
+        parts2.unshift(value % _60);
         if (value >= 60) {
-          value = (value - parts[0]) / _60;
-          parts.unshift(value);
+          value = (value - parts2[0]) / _60;
+          parts2.unshift(value);
         }
       }
-      return sign + parts.map((n) => String(n).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
+      return sign + parts2.map((n) => String(n).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
     }
     var intTime = {
       identify: (value) => typeof value === "bigint" || Number.isInteger(value),
@@ -12003,28 +12003,28 @@ var require_utils = __commonJS({
         if (left.length === 1 && left[0] === "") left.length = 0;
         if (right.length === 1 && right[0] === "") right.length = 0;
       }
-      const parts = left.concat(right);
+      const parts2 = left.concat(right);
       let hextetCount = 0;
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
+      for (let i = 0; i < parts2.length; i++) {
+        const part = parts2[i];
         if (part === "") return void 0;
         if (part.indexOf(".") !== -1) {
-          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
+          if (i !== parts2.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
           hextetCount += 2;
           continue;
         }
         if (!isHextet(part)) return void 0;
-        parts[i] = parseInt(part, 16).toString(16);
+        parts2[i] = parseInt(part, 16).toString(16);
         hextetCount++;
       }
       if (compression === -1) {
         if (hextetCount !== 8) return void 0;
-        return compressIPv6ZeroRun(parts);
+        return compressIPv6ZeroRun(parts2);
       }
       if (hextetCount >= 8) return void 0;
-      const expanded = parts.slice(0, left.length);
+      const expanded = parts2.slice(0, left.length);
       for (let i = hextetCount; i < 8; i++) expanded.push("0");
-      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
+      for (let i = left.length; i < parts2.length; i++) expanded.push(parts2[i]);
       return compressIPv6ZeroRun(expanded);
     }
     function normalizeIPv6(host) {
@@ -15705,23 +15705,23 @@ async function syncMemory(events, store) {
 function renderMemory(m2) {
   if (!m2)
     return "";
-  const parts = [];
+  const parts2 = [];
   if (m2.longTerm?.length) {
-    parts.push("## What you learned before (long-term memory of this project)");
+    parts2.push("## What you learned before (long-term memory of this project)");
     for (const e of m2.longTerm)
-      parts.push(`- ${e.at.slice(0, 10)}${e.key ? ` [${e.key}]` : ""}: ${clip(e.note)}${e.tags.length ? ` (${e.tags.join(", ")})` : ""}`);
+      parts2.push(`- ${e.at.slice(0, 10)}${e.key ? ` [${e.key}]` : ""}: ${clip(e.note)}${e.tags.length ? ` (${e.tags.join(", ")})` : ""}`);
   }
   const short3 = m2.short;
   if (short3 && (short3.trail.length || Object.keys(short3.remembered).length)) {
-    parts.push(parts.length ? "" : "", "## Earlier in this run (short-term memory)");
+    parts2.push(parts2.length ? "" : "", "## Earlier in this run (short-term memory)");
     for (const t of short3.trail.slice(-TRAIL_MAX))
-      parts.push(`- ${t.step}${t.agent ? ` (@${t.agent})` : ""} \u2192 ${t.outcome}${t.summary ? `: ${clip(t.summary)}` : ""}`);
+      parts2.push(`- ${t.step}${t.agent ? ` (@${t.agent})` : ""} \u2192 ${t.outcome}${t.summary ? `: ${clip(t.summary)}` : ""}`);
     if (Object.keys(short3.remembered).length)
-      parts.push(`- you asked to remember: ${clip(JSON.stringify(short3.remembered), 600)}`);
+      parts2.push(`- you asked to remember: ${clip(JSON.stringify(short3.remembered), 600)}`);
   }
-  if (parts.length)
-    parts.push("", "You may add `remember: {...}` (kept for this run) and `learn: [{ note, tags }]` (kept for future runs) to your JSON answer.");
-  return parts.join("\n").trim();
+  if (parts2.length)
+    parts2.push("", "You may add `remember: {...}` (kept for this run) and `learn: [{ note, tags }]` (kept for future runs) to your JSON answer.");
+  return parts2.join("\n").trim();
 }
 function clip(s, max = NOTE_MAX) {
   return s.length > max ? s.slice(0, max - 1) + "\u2026" : s;
@@ -19576,31 +19576,31 @@ async function toFile(value, name, options) {
     name || (name = new URL(value.url).pathname.split(/[\\/]/).pop());
     return makeFile(await getBytes(blob), name, options);
   }
-  const parts = await getBytes(value);
+  const parts2 = await getBytes(value);
   if (!options?.type) {
-    const type = parts.find((part) => typeof part === "object" && "type" in part && part.type);
+    const type = parts2.find((part) => typeof part === "object" && "type" in part && part.type);
     if (typeof type === "string") {
       options = { ...options, type };
     }
   }
-  return makeFile(parts, name, options);
+  return makeFile(parts2, name, options);
 }
 async function getBytes(value) {
-  let parts = [];
+  let parts2 = [];
   if (typeof value === "string" || ArrayBuffer.isView(value) || // includes Uint8Array, Buffer, etc.
   value instanceof ArrayBuffer) {
-    parts.push(value);
+    parts2.push(value);
   } else if (isBlobLike(value)) {
-    parts.push(value instanceof Blob ? value : await value.arrayBuffer());
+    parts2.push(value instanceof Blob ? value : await value.arrayBuffer());
   } else if (isAsyncIterable(value)) {
     for await (const chunk of value) {
-      parts.push(...await getBytes(chunk));
+      parts2.push(...await getBytes(chunk));
     }
   } else {
     const constructor = value?.constructor?.name;
     throw new Error(`Unexpected data type: ${typeof value}${constructor ? `; constructor: ${constructor}` : ""}${propsForError(value)}`);
   }
-  return parts;
+  return parts2;
 }
 function propsForError(value) {
   if (typeof value !== "object" || value === null)
@@ -21200,12 +21200,12 @@ var require_sha256 = __commonJS({
       }
       exports2.hmac = hmac;
       function fillBuffer(buffer, hmac2, info, counter) {
-        var num = counter[0];
-        if (num === 0) {
+        var num2 = counter[0];
+        if (num2 === 0) {
           throw new Error("hkdf: cannot expand more");
         }
         hmac2.reset();
-        if (num > 1) {
+        if (num2 > 1) {
           hmac2.update(buffer);
         }
         if (info) {
@@ -22855,15 +22855,15 @@ function archiveTopDir(names) {
   let top;
   let nested = false;
   for (const raw of names) {
-    const parts = raw.trim().split("/").filter((p) => p !== "" && p !== ".");
-    if (parts.length === 0)
+    const parts2 = raw.trim().split("/").filter((p) => p !== "" && p !== ".");
+    if (parts2.length === 0)
       continue;
-    const first = parts[0];
+    const first = parts2[0];
     if (top === void 0)
       top = first;
     else if (first !== top)
       return "";
-    if (parts.length > 1)
+    if (parts2.length > 1)
       nested = true;
   }
   return top !== void 0 && nested ? top : "";
@@ -23316,11 +23316,11 @@ var init_file_store = __esm({
         }
         resolveUnderRoot(relPath) {
           const norm2 = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
-          const parts = norm2.split("/").filter((p) => p !== "" && p !== ".");
-          if (path4.posix.isAbsolute(norm2) || parts.includes("..")) {
+          const parts2 = norm2.split("/").filter((p) => p !== "" && p !== ".");
+          if (path4.posix.isAbsolute(norm2) || parts2.includes("..")) {
             throw new FileStoreError(FileStoreError.ESCAPES_ROOT, relPath);
           }
-          return parts.length === 0 ? this.rootPath : path4.join(this.rootPath, ...parts);
+          return parts2.length === 0 ? this.rootPath : path4.join(this.rootPath, ...parts2);
         }
         requireUtf8(relPath, data) {
           if (!this.decoder)
@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.13.0";
+    VERSION2 = "0.14.0";
   }
 });
 
@@ -39238,10 +39238,10 @@ function isValidIPv6(value) {
   return canParseURL(`http://[${value}]`);
 }
 function isValidCIDRv6(value) {
-  const parts = value.split("/");
-  if (parts.length !== 2)
+  const parts2 = value.split("/");
+  if (parts2.length !== 2)
     return false;
-  const [address, prefix] = parts;
+  const [address, prefix] = parts2;
   if (!prefix)
     return false;
   const prefixNum = Number(prefix);
@@ -52436,10 +52436,10 @@ function _readonly(Class2, innerType) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _templateLiteral(Class2, parts, params) {
+function _templateLiteral(Class2, parts2, params) {
   return new Class2({
     type: "template_literal",
-    parts,
+    parts: parts2,
     ...normalizeParams(params)
   });
 }
@@ -52866,15 +52866,15 @@ function foldObjects(members2) {
     for (const key in object3.properties) {
       if (Object.prototype.hasOwnProperty.call(properties, key))
         continue;
-      const parts = [];
+      const parts2 = [];
       for (const other of objects) {
         const part = other.properties?.[key] ?? undeclaredConstraint(other);
         if (part === null || part === void 0)
           continue;
-        if (!parts.some((seen) => JSON.stringify(seen) === JSON.stringify(part)))
-          parts.push(part);
+        if (!parts2.some((seen) => JSON.stringify(seen) === JSON.stringify(part)))
+          parts2.push(part);
       }
-      const merged = parts.length === 1 ? parts[0] : foldObjects(parts) ?? { allOf: parts };
+      const merged = parts2.length === 1 ? parts2[0] : foldObjects(parts2) ?? { allOf: parts2 };
       assignProp(properties, key, merged);
     }
     for (const key of object3.required ?? [])
@@ -55059,10 +55059,10 @@ function readonly(innerType) {
     innerType
   });
 }
-function templateLiteral(parts, params) {
+function templateLiteral(parts2, params) {
   return new ZodTemplateLiteral({
     type: "template_literal",
-    parts,
+    parts: parts2,
     ...util_exports.normalizeParams(params)
   });
 }
@@ -56286,24 +56286,24 @@ function canonicalKey(value, seen) {
   seen.add(value);
   try {
     if (Array.isArray(value)) {
-      const parts2 = [];
+      const parts3 = [];
       for (const item of value) {
         const key = canonicalKey(item, seen);
         if (key === null)
           return null;
-        parts2.push(key);
+        parts3.push(key);
       }
-      return `a${parts2.length}:[${parts2.join(",")}]`;
+      return `a${parts3.length}:[${parts3.join(",")}]`;
     }
     const keys = Object.keys(value).sort();
-    const parts = [];
+    const parts2 = [];
     for (const k2 of keys) {
       const key = canonicalKey(value[k2], seen);
       if (key === null)
         return null;
-      parts.push(`${k2.length}:${k2}=${key}`);
+      parts2.push(`${k2.length}:${k2}=${key}`);
     }
-    return `o${parts.length}:{${parts.join(",")}}`;
+    return `o${parts2.length}:{${parts2.join(",")}}`;
   } finally {
     seen.delete(value);
   }
@@ -57802,6 +57802,128 @@ var init_userStoryMap = __esm({
   }
 });
 
+// packages/canvas/dist/diagrams/dsIcons.js
+function parseDsIcon(svg2) {
+  if (typeof svg2 !== "string" || !svg2.trim() || svg2.length > DS_ICON_MAX_CHARS)
+    return void 0;
+  const box = /<svg\b[^>]*>/i.exec(svg2)?.[0];
+  const vb = box ? (attrsOf(box).viewBox ?? "").split(/[\s,]+/).map(Number) : [];
+  const viewBox = vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0 ? [vb[0], vb[1], vb[2], vb[3]] : [0, 0, 24, 24];
+  const shapes = [];
+  for (const m2 of svg2.matchAll(/<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>/gi)) {
+    const tag = m2[1].toLowerCase();
+    const given = attrsOf(m2[2]);
+    const attrs = {};
+    for (const [name, ok] of Object.entries(SHAPES2[tag]))
+      if (given[name] !== void 0 && ok.test(given[name]))
+        attrs[name] = given[name];
+    if (!REQUIRED[tag].every((name) => attrs[name] !== void 0))
+      continue;
+    shapes.push({ tag, attrs });
+    if (shapes.length >= DS_ICON_MAX_SHAPES)
+      break;
+  }
+  return shapes.length ? { viewBox, shapes } : void 0;
+}
+function dsGlyphTransform(g2) {
+  const [x2, y2, w2, h] = g2.viewBox;
+  if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
+    return void 0;
+  const s = 24 / Math.max(w2, h);
+  const r = (v2) => Math.round(v2 * 1e3) / 1e3;
+  return `translate(${r((24 - w2 * s) / 2)} ${r((24 - h * s) / 2)}) scale(${r(s)}) translate(${r(-x2)} ${r(-y2)})`;
+}
+function dsGlyphMarkup(g2) {
+  const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
+  const t = dsGlyphTransform(g2);
+  return t ? `<g transform="${t}">${body}</g>` : body;
+}
+var DS_ICON_MAX_CHARS, DS_ICON_MAX_SHAPES, NUM, PATH, POINTS, SHAPES2, REQUIRED, attrsOf;
+var init_dsIcons = __esm({
+  "packages/canvas/dist/diagrams/dsIcons.js"() {
+    DS_ICON_MAX_CHARS = 4e3;
+    DS_ICON_MAX_SHAPES = 40;
+    NUM = /^-?(\d+\.?\d*|\.\d+)$/;
+    PATH = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,+\-eE]+$/;
+    POINTS = /^[\s\d.,+\-eE]+$/;
+    SHAPES2 = {
+      path: { d: PATH },
+      circle: { cx: NUM, cy: NUM, r: NUM },
+      ellipse: { cx: NUM, cy: NUM, rx: NUM, ry: NUM },
+      rect: { x: NUM, y: NUM, width: NUM, height: NUM, rx: NUM, ry: NUM },
+      line: { x1: NUM, y1: NUM, x2: NUM, y2: NUM },
+      polyline: { points: POINTS },
+      polygon: { points: POINTS }
+    };
+    REQUIRED = { path: ["d"], circle: ["r"], ellipse: ["rx", "ry"], rect: ["width", "height"], line: ["x2"], polyline: ["points"], polygon: ["points"] };
+    attrsOf = (text3) => {
+      const out = {};
+      for (const m2 of text3.matchAll(/([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
+        out[m2[1]] = (m2[2] ?? m2[3] ?? "").trim();
+      return out;
+    };
+  }
+});
+
+// packages/canvas/dist/diagrams/domainStoryReview.js
+function reviewDomainStory(m2) {
+  const out = [];
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const unsaid = [!m2.scope.granularity && "granularity (coarse-, medium- or fine-grained)", !m2.scope.time && "time (as-is or to-be)", !m2.scope.purity && "purity (pure or digitalized)"].filter(Boolean);
+  if (unsaid.length)
+    out.push({ rule: "scope-missing", severity: "info", message: `the scope does not say its ${unsaid.join(", ")} \u2014 readers judge every sentence by it (how much detail, today or the future, with or without software), so decide it before telling the story`, page: QUICK_START });
+  const inStory = (id) => m2.sentences.some((s) => s.actor === id || s.to.includes(id));
+  const systems = m2.actors.filter((a) => a.kind === "system" && inStory(a.id));
+  if (m2.scope.purity === "pure" && systems.length)
+    out.push({ rule: "scope-purity", severity: "warning", element: systems[0].id, message: `the scope says pure, but ${systems.map((a) => `"${a.text}"`).join(", ")} ${systems.length > 1 ? "are software systems" : "is a software system"} \u2014 a story with software systems is digitalized; change the scope, or tell who does this work`, page: QUICK_START });
+  if (m2.scope.purity === "digitalized" && !systems.length)
+    out.push({ rule: "scope-purity", severity: "info", message: "the scope says digitalized, but no actor is a software system (kind: system) \u2014 a story without software systems is pure", page: QUICK_START });
+  const acting = m2.actors.filter((a) => inStory(a.id));
+  const [first, second] = acting;
+  if (m2.sentences.length >= 4 && acting.length === 2 && first.kind === "system" !== (second.kind === "system") && acting.every((a) => m2.sentences.some((s) => s.actor === a.id)))
+    out.push({ rule: "request-response", severity: "info", message: `every sentence is between "${first.text}" and "${second.text}" \u2014 a user and a system answering each other reads like a screen flow, which a mock-up shows better; a domain story models intent: what is the user after, who else is involved, and how does the system help? Each activity should push the story forward`, page: BOOK_STYLE });
+  const told = m2.sentences.filter((s) => s.objectText);
+  for (const s of m2.sentences) {
+    const words = [s.verb, s.objectText ?? "", s.toLabel ?? ""];
+    if (words.some((w2) => CONDITIONAL_EN.test(w2) || CONDITIONAL_CJK.test(w2)))
+      out.push({ rule: "conditional", severity: "info", element: s.id, message: `${num(s.seq)} "${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}" reads like a choice \u2014 a domain story is one concrete example: tell the usual case here, put the variation in a note, and give an alternative that matters a story of its own`, page: QUICK_START });
+    if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
+      out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
+  }
+  const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
+  if (told.length >= 4 && names.size === told.length)
+    out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
+  const kinds = new Set(told.map((s) => s.objectKind));
+  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
+    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
+  const icons = m2.icons ?? {};
+  for (const [icon, svg2] of Object.entries(icons)) {
+    if (!parseDsIcon(svg2))
+      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
+  }
+  for (const o of m2.workObjects) {
+    if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
+      out.push({ rule: "icon-unknown", severity: "info", element: o.id, message: `"${o.text}": no icon named "${o.kind}" \u2014 it is drawn as a document; use a built-in kind or draw "${o.kind}" under \`icons:\``, page: EGON_HOWTO });
+  }
+  return out;
+}
+var QUICK_START, EGON_HOWTO, BOOK_STYLE, BUILT_IN_OBJECT_ICONS, parts, OUTCOME_EN, OUTCOME_CJK, CONDITIONAL_EN, CONDITIONAL_CJK, num;
+var init_domainStoryReview = __esm({
+  "packages/canvas/dist/diagrams/domainStoryReview.js"() {
+    init_dsIcons();
+    QUICK_START = "domainstorytelling.org/quick-start-guide";
+    EGON_HOWTO = "egon.io/howto";
+    BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"';
+    BUILT_IN_OBJECT_ICONS = /* @__PURE__ */ new Set(["document", "thing", "digital", "folder", "call", "email", "conversation", "info", "message", "information"]);
+    parts = (text3) => text3.split(/\s*[/／·|｜\n]\s*/).map((p) => p.trim()).filter(Boolean);
+    OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|completed|confirmed|done)$/i;
+    OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
+    CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
+    CONDITIONAL_CJK = /如果|否則|或者|還是/;
+    num = (n) => `#${n}`;
+  }
+});
+
 // packages/canvas/dist/diagrams/domainStory.js
 function normalizeDomainStory(raw) {
   const c2 = domainStorySchema.parse(raw);
@@ -57856,7 +57978,7 @@ function normalizeDomainStory(raw) {
     const on = elementRef(a.on, id, "on");
     return on ? [{ id, on, text: a.text }] : [];
   });
-  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
+  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
 }
 function circled(n) {
   return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
@@ -57871,7 +57993,7 @@ function checkDomainStory(content) {
   const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
   const out = [];
   for (const u3 of m2.unresolved)
-    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START });
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
   const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   for (const s of m2.sentences) {
     if (s.to.includes(s.actor)) {
@@ -57881,17 +58003,17 @@ function checkDomainStory(content) {
         severity: "warning",
         element: s.id,
         message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
-        page: QUICK_START
+        page: QUICK_START2
       });
     }
     if (!s.objectText)
-      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START });
+      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
   }
   const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
   seqs.forEach((n, i) => {
     const expected = i === 0 ? 1 : seqs[i - 1] + 1;
     if (n !== expected)
-      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START });
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START2 });
   });
   for (const n of seqs) {
     const same2 = m2.sentences.filter((s) => s.seq === n);
@@ -57912,31 +58034,34 @@ function checkDomainStory(content) {
         severity: "warning",
         element: b2.id,
         message: `groups "${a.text}" and "${b2.text}" share ${shared.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
-        page: QUICK_START
+        page: QUICK_START2
       });
     }
   for (const n of m2.annotations) {
     const w2 = displayWidth(n.text);
     if (w2 > NOTE_RECOMMENDED)
-      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START });
+      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
   }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
-      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START });
+      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START2 });
   }
   for (const a of m2.actors) {
     if (!m2.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
-      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START });
+      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START2 });
     if (!DS_ACTOR_KINDS.includes(a.kind))
-      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START });
+      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START2 });
   }
+  out.push(...reviewDomainStory(m2));
   return out;
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START, NOTE_RECOMMENDED;
+var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
     init_ids2();
+    init_dsIcons();
+    init_domainStoryReview();
     DS_ACTOR_KINDS = ["person", "group", "system"];
     DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
     named = () => external_exports.union([
@@ -57975,6 +58100,8 @@ var init_domainStory = __esm({
       })).min(1),
       groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
       annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+      /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
+      icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
       /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
       layout: external_exports.object({
         spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
@@ -57984,7 +58111,7 @@ var init_domainStory = __esm({
         gapY: external_exports.number().min(180).max(2e3).optional()
       }).optional()
     });
-    QUICK_START = "domainstorytelling.org/quick-start-guide";
+    QUICK_START2 = "domainstorytelling.org/quick-start-guide";
     NOTE_RECOMMENDED = 120;
   }
 });
@@ -58654,7 +58781,11 @@ function toEgon(content, opts = {}) {
     if (target)
       objs.push({ id: id("connection"), type: "domainStory:connection", source: t.id, target: target.id, waypoints: [center(t), center(target)] });
   });
-  const iconMap = (names) => Object.fromEntries([...names].map((k2) => [k2, svg(k2)]));
+  const own2 = (icon) => {
+    const glyph = parseDsIcon(m2.icons?.[lowerIcon(icon)] ?? m2.icons?.[icon]);
+    return glyph ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${dsGlyphMarkup(glyph)}</svg>` : void 0;
+  };
+  const iconMap = (names) => Object.fromEntries([...names].map((k2) => [k2, own2(k2) ?? svg(k2)]));
   return {
     iconSet: { name: "unprose", actors: iconMap(icons.actors), workObjects: iconMap(icons.workObjects) },
     domainStory: {
@@ -58671,6 +58802,7 @@ var init_egon = __esm({
   "packages/canvas/dist/diagrams/egon.js"() {
     init_ids2();
     init_domainStory();
+    init_dsIcons();
     ACTOR = "domainStory:actor";
     OBJECT = "domainStory:workObject";
     lowerIcon = (icon) => icon.toLowerCase();
@@ -59160,13 +59292,13 @@ function frameOf(board, key) {
 function growFrame(frame, drawn, placed, pad = 20) {
   if (placed.has(frame.id))
     return void 0;
-  const num = (v2) => typeof v2 === "number" ? v2 : 0;
+  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
   const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id);
   if (!boxes.length)
     return void 0;
-  const [fx, fy, fw, fh] = [num(frame.x), num(frame.y), num(frame.w), num(frame.h)];
-  const w2 = Math.max(fw, ...boxes.map((b2) => num(b2.x) + num(b2.w) + pad - fx));
-  const h = Math.max(fh, ...boxes.map((b2) => num(b2.y) + num(b2.h) + pad - fy));
+  const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
+  const w2 = Math.max(fw, ...boxes.map((b2) => num2(b2.x) + num2(b2.w) + pad - fx));
+  const h = Math.max(fh, ...boxes.map((b2) => num2(b2.y) + num2(b2.h) + pad - fy));
   return w2 > fw || h > fh ? { kind: "update", id: frame.id, patch: { w: w2, h } } : void 0;
 }
 function esItemFor(board, esKey, element) {
@@ -59176,13 +59308,13 @@ function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ ne
   const frame = frameOf(board, usmKey);
   if (!frame)
     throw new Error(`no story-map frame keyed "${usmKey}" on this board \u2014 draw the story map first (awd design draw <file>)`);
-  const num = (v2) => typeof v2 === "number" ? v2 : 0;
+  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
   const already = new Set(Object.values(board.items).map((it) => it.data?.pending?.trace?.from).filter(Boolean));
   const fresh = candidates.filter((c2) => !already.has(c2.traces[0]?.from));
   const children = Object.values(board.items).filter((it) => it.parent === frame.id);
-  const fx = num(frame.x);
-  const fy = num(frame.y);
-  const bottom = Math.max(fy + PAD2, ...children.map((c2) => num(c2.y) + num(c2.h)));
+  const fx = num2(frame.x);
+  const fy = num2(frame.y);
+  const bottom = Math.max(fy + PAD2, ...children.map((c2) => num2(c2.y) + num2(c2.h)));
   const y2 = bottom + GAP2 * 2;
   const stamp = { createdBy: "agent", updatedBy: "agent", updatedAt: now };
   const ops = [];
@@ -59216,10 +59348,10 @@ function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ ne
     }
   });
   const need2 = y2 + CARD_H + PAD2 - fy;
-  if (fresh.length && need2 > num(frame.h))
+  if (fresh.length && need2 > num2(frame.h))
     ops.push({ kind: "update", id: frame.id, patch: { h: need2 } });
   const right = fx + PAD2 + fresh.length * (CARD_W3 + GAP2) + PAD2 - fx;
-  if (fresh.length && right > num(frame.w))
+  if (fresh.length && right > num2(frame.w))
     ops.push({ kind: "update", id: frame.id, patch: { w: right } });
   return { ops, proposed: fresh.length, skipped: candidates.length - fresh.length };
 }
@@ -59465,10 +59597,10 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
   return { ops: result, plan, keptLayout };
 }
 function planSummary(plan) {
-  const parts = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n]) => n > 0).map(([n, name]) => `${n} ${name}`);
+  const parts2 = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n]) => n > 0).map(([n, name]) => `${n} ${name}`);
   if (plan.unchanged)
-    parts.splice(Math.min(2, parts.length), 0, `${plan.unchanged} unchanged`);
-  return parts.length ? parts.join(" \xB7 ") : "nothing to change";
+    parts2.splice(Math.min(2, parts2.length), 0, `${plan.unchanged} unchanged`);
+  return parts2.length ? parts2.join(" \xB7 ") : "nothing to change";
 }
 function planLines(plan, o = {}) {
   const limit2 = o.limit ?? 8;
@@ -60456,26 +60588,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num = +value;
-                if (!Number.isInteger(num) || num < 8 || num > 15) {
+                const num2 = +value;
+                if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num;
+                value = num2;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num = +value;
-              if (!Number.isInteger(num) || num < 8 || num > 15) {
+              const num2 = +value;
+              if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num;
+              value = num2;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -61189,8 +61321,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num = buf.readUInt32BE(0);
-        if (num > Math.pow(2, 53 - 32) - 1) {
+        const num2 = buf.readUInt32BE(0);
+        if (num2 > Math.pow(2, 53 - 32) - 1) {
           const error62 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -61201,7 +61333,7 @@ var require_receiver = __commonJS({
           cb(error62);
           return;
         }
-        this._payloadLength = num * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num2 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -62954,9 +63086,9 @@ var require_websocket = __commonJS({
         opts.auth = `${parsedUrl.username}:${parsedUrl.password}`;
       }
       if (isIpcUrl) {
-        const parts = opts.path.split(":");
-        opts.socketPath = parts[0];
-        opts.path = parts[1];
+        const parts2 = opts.path.split(":");
+        opts.socketPath = parts2[0];
+        opts.path = parts2[1];
       }
       let req;
       if (opts.followRedirects) {
@@ -67697,8 +67829,33 @@ ${CLOSE}`
         arg: { name: "topic", hint: "<process>", description: 'The story to tell, e.g. "an order from cart to delivery"' },
         fallback: "a process in this project \u2014 ask me which one",
         body: `Tell {arg} as a Domain Storytelling story (domainstorytelling.org) on the Unprose canvas.
-Write design/<name>.domain-story.yaml: the scope (granularity, as-is or to-be), every actor once, one work object per activity, and numbered sentences "actor \u2014 verb \u2014 work object \u2014 to actor". Check it with design_lint, draw it with design_draw, then read the story back to me sentence by sentence and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
+First settle the scope with me, because every sentence is judged by it: the granularity \u2014 coarse-grained (the whole process at a glance: what happens, not how), medium-grained, or fine-grained (one part in detail, how exactly it is done) \u2014 as-is or to-be, and pure (no software) or digitalized (software systems are actors). Keep every sentence at that one level (mixing levels is a bad smell; "clicks button" is too fine for any story); detail that belongs to another level is another story. If the domain has not been told without software yet, say that the usual way is a pure as-is story first, and ask whether to start there.
+Write design/<name>.domain-story.yaml: the scope, every actor once, one work object per activity, and numbered sentences "actor \u2014 verb \u2014 work object \u2014 to actor". While you write, hold each sentence against these:
+- One concrete case, no "if" or "or": tell the usual case, put a variation in a note, give an alternative that matters its own story.
+- An actor plays an active part (a person, a group, a software system) and is named by its role; what is only carried along or acted on is a work object.
+- Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward \u2014 what is the person after, and how does the system help?
+- A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
+- Give each kind of work object an icon that says what it is: a built-in kind (document, thing, digital, folder, call, email, conversation, info), or draw your own \u2014 \`icons: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }\`, a line drawing of plain shapes \u2014 and use its name as the kind. Fit the icon set to the domain, and keep it small: one icon for everything tells the reader nothing, too many water the language down.
+Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
 ${CLOSE}`
+      },
+      {
+        name: "critique",
+        title: "Critique a domain story",
+        description: "Read a domain story as a Domain Storytelling reviewer and say what to improve",
+        arg: { name: "story", hint: "[board link, frame or file]", description: "The domain story to read: a board link or frame, or a design/*.domain-story.yaml file" },
+        fallback: "the domain story we are working on \u2014 find it with canvas_list_boards and ask me if there are several",
+        body: `Read {arg} as a Domain Storytelling reviewer (domainstorytelling.org; docs/domain-story-review.md has the sources) and tell me what you see and what to improve. You advise; you change nothing.
+Look first: canvas_read_board with the frame for the sentences, notes and comments, canvas_snapshot to see the picture as I see it, and design_lint on the file when you can read it (canvas_files, or the file itself). Then tell the story back to yourself from the beginning, one sentence at a time, and hold it against the method:
+1. Scope \u2014 is it stated (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized), and does every sentence keep to it? A coarse-grained story says what happens across the whole process, end to end; steps that explain how one actor does one thing are fine-grained and belong in a story of their own; mixing the levels is a bad smell, and "clicks button" is too fine for any story. A story with software systems is digitalized. The usual journey is coarse-grained pure as-is, then fine-grained pure as-is, then fine-grained digitalized to-be \u2014 not a rule, but ask what came before this story.
+2. One concrete case \u2014 no "if", "or", "sometimes"; variations in notes, important alternatives as separate stories.
+3. Sentences \u2014 each reads aloud as actor \u2014 verb \u2014 work object (\u2014 to actor), in the words the people of the domain use; the same thing has the same name everywhere, on this board and in the diagrams it traces to.
+4. Actors \u2014 a person, a group or a software system that plays an active part, named by its role, each drawn once. Ask of each: does it decide to do this, or is it carried along? (The same concept can be an actor in one story and a work object in another.)
+5. Work objects \u2014 things an actor creates, works with or hands over. Follow the main one through the story: it should come back under the same name (its state may change: "signed contract"); an outcome on its own is not a thing, and a work object hidden inside a verb or inside another work object should stand on its own. Does each icon say what the thing is \u2014 a small set that fits the domain \u2014 or is everything the same pictogram?
+6. Intent, not screens \u2014 if the sentences are a user asking and a system answering, or a system sending things back to itself, the story shows an interface, which a mock-up does better. Ask what the person is after, who else is involved, and whether each activity pushes the story forward.
+7. The story as a whole \u2014 where does it start and what triggers it, and what has whom at the end? (Adding a sentence before the beginning and after the end often shows what is missing.) The purpose and the assumptions belong in notes.
+Answer in this order: what the story says, in two or three sentences; what is well done; then the findings, most important first \u2014 each with the sentence number, the question to ask the people who know the domain, and a rewritten sentence. Say for each finding whether the method states it (items 1\u20136 rest on the authors' book and quick-start guide) or it is your own judgment (most of item 7, and anything about taste), and never present a guess about the domain as a fact \u2014 ask. Close with the three changes you would make first.
+Call canvas_focus on the sentence you are talking about. Put a finding on the board (a comment on its item, one finding per comment) only when I ask for it, and leave the file to whoever holds it: propose, do not edit. Talk with me in the language I use.`
       },
       {
         name: "review",
@@ -76698,6 +76855,7 @@ function helpText(o) {
     "- /unprose:wireframe <page> \u2014 sketch a page",
     "- /unprose:mockup <screen> \u2014 mock a screen as real-looking UI",
     "- /unprose:domain-story <topic> \u2014 tell a process as a domain story",
+    "- /unprose:critique [story] \u2014 have a domain story read by a Domain Storytelling reviewer",
     "- /unprose:review \u2014 answer every open comment on a board",
     ...o.prompts.length ? [`MCP prompts on this server: ${o.prompts.join(", ")}`] : [],
     "",
@@ -76728,7 +76886,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.13.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.14.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -77258,7 +77416,7 @@ var init_mcp2 = __esm({
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object. Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
@@ -77320,6 +77478,7 @@ var DS_GLYPHS;
 var init_snapshot = __esm({
   "packages/canvas/dist/snapshot.js"() {
     init_shown();
+    init_dsIcons();
     init_textMetrics();
     init_edgeLabel();
     init_wireGeometry();

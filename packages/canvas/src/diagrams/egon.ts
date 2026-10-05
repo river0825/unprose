@@ -10,6 +10,7 @@
 // An activity starting at an actor carries the sentence number; one starting at a work object passes it on.
 import { idAllocator } from './ids.js'
 import { normalizeDomainStory, type DomainStoryContent } from './domainStory.js'
+import { dsGlyphMarkup, parseDsIcon } from './dsIcons.js'
 
 type Obj = { id: string; type: string; name?: string; text?: string; x?: number; y?: number; width?: number; height?: number; number?: number | null; source?: string; target?: string; children?: string[]; waypoints?: Array<{ x: number; y: number }>; pickedColor?: string }
 
@@ -168,7 +169,12 @@ export function toEgon(content: DomainStoryContent, opts: { title?: string; desc
     objs.push(t)
     if (target) objs.push({ id: id('connection'), type: 'domainStory:connection', source: t.id, target: target.id, waypoints: [center(t), center(target)] })
   })
-  const iconMap = (names: Set<string>) => Object.fromEntries([...names].map((k) => [k, svg(k)]))
+  // the story's own icons go into Egon's icon set as the shapes we draw (dsIcons.ts), under the kind's name
+  const own = (icon: string) => {
+    const glyph = parseDsIcon(m.icons?.[lowerIcon(icon)] ?? m.icons?.[icon])
+    return glyph ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${dsGlyphMarkup(glyph)}</svg>` : undefined
+  }
+  const iconMap = (names: Set<string>) => Object.fromEntries([...names].map((k) => [k, own(k) ?? svg(k)]))
   return {
     iconSet: { name: 'unprose', actors: iconMap(icons.actors), workObjects: iconMap(icons.workObjects) },
     domainStory: {

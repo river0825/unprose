@@ -263,8 +263,10 @@ code or icons). A domain story is **one concrete scenario**, told in pictographi
   object → (to) actor*.
 - **Annotations** complement sentences (variations, domain terms, assumptions); a **group** is "an outline that
   clusters parts of a story" (repetition, optional parts, locations, organisations, subdomains).
-- **Scope**: granularity (coarse ↔ fine; Egon also offers medium and the cloud … clam levels), point in time
-  (as-is / to-be), domain purity (pure / digitalized).
+- **Scope**: granularity — "the level of detail": **coarse-grained** (the whole process at a glance: what happens),
+  **medium-grained**, **fine-grained** (one part in detail: how exactly it is done); Egon also offers the cloud …
+  clam levels — point in time (as-is / to-be), domain purity (pure = no software systems / digitalized). A story
+  keeps to one level; detail of another level is another story.
 
 **File** `design/<name>.domain-story.yaml` (or `.dst.yaml`; key `<name>-domain-story` / `<name>-dst`):
 
@@ -278,6 +280,7 @@ sentences:
 groups: [{ text: Booking, members: [ticket] }]          # actors, work objects or sentences
 annotations: [{ on: clerk, text: Cash only }]
 layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or gapX / gapY in px
+icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"/></svg>' }   # optional: icons of your own, used as a kind
 ```
 
 - **Drawn as a pictographic story**, the way domainstorytelling.org and Egon.io draw one: actors and work
@@ -337,6 +340,20 @@ layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or
   and shared numbers (shared = parallel activities: Egon allows them, the site does not describe them), work
   objects in no sentence, actors who neither act nor receive, custom actor kinds; and, for the drawing, sentences
   sent to their own actor, groups sharing members, notes longer than recommended ("No collisions" above).
+- **Reviewer's hints** (lint and the frame panel; `info`, because only the people telling the story can say
+  whether it is wrong — [domain-story-review.md](domain-story-review.md) has the reasoning and the sources): a scope
+  that does not state its granularity, time or purity; `pure` with a software system among the actors (a warning);
+  a story in which every sentence is one user and one system answering each other;
+  a sentence that reads like a choice ("if", "or"); a work object that reads like an outcome ("check passed")
+  instead of a thing; no work object coming back in a second sentence; every work object drawn with the same
+  icon; a kind with no icon. `/unprose:critique` (the `critique` prompt) has an agent read a story this way.
+- **Icons of your own** (`icons:`; Egon.io has them too — "upload your own icons", "square SVG images"): a name →
+  an SVG line drawing on a 24 × 24 box, used as an actor's or a work object's `kind`. Only plain shapes are read
+  out of it — `path` (`d`), `circle`, `ellipse`, `rect`, `line`, `polyline`, `polygon` with plain numbers, at most 40
+  shapes and 4000 characters; styles, fills, text, images, links and scripts are ignored, and the board, the
+  snapshot and the Egon export draw from that list in the ink colour (an icon is text an agent wrote: it is never
+  put on the page as it came). An icon with nothing to draw is a lint warning and falls back to the built-in one.
+  `export-egon` puts them into the story's icon set; `import-egon` does not read Egon's icons.
 - **Egon.io interop**: `awd design import-egon <story.egn | story.egn.svg> --out design/<name>.domain-story.yaml`
   and `awd design export-egon <file> --out <story.egn>` (with plain icons of our own for the names used).
 - **Into a story map** (our rule — the site gives none): `awd design propose-stories <domain-story file> --into

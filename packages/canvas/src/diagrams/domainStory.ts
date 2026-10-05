@@ -18,6 +18,8 @@
 // reported as info.
 import { z } from 'zod'
 import { idAllocator, slugify, traceSchema, type Trace } from './ids.js'
+import { DS_ICON_MAX_CHARS } from './dsIcons.js'
+import { reviewDomainStory, type DsReviewRule } from './domainStoryReview.js'
 
 export const DS_ACTOR_KINDS = ['person', 'group', 'system'] as const
 /** Work-object kinds with a glyph: the site's three categories plus Egon.io's default icon set. Custom names are allowed. */
@@ -68,6 +70,8 @@ export const domainStorySchema = z.object({
     .min(1),
   groups: z.array(z.object({ id: z.string().optional(), text: z.string().min(1), members: z.array(z.string()).default([]) })).default([]),
   annotations: z.array(z.object({ id: z.string().optional(), on: z.string(), text: z.string().min(1) })).default([]),
+  /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
+  icons: z.record(z.string(), z.string().max(DS_ICON_MAX_CHARS)).optional(),
   /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
   layout: z
     .object({
@@ -105,6 +109,8 @@ export interface DsModel {
   sentences: DsSentence[]
   groups: Array<{ id: string; text: string; members: string[] }>
   annotations: Array<{ id: string; on: string; text: string }>
+  /** The story's own icons by kind name (absent: only the built-in ones). */
+  icons?: Record<string, string>
   /** Drawing spacing from the file's `layout` (absent: the default, `normal`). */
   layout?: { spacing?: 'compact' | 'normal' | 'roomy'; gapX?: number; gapY?: number }
   /** References that matched nothing (unknown actors are still drawn, as persons). */
@@ -167,7 +173,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const on = elementRef(a.on, id, 'on')
     return on ? [{ id, on, text: a.text }] : []
   })
-  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.layout ? { layout: c.layout } : {}), unresolved, dsModel: true }
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.icons ? { icons: c.icons } : {}), ...(c.layout ? { layout: c.layout } : {}), unresolved, dsModel: true }
 }
 
 /** "② Customer sends application form to Clerk" — a sentence read out, as the method intends. */
@@ -195,7 +201,7 @@ export function displayWidth(text: string): number {
   return n
 }
 export interface DsFinding {
-  rule: DsRule
+  rule: DsRule | DsReviewRule
   severity: 'warning' | 'info'
   element?: string
   message: string
@@ -259,5 +265,6 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
     if (!m.sentences.some((s) => s.actor === a.id || s.to.includes(a.id))) out.push({ rule: 'actor-unused', severity: 'warning', element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START })
     if (!(DS_ACTOR_KINDS as readonly string[]).includes(a.kind)) out.push({ rule: 'actor-kind-custom', severity: 'info', element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon — the method names person, group of people and software system`, page: QUICK_START })
   }
+  out.push(...reviewDomainStory(m))
   return out
 }

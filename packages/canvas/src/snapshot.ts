@@ -7,6 +7,7 @@
 // driving side's job.
 import type { Board, ColorToken, Item } from './model.js'
 import { shownBoard } from './shown.js'
+import { dsGlyphMarkup, parseDsIcon } from './diagrams/dsIcons.js'
 import { fitText, measure, wrap } from './textMetrics.js'
 import { EDGE_LABEL } from './edgeLabel.js'
 import { planWires, type WirePlan } from './wireGeometry.js'
@@ -459,7 +460,8 @@ function drawDsIcon(c: Ctx, it: Item): string {
     const size = legend ? 36 : 52
     const isActor = ds === 'actor' || ds === 'legend-actor'
     const kind = typeof it.data?.kind === 'string' ? it.data.kind : ''
-    const glyph = DS_GLYPHS[kind] ?? DS_GLYPHS[isActor ? 'person' : 'document']
+    const own = parseDsIcon(it.data?.icon)
+    const glyph = own ? dsGlyphMarkup(own) : (DS_GLYPHS[kind] ?? DS_GLYPHS[isActor ? 'person' : 'document'])
     const s = size / 24
     parts.push(`<g transform="translate(${n(bx.x + bx.w / 2 - size / 2)} ${n(top)}) scale(${n(s)})" fill="none" stroke="${p.ink}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`)
     top += size + 4

@@ -2,10 +2,11 @@
 // (docs/diagrams.md §6b). The icons are drawn here as simple line SVGs (our own, Apache-2.0 like the rest
 // of the code; Egon.io's GPL icon set is not used). Unknown kinds fall back to person / document.
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import type { ReactNode } from 'react'
+import { createElement, type ReactNode } from 'react'
 import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
+import { dsGlyphTransform, parseDsIcon } from '../../../../src/diagrams/dsIcons'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -75,10 +76,19 @@ export function dsIcon(kind: string | undefined, fallback: 'person' | 'document'
   return ICONS[kind ?? ''] ?? ICONS[fallback]
 }
 
-function Icon({ kind, fallback, size }: { kind?: string; fallback: 'person' | 'document'; size: number }) {
+/** An icon the story file brings (`icons:`): only its plain shapes are drawn, never its markup (dsIcons.ts). */
+function ownIcon(svg: unknown): ReactNode | undefined {
+  const glyph = parseDsIcon(svg)
+  if (!glyph) return undefined
+  const shapes = glyph.shapes.map((s, i) => createElement(s.tag, { key: i, ...s.attrs }))
+  const transform = dsGlyphTransform(glyph)
+  return transform ? <g transform={transform}>{shapes}</g> : <>{shapes}</>
+}
+
+function Icon({ kind, own, fallback, size }: { kind?: string; own?: unknown; fallback: 'person' | 'document'; size: number }) {
   return (
     <svg className="ds-glyph" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      {dsIcon(kind, fallback)}
+      {ownIcon(own) ?? dsIcon(kind, fallback)}
     </svg>
   )
 }
@@ -114,7 +124,7 @@ export function DsIconNode({ data, selected }: NodeProps<ItemNode>) {
       }}
     >
       {!legend && SIDES.map((side) => <Handle key={side} id={side} type="source" position={side} />)}
-      {ds === 'legend-activity' ? <ActivitySample /> : <Icon kind={kind} fallback={isActor ? 'person' : 'document'} size={legend ? 36 : 52} />}
+      {ds === 'legend-activity' ? <ActivitySample /> : <Icon kind={kind} own={item.data?.icon} fallback={isActor ? 'person' : 'document'} size={legend ? 36 : 52} />}
       {item.data?.pending ? <span className="node-tag" aria-label="proposed, not in the file yet">proposed</span> : null}
       <div className="ds-name">
         <EditableText text={item.text ?? ''} editing={edit.editingId === item.id} onCommit={(t) => edit.commitText(item.id, t)} onCancel={edit.cancelEdit} placeholder="Name" />

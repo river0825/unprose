@@ -6,6 +6,34 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-05
+
+### Added
+- **A reviewer for domain stories: `/unprose:critique`** (the `critique` start prompt). An agent reads a story —
+  the sentences, the picture, the lint hints — holds it against the method (scope and one level of detail, one
+  concrete case, sentences read aloud, actors that act, work objects that are things and come back under the same
+  name, intent instead of screens) and answers with questions and rewritten sentences, saying for each finding
+  whether the method states it or it is the reviewer's judgment. It advises; it changes nothing.
+  `docs/domain-story-review.md` has the rules with their sources (Hofer & Schwentner's book, the quick-start guide).
+- **Reviewer's hints in `awd design lint` / `design_lint` for domain stories** (`info`: questions for the
+  conversation): the scope does not state its granularity (coarse-, medium- or fine-grained), time or purity
+  (`scope-missing`); `pure` with a software system among the actors (`scope-purity`, a warning); every sentence
+  between one user and one system (`request-response`); "if" / "or" in a sentence (`conditional`); a work object
+  that reads like an outcome, e.g. "check passed" (`work-object-outcome`); no work object in more than one sentence
+  (`work-objects-never-repeat`); every work object drawn with the same icon (`work-objects-one-icon`); a kind with
+  no icon (`icon-unknown`).
+- **Icons of your own in a domain story**: `icons: { <name>: '<svg viewBox="0 0 24 24">…</svg>' }` in the file, used
+  as an actor's or a work object's `kind` (docs/diagrams.md §6b). Only plain shapes are read out of the SVG —
+  path, circle, ellipse, rect, line, polyline, polygon — and the board, the snapshot and the Egon.io export draw
+  from that list; styles, scripts, images and links are ignored. An icon with nothing to draw is a lint warning
+  (`icon-invalid`).
+
+### Changed
+- **The `domain-story` start prompt** settles the scope first (granularity, as-is / to-be, pure / digitalized; one
+  level of detail per story) and names what to hold each sentence against: one concrete case, intent instead of a
+  user-asks / system-answers flow, work objects named as things and never hidden in a verb, a small icon set that
+  fits the domain.
+
 ## [0.13.0] — 2026-10-05
 
 ### Fixed
@@ -666,7 +694,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/river0825/unprose/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/river0825/unprose/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/river0825/unprose/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/river0825/unprose/compare/v0.10.0...v0.11.0

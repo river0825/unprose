@@ -300,6 +300,8 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   }
 
   const items: Item[] = []
+  // an icon the file brings travels on the item, so the page and the snapshot draw it without the file
+  const ownIcon = (kind: string) => (m.icons?.[kind] ? { icon: m.icons[kind] } : {})
   const actorItem = new Map<string, Item>()
   // Traces of sentences without a work object ride on their actor (an arrow cannot be a trace's end).
   const actorTraces = new Map<string, DsSentence['traces']>()
@@ -308,7 +310,7 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     const a = m.actors.find((x) => x.id === id)!
     const b = best.actor.get(id)!
     const traces = actorTraces.get(id)
-    const it = make({ id: itemId('actor', a.id), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ds: 'actor', ...(traces ? { traces } : {}) } }, now)
+    const it = make({ id: itemId('actor', a.id), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: 'actor', ...(traces ? { traces } : {}) } }, now)
     actorItem.set(id, it)
     items.push(it)
   })
@@ -321,7 +323,7 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     const box = best.object.get(s.id)
     const self = s.to.includes(s.actor)
     if (box && s.objectText) {
-      const o = make({ id: itemId('object', s.id), type: 'card', ...box, text: s.objectText, role: 'work-object', order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ds: 'object', ...(s.object ? { workObject: s.object } : {}), ...(s.traces.length ? { traces: s.traces } : {}), ...(s.note ? { note: s.note } : {}), ...(self ? { self: true } : {}) } }, now)
+      const o = make({ id: itemId('object', s.id), type: 'card', ...box, text: s.objectText, role: 'work-object', order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ...ownIcon(s.objectKind), ds: 'object', ...(s.object ? { workObject: s.object } : {}), ...(s.traces.length ? { traces: s.traces } : {}), ...(s.note ? { note: s.note } : {}), ...(self ? { self: true } : {}) } }, now)
       objectItem.set(s.id, o)
       items.push(o)
       items.push(arrow(scope, from.id, o.id, now, s.verb, 'activity', { key: s.id, data: { ...base, ...facing(from, o) } }))
