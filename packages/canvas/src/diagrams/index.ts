@@ -20,6 +20,7 @@ export {
   type EsPerson,
 } from './eventStorming.js'
 export { userStoryMapSchema, normalizeUserStoryMap, type UserStoryMapContent, type UsmModel, type UsmActivity, type UsmStep, type UsmStory } from './userStoryMap.js'
+export { WHICH_DIAGRAM, DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY, tellBack } from './guidance.js'
 export {
   domainStorySchema,
   normalizeDomainStory,

@@ -96,7 +96,7 @@ Write design/<name>.domain-story.yaml: the scope, every actor once, one work obj
 - Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward — what is the person after, and how does the system help?
 - A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
 - Give each kind of work object an icon that says what it is: a built-in kind (document, thing, digital, folder, call, email, conversation, info), or draw your own — \`icons: { <name>: '<svg viewBox="0 0 24 24">…</svg>' }\`, a line drawing of plain shapes — and use its name as the kind. Fit the icon set to the domain, and keep it small: one icon for everything tells the reader nothing, too many water the language down.
-Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
+When pictograms collide, change the layout (layout.spacing, a split into scenarios) — never the story: no actor or sentence is dropped to make the picture fit. Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
 ${CLOSE}`,
   },
   {

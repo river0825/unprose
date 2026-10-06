@@ -10,6 +10,7 @@ import { designFromObject, findingLine, frameOf, lintDesignContent, proposalOps,
 import { explainRedraw, planLines, redrawInputs, type BoardItem, type LoggedChange } from './diagrams/redraw.js'
 import { proposeStories } from './diagrams/proposeStories.js'
 import { proposeFromDomainStory } from './diagrams/proposeFromDomainStory.js'
+import { DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY, WHICH_DIAGRAM, tellBack } from './diagrams/guidance.js'
 import { START_PROMPTS, promptText } from './prompts.js'
 import type { Op } from './model.js'
 
@@ -107,7 +108,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
     'design_lint',
     {
       title: 'Check a diagram file',
-      description: 'Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. This canvas is not on your machine, so pass the file\'s text as `content` and its file name as `name`. Run it before design_draw.',
+      description: `Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. It checks the grammar and the drawing, not whether this is the right diagram or a true story: a domain story's result ends with the story read back for you to tell the person. This canvas is not on your machine, so pass the file's text as \`content\` and its file name as \`name\`. Run it before design_draw.`,
       inputSchema: fileArgs,
     },
     async ({ name, content }) =>
@@ -115,7 +116,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
         const d = parseDesignText(name, content)
         const findings = lintDesignContent(d)
         const errors = findings.filter((x) => x.severity === 'error').length
-        return text([...findings.map(findingLine), `${errors ? '✖' : '✔'} ${name} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`].join('\n'))
+        return text([...findings.map(findingLine), `${errors ? '✖' : '✔'} ${name} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`, ...(d.kind === 'domain-story' && !errors ? tellBack(d.content as never) : [])].join('\n'))
       }),
   )
 
@@ -123,7 +124,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: 'Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person\'s, another agent\'s, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Pass the file\'s text as `content` and its name as `name` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).',
+      description: `${WHICH_DIAGRAM}\nFor a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}\nDraw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Pass the file's text as \`content\` and its name as \`name\` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).`,
       inputSchema: {
         ...fileArgs,
         board: z.string().describe('A board id, or "title:<title>" (found, or created)'),
@@ -137,7 +138,8 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
         if (dryRun) return text((await previewDesignContent(client, name, content, board, { ...(at ? { at } : {}), ...(limit ? { limit } : {}) })).lines.join('\n'))
         const r = await drawDesignContent(client, name, content, board, at)
         const unresolved = r.unresolved.length ? [`⚠ ${r.unresolved.length} trace(s) not drawn:`, ...r.unresolved.map((u) => `  ${u.item} —${u.trace.rel}→ ${u.trace.from}: ${u.reason === 'bad-ref' ? 'not a <diagram key>/<element id> ref' : 'target not found on the board'}`)] : []
-        return text([`✔ ${name} → frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...(r.note ? [`⚠ ${r.note}`] : []), ...r.notes.map(findingLine), ...unresolved].join('\n'))
+        const d = parseDesignText(name, content)
+        return text([`✔ ${name} → frame ${r.key} on ${client.boardUrl(r.boardId, { frame: r.key })} (seq ${r.seq})`, ...(r.note ? [`⚠ ${r.note}`] : []), ...r.notes.map(findingLine), ...unresolved, ...(d.kind === 'domain-story' ? tellBack(d.content as never) : [])].join('\n'))
       }),
   )
 

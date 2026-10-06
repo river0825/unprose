@@ -280,3 +280,36 @@ test('the same work object in several sentences: its pictograms know each other'
   assert.deepEqual(seqs(objects.find((o) => o.data?.seq === 2)!), [4], 'an undeclared one, by its name')
   assert.deepEqual(sameWorkObject(b, items.find((i) => i.role === 'actor')), [], 'actors appear once')
 })
+
+test('review hints: a story of things that do not happen, one thing under several names, dates in verbs; the story read back', async () => {
+  const { tellBack, WHICH_DIAGRAM, DOMAIN_STORY_METHOD } = await import('../src/diagrams/guidance.js')
+  const content: DomainStoryContent = {
+    scope: { granularity: 'fine-grained', time: 'as-is', purity: 'digitalized' },
+    actors: ['Ops', { text: 'ConvoAI', kind: 'system' }],
+    sentences: [
+      { actor: 'Ops', verb: '10/1 imports', object: 'Casey plan=free', to: 'ConvoAI' },
+      { actor: 'ConvoAI', verb: 'checks', object: 'Casey plan=free', note: '不符合 → 不送' },
+      { actor: 'Ops', verb: 'changes', object: 'Casey plan=growth', to: 'ConvoAI' },
+      { actor: 'ConvoAI', verb: 'sends', object: 'webhook', to: 'Ops' },
+      { actor: 'Ops', verb: 'renames', object: 'Casey new name', to: 'ConvoAI', note: '離開再回來也不會再送' },
+      { actor: 'ConvoAI', verb: 'does not send', object: 'webhook' },
+    ],
+  }
+  const rules = checkDomainStory(content).map((f) => f.rule)
+  for (const r of ['negative-story', 'work-objects-variants', 'date-in-verb']) assert.ok(rules.includes(r), r)
+  assert.match(checkDomainStory(content).find((f) => f.rule === 'work-objects-variants')!.message, /3 work objects start with "casey"/)
+  // a positive story with distinct things says none of this
+  const fine = checkDomainStory({ ...content, sentences: [
+    { actor: 'Ops', verb: 'imports', object: 'Casey', to: 'ConvoAI' },
+    { actor: 'ConvoAI', verb: 'sends', object: 'webhook', to: 'Ops' },
+    { actor: 'Ops', verb: 'reads', object: 'webhook' },
+  ] }).map((f) => f.rule)
+  for (const r of ['negative-story', 'work-objects-variants', 'date-in-verb']) assert.ok(!fine.includes(r), `no ${r}`)
+  const told = tellBack(content)
+  assert.match(told[0], /did the person say this, or did you guess/)
+  assert.equal(told.length, 7)
+  assert.match(told[1], /^  ① Ops 10\/1 imports Casey plan=free to ConvoAI$/)
+  assert.deepEqual(tellBack({ actors: [], sentences: [] } as never), [], 'nothing to tell for a file that does not parse')
+  assert.match(WHICH_DIAGRAM, /does NOT happen/)
+  assert.match(DOMAIN_STORY_METHOD, /no "does not"/)
+})

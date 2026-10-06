@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
+import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, tellBack, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
@@ -57,6 +57,7 @@ export function cmdDesignLint(file: string): boolean {
   const errors = findings.filter((f) => f.severity === 'error')
   for (const f of findings) console.log(`${f.severity === 'error' ? '✖' : f.severity === 'warning' ? '⚠' : '·'} ${f.element ? `${f.element}: ` : ''}${f.message}${f.page ? `  (${f.page})` : ''}`)
   console.log(`${errors.length ? '✖' : '✔'} ${path.basename(file)} (${d.kind}, key ${d.key}): ${errors.length} error(s), ${findings.length - errors.length} note(s)`)
+  if (d.kind === 'domain-story' && !errors.length) for (const line of tellBack(d.content as never)) console.log(line)
   return errors.length === 0
 }
 
@@ -223,7 +224,8 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
   }
   if (sub === 'draw') {
     if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]')
-    const findings = lintDesign(parseDesignFile(file, fs.readFileSync(file, 'utf8')), file)
+    const parsed = parseDesignFile(file, fs.readFileSync(file, 'utf8'))
+    const findings = lintDesign(parsed, file)
     const errors = findings.filter((f) => f.severity === 'error')
     if (errors.length) {
       for (const e of errors) console.error(`✖ ${e.message}`)
@@ -241,6 +243,7 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     console.log(`✔ ${path.basename(file)} → frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== 'error').length} note(s) — awd design lint ${file})`)
     if (r.applied) console.log(`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`)
     for (const line of unresolvedReport(r.unresolvedTraces)) console.warn(line)
+    if (parsed.kind === 'domain-story') for (const line of tellBack(parsed.content as never)) console.log(line)
     return true
   }
   if (sub === 'propose-stories') {

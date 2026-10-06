@@ -94,9 +94,12 @@ calling the canvas behind Cloudflare must send a `User-Agent` (Python's default 
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).
-    A domain story tells one scenario as sentences (actor → verb → work object → receiver); move stories to and
-    from Egon.io with `awd design import-egon` / `export-egon` (docs/diagrams.md §6b).
-  - `awd design lint <file>` — schema + EventStorming grammar (with book page references).
+    A domain story tells one concrete scenario as sentences (actor → verb → work object → receiver) — no
+    conditions, no "not": what does not happen, and why, is an EventStorming timeline or a note. Ask who acts
+    instead of guessing, and tell the story back (the lint and draw results end with it read out). Move stories
+    to and from Egon.io with `awd design import-egon` / `export-egon` (docs/diagrams.md §6b).
+  - `awd design lint <file>` — schema + EventStorming / Domain Storytelling grammar (with book page references);
+    it checks the grammar and the drawing, not whether it is the right diagram or a true story.
   - `awd design propose-stories <es file> --into <story map file> --board …` — story candidates from
     EventStorming, drawn as dashed proposals (never written until the person accepts).
   - `awd graph <workflow.yaml> --canvas` — a workflow as a board; `awd lint` / `awd test` for workflows.

@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import { runMcp, sessionProjectRoot, type McpOptions } from '@awd/canvas'
-import { findingLine } from '@awd/canvas/diagrams'
+import { DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY, WHICH_DIAGRAM, findingLine, tellBack } from '@awd/canvas/diagrams'
 import { drawDesign, previewDesign, exportEgonFile, importEgonFile, lintDesign, parseDesignFile, proposeStoriesToBoard, unresolvedReport } from './design.js'
 import { START_PROMPTS, promptText } from './prompts.js'
 
@@ -41,7 +41,7 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
     'design_lint',
     {
       title: 'Check a diagram file',
-      description: 'Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. Run it before design_draw.',
+      description: 'Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. It checks the grammar and the drawing, not whether this is the right diagram or a true story: a domain story\'s result ends with the story read back for you to tell the person. Run it before design_draw.',
       inputSchema: { file: z.string().describe('Path to the diagram file, relative to the project') },
     },
     async ({ file }) =>
@@ -49,7 +49,7 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
         const f = abs(file)
         const { d, findings } = lintFile(f)
         const errors = findings.filter((x) => x.severity === 'error').length
-        return text([...findings.map(findingLine), `${errors ? '✖' : '✔'} ${path.basename(f)} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`].join('\n'))
+        return text([...findings.map(findingLine), `${errors ? '✖' : '✔'} ${path.basename(f)} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`, ...(d.kind === 'domain-story' && !errors ? tellBack(d.content as never) : [])].join('\n'))
       }),
   )
 
@@ -57,7 +57,7 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: 'Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person\'s, another agent\'s, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" — the person confirms it.',
+      description: `${WHICH_DIAGRAM}\nFor a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}\nDraw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" — the person confirms it.`,
       inputSchema: {
         file: z.string().describe('Path to the diagram file, relative to the project'),
         board: z.string().describe('A board id, or "title:<title>" (found or created in this project)'),
@@ -71,7 +71,7 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
       guard(async () => {
         const f = abs(file)
         if (dryRun) return text((await previewDesign(f, { board, ...(at ? { at } : {}), ...(limit ? { limit } : {}) })).lines.join('\n'))
-        const { findings } = lintFile(f)
+        const { d, findings } = lintFile(f)
         const errors = findings.filter((x) => x.severity === 'error')
         if (errors.length) return fail([`not drawn: ${errors.length} lint error(s) in ${file}`, ...errors.map(findingLine)].join('\n'))
         const r = await drawDesign(f, { board, ...(at ? { at } : {}), ...(applied ? { applied } : {}) })
@@ -82,6 +82,7 @@ export function registerDesignTools(server: Server, o: DesignToolOptions = {}): 
             ...(r.applied ? [`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`] : []),
             ...notes.map(findingLine),
             ...unresolvedReport(r.unresolvedTraces),
+            ...(d.kind === 'domain-story' ? tellBack(d.content as never) : []),
           ].join('\n'),
         )
       }),

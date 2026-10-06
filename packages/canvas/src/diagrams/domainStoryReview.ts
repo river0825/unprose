@@ -9,7 +9,7 @@ const EGON_HOWTO = 'egon.io/howto'
 /** Hofer & Schwentner, Domain Storytelling (Leanpub edition of 2021-02-27), chapter 2 "Good Language Style". */
 const BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"'
 
-export type DsReviewRule = 'scope-missing' | 'scope-purity' | 'request-response' | 'conditional' | 'work-object-outcome' | 'work-objects-never-repeat' | 'work-objects-one-icon' | 'icon-unknown' | 'icon-invalid'
+export type DsReviewRule = 'scope-missing' | 'scope-purity' | 'request-response' | 'conditional' | 'negative-story' | 'work-objects-variants' | 'date-in-verb' | 'work-object-outcome' | 'work-objects-never-repeat' | 'work-objects-one-icon' | 'icon-unknown' | 'icon-invalid'
 export interface DsReviewFinding {
   rule: DsReviewRule
   severity: 'warning' | 'info'
@@ -26,6 +26,9 @@ const OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|complete
 const OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/
 const CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i
 const CONDITIONAL_CJK = /如果|否則|或者|還是/
+/** A sentence about what does not happen ("不送", "is not sent", "skips") — a story has no symbol for it (the book, pp. 30–31). */
+const NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i
+const DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/
 const num = (n: number) => `#${n}`
 
 export function reviewDomainStory(m: DsModel): DsReviewFinding[] {
@@ -60,6 +63,22 @@ export function reviewDomainStory(m: DsModel): DsReviewFinding[] {
     if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
       out.push({ rule: 'work-object-outcome', severity: 'info', element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over — name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START })
   }
+
+  // a story of things that do not happen: the point lives in notes, the picture shows nothing (pp. 30–31, 36–37)
+  const negative = m.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ''} ${s.note ?? ''}`))
+  if (m.sentences.length >= 3 && negative.length * 2 >= m.sentences.length)
+    out.push({ rule: 'negative-story', severity: 'info', element: negative[0].id, message: `${negative.length} of ${m.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(' ')}) — a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE })
+  for (const s of m.sentences) {
+    if (DATE.test(s.verb)) out.push({ rule: 'date-in-verb', severity: 'info', element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date — the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START })
+  }
+  // one thing under several names: "Casey plan=free", "Casey plan=growth", "Casey new name" are one contact
+  const variants = new Map<string, Set<string>>()
+  for (const s of told) {
+    const first = (s.objectText ?? '').trim().split(/[\s／/·|]+/)[0]?.toLowerCase()
+    if (first && first.length >= 2) variants.set(first, new Set([...(variants.get(first) ?? []), s.objectText!.trim()]))
+  }
+  for (const [first, names] of variants)
+    if (names.size >= 3) out.push({ rule: 'work-objects-variants', severity: 'info', message: `${names.size} work objects start with "${first}": ${[...names].map((n) => `"${n}"`).join(', ')} — if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START })
 
   // "For every activity, we draw a separate work object (even if the same work object already exists in a previous sentence)."
   const names = new Set(told.map((s) => s.object ?? s.objectText!.trim().toLowerCase()))

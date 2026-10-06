@@ -69,6 +69,17 @@ to strict rules" (Book p. 34) — so even a rule is a reason to ask, not a verdi
 - **An ending.** A story that stops at "reviews" has not said what anyone does with the result. If that is
   undecided, a note should say so.
 
+## Where the method has to be
+
+An agent that drew a story as a timeline of things that did not happen (2026-10-06) diagnosed itself: it had read
+only the file format, the tool descriptions said only format, lint said "0 notes", and it had never met the start
+prompt because it called the tools directly. So the method now sits where an agent acts, not only here: which
+diagram holds which content and the story's rules are in the `design_draw` / `design_lint` descriptions and the
+MCP content help (packages/canvas/src/diagrams/guidance.ts), AGENTS.md's first step and the skill; a domain story's
+lint and draw results end with the story read back ("did the person say this, or did you guess?"); and lint asks
+about a story mostly made of "not", one thing under several names, and dates in verbs. What lint cannot see stays
+with the `critique` prompt and the person.
+
 ## Where we were wrong at first
 
 Worth keeping, because an agent reviewing a story will be tempted the same way:
@@ -98,7 +109,8 @@ A finding is easiest to take when it sits on the sentence it is about, as one qu
 ## What lint can and cannot see
 
 Lint sees the file, so it can tell: the scope is not stated; `pure` with a system actor; every sentence between
-one user and one system; "if" / "or" in a sentence; a label ending in an outcome word; no work object repeated;
+one user and one system; most sentences about what does not happen; several work objects whose names start
+with the same word; a date in a verb; "if" / "or" in a sentence; a label ending in an outcome word; no work object repeated;
 one icon for everything; a kind without an icon. All of these are `info` (the scope contradiction is a
 warning): questions for the conversation. Lint cannot tell whether an actor really acts, whether the levels of
 detail are mixed, or whether the story has an ending — that is what the `critique` prompt is for.

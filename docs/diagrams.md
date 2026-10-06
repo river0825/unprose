@@ -254,6 +254,16 @@ guide) and [Egon.io](https://egon.io), the modeler by the method's authors
 ([github.com/WPS/egon.io](https://github.com/WPS/egon.io), GPL-3.0 — we read its file format, we copy none of its
 code or icons). A domain story is **one concrete scenario**, told in pictographic sentences.
 
+**What it is for — and not** (read this before the file format; [domain-story-review.md](domain-story-review.md) has
+the method's rules with their pages). A domain story shows *who does what with what, and hands it to whom*, in one
+concrete case, as sentences the person would say aloud. It is **not** the diagram for what does *not* happen, for
+conditions or alternatives (the method has no symbol for them: each important alternative is its own story), for a
+rule or a comparison ("only once per contact", "A vs B" — a definition, policy or hotspot sticky, or a note), or for
+how things change over time (an EventStorming timeline). A story is told *with* the person: an actor or a purpose
+you guessed is a question, not a sentence. And when pictograms collide, change the layout — spacing, groups, a split
+into scenarios — never the story: no actor or sentence is dropped to make the picture fit. The lint and draw results
+end with the story read back; tell it to the person before you call it done.
+
 **Notation (as the site states it).**
 - **Actors**: "a person, a group of people, or a software system". **Every actor appears only once** in a story.
 - **Work objects**: what actors "create, work with, and exchange … documents, physical things, and digital
@@ -343,7 +353,9 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
 - **Reviewer's hints** (lint and the frame panel; `info`, because only the people telling the story can say
   whether it is wrong — [domain-story-review.md](domain-story-review.md) has the reasoning and the sources): a scope
   that does not state its granularity, time or purity; `pure` with a software system among the actors (a warning);
-  a story in which every sentence is one user and one system answering each other;
+  a story in which every sentence is one user and one system answering each other; a story mostly about what does
+  not happen (`negative-story`); several work objects whose names start with the same word (`work-objects-variants`);
+  a date inside a verb (`date-in-verb`);
   a sentence that reads like a choice ("if", "or"); a work object that reads like an outcome ("check passed")
   instead of a thing; no work object coming back in a second sentence; every work object drawn with the same
   icon; a kind with no icon. `/unprose:critique` (the `critique` prompt) has an agent read a story this way.

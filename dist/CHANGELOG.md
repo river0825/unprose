@@ -6,6 +6,23 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-10-06
+
+### Changed
+- **The method is where an agent acts, not only in docs/.** An agent that drew a domain story of things that did not
+  happen had read only the file format: the tool descriptions said format, lint said "0 notes", and it never met the
+  start prompt. Now `design_draw` and `design_lint` (local and remote), the MCP content help and `unprose_help` say
+  which diagram holds which content and what a domain story is (one case, no "not", told with the person, layout
+  never changes the story); AGENTS.md's first step and the skill say the same; docs/diagrams.md §6b opens with what
+  a domain story is for and not for.
+- **A domain story's lint and draw results end with the story read back** ("did the person say this, or did you
+  guess?") — the grammar check cannot see a wrong diagram or a guessed actor; an agent reading its own sentences can.
+
+### Added
+- **Three more reviewer's hints** for domain stories: most sentences about what does not happen (`negative-story`),
+  several work objects whose names start with the same word (`work-objects-variants`), a date inside a verb
+  (`date-in-verb`).
+
 ## [0.15.0] — 2026-10-05
 
 ### Added
@@ -713,7 +730,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/river0825/unprose/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/river0825/unprose/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/river0825/unprose/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/river0825/unprose/compare/v0.12.0...v0.13.0

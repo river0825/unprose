@@ -69,8 +69,13 @@ The MCP server also carries the diagram-file tools (`design_lint`, `design_draw`
 
 ## The loop
 
-1. Choose the diagram: EventStorming (flow in time), story map (scope), kanban (work), wireframe (page),
-   workflow (agent pipeline). Link related elements across diagrams with `traces`.
+1. Choose the diagram by the shape of the content — what happens over time, how the system reacts, what does
+   **not** happen and why → EventStorming; one concrete case of who does what with what → domain story (one
+   scenario, no conditions, no "not"); a rule or a comparison ("only once per contact") → a definition / policy /
+   hotspot or a note, not a story; scope → story map; work → kanban; a page → wireframe / UI mock; an agent
+   pipeline → workflow. Link related elements across diagrams with `traces`. A domain story is told with the
+   person, not guessed (docs/domain-story-review.md): ask who acts, then tell it back sentence by sentence.
+   Collisions are a layout problem — change the layout, never the story.
 2. Write the file, lint, draw; give the person the board URL.
 3. Wait for comments (MCP `canvas_wait`), answer in the thread, record open questions as hotspots.
    Wait long (`timeoutSec` up to 1800) and don't poll: every return costs tokens; a one-line `nothing new … — wait

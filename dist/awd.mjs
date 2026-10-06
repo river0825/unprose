@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.15.0";
+    VERSION2 = "0.16.0";
   }
 });
 
@@ -57890,6 +57890,22 @@ function reviewDomainStory(m2) {
     if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
       out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
   }
+  const negative = m2.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ""} ${s.note ?? ""}`));
+  if (m2.sentences.length >= 3 && negative.length * 2 >= m2.sentences.length)
+    out.push({ rule: "negative-story", severity: "info", element: negative[0].id, message: `${negative.length} of ${m2.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(" ")}) \u2014 a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE });
+  for (const s of m2.sentences) {
+    if (DATE.test(s.verb))
+      out.push({ rule: "date-in-verb", severity: "info", element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date \u2014 the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START });
+  }
+  const variants = /* @__PURE__ */ new Map();
+  for (const s of told) {
+    const first2 = (s.objectText ?? "").trim().split(/[\s／/·|]+/)[0]?.toLowerCase();
+    if (first2 && first2.length >= 2)
+      variants.set(first2, /* @__PURE__ */ new Set([...variants.get(first2) ?? [], s.objectText.trim()]));
+  }
+  for (const [first2, names2] of variants)
+    if (names2.size >= 3)
+      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n) => `"${n}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
   const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
   if (told.length >= 4 && names.size === told.length)
     out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
@@ -57907,7 +57923,7 @@ function reviewDomainStory(m2) {
   }
   return out;
 }
-var QUICK_START, EGON_HOWTO, BOOK_STYLE, BUILT_IN_OBJECT_ICONS, parts, OUTCOME_EN, OUTCOME_CJK, CONDITIONAL_EN, CONDITIONAL_CJK, num;
+var QUICK_START, EGON_HOWTO, BOOK_STYLE, BUILT_IN_OBJECT_ICONS, parts, OUTCOME_EN, OUTCOME_CJK, CONDITIONAL_EN, CONDITIONAL_CJK, NEGATIVE, DATE, num;
 var init_domainStoryReview = __esm({
   "packages/canvas/dist/diagrams/domainStoryReview.js"() {
     init_dsIcons();
@@ -57920,6 +57936,8 @@ var init_domainStoryReview = __esm({
     OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
     CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
     CONDITIONAL_CJK = /如果|否則|或者|還是/;
+    NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
+    DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
     num = (n) => `#${n}`;
   }
 });
@@ -57979,6 +57997,11 @@ function normalizeDomainStory(raw) {
     return on ? [{ id, on, text: a.text }] : [];
   });
   return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
+}
+function readSentence(m2, s) {
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
+  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
 }
 function circled(n) {
   return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
@@ -58113,6 +58136,34 @@ var init_domainStory = __esm({
     });
     QUICK_START2 = "domainstorytelling.org/quick-start-guide";
     NOTE_RECOMMENDED = 120;
+  }
+});
+
+// packages/canvas/dist/diagrams/guidance.js
+function tellBack(content) {
+  let m2;
+  try {
+    m2 = normalizeDomainStory(content);
+  } catch {
+    return [];
+  }
+  const lines = [...m2.sentences].sort((a, b2) => a.seq - b2.seq).map((s) => `  ${readSentence(m2, s)}`);
+  return [
+    "The grammar and the drawing are checked; whether this is the right diagram and a true story is not. Tell it back \u2014 did the person say this, or did you guess?",
+    ...lines
+  ];
+}
+var WHICH_DIAGRAM, DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY;
+var init_guidance = __esm({
+  "packages/canvas/dist/diagrams/guidance.js"() {
+    init_domainStory();
+    WHICH_DIAGRAM = `Which diagram for which content:
+- what happens over time, how the system reacts, what does NOT happen and why \u2192 EventStorming (events, policies, hotspots)
+- one concrete case of who does what with what, and hands it to whom \u2192 domain story (one scenario, no conditions, no "not")
+- a rule, an invariant, a comparison ("only once per contact", "A vs B") \u2192 a definition / policy / hotspot sticky, or a note \u2014 not a story
+- scope and order of delivery \u2192 story map; the work \u2192 kanban; one page \u2192 wireframe / UI mock; a persona's feelings \u2192 journey`;
+    DOMAIN_STORY_METHOD = `A domain story tells ONE concrete case as sentences the person would say aloud: actor \u2014 verb \u2014 work object \u2014 to actor. State its scope (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized) and keep every sentence at that level. Actors are the people, groups and systems that act, named by role, each once; the same thing keeps the same name every time it comes back (its state may change). It has no "if", no "or", no "does not": what does not happen, and why, is a note or another diagram. Do not guess who acts or what they want \u2014 ask; then tell the story back sentence by sentence before you call it done.`;
+    LAYOUT_NEVER_THE_STORY = "When pictograms or labels collide, change the layout (layout.spacing, groups, a split into scenarios) \u2014 never the story: an actor or a sentence is not dropped to make the picture fit.";
   }
 });
 
@@ -59664,6 +59715,7 @@ var init_diagrams = __esm({
     init_ids2();
     init_eventStorming();
     init_userStoryMap();
+    init_guidance();
     init_domainStory();
     init_uiMock();
     init_grammar();
@@ -59823,6 +59875,9 @@ function cmdDesignLint(file2) {
   for (const f of findings)
     console.log(`${f.severity === "error" ? "\u2716" : f.severity === "warning" ? "\u26A0" : "\xB7"} ${f.element ? `${f.element}: ` : ""}${f.message}${f.page ? `  (${f.page})` : ""}`);
   console.log(`${errors.length ? "\u2716" : "\u2714"} ${path16.basename(file2)} (${d.kind}, key ${d.key}): ${errors.length} error(s), ${findings.length - errors.length} note(s)`);
+  if (d.kind === "domain-story" && !errors.length)
+    for (const line of tellBack(d.content))
+      console.log(line);
   return errors.length === 0;
 }
 async function resolveBoard(api, ref2, projectRoot) {
@@ -59930,7 +59985,8 @@ async function cmdDesign(args2, flags2) {
   if (sub === "draw") {
     if (!file2 || !boardRef)
       throw new Error("usage: awd design draw <file> --board <id | title:\u2026> [--canvas URL] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]");
-    const findings = lintDesign(parseDesignFile(file2, fs15.readFileSync(file2, "utf8")), file2);
+    const parsed = parseDesignFile(file2, fs15.readFileSync(file2, "utf8"));
+    const findings = lintDesign(parsed, file2);
     const errors = findings.filter((f) => f.severity === "error");
     if (errors.length) {
       for (const e of errors)
@@ -59953,6 +60009,9 @@ async function cmdDesign(args2, flags2) {
       console.log(`\u2714 answered "Applied to ${r.applied.file ?? file2}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`);
     for (const line of unresolvedReport(r.unresolvedTraces))
       console.warn(line);
+    if (parsed.kind === "domain-story")
+      for (const line of tellBack(parsed.content))
+        console.log(line);
     return true;
   }
   if (sub === "propose-stories") {
@@ -67836,7 +67895,7 @@ Write design/<name>.domain-story.yaml: the scope, every actor once, one work obj
 - Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward \u2014 what is the person after, and how does the system help?
 - A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
 - Give each kind of work object an icon that says what it is: a built-in kind (document, thing, digital, folder, call, email, conversation, info), or draw your own \u2014 \`icons: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }\`, a line drawing of plain shapes \u2014 and use its name as the kind. Fit the icon set to the domain, and keep it small: one icon for everything tells the reader nothing, too many water the language down.
-Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
+When pictograms collide, change the layout (layout.spacing, a split into scenarios) \u2014 never the story: no actor or sentence is dropped to make the picture fit. Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
 ${CLOSE}`
       },
       {
@@ -67879,6 +67938,7 @@ var init_designTools = __esm({
     init_redraw();
     init_proposeStories();
     init_proposeFromDomainStory();
+    init_guidance();
     init_prompts();
     MAX = 512 * 1024;
   }
@@ -74800,10 +74860,10 @@ var require_formats = __commonJS({
     function isLeapYear(year) {
       return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
     }
-    var DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+    var DATE2 = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     function date5(str5) {
-      const matches = DATE.exec(str5);
+      const matches = DATE2.exec(str5);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -76886,7 +76946,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.15.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.16.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -77400,6 +77460,7 @@ async function runMcp(extend2) {
 var kindEnum, CONTENT_HELP, LOOP_HELP, READ_HELP, text, ABOUT, DIAGRAMS, PROGRESS_MS;
 var init_mcp2 = __esm({
   "packages/canvas/dist/mcp.js"() {
+    init_guidance();
     init_mcp();
     init_stdio2();
     init_zod();
@@ -77417,7 +77478,7 @@ var init_mcp2 = __esm({
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number): { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
@@ -77426,7 +77487,9 @@ Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on 
     READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
     text = (s) => ({ content: [{ type: "text", text: s }] });
     ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`;
-    DIAGRAMS = `Diagrams (one file each, drawn as a frame on a board):
+    DIAGRAMS = `${WHICH_DIAGRAM}
+
+Diagrams (one file each, drawn as a frame on a board):
 - EventStorming \u2014 design/<name>.es.yaml \u2014 a flow in time: events, commands, people, systems, policies, hotspots (Introducing EventStorming)
 - Story map \u2014 design/<name>.story-map.yaml \u2014 scope and releases; stories can be proposed from EventStorming or a domain story
 - Kanban \u2014 design/<name>.kanban.yaml \u2014 the work; cards trace to stories
@@ -77648,17 +77711,19 @@ function registerDesignTools(server, o = {}) {
   };
   server.registerTool("design_lint", {
     title: "Check a diagram file",
-    description: "Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. Run it before design_draw.",
+    description: "Check a diagram file (design/<name>.<kind>.yaml): its schema, unknown fields, and the EventStorming / Domain Storytelling grammar, with book page references. It checks the grammar and the drawing, not whether this is the right diagram or a true story: a domain story's result ends with the story read back for you to tell the person. Run it before design_draw.",
     inputSchema: { file: external_exports.string().describe("Path to the diagram file, relative to the project") }
   }, async ({ file: file2 }) => guard(() => {
     const f = abs(file2);
     const { d, findings } = lintFile(f);
     const errors = findings.filter((x2) => x2.severity === "error").length;
-    return text2([...findings.map(findingLine), `${errors ? "\u2716" : "\u2714"} ${path22.basename(f)} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`].join("\n"));
+    return text2([...findings.map(findingLine), `${errors ? "\u2716" : "\u2714"} ${path22.basename(f)} (${d.kind}, key ${d.key}): ${errors} error(s), ${findings.length - errors} note(s)`, ...d.kind === "domain-story" && !errors ? tellBack(d.content) : []].join("\n"));
   }));
   server.registerTool("design_draw", {
     title: "Draw a diagram file on a board",
-    description: `Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" \u2014 the person confirms it.`,
+    description: `${WHICH_DIAGRAM}
+For a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}
+Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" \u2014 the person confirms it.`,
     inputSchema: {
       file: external_exports.string().describe("Path to the diagram file, relative to the project"),
       board: external_exports.string().describe('A board id, or "title:<title>" (found or created in this project)'),
@@ -77671,7 +77736,7 @@ function registerDesignTools(server, o = {}) {
     const f = abs(file2);
     if (dryRun)
       return text2((await previewDesign(f, { board, ...at2 ? { at: at2 } : {}, ...limit2 ? { limit: limit2 } : {} })).lines.join("\n"));
-    const { findings } = lintFile(f);
+    const { d, findings } = lintFile(f);
     const errors = findings.filter((x2) => x2.severity === "error");
     if (errors.length)
       return fail([`not drawn: ${errors.length} lint error(s) in ${file2}`, ...errors.map(findingLine)].join("\n"));
@@ -77681,7 +77746,8 @@ function registerDesignTools(server, o = {}) {
       `\u2714 ${path22.basename(f)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId}?frame=${encodeURIComponent(r.key)} (seq ${r.seq})`,
       ...r.applied ? [`\u2714 answered "Applied to ${r.applied.file ?? file2}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`] : [],
       ...notes.map(findingLine),
-      ...unresolvedReport(r.unresolvedTraces)
+      ...unresolvedReport(r.unresolvedTraces),
+      ...d.kind === "domain-story" ? tellBack(d.content) : []
     ].join("\n"));
   }));
   server.registerTool("design_propose_stories", {
