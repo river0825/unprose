@@ -51053,7 +51053,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.16.0";
+var VERSION = "0.16.1";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -52010,7 +52010,7 @@ var WHICH_DIAGRAM = `Which diagram for which content:
 - one concrete case of who does what with what, and hands it to whom \u2192 domain story (one scenario, no conditions, no "not")
 - a rule, an invariant, a comparison ("only once per contact", "A vs B") \u2192 a definition / policy / hotspot sticky, or a note \u2014 not a story
 - scope and order of delivery \u2192 story map; the work \u2192 kanban; one page \u2192 wireframe / UI mock; a persona's feelings \u2192 journey`;
-var DOMAIN_STORY_METHOD = `A domain story tells ONE concrete case as sentences the person would say aloud: actor \u2014 verb \u2014 work object \u2014 to actor. State its scope (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized) and keep every sentence at that level. Actors are the people, groups and systems that act, named by role, each once; the same thing keeps the same name every time it comes back (its state may change). It has no "if", no "or", no "does not": what does not happen, and why, is a note or another diagram. Do not guess who acts or what they want \u2014 ask; then tell the story back sentence by sentence before you call it done.`;
+var DOMAIN_STORY_METHOD = `A domain story tells ONE concrete case as sentences the person would say aloud: actor \u2014 verb \u2014 work object \u2014 to actor. State its scope (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized) and keep every sentence at that level. Actors are the people, groups and systems that act, named by role, each once; the same thing keeps the same name every time it comes back (its state may change). It has no "if", no "or", no "does not": what does not happen is a note on the sentence that would have happened ("variation: already sent \u2192 \u2462 does not happen"), the case the story tells is a note on the whole story ("assumption: Casey matches for the first time"), and the rule itself lives in an EventStorming policy or a story map's acceptance \u2014 never a story of its own. Do not guess who acts or what they want \u2014 ask; then tell the story back sentence by sentence before you call it done.`;
 var LAYOUT_NEVER_THE_STORY = "When pictograms or labels collide, change the layout (layout.spacing, groups, a split into scenarios) \u2014 never the story: an actor or a sentence is not dropped to make the picture fit.";
 function tellBack(content) {
   let m2;
@@ -52102,6 +52102,7 @@ ${CLOSE}`
 First settle the scope with me, because every sentence is judged by it: the granularity \u2014 coarse-grained (the whole process at a glance: what happens, not how), medium-grained, or fine-grained (one part in detail, how exactly it is done) \u2014 as-is or to-be, and pure (no software) or digitalized (software systems are actors). Keep every sentence at that one level (mixing levels is a bad smell; "clicks button" is too fine for any story); detail that belongs to another level is another story. If the domain has not been told without software yet, say that the usual way is a pure as-is story first, and ask whether to start there.
 Write design/<name>.domain-story.yaml: the scope, every actor once, one work object per activity, and numbered sentences "actor \u2014 verb \u2014 work object \u2014 to actor". While you write, hold each sentence against these:
 - One concrete case, no "if" or "or": tell the usual case, put a variation in a note, give an alternative that matters its own story.
+- What does not happen is not a sentence. Say which case this story tells in a note on the whole story (an \`annotations\` entry on its first work object: "assumption: Casey matches for the first time"); say where a sentence would not happen in a note on that sentence ("variation: already sent \u2192 \u2462 does not happen"); wrap a stretch that is sometimes skipped in a \`groups\` outline ("optional: \u2026"); keep the rule itself ("only once per contact") in an EventStorming policy or the story map's acceptance and link to it; a rejected alternative goes to the decisions kanban. One sentence per note \u2014 the detail goes into the sentence's \`note\`.
 - An actor plays an active part (a person, a group, a software system) and is named by its role; what is only carried along or acted on is a work object.
 - Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward \u2014 what is the person after, and how does the system help?
 - A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
@@ -52118,7 +52119,7 @@ ${CLOSE}`
     body: `Read {arg} as a Domain Storytelling reviewer (domainstorytelling.org; docs/domain-story-review.md has the sources) and tell me what you see and what to improve. You advise; you change nothing.
 Look first: canvas_read_board with the frame for the sentences, notes and comments, canvas_snapshot to see the picture as I see it, and design_lint on the file when you can read it (canvas_files, or the file itself). Then tell the story back to yourself from the beginning, one sentence at a time, and hold it against the method:
 1. Scope \u2014 is it stated (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized), and does every sentence keep to it? A coarse-grained story says what happens across the whole process, end to end; steps that explain how one actor does one thing are fine-grained and belong in a story of their own; mixing the levels is a bad smell, and "clicks button" is too fine for any story. A story with software systems is digitalized. The usual journey is coarse-grained pure as-is, then fine-grained pure as-is, then fine-grained digitalized to-be \u2014 not a rule, but ask what came before this story.
-2. One concrete case \u2014 no "if", "or", "sometimes"; variations in notes, important alternatives as separate stories.
+2. One concrete case \u2014 no "if", "or", "sometimes"; variations in notes, important alternatives as separate stories. Are the notes where the method puts them: the case told as an assumption on the whole story, a variation on the sentence it changes, a skipped stretch as a group, the rule itself in an EventStorming policy or the story map \u2014 and never a story made of what does not happen?
 3. Sentences \u2014 each reads aloud as actor \u2014 verb \u2014 work object (\u2014 to actor), in the words the people of the domain use; the same thing has the same name everywhere, on this board and in the diagrams it traces to.
 4. Actors \u2014 a person, a group or a software system that plays an active part, named by its role, each drawn once. Ask of each: does it decide to do this, or is it carried along? (The same concept can be an actor in one story and a work object in another.)
 5. Work objects \u2014 things an actor creates, works with or hands over. Follow the main one through the story: it should come back under the same name (its state may change: "signed contract"); an outcome on its own is not a thing, and a work object hidden inside a verb or inside another work object should stand on its own. Does each icon say what the thing is \u2014 a small set that fits the domain \u2014 or is everything the same pictogram?
@@ -60501,7 +60502,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.16.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.16.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {

@@ -272,7 +272,18 @@ end with the story read back; tell it to the person before you call it done.
   order by numbering them", with the number at the arrow's origin. A sentence reads *actor → activity → work
   object → (to) actor*.
 - **Annotations** complement sentences (variations, domain terms, assumptions); a **group** is "an outline that
-  clusters parts of a story" (repetition, optional parts, locations, organisations, subdomains).
+  clusters parts of a story" (repetition, optional parts, locations, organisations, subdomains). Where what does
+  *not* happen goes (the book, pp. 23 and 28):
+
+  | To say | Put it |
+  |---|---|
+  | which case this story tells ("Casey matches for the first time") | an annotation on the whole story — `annotations: [{ on: <first work object>, text: 'Assumption: …' }]` |
+  | where a sentence would not happen ("already sent → ③ does not happen") | an annotation on that sentence — `{ on: <sentence id>, text: 'Variation: …' }`, the detail in the sentence's `note` |
+  | a stretch that is sometimes skipped | a `groups` outline around those sentences, labelled "optional: …" |
+  | the rule itself ("only once per contact") | an EventStorming policy / hotspot, or the story map's acceptance — the story links to it |
+  | a rejected alternative | the decisions kanban; the story keeps one link |
+
+  One sentence per annotation (`note-long` warns past 120 characters); a story made of the right column is no story.
 - **Scope**: granularity — "the level of detail": **coarse-grained** (the whole process at a glance: what happens),
   **medium-grained**, **fine-grained** (one part in detail: how exactly it is done); Egon also offers the cloud …
   clam levels — point in time (as-is / to-be), domain purity (pure = no software systems / digitalized). A story

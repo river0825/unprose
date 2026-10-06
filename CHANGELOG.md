@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-10-06
+
+### Changed
+- **Where what does not happen goes in a domain story** — the `domain-story` and `critique` prompts, the tool
+  guidance and docs/diagrams.md §6b now say it: the case told is an assumption on the whole story, a sentence that
+  would not happen gets a variation note, a stretch sometimes skipped is an optional group, the rule itself lives in an
+  EventStorming policy or the story map's acceptance, a rejected alternative in the decisions kanban — never a story
+  of its own.
+
 ## [0.16.0] — 2026-10-06
 
 ### Changed
@@ -730,7 +739,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/river0825/unprose/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/river0825/unprose/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/river0825/unprose/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/river0825/unprose/compare/v0.13.0...v0.14.0
