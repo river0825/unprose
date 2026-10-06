@@ -94,6 +94,7 @@ calling the canvas behind Cloudflare must send a `User-Agent` (Python's default 
 - CLI `awd` (`node <root>/scripts/awd.mjs …`):
   - `awd design draw design/<name>.<kind>.yaml --board "title:<board>"` — draw/refresh one diagram frame
     (kinds: `es`, `story-map`, `kanban`, `wireframe`, `domain-story`, `journey`, `*.workflow.yaml`).
+    For a domain story load the `domain-storytelling` skill (the method with the book's pages, examples, checklists).
     A domain story tells one concrete scenario as sentences (actor → verb → work object → receiver) — no
     conditions, no "not": what does not happen, and why, is an EventStorming timeline or a note. Ask who acts
     instead of guessing, and tell the story back (the lint and draw results end with it read out). Move stories

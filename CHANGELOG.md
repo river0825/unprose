@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-10-06
+
+### Added
+- **A `domain-storytelling` skill** in the plugin (skills/domain-storytelling/): the method as the authors state it —
+  when a domain story is the right diagram and when not, scope, the language, the authors' do's and don'ts, the
+  moderator's questions, how to review — with the book's pages, good / bad examples, where what does not happen goes,
+  checklists, and the mistakes agents actually made. Any agent with the plugin loads it when it writes, draws or
+  reviews a story; the `domain-story` and `critique` prompts ask for it.
+
 ## [0.16.1] — 2026-10-06
 
 ### Changed
@@ -739,7 +748,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/river0825/unprose/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/river0825/unprose/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/river0825/unprose/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/river0825/unprose/compare/v0.14.0...v0.15.0

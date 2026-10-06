@@ -5,6 +5,10 @@ sources. It is the background for three things: the reviewer's hints in `design 
 `domain-story` start prompt, and the `critique` start prompt (`/unprose:critique`), which has an agent read a
 story and say what to improve.
 
+The full distillation of the method — chapter by chapter with pages, good / bad examples, checklists — is the plugin's
+`domain-storytelling` skill (skills/domain-storytelling/); any agent with the plugin loads it when it writes, draws or
+reviews a story. This page is the shorter background.
+
 Sources, and how they are cited here:
 
 - **Book** — Stefan Hofer and Henning Schwentner, *Domain Storytelling* (the Leanpub edition published

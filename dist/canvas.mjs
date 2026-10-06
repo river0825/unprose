@@ -51053,7 +51053,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.16.1";
+var VERSION = "0.17.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -52099,7 +52099,7 @@ ${CLOSE}`
     arg: { name: "topic", hint: "<process>", description: 'The story to tell, e.g. "an order from cart to delivery"' },
     fallback: "a process in this project \u2014 ask me which one",
     body: `Tell {arg} as a Domain Storytelling story (domainstorytelling.org) on the Unprose canvas.
-First settle the scope with me, because every sentence is judged by it: the granularity \u2014 coarse-grained (the whole process at a glance: what happens, not how), medium-grained, or fine-grained (one part in detail, how exactly it is done) \u2014 as-is or to-be, and pure (no software) or digitalized (software systems are actors). Keep every sentence at that one level (mixing levels is a bad smell; "clicks button" is too fine for any story); detail that belongs to another level is another story. If the domain has not been told without software yet, say that the usual way is a pure as-is story first, and ask whether to start there.
+If a \`domain-storytelling\` skill is available to you, load it first \u2014 it carries the method with the book's pages. First settle the scope with me, because every sentence is judged by it: the granularity \u2014 coarse-grained (the whole process at a glance: what happens, not how), medium-grained, or fine-grained (one part in detail, how exactly it is done) \u2014 as-is or to-be, and pure (no software) or digitalized (software systems are actors). Keep every sentence at that one level (mixing levels is a bad smell; "clicks button" is too fine for any story); detail that belongs to another level is another story. If the domain has not been told without software yet, say that the usual way is a pure as-is story first, and ask whether to start there.
 Write design/<name>.domain-story.yaml: the scope, every actor once, one work object per activity, and numbered sentences "actor \u2014 verb \u2014 work object \u2014 to actor". While you write, hold each sentence against these:
 - One concrete case, no "if" or "or": tell the usual case, put a variation in a note, give an alternative that matters its own story.
 - What does not happen is not a sentence. Say which case this story tells in a note on the whole story (an \`annotations\` entry on its first work object: "assumption: Casey matches for the first time"); say where a sentence would not happen in a note on that sentence ("variation: already sent \u2192 \u2462 does not happen"); wrap a stretch that is sometimes skipped in a \`groups\` outline ("optional: \u2026"); keep the rule itself ("only once per contact") in an EventStorming policy or the story map's acceptance and link to it; a rejected alternative goes to the decisions kanban. One sentence per note \u2014 the detail goes into the sentence's \`note\`.
@@ -52116,7 +52116,7 @@ ${CLOSE}`
     description: "Read a domain story as a Domain Storytelling reviewer and say what to improve",
     arg: { name: "story", hint: "[board link, frame or file]", description: "The domain story to read: a board link or frame, or a design/*.domain-story.yaml file" },
     fallback: "the domain story we are working on \u2014 find it with canvas_list_boards and ask me if there are several",
-    body: `Read {arg} as a Domain Storytelling reviewer (domainstorytelling.org; docs/domain-story-review.md has the sources) and tell me what you see and what to improve. You advise; you change nothing.
+    body: `Read {arg} as a Domain Storytelling reviewer (load the \`domain-storytelling\` skill if you have it; docs/domain-story-review.md has the sources) and tell me what you see and what to improve. You advise; you change nothing.
 Look first: canvas_read_board with the frame for the sentences, notes and comments, canvas_snapshot to see the picture as I see it, and design_lint on the file when you can read it (canvas_files, or the file itself). Then tell the story back to yourself from the beginning, one sentence at a time, and hold it against the method:
 1. Scope \u2014 is it stated (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized), and does every sentence keep to it? A coarse-grained story says what happens across the whole process, end to end; steps that explain how one actor does one thing are fine-grained and belong in a story of their own; mixing the levels is a bad smell, and "clicks button" is too fine for any story. A story with software systems is digitalized. The usual journey is coarse-grained pure as-is, then fine-grained pure as-is, then fine-grained digitalized to-be \u2014 not a rule, but ask what came before this story.
 2. One concrete case \u2014 no "if", "or", "sometimes"; variations in notes, important alternatives as separate stories. Are the notes where the method puts them: the case told as an assumption on the whole story, a variation on the sentence it changes, a skipped stretch as a group, the rule itself in an EventStorming policy or the story map \u2014 and never a story made of what does not happen?
@@ -60502,7 +60502,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.16.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.17.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
