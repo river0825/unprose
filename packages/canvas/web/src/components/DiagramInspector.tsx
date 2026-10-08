@@ -83,7 +83,7 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
   )
 }
 
-const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', group: 'groups overlap', label: 'wire label', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere' }
+const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', group: 'groups overlap', label: 'wire label', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere', 'comment-covers': 'comment covers', 'comment-outside': 'comment outside' }
 
 /** The layout check (src/layoutCheck.ts): what overlaps, is cut off, sticks out or is far too big in this frame — the same findings agents get. */
 function LayoutFindings({ board, diagramKey, onSelect }: { board: Board; diagramKey: string; onSelect: (id: string) => void }) {

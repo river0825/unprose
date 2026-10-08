@@ -2,7 +2,7 @@
 // Nothing from the file is rendered as HTML — every value is text in a React element — so a mock written
 // by an agent (or edited by anyone who can reach the canvas) cannot run scripts or load anything.
 import type { NodeProps } from '@xyflow/react'
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Item } from '../../../../src/model'
 import { canEditValue, uiPendingOf, uiProposalOf, uiValueOp, type UiPath } from '../../diagrams/uiProposal'
 import { uiFindingsOf } from '../../diagrams/uiFindings'
@@ -11,10 +11,11 @@ import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { play, usePlay } from '../uiPlay'
+import { itemNote, rowNote } from '../notesView'
 import { Rims, Shell } from './index'
 import '../../ui-mock.css'
 
-interface UiItem { id?: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean }
+interface UiItem { id?: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean; /** a design note about this entry (docs/diagrams.md §6c): a ⓘ at the end of its row */ note?: string }
 export interface UiData {
   type: string
   theme?: 'light' | 'dark'
@@ -41,6 +42,10 @@ export interface UiData {
   path?: Array<string | number>
   textKey?: string
   container?: boolean
+  /** design notes about table rows, keyed by the row index as a string: a ⓘ at the end of that row */
+  rowNotes?: Record<string, string>
+  /** the words and numbers here are made up to show the layout: a hatched "sample" stripe outside the top edge */
+  sample?: boolean
 }
 
 export const uiOf = (it: Item | undefined): UiData | undefined => {
@@ -145,6 +150,42 @@ function Val({ sub, text, children }: { sub: UiPath; text: string; children?: Re
   )
 }
 
+// ── design notes on entries and rows (docs/diagrams.md §6c): a quiet ⓘ at the end of the row, the note in its tooltip ──
+/** What the marks of one element need: its id (to find the note comment) and whether the mock is being played. */
+const NoteCtx = createContext<{ elementId: string; playing: boolean } | null>(null)
+
+/**
+ * The ⓘ of a list entry, tab, sidebar / navbar item, option or table row. Graphite, 12 px, outside the mock's own
+ * type: a design annotation, not product UI. Pointing at it lights up the note comment about this entry (flow/notesView.ts
+ * noteCommentOf); while the mock plays it is a label only.
+ */
+function NoteMark({ note, kind, index }: { note: string | undefined; kind: 'item' | 'row'; index: number }) {
+  const ctx = useContext(NoteCtx)
+  const edit = useEdit()
+  if (!note || !ctx) return null
+  const hover = !ctx.playing && edit.hoverNote ? (on: boolean) => edit.hoverNote!(ctx.elementId, kind, index, on) : undefined
+  return (
+    <span
+      className={`ui-note-mark ${ctx.playing ? 'playing' : ''}`}
+      role="img"
+      aria-label={`Design note: ${note}`}
+      title={note}
+      onPointerEnter={hover ? () => hover(true) : undefined}
+      onPointerLeave={hover ? () => hover(false) : undefined}
+    >
+      i
+    </span>
+  )
+}
+
+/** A closed select shows its options' notes as one ⓘ after the chevron (`option: note` per line); open, each option has its own. */
+function SelectNotes({ items }: { items: UiItem[] }) {
+  const noted = items.map((it, i) => ({ it, i })).filter(({ it }) => typeof it.note === 'string' && it.note.trim())
+  if (!noted.length) return null
+  return <NoteMark note={noted.map(({ it }) => `${it.text}: ${it.note}`).join('\n')} kind="item" index={noted[0].i} />
+}
+
+
 // ── play (docs/diagrams.md §6c "Play"): the element on the screen on view takes clicks and typing ─────────
 interface Live {
   /** a click leads to this screen */
@@ -180,6 +221,7 @@ function Options({ live, items, value }: { live: Live; items: UiItem[]; value: s
         rows.map((t, i) => (
           <div key={i} role="option" aria-selected={t === value} className={`ui-option ${t === value ? 'on' : ''}`} onClick={() => live.pick(t)}>
             {t}
+            <NoteMark note={itemNote(items, i)} kind="item" index={i} />
           </div>
         ))
       ) : (
@@ -242,6 +284,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
             {items.map((l, i) => (
               <span key={i} className={l.active ? 'on' : ''}>
                 <Val sub={['items', i]} text={l.text} />
+                <NoteMark note={itemNote(items, i)} kind="item" index={i} />
               </span>
             ))}
           </nav>
@@ -256,6 +299,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               <UiIcon name={l.icon} />
               <span className="ui-grow"><Val sub={['items', i]} text={l.text} /></span>
               {l.badge ? <span className="ui-count">{l.badge}</span> : null}
+              <NoteMark note={itemNote(items, i)} kind="item" index={i} />
             </div>
           ))}
         </div>
@@ -301,6 +345,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               <span className={`ui-grow ${val ? '' : 'ui-ph'}`}>{val || placeholder}</span>
             )}
             {u.type === 'select' ? <UiIcon name="chevron-down" /> : null}
+            {u.type === 'select' && !live?.open ? <SelectNotes items={items} /> : null}
           </div>
           {live?.open && u.type === 'select' ? <Options live={live} items={items} value={val} /> : null}
           {u.hint ? <div className="ui-hint">{u.hint}</div> : null}
@@ -364,6 +409,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
                       <Val sub={['rows', i, j]} text={c === undefined ? '' : String(c)}>
                         <Cell v={c} />
                       </Val>
+                      {j === r.length - 1 ? <NoteMark note={rowNote(u, i)} kind="row" index={i} /> : null}
                     </td>
                   ))}
                 </tr>
@@ -385,6 +431,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               </span>
               {l.badge ? <Cell v={/^\[.*\]$/.test(l.badge) ? l.badge : `[${l.badge}]`} /> : null}
               {u.variant !== 'plain' ? <UiIcon name="chevron-right" className="ui-faint" /> : null}
+              <NoteMark note={itemNote(items, i)} kind="item" index={i} />
             </div>
           ))}
         </>
@@ -435,6 +482,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
         >
           <Val sub={['items', i]} text={t.text} />
           {t.badge ? <span className="ui-count">{t.badge}</span> : null}
+          <NoteMark note={itemNote(items, i)} kind="item" index={i} />
         </span>
       ))
     case 'breadcrumb':
@@ -561,7 +609,10 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   ]
   const toggles = live && (u.type === 'checkbox' || u.type === 'radio' || u.type === 'toggle')
   const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : undefined
+  const noteCtx = useMemo(() => ({ elementId: item.id, playing }), [item.id, playing])
   return (
+    <>
+    {u.sample === true ? <SampleStripe phone={u.type === 'screen' && u.device === 'phone'} /> : null}
     <Shell
       item={item}
       pulse={pulse}
@@ -574,7 +625,9 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
       onClick={onClick}
     >
       {(u.type === 'screen' || u.type === 'section') && <Rims />}
-      <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id, live)}</ValueCtx.Provider>
+      <NoteCtx.Provider value={noteCtx}>
+        <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id, live)}</ValueCtx.Provider>
+      </NoteCtx.Provider>
       {findings.length ? (
         <span
           className={`ui-finding-mark ${findings.some((f) => f.severity === 'warning') ? 'warning' : 'info'}`}
@@ -586,5 +639,22 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
         </span>
       ) : null}
     </Shell>
+    </>
+  )
+}
+
+/**
+ * `data.ui.sample`: the words and numbers in this screen or element are made up to show the layout. A hatched
+ * graphite stripe along the OUTSIDE of its top edge with a tiny "sample" — outside the product chrome, so nobody
+ * reads it as a badge of the product; nothing inside the box changes. A sibling of the box, so a box that clips
+ * its content (a table, a list) does not clip it.
+ */
+function SampleStripe({ phone }: { phone: boolean }) {
+  return (
+    <span className={`ui-sample-stripe ${phone ? 'phone' : ''}`} role="img" aria-label="Sample data: the words and numbers here are made up">
+      <span className="ui-sample-word" aria-hidden="true">
+        sample
+      </span>
+    </span>
   )
 }

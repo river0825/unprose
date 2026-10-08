@@ -7,6 +7,7 @@ import { autoSides, planSides, type Box } from './route'
 import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
 import { planWires } from '../../../src/wireGeometry'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
+import type { CommentShown } from './notesView'
 
 /** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
 export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
@@ -25,6 +26,8 @@ export type ItemNode = Node<
     item: Item
     pulse: boolean
     open: boolean
+    /** a settled proposal thread (flow/notesView.ts): folded into a ✓ marker until the viewer clicks it */
+    done?: boolean
     replies: Item[]
     childCount?: number
     diagram?: DiagramBadge
@@ -122,13 +125,18 @@ const DS_ICONS = new Set(['actor', 'object', 'legend-actor', 'legend-object', 'l
 /** How catch-all wires are shown (flow/catchAll.ts): as badges (the default) or drawn; `expanded` holds the wires of badges clicked open. */
 export interface CatchAllView { show: boolean; expanded: Set<string> }
 
-export function boardToFlow(board: Board, pulse: ReadonlySet<string>, openComments: Set<string>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
+/**
+ * `comments` says how each thread is drawn (flow/notesView.ts `notesShown`, by root id); a plain Set of ids is the
+ * older form — those threads are open, the rest folded.
+ */
+export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: ReadonlySet<string> | ReadonlyMap<string, CommentShown>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
   const items = Object.values(board.items)
   const byId = board.items
   const nodes: ItemNode[] = []
   const edges: Edge[] = []
   const visited = new Set<string>()
   const byRoot = threads(board)
+  const shownAs = (id: string): CommentShown => (comments instanceof Map ? (comments.get(id) ?? 'badge') : comments.has(id) ? 'open' : 'badge')
   const stacked = kanbanLayout(board)
   let obs: Array<Box & { id: string }> | undefined
   const boxes = () => (obs ??= obstacles(board, stacked))
@@ -145,7 +153,8 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, openCommen
     const parent = it.type !== 'comment' && it.parent && byId[it.parent] && it.parent !== it.id ? byId[it.parent] : undefined
     if (parent) push(parent)
     const thread = byRoot.get(it.id) ?? []
-    const open = it.type !== 'comment' || openComments.has(it.id)
+    const shown = it.type === 'comment' ? shownAs(it.id) : 'open'
+    const open = shown === 'open'
     const at = stacked.get(it.id) ?? { x: it.x, y: it.y }
     nodes.push({
       id: it.id,
@@ -159,7 +168,7 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, openCommen
       // a kanban card must be able to leave its column; drag-stop re-parents it by where it lands
       extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
-      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}) },
+      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}) },
       ...nodeClass(it),
       // a frame, lane, column or screen moves by its title bar or border; a drag on its body draws a selection box (docs/canvas.md)
       ...(passThrough(it) ? { dragHandle: `.${DRAG_HANDLE}` } : {}),
@@ -202,7 +211,8 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, openCommen
       }
       continue
     }
-    if (it.type === 'comment' && !byRoot.has(it.id)) continue
+    // a reply renders inside its root; a thread the viewer hid (Notes: none) is not drawn, nor is its tether
+    if (it.type === 'comment' && (!byRoot.has(it.id) || shownAs(it.id) === 'hidden')) continue
     push(it)
     const about = it.type === 'comment' && it.target ? byId[it.target] : undefined
     if (about && about.type !== 'arrow' && about.type !== 'comment') {

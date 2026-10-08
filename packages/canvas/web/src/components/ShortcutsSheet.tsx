@@ -55,6 +55,7 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       ['⌥ ← / ⌥ →', 'Back to where the view was before a jump (a panel link, a locate, ⌘K, a focus) / forward again'],
       ['W', 'Lines inside diagrams: all → selected only → none (also in the settings in the bottom-right corner)'],
       ['Shift+W', 'Traces between diagrams: all → faded → bundled → selected only → none'],
+      ['Shift+N', 'Comments: all → folded into markers → none (a proposal that was applied folds into a ✓ by itself; click it to read)'],
       ['?', 'This list'],
     ],
   },

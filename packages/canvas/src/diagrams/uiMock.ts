@@ -34,9 +34,34 @@ const tone = z.enum(['neutral', 'info', 'success', 'warning', 'danger'])
 const size = z.enum(['sm', 'md', 'lg'])
 const listItem = z.union([
   z.string(),
-  z.object({ id: z.string().optional(), text: z.string(), meta: z.string().optional(), icon: z.string().optional(), badge: z.string().optional(), active: z.boolean().optional() }),
+  z.object({
+    id: z.string().optional(),
+    text: z.string(),
+    meta: z.string().optional(),
+    icon: z.string().optional(),
+    badge: z.string().optional(),
+    active: z.boolean().optional(),
+    /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+    note: z.string().optional(),
+  }),
 ])
 export type UiListItemInput = z.input<typeof listItem>
+const cell = z.union([z.string(), z.number()])
+/** A table row: its cells, or `{ cells, note }` when the row carries a design note. */
+const tableRow = z.union([z.array(cell), z.object({ cells: z.array(cell), note: z.string().optional() })])
+export type UiRowInput = z.input<typeof tableRow>
+export type UiCell = string | number
+
+/**
+ * The gutter: a column right of every screen where its notes and comment threads live, so nothing sits on the
+ * product (docs/diagrams.md §6c). `place.ts` puts later comments there too, and the frame fits around it.
+ */
+export const UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 } as const
+/** The gutter column of a drawn screen (a `ui` item with role `screen`), from its geometry. */
+export function uiGutterOf(screen: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } {
+  return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h }
+}
+export const isUiScreen = (it: { type: string; role?: unknown } | undefined): boolean => !!it && it.type === 'ui' && it.role === 'screen'
 
 export interface UiNodeInput {
   type: UiType
@@ -61,7 +86,7 @@ export interface UiNodeInput {
   items?: UiListItemInput[]
   active?: string | number
   columns?: string[]
-  rows?: Array<Array<string | number>>
+  rows?: UiRowInput[]
   value?: string | number
   placeholder?: string
   hint?: string
@@ -69,6 +94,7 @@ export interface UiNodeInput {
   ratio?: string
   delta?: string
   note?: string
+  sample?: boolean
   goto?: string
   traces?: Trace[]
 }
@@ -107,7 +133,8 @@ export const uiNodeSchema: z.ZodType<UiNodeInput> = z.lazy(() =>
     /** The selected entry of items: its text or index. */
     active: z.union([z.string(), z.number()]).optional(),
     columns: z.array(z.string()).optional(),
-    rows: z.array(z.array(z.union([z.string(), z.number()]))).optional(),
+    /** table: `[cells]` per row, or `{ cells, note }` for a row with a design note; chart: `[[numbers]]`. */
+    rows: z.array(tableRow).optional(),
     value: z.union([z.string(), z.number()]).optional(),
     placeholder: z.string().optional(),
     hint: z.string().optional(),
@@ -116,8 +143,10 @@ export const uiNodeSchema: z.ZodType<UiNodeInput> = z.lazy(() =>
     ratio: z.string().optional(),
     /** stat: '+12%' / '-3' — the change, coloured by its sign. */
     delta: z.string().optional(),
-    /** An open question about this element (a comment bubble on the board). */
+    /** An open question about this element (a comment in the gutter beside the screen, never on it). */
     note: z.string().optional(),
+    /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
+    sample: z.boolean().optional(),
     /** Tapping this element goes to that screen: a flow arrow. */
     goto: z.string().optional(),
     traces: z.array(traceSchema).optional(),
@@ -152,6 +181,8 @@ export const uiMockSchema = z.object({
         pad: z.number().min(0).optional(),
         gap: z.number().min(0).optional(),
         note: z.string().optional(),
+        /** The whole screen shows sample data (see the element's `sample`). */
+        sample: z.boolean().optional(),
         traces: z.array(traceSchema).optional(),
         body: z.array(uiNodeSchema).default([]),
       }),
@@ -166,7 +197,7 @@ export type UiMockContent = z.input<typeof uiMockSchema>
 
 export type UiPath = Array<string | number>
 
-export interface UiItem { id: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean }
+export interface UiItem { id: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean; note?: string }
 
 export interface UiEl {
   /** id within the screen */
@@ -180,7 +211,12 @@ export interface UiEl {
   /** where the element sits in the file: ['screens', 0, 'body', 2, 'children', 1] */
   path: UiPath
   children: UiEl[]
-  props: Omit<UiNodeInput, 'type' | 'id' | 'text' | 'label' | 'children' | 'note' | 'goto' | 'traces' | 'items'> & { items?: UiItem[] }
+  /**
+   * What the board's `data.ui` carries: the props as written, with `items[i].note`, table `rows` always as
+   * cell arrays and their notes in `rowNotes` (keyed by the row index as a string, present only when there is
+   * one), and `sample: true` only when set.
+   */
+  props: Omit<UiNodeInput, 'type' | 'id' | 'text' | 'label' | 'children' | 'note' | 'goto' | 'traces' | 'items' | 'rows' | 'sample'> & { items?: UiItem[]; rows?: UiCell[][]; rowNotes?: Record<string, string>; sample?: true }
   note?: string
   goto?: string
   traces: Trace[]
@@ -198,6 +234,7 @@ export interface UiScreen {
   gap: number
   theme: UiTheme
   note?: string
+  sample?: true
   traces: Trace[]
   path: UiPath
   body: UiEl[]
@@ -212,8 +249,20 @@ function itemsOf(items: UiListItemInput[] | undefined, active: string | number |
   return items.map((it, i) => {
     const o = typeof it === 'string' ? { text: it } : it
     const isActive = o.active ?? (active !== undefined && (active === i || active === o.text || active === o.id))
-    return { id: o.id ?? (slugify(o.text) || `item-${i + 1}`), text: o.text, ...(o.meta ? { meta: o.meta } : {}), ...(o.icon ? { icon: o.icon } : {}), ...(o.badge ? { badge: o.badge } : {}), ...(isActive ? { active: true } : {}) }
+    return { id: o.id ?? (slugify(o.text) || `item-${i + 1}`), text: o.text, ...(o.meta ? { meta: o.meta } : {}), ...(o.icon ? { icon: o.icon } : {}), ...(o.badge ? { badge: o.badge } : {}), ...(isActive ? { active: true } : {}), ...(o.note ? { note: o.note } : {}) }
   })
+}
+
+/** Table rows as the board draws them (cell arrays, whichever way the file wrote them) and the notes some carry. */
+function rowsOf(rows: UiRowInput[] | undefined): { rows?: UiCell[][]; rowNotes?: Record<string, string> } {
+  if (!rows) return {}
+  const notes: Record<string, string> = {}
+  const cells = rows.map((r, i) => {
+    if (Array.isArray(r)) return r
+    if (r.note) notes[String(i)] = r.note
+    return r.cells
+  })
+  return { rows: cells, ...(Object.keys(notes).length ? { rowNotes: notes } : {}) }
 }
 
 /** Ids for every screen and element (element ids unique per screen), defaults filled in. */
@@ -235,7 +284,7 @@ export function normalizeUiMock(raw: UiMockContent): UiModel {
       return id
     }
     const el = (n: UiNodeInput, path: UiPath): UiEl => {
-      const { type, id: _id, text, label, children, note, goto, traces, items, ...props } = n
+      const { type, id: _id, text, label, children, note, goto, traces, items, rows, sample, ...props } = n
       const words = text ?? label
       const id = alloc(n.id, words, type)
       return {
@@ -246,7 +295,7 @@ export function normalizeUiMock(raw: UiMockContent): UiModel {
         textKey: text === undefined && label !== undefined ? 'label' : 'text',
         path,
         children: (children ?? []).map((ch, i) => el(ch, [...path, 'children', i])),
-        props: { ...props, ...(items ? { items: itemsOf(items, n.active) } : {}) },
+        props: { ...props, ...(items ? { items: itemsOf(items, n.active) } : {}), ...rowsOf(rows), ...(sample ? { sample: true as const } : {}) },
         ...(note ? { note } : {}),
         ...(goto ? { goto } : {}),
         traces: traces ?? [],
@@ -262,6 +311,7 @@ export function normalizeUiMock(raw: UiMockContent): UiModel {
       gap: s.gap ?? 0,
       theme,
       ...(s.note ? { note: s.note } : {}),
+      ...(s.sample ? { sample: true as const } : {}),
       traces: s.traces ?? [],
       path: ['screens', si],
       body: s.body.map((n, i) => el(n, ['screens', si, 'body', i])),
@@ -537,7 +587,41 @@ export function layoutScreen(s: UiScreen): { w: number; h: number; boxes: UiBox[
 
 export interface UiFinding { severity: 'warning' | 'info'; message: string; element?: string }
 
-/** What would draw oddly or point nowhere: unknown screens in flows, ragged tables, unknown icons. */
+/**
+ * Words that mark a design note, not product text (rule `ui-text-reads-like-a-note`): the Latin ones as whole
+ * words, case-insensitively ("Open" the button label is a hit, `reopen` is not); the Chinese ones anywhere.
+ */
+export const NOTE_WORDS = ['OPEN', 'TBD', 'TODO', 'FIXME', 'sample', 'proposal', 'proposed', 'placeholder', 'lorem'] as const
+export const NOTE_WORDS_CJK = ['待定', '待確認', '待決定', '示例', '範例', '假資料', '提案'] as const
+const NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join('|')})(?![\\p{L}\\p{N}_])`, 'iu')
+export const NOTE_RULE = 'ui-text-reads-like-a-note'
+export const NOTE_RULE_MESSAGE = 'reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here'
+
+/** The note word a product text contains, if any. */
+export function noteWordIn(text: string): string | undefined {
+  const latin = NOTE_WORD_RE.exec(text)
+  if (latin) return latin[0]
+  return NOTE_WORDS_CJK.find((w) => text.includes(w))
+}
+
+/** Every product-facing text of an element, with where it sits (`text`, `items[2].meta`, `rows[1][0]`, `columns[0]`). */
+function productTexts(e: UiEl): Array<{ at: string; text: string }> {
+  const out: Array<{ at: string; text: string }> = []
+  const p = e.props
+  if (e.text) out.push({ at: e.textKey, text: e.text })
+  if (p.placeholder) out.push({ at: 'placeholder', text: p.placeholder })
+  if (p.hint) out.push({ at: 'hint', text: p.hint })
+  if (typeof p.value === 'string' && p.value) out.push({ at: 'value', text: p.value })
+  p.items?.forEach((it, i) => {
+    out.push({ at: `items[${i}].text`, text: it.text })
+    if (it.meta) out.push({ at: `items[${i}].meta`, text: it.meta })
+  })
+  p.columns?.forEach((c, i) => out.push({ at: `columns[${i}]`, text: c }))
+  if (e.type === 'table') p.rows?.forEach((r, i) => r.forEach((c, j) => typeof c === 'string' && out.push({ at: `rows[${i}][${j}]`, text: c })))
+  return out
+}
+
+/** What would draw oddly or point nowhere: unknown screens in flows, ragged tables, unknown icons, note words in product text. */
 export function checkUiMock(raw: UiMockContent): UiFinding[] {
   const m = normalizeUiMock(raw)
   const out: UiFinding[] = []
@@ -556,6 +640,10 @@ export function checkUiMock(raw: UiMockContent): UiFinding[] {
       if (e.type === 'button' && !e.text && !e.props.icon) out.push({ severity: 'warning', element: e.ref, message: 'a button with neither text nor icon' })
       if (e.children.length && !isLayout(e.type) && !isDrawnContainer(e.type)) out.push({ severity: 'warning', element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) — they are not drawn` })
       if (e.props.active !== undefined && e.props.items && !e.props.items.some((i) => i.active)) out.push({ severity: 'info', element: e.ref, message: `active "${e.props.active}" is none of its items` })
+      for (const t of productTexts(e)) {
+        const word = noteWordIn(t.text)
+        if (word) out.push({ severity: 'warning', element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` })
+      }
     }
     for (const [id, n] of explicit) if (n > 1) out.push({ severity: 'warning', element: `${s.id}/${id}`, message: `id "${id}" is used ${n} times in screen ${s.id}; the others become ${id}-2 …` })
   }
@@ -564,6 +652,11 @@ export function checkUiMock(raw: UiMockContent): UiFinding[] {
     if (!screens.has(f.from) && !refs.has(f.from)) out.push({ severity: 'warning', message: `flow from "${f.from}": no such screen or <screen>/<element>` })
   }
   return out
+}
+
+const shortText = (s: string, n = 48) => {
+  const t = s.replace(/\s+/g, ' ').trim()
+  return t.length > n ? t.slice(0, n - 1) + '…' : t
 }
 
 /** A place in the file as `awd design lint` writes it: `screens[0].body[2].children[1]`. */

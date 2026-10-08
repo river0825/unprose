@@ -1335,6 +1335,27 @@ textarea.selected-title:focus {
   outline: 2px solid var(--marker);
   outline-offset: 2px;
 }
+/* a settled proposal (applied by the holder, or declined) folds into a ✓ — graphite, no author colour, no dot
+   (flow/notesView.ts); a click opens the thread for this viewer */
+.comment-badge.done {
+  border-color: var(--rule-2);
+  color: var(--ink-3);
+  background: var(--paper);
+}
+.comment-badge.done:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.comment-badge.done svg {
+  width: 13px;
+  height: 13px;
+}
+/* a folded comment the pointer points at through a ⓘ or a panel link */
+.react-flow__node.panel-hover > .comment-badge {
+  outline: 3px solid var(--marker);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px var(--marker-soft);
+}
 
 /* arrow labels: HTML so they can be edited in place */
 .edge-label {

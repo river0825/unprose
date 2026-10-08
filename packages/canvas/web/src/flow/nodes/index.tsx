@@ -336,14 +336,14 @@ export function WireframeNode({ data, selected }: NodeProps<ItemNode>) {
 const Tether = () => <Handle id="tether" type="source" position={Position.Top} isConnectable={false} className="tether-handle" />
 
 export function CommentNode({ data, selected }: NodeProps<ItemNode>) {
-  const { item, pulse, open, replies } = data
+  const { item, pulse, open, done, replies } = data
   const edit = useEdit()
   const messages = [item, ...replies]
   if (!open && !messages.some((m) => m.id === edit.editingId))
     return (
       <>
         <Tether />
-        <CommentBadge messages={messages} pulse={pulse} />
+        <CommentBadge messages={messages} pulse={pulse} done={done} />
       </>
     )
   return (

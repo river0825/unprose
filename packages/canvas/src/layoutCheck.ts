@@ -2,18 +2,20 @@
 // overlap their siblings, text that is likely cut off, items outside their parent or off their lane, items far
 // larger than their siblings (or than the template's sticky), and items the page draws somewhere other than their
 // stored coordinates (kanban stacking), wire labels and domain-story number circles that collide with each other or
-// with a card, domain-story group outlines that intersect. Each finding says what to do in plain words. Shared by the server
+// with a card, domain-story group outlines that intersect, comments that cover an item or lie outside the diagram
+// frame their target is in. Each finding says what to do in plain words. Shared by the server
 // (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
 import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
 import { EDGE_LABEL, labelControl, labelHits, labelLines, labelSize } from './edgeLabel.js'
 import { DS_SEQ, labelObstacles, planWires, seqBox, wireText } from './wireGeometry.js'
+import { isUiScreen, uiGutterOf } from './diagrams/uiMock.js'
 /** The template sticky (templates/util.ts STICKY_W × STICKY_H) — not imported: util.ts pulls node:crypto, and the web bundles this file. */
 const STICKY_W = 160
 const STICKY_H = 110
 
-export type LayoutKind = 'overlap' | 'clipped' | 'group' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout'
+export type LayoutKind = 'overlap' | 'clipped' | 'group' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout' | 'comment-covers' | 'comment-outside'
 
 export interface LayoutFinding {
   /** the item the finding is about */
@@ -26,6 +28,8 @@ export interface LayoutFinding {
   others?: string[]
   /** the diagram key the item belongs to */
   frame?: string
+  /** how much it matters; absent = a layout defect worth fixing (the comment findings are information) */
+  severity?: 'info'
 }
 
 export interface LayoutReport {
@@ -48,7 +52,7 @@ export class LayoutError extends Error {
   }
 }
 
-const KINDS: LayoutKind[] = ['clipped', 'overlap', 'group', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout']
+const KINDS: LayoutKind[] = ['clipped', 'overlap', 'group', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout', 'comment-covers', 'comment-outside']
 
 /** Overlaps smaller than this (in both directions) are hairline touches, not overlaps. */
 const OVERLAP_TOL = 6
@@ -335,6 +339,56 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
           : `move ${nameOf(z)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`
       add(m2.wire, { kind: 'label', message: `${m2.what} ${m1.circle || m2.circle ? 'collides with' : 'overlaps'} ${m1.wire.id === m2.wire.id ? 'its own ' : ''}${m1.what} (${r(ox)}×${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] })
     }
+
+  // ---- comments: on an item instead of beside it, or outside the diagram frame their target is in ----
+  // The paper (a diagram frame, a lane) is where a comment sits, never what it covers; a UI-mock screen is the product.
+  const paper = (it: Item) => it.type === 'frame' || it.type === 'lane'
+  const coverable = Object.values(shown.items).filter((it) => it.type !== 'arrow' && it.type !== 'comment' && !paper(it) && it.w > 8 && it.h > 8)
+  const uiScreenOf = (it: Item): Item | undefined => {
+    const seen = new Set<string>()
+    for (let cur: Item | undefined = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : undefined) {
+      if (isUiScreen(cur)) return cur
+      seen.add(cur.id)
+    }
+    return undefined
+  }
+  for (const c of Object.values(shown.items)) {
+    if (c.type !== 'comment' || c.w <= 8 || c.h <= 8) continue
+    const t = c.target ? shown.items[c.target] : undefined
+    if (root && !inside(shown, c, root) && !(t && inScope.has(t.id))) continue
+    const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c)
+    const screen = t ? uiScreenOf(t) : undefined
+    const gutter = screen ? uiGutterOf(screen) : undefined
+    const label = `comment "${short(c.text, 32)}"${t ? ` on ${nameOf(t)}` : ''}`
+    const into = gutter && screen && t ? `move it into the gutter right of ${nameOf(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) — notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf(t)} onto free paper, or add it without x/y so the canvas places it` : 'move it onto free paper'
+    const push = (f: Omit<LayoutFinding, 'id' | 'frame' | 'severity'>) => found.push({ id: c.id, ...f, severity: 'info', ...(info?.key ? { frame: info.key } : {}) })
+    const covered = coverable
+      .map((it) => ({ it, ox: Math.min(c.x + c.w, it.x + it.w) - Math.max(c.x, it.x), oy: Math.min(c.y + c.h, it.y + it.h) - Math.max(c.y, it.y) }))
+      .filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL)
+      .sort((a, b) => byReading(a.it, b.it))
+    if (covered.length) {
+      const names = covered.slice(0, 3).map((o) => nameOf(o.it)).join(', ')
+      const more = covered.length > 3 ? ` and ${covered.length - 3} more` : ''
+      // the measure names the most covered leaf (a heading, a button), not the screen or card behind it
+      const leaves = covered.filter((o) => !isContainer(o.it))
+      const worst = (leaves.length ? leaves : covered).reduce((a, b) => (a.ox * a.oy >= b.ox * b.oy ? a : b))
+      push({ kind: 'comment-covers', message: `${label} covers ${names}${more} (${r(worst.ox)}×${r(worst.oy)} px on ${nameOf(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) })
+    }
+    if (!t || !info?.frameId) continue
+    const f = shown.items[info.frameId]
+    if (!f) continue
+    const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) }
+    if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL) continue
+    const sides = (Object.entries(out) as Array<[string, number]>).filter(([, v]) => v > OUTSIDE_TOL).map(([s, v]) => `${r(v)} px past the ${s}`)
+    const nx = Math.min(Math.max(c.x, f.x + 10), f.x + f.w - c.w - 10)
+    const ny = Math.min(Math.max(c.y, f.y + 10), f.y + f.h - c.h - 10)
+    push({
+      kind: 'comment-outside',
+      message: `${label} is outside its frame ${nameOf(f)}: ${sides.join(', ')}`,
+      suggestion: gutter ? `${into}, or grow the frame to hold the gutter` : `move it inside the frame beside ${nameOf(t)} (x ${r(nx)}, y ${r(ny)}), or grow the frame`,
+      others: [f.id, t.id],
+    })
+  }
 
   // ---- drawn somewhere else than stored ----
   for (const d of shownDifferences(board)) {

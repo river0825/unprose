@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.20.0";
+    VERSION2 = "0.21.0";
   }
 });
 
@@ -58224,14 +58224,30 @@ var init_unknownFields = __esm({
 });
 
 // packages/canvas/dist/diagrams/uiMock.js
+function uiGutterOf(screen) {
+  return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h };
+}
 function itemsOf(items, active) {
   if (!items)
     return void 0;
   return items.map((it, i) => {
     const o = typeof it === "string" ? { text: it } : it;
     const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
-    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {} };
+    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {}, ...o.note ? { note: o.note } : {} };
   });
+}
+function rowsOf(rows) {
+  if (!rows)
+    return {};
+  const notes = {};
+  const cells = rows.map((r, i) => {
+    if (Array.isArray(r))
+      return r;
+    if (r.note)
+      notes[String(i)] = r.note;
+    return r.cells;
+  });
+  return { rows: cells, ...Object.keys(notes).length ? { rowNotes: notes } : {} };
 }
 function normalizeUiMock(raw) {
   const c2 = uiMockSchema.parse(raw);
@@ -58253,7 +58269,7 @@ function normalizeUiMock(raw) {
       return id;
     };
     const el = (n, path24) => {
-      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, ...props } = n;
+      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n;
       const words = text3 ?? label2;
       const id = alloc(n.id, words, type);
       return {
@@ -58264,7 +58280,7 @@ function normalizeUiMock(raw) {
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
         path: path24,
         children: (children ?? []).map((ch, i) => el(ch, [...path24, "children", i])),
-        props: { ...props, ...items ? { items: itemsOf(items, n.active) } : {} },
+        props: { ...props, ...items ? { items: itemsOf(items, n.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
         traces: traces2 ?? []
@@ -58280,6 +58296,7 @@ function normalizeUiMock(raw) {
       gap: s.gap ?? 0,
       theme,
       ...s.note ? { note: s.note } : {},
+      ...s.sample ? { sample: true } : {},
       traces: s.traces ?? [],
       path: ["screens", si],
       body: s.body.map((n, i) => el(n, ["screens", si, "body", i]))
@@ -58289,6 +58306,33 @@ function normalizeUiMock(raw) {
 }
 function walkUi(els) {
   return els.flatMap((e) => [e, ...walkUi(e.children)]);
+}
+function noteWordIn(text3) {
+  const latin = NOTE_WORD_RE.exec(text3);
+  if (latin)
+    return latin[0];
+  return NOTE_WORDS_CJK.find((w2) => text3.includes(w2));
+}
+function productTexts(e) {
+  const out = [];
+  const p = e.props;
+  if (e.text)
+    out.push({ at: e.textKey, text: e.text });
+  if (p.placeholder)
+    out.push({ at: "placeholder", text: p.placeholder });
+  if (p.hint)
+    out.push({ at: "hint", text: p.hint });
+  if (typeof p.value === "string" && p.value)
+    out.push({ at: "value", text: p.value });
+  p.items?.forEach((it, i) => {
+    out.push({ at: `items[${i}].text`, text: it.text });
+    if (it.meta)
+      out.push({ at: `items[${i}].meta`, text: it.meta });
+  });
+  p.columns?.forEach((c2, i) => out.push({ at: `columns[${i}]`, text: c2 }));
+  if (e.type === "table")
+    p.rows?.forEach((r, i) => r.forEach((c2, j2) => typeof c2 === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c2 })));
+  return out;
 }
 function checkUiMock(raw) {
   const m2 = normalizeUiMock(raw);
@@ -58316,6 +58360,11 @@ function checkUiMock(raw) {
         out.push({ severity: "warning", element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) \u2014 they are not drawn` });
       if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
         out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
+      for (const t of productTexts(e)) {
+        const word = noteWordIn(t.text);
+        if (word)
+          out.push({ severity: "warning", element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` });
+      }
     }
     for (const [id, n] of explicit)
       if (n > 1)
@@ -58381,7 +58430,7 @@ function attachUiFindings(items, raw) {
     return { ...it, data: { ...it.data, ui: mine ? { ...rest, findings: mine } : rest } };
   });
 }
-var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, listItem, uiNodeSchema, uiMockSchema, DEFAULT_ACCENT, isDrawnContainer, isLayout, uiPathText;
+var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, listItem, cell, tableRow, UI_GUTTER, isUiScreen, uiNodeSchema, uiMockSchema, DEFAULT_ACCENT, isDrawnContainer, isLayout, NOTE_WORDS, NOTE_WORDS_CJK, NOTE_WORD_RE, NOTE_RULE, NOTE_RULE_MESSAGE, shortText, uiPathText;
 var init_uiMock = __esm({
   "packages/canvas/dist/diagrams/uiMock.js"() {
     init_zod();
@@ -58459,8 +58508,21 @@ var init_uiMock = __esm({
     size = external_exports.enum(["sm", "md", "lg"]);
     listItem = external_exports.union([
       external_exports.string(),
-      external_exports.object({ id: external_exports.string().optional(), text: external_exports.string(), meta: external_exports.string().optional(), icon: external_exports.string().optional(), badge: external_exports.string().optional(), active: external_exports.boolean().optional() })
+      external_exports.object({
+        id: external_exports.string().optional(),
+        text: external_exports.string(),
+        meta: external_exports.string().optional(),
+        icon: external_exports.string().optional(),
+        badge: external_exports.string().optional(),
+        active: external_exports.boolean().optional(),
+        /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+        note: external_exports.string().optional()
+      })
     ]);
+    cell = external_exports.union([external_exports.string(), external_exports.number()]);
+    tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
+    UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 };
+    isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
     uiNodeSchema = external_exports.lazy(() => external_exports.object({
       type: external_exports.enum(UI_TYPES),
       /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
@@ -58494,7 +58556,8 @@ var init_uiMock = __esm({
       /** The selected entry of items: its text or index. */
       active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
       columns: external_exports.array(external_exports.string()).optional(),
-      rows: external_exports.array(external_exports.array(external_exports.union([external_exports.string(), external_exports.number()]))).optional(),
+      /** table: `[cells]` per row, or `{ cells, note }` for a row with a design note; chart: `[[numbers]]`. */
+      rows: external_exports.array(tableRow).optional(),
       value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
       placeholder: external_exports.string().optional(),
       hint: external_exports.string().optional(),
@@ -58503,8 +58566,10 @@ var init_uiMock = __esm({
       ratio: external_exports.string().optional(),
       /** stat: '+12%' / '-3' — the change, coloured by its sign. */
       delta: external_exports.string().optional(),
-      /** An open question about this element (a comment bubble on the board). */
+      /** An open question about this element (a comment in the gutter beside the screen, never on it). */
       note: external_exports.string().optional(),
+      /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
+      sample: external_exports.boolean().optional(),
       /** Tapping this element goes to that screen: a flow arrow. */
       goto: external_exports.string().optional(),
       traces: external_exports.array(traceSchema).optional()
@@ -58533,6 +58598,8 @@ var init_uiMock = __esm({
         pad: external_exports.number().min(0).optional(),
         gap: external_exports.number().min(0).optional(),
         note: external_exports.string().optional(),
+        /** The whole screen shows sample data (see the element's `sample`). */
+        sample: external_exports.boolean().optional(),
         traces: external_exports.array(traceSchema).optional(),
         body: external_exports.array(uiNodeSchema).default([])
       })).min(1),
@@ -58542,6 +58609,15 @@ var init_uiMock = __esm({
     DEFAULT_ACCENT = "#4f46e5";
     isDrawnContainer = (t) => UI_BOXES.includes(t);
     isLayout = (t) => UI_LAYOUT.includes(t);
+    NOTE_WORDS = ["OPEN", "TBD", "TODO", "FIXME", "sample", "proposal", "proposed", "placeholder", "lorem"];
+    NOTE_WORDS_CJK = ["\u5F85\u5B9A", "\u5F85\u78BA\u8A8D", "\u5F85\u6C7A\u5B9A", "\u793A\u4F8B", "\u7BC4\u4F8B", "\u5047\u8CC7\u6599", "\u63D0\u6848"];
+    NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
+    NOTE_RULE = "ui-text-reads-like-a-note";
+    NOTE_RULE_MESSAGE = "reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here";
+    shortText = (s, n = 48) => {
+      const t = s.replace(/\s+/g, " ").trim();
+      return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
+    };
     uiPathText = (p) => p.map((k2) => typeof k2 === "number" ? `[${k2}]` : `.${k2}`).join("").replace(/^\./, "");
   }
 });
@@ -59196,6 +59272,7 @@ var init_frame = __esm({
   "packages/canvas/dist/templates/frame.js"() {
     init_model();
     init_ids2();
+    init_uiMock();
     init_util2();
   }
 });
@@ -59344,7 +59421,7 @@ function growFrame(frame, drawn, placed, pad = 20) {
   if (placed.has(frame.id))
     return void 0;
   const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
-  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id);
+  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) }) }] : [it]);
   if (!boxes.length)
     return void 0;
   const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
@@ -65260,6 +65337,7 @@ var init_thumb = __esm({
 // packages/canvas/dist/place.js
 var init_place = __esm({
   "packages/canvas/dist/place.js"() {
+    init_uiMock();
   }
 });
 
@@ -67877,7 +67955,7 @@ ${CLOSE}`
         arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
         fallback: "the screen we are discussing \u2014 ask me which one",
         body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
-Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question (on the screen, an element, a list item or a table row \u2014 notes are drawn in a gutter beside the screen, never on it; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
 When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
       },
@@ -76947,7 +77025,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.20.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.21.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -77046,7 +77124,7 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
   });
   server.registerTool("canvas_add_items", {
     title: "Render a template onto an existing board",
-    description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist \u2014 re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } \u2014 leave x/y out and the server places it beside the target without covering anything.
+    description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist \u2014 re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } \u2014 leave x/y out and the server places it beside the target without covering anything (a target in a UI mock gets it in the gutter right of its screen, never on the product).
 
 ${CONTENT_HELP}`,
     inputSchema: {
@@ -77179,7 +77257,7 @@ ${svg2}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -77573,6 +77651,7 @@ var init_layoutCheck = __esm({
     init_textMetrics();
     init_edgeLabel();
     init_wireGeometry();
+    init_uiMock();
   }
 });
 

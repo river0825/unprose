@@ -200,3 +200,23 @@ test('drawing from a file (CLI or remote design_draw): the findings of the file 
   const drawn = withDesignFindings(d, served)
   assert.match(uiFindingsOf(drawn.find((i) => i.id === `${d.key}.ui.s.t`))[0].message, /unknown field `colour`/)
 })
+
+test('a table-cell edit lands in rows[r].cells[c] when the file wrote that row with a note, and in rows[r][c] otherwise', () => {
+  const file = `screens:
+  - id: home
+    name: Home
+    body:
+      - type: table
+        id: orders
+        columns: [Order, Total]
+        rows:
+          - [A-1, 42]
+          - cells: [A-2, 7]
+            note: why seven?
+`
+  const plain = applyUiPending(file, { kind: 'text', before: { text: '42' }, after: { text: '43' }, path: ['screens', 0, 'body', 0], key: 'rows', sub: ['rows', 0, 1], by: 'user', at: NOW }, 'home/orders')
+  assert.match(plain, /- \[A-1, 43\]/)
+  const noted = applyUiPending(file, { kind: 'text', before: { text: '7' }, after: { text: '8' }, path: ['screens', 0, 'body', 0], key: 'rows', sub: ['rows', 1, 1], by: 'user', at: NOW }, 'home/orders')
+  assert.match(noted, /cells: \[A-2, 8\]/)
+  assert.match(noted, /note: why seven\?/)
+})

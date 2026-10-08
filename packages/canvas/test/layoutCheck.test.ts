@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { Board, Item } from '../src/model.js'
 import { checkLayout, layoutLines, LayoutError } from '../src/layoutCheck.js'
 import { render, contentSchemas } from '../src/templates/index.js'
+import { placeInFrame } from '../src/templates/frame.js'
 import { demoBoards } from '../src/demo.js'
 
 const now = '2026-10-02T00:00:00.000Z'
@@ -115,4 +116,45 @@ test('template renders are clean: no overlaps, clipped text or oversized items',
     const bad = checkLayout(b).findings.filter((f) => f.kind === 'overlap' || f.kind === 'clipped' || f.kind === 'oversized')
     assert.deepEqual(bad.map((f) => `${f.kind}: ${f.message}`), [], d.title)
   }
+})
+
+test('comments: a drawn UI mock has none on its screens; a note moved onto the screen covers it; one outside the frame is said so', () => {
+  const ui = { screens: [{ id: 'home', name: 'Home', note: 'screen note', body: [{ type: 'heading', id: 'title', text: 'Boards', level: 1, note: 'element note' }, { type: 'button', id: 'go', text: 'Go' }] }] }
+  const parsed = contentSchemas['ui-mock'].parse(ui)
+  const { items } = placeInFrame({}, { kind: 'ui-mock', key: 'home-ui' }, render('ui-mock', parsed, { now, scope: 'home-ui' }), now)
+  const clean = board(items)
+  assert.deepEqual([...of(clean, 'comment-covers'), ...of(clean, 'comment-outside')], [])
+  // the element note dragged onto the screen, over the heading
+  const screen = clean.items['home-ui.screen.home']
+  const title = clean.items['home-ui.ui.home.title']
+  const moved = board(items.map((i) => (i.id === 'home-ui.note.home.title' ? { ...i, x: title.x + 20, y: title.y + 10 } : i)))
+  const covers = of(moved, 'comment-covers')
+  assert.equal(covers.length, 1)
+  assert.equal(covers[0].id, 'home-ui.note.home.title')
+  assert.equal(covers[0].severity, 'info')
+  assert.equal(covers[0].frame, 'home-ui')
+  assert.match(covers[0].message, /^comment "element note" on heading "Boards" covers screen "Home", heading "Boards", button "Go" \(\d+×\d+ px on heading "Boards"\)$/)
+  assert.match(covers[0].suggestion, /^move it into the gutter right of screen "Home" \(x \d+, y \d+\) — notes and threads live beside a screen, never on it$/)
+  assert.deepEqual(covers[0].others, [screen.id, title.id, "home-ui.ui.home.go"])
+  assert.equal(of(moved, 'comment-outside').length, 0)
+  // a later comment put beyond the frame's right edge (its target is in the frame)
+  const fr = clean.items["diagram.home-ui"]
+  const far = board([...items, item({ id: 'c1', type: 'comment', x: fr.x + fr.w + 100, y: fr.y + 60, w: 220, h: 80, text: 'late reply', target: 'home-ui.ui.home.go' })])
+  const outside = of(far, 'comment-outside')
+  assert.equal(outside.length, 1)
+  assert.equal(outside[0].id, 'c1')
+  assert.equal(outside[0].severity, 'info')
+  assert.match(outside[0].message, /^comment "late reply" on button "Go" is outside its frame diagram "home-ui": \d+ px past the right$/)
+  assert.match(outside[0].suggestion, /move it into the gutter right of screen "Home" \(x \d+, y \d+\) — notes and threads live beside a screen, never on it, or grow the frame to hold the gutter/)
+  assert.deepEqual(outside[0].others, ['diagram.home-ui', 'home-ui.ui.home.go'])
+  assert.equal(of(far, 'comment-covers').length, 0)
+  // the frame filter keeps them (the target is in the frame); the lines name the kinds
+  assert.equal(checkLayout(far, { frame: 'home-ui' }).counts['comment-outside'], 1)
+  assert.ok(layoutLines(checkLayout(far), far).some((l) => l.startsWith('- [comment-outside] comment "late reply"')))
+  // outside a UI mock: a comment beside a sticky on the lane is fine, one on the sticky covers it, with a generic fix
+  const es = board([frame('diagram.a', 'a'), item({ id: 's1', type: 'sticky', x: 40, y: 40, text: 'one', parent: 'diagram.a' }), item({ id: 'c2', type: 'comment', x: 212, y: 40, w: 220, h: 80, text: 'beside', target: 's1' }), item({ id: 'c3', type: 'comment', x: 60, y: 60, w: 220, h: 80, text: 'on it', target: 's1' })])
+  const esCovers = of(es, 'comment-covers')
+  assert.deepEqual(esCovers.map((f) => f.id), ['c3'])
+  assert.equal(esCovers[0].message, 'comment "on it" on sticky "one" covers sticky "one" (140×80 px on sticky "one")')
+  assert.equal(esCovers[0].suggestion, 'move it beside sticky "one" onto free paper, or add it without x/y so the canvas places it')
 })

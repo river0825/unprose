@@ -32,7 +32,7 @@ export function sameNode(prev: ItemNode, next: ItemNode): boolean {
   if (prev.parentId !== next.parentId || prev.extent !== next.extent || prev.zIndex !== next.zIndex || prev.className !== next.className || prev.dragHandle !== next.dragHandle) return false
   if (prev.draggable !== next.draggable || prev.selectable !== next.selectable || prev.connectable !== next.connectable || prev.hidden !== next.hidden) return false
   const [p, n] = [prev.data, next.data]
-  if (p.item !== n.item || p.pulse !== n.pulse || p.open !== n.open || p.childCount !== n.childCount || !sameList(p.replies, n.replies)) return false
+  if (p.item !== n.item || p.pulse !== n.pulse || p.open !== n.open || p.done !== n.done || p.childCount !== n.childCount || !sameList(p.replies, n.replies)) return false
   const [pd, nd] = [p.diagram, n.diagram]
   if (pd !== nd && (!pd || !nd || pd.kind !== nd.kind || pd.name !== nd.name || pd.key !== nd.key || pd.findings !== nd.findings)) return false
   return sameList(p.wireBadges, n.wireBadges, sameBadge)

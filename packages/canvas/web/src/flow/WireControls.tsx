@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { REL_NAMES } from '../diagrams/traces'
 import { DEFAULT_TRACE_VIEW, TRACE_MODES, TRACE_RELS, type TraceMode, type TraceView } from './traceView'
 import { WIRE_MODES, type WireBadge, type WireMode } from './catchAll'
+import { DEFAULT_NOTES_MODE, NOTES_MODE_NAMES, NOTES_MODES, type NotesMode } from './notesView'
 
 export interface WireView { mode: WireMode; catchAll: boolean }
 
@@ -50,11 +51,31 @@ const MODE_TIPS: Record<WireMode, string> = {
 }
 
 /**
- * What this viewer sees of the lines, in the bottom-right corner: one quiet button that says the current choice
- * ("Traces: selected · Wires: all") and opens the settings — the trace view (`children`), the wire modes and the
- * catch-all switch. Closed by default, closed again by Escape or a click elsewhere; W and Shift+W still cycle.
+ * What this viewer sees of the lines and the notes, in the bottom-right corner: one quiet button that says the
+ * current choice ("Traces: selected · Lines: all · Notes: badges") and opens the settings — the trace view
+ * (`children`), the wire modes, the catch-all switch and the notes modes (`after`). Closed by default, closed again
+ * by Escape or a click elsewhere; W, Shift+W and Shift+N still cycle.
  */
-export function WireControls({ view, onChange, hasCatchAll, traces, children }: { view: WireView; onChange: (patch: Partial<WireView>) => void; hasCatchAll: boolean; traces?: string; children?: ReactNode }) {
+export function WireControls({
+  view,
+  onChange,
+  hasCatchAll,
+  traces,
+  notes,
+  children,
+  after,
+}: {
+  view: WireView
+  onChange: (patch: Partial<WireView>) => void
+  hasCatchAll: boolean
+  traces?: string
+  /** the notes mode's name, when the board has comments */
+  notes?: string
+  /** the trace view, above the wire modes */
+  children?: ReactNode
+  /** the notes modes, below them */
+  after?: ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -94,10 +115,12 @@ export function WireControls({ view, onChange, hasCatchAll, traces, children }: 
                 Show catch-all wires
               </label>
             )}
+            {after}
           </div>
         )}
-        <button type="button" className="view-toggle" aria-expanded={open} title="Which lines are drawn: the lines inside diagrams (W cycles) and the traces between them (Shift+W)" onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="view-toggle" aria-expanded={open} title={`What is drawn: the lines inside diagrams (W cycles), the traces between them (Shift+W)${notes ? ' and the comments (Shift+N)' : ''}`} onClick={() => setOpen((v) => !v)}>
           {traces ? `Traces: ${traces} · ` : ''}Lines: {MODE_NAMES[view.mode].toLowerCase()}
+          {notes ? ` · Notes: ${notes}` : ''}
         </button>
       </div>
     </Panel>
@@ -171,6 +194,58 @@ export function TraceControls({ view, onChange }: { view: TraceView; onChange: (
         ))}
       </div>
     </>
+  )
+}
+
+const NOTES_KEY = 'awd.canvas.notes'
+
+function readNotes(): NotesMode {
+  try {
+    const v = JSON.parse(localStorage.getItem(NOTES_KEY) ?? 'null') as { mode?: unknown } | null
+    return NOTES_MODES.includes(v?.mode as NotesMode) ? (v!.mode as NotesMode) : DEFAULT_NOTES_MODE
+  } catch {
+    return DEFAULT_NOTES_MODE
+  }
+}
+
+/** The notes mode (flow/notesView.ts), remembered in this browser; `cycle` steps all → badges → none (Shift+N). */
+export function useNotesMode(): [NotesMode, (mode: NotesMode) => void, () => NotesMode] {
+  const [mode, setMode] = useState(readNotes)
+  const update = useCallback((next: NotesMode) => {
+    setMode(next)
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify({ mode: next }))
+    } catch {
+      // a per-viewer preference only; losing it is harmless
+    }
+  }, [])
+  const cycle = useCallback(() => {
+    const next = NOTES_MODES[(NOTES_MODES.indexOf(mode) + 1) % NOTES_MODES.length]
+    update(next)
+    return next
+  }, [mode, update])
+  return [mode, update, cycle]
+}
+
+const NOTES_MODE_TIPS: Record<NotesMode, string> = {
+  all: 'Draw every comment as you left it, open or folded; a proposal that was applied folds into a ✓',
+  badges: 'Fold every comment into a small marker at what it is about — click one to read it',
+  none: 'Draw no comment (the panel’s Chats tab still lists them)',
+}
+
+/** The notes part of the settings: the three modes, shown when the board has comments. */
+export function NotesControls({ mode, onChange }: { mode: NotesMode; onChange: (mode: NotesMode) => void }) {
+  return (
+    <div className="wire-modes" role="radiogroup" aria-label="Notes shown (Shift+N)">
+      <span className="wire-modes-label" aria-hidden="true">
+        Notes
+      </span>
+      {NOTES_MODES.map((m) => (
+        <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} title={`${NOTES_MODE_TIPS[m]} (Shift+N cycles)`} onClick={() => onChange(m)}>
+          {NOTES_MODE_NAMES[m]}
+        </button>
+      ))}
+    </div>
   )
 }
 

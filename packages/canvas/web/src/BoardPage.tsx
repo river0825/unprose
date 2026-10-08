@@ -35,8 +35,9 @@ import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
 import { useStoredSet } from './flow/storedSet'
-import { TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useTraceView, useWireView } from './flow/WireControls'
+import { NotesControls, TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useNotesMode, useTraceView, useWireView } from './flow/WireControls'
 import { applyTraceView, traceCounts, TRACE_MODES } from './flow/traceView'
+import { hasComments, noteCommentOf, notesShown, NOTES_MODE_NAMES, type CommentShown, type NotesMode } from './flow/notesView'
 import { sameWorkObject } from './diagrams/sameObject'
 import { applyWireMode, catchAllWires, type WireBadge } from './flow/catchAll'
 import { useBoard } from './store'
@@ -97,6 +98,12 @@ function isInside(board: Board, id: string, container: string): boolean {
 
 const snap = (n: number) => Math.round(n / 10) * 10
 const NO_PULSE: ReadonlySet<string> = new Set()
+const NO_COMMENTS: ReadonlyMap<string, CommentShown> = new Map()
+const sameShown = (a: ReadonlyMap<string, CommentShown>, b: ReadonlyMap<string, CommentShown>) => {
+  if (a.size !== b.size) return false
+  for (const [k, v] of a) if (b.get(k) !== v) return false
+  return true
+}
 const PRO_OPTIONS = { hideAttribution: true }
 const CROSSHAIR: CSSProperties = { cursor: 'crosshair' }
 const miniMapColor = (n: Node) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`
@@ -147,6 +154,21 @@ function BoardInner({ id }: { id: string }) {
   const [traceView, setTraceView] = useTraceView()
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [openBundles, setOpenBundles] = useState<Set<string>>(() => new Set())
+  // which comments this viewer sees (flow/notesView.ts): all / badges / none; `expandedNotes` are the threads opened
+  // in this session beyond the stored set — a settled proposal's ✓, a badge in `badges` mode — and empty again on a mode change
+  const [notesMode, setNotesModeStored, cycleNotesStored] = useNotesMode()
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(() => new Set())
+  const setNotesMode = useCallback(
+    (m: NotesMode) => {
+      setNotesModeStored(m)
+      setExpandedNotes((prev) => (prev.size ? new Set() : prev))
+    },
+    [setNotesModeStored],
+  )
+  const cycleNotes = useCallback(() => {
+    setExpandedNotes((prev) => (prev.size ? new Set() : prev))
+    return cycleNotesStored()
+  }, [cycleNotesStored])
   const toggleBadge = useCallback(
     (b: WireBadge) =>
       setExpandedWires((prev) => {
@@ -173,8 +195,17 @@ function BoardInner({ id }: { id: string }) {
   const laid = useMemo(() => (shown ? alignKanban(shown) : shown), [shown])
   // the agent-change wash (pulse) is laid over the nodes below (shownNodes), so its coming and going (1.2 s later)
   // does not rebuild the whole flow graph — only the washed nodes change
-  const derived = useMemo(() => (laid ? boardToFlow(laid, NO_PULSE, openComments, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, openComments, wireView.catchAll, expandedWires])
+  // how each thread is drawn, computed once per change (flow/notesView.ts); the same Map while it says the same, so
+  // starting or ending an edit that changes nothing here does not rebuild the flow graph
+  const shownRef = useRef(NO_COMMENTS)
+  const commentsShown = useMemo(() => {
+    const next = laid ? notesShown(laid, { mode: notesMode, open: openComments, expanded: expandedNotes, editing: editingId }) : NO_COMMENTS
+    if (sameShown(shownRef.current, next)) return shownRef.current
+    return (shownRef.current = next)
+  }, [laid, notesMode, openComments, expandedNotes, editingId])
+  const derived = useMemo(() => (laid ? boardToFlow(laid, NO_PULSE, commentsShown, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, commentsShown, wireView.catchAll, expandedWires])
   const hasCatchAll = useMemo(() => (board ? catchAllWires(board).size > 0 : false), [board])
+  const anyComments = useMemo(() => (board ? hasComments(board) : false), [board])
   useEffect(() => {
     // a node or wire that says the same as before stays the same object (flow/reuse.ts), so React Flow re-measures
     // and re-renders only what the change touched
@@ -548,6 +579,14 @@ function BoardInner({ id }: { id: string }) {
   const setCommentOpen = useCallback(
     (iid: string, open: boolean) => {
       setOpenComment(iid, open)
+      // a settled proposal's ✓, or a badge while every comment is folded, opens for this viewer only (not stored)
+      setExpandedNotes((prev) => {
+        if (prev.has(iid) === open) return prev
+        const next = new Set(prev)
+        if (open) next.add(iid)
+        else next.delete(iid)
+        return next
+      })
       const read = open && board ? threadOf(board, iid).flatMap((m) => (isUnread(m, 'user') ? [markSeen(m, 'user')!] : [])) : []
       if (read.length) void commit(read, 'read a comment', { undoable: false })
     },
@@ -848,6 +887,11 @@ function BoardInner({ id }: { id: string }) {
       setSourceRequest({ id: iid, mode, n: Date.now() })
     },
     commitOps: (ops: Op[], label: string) => void commit(ops, label),
+    // the pointer on a ⓘ of a list entry or table row lights up the note comment about it, like a panel link does
+    hoverNote: (elementId: string, kind: 'item' | 'row', index: number, on: boolean) => {
+      const c = on && board ? noteCommentOf(board, elementId, kind, index) : undefined
+      onHoverItems(c ? [c.id] : [])
+    },
   }
   const latest = useRef(actions)
   latest.current = actions
@@ -866,6 +910,7 @@ function BoardInner({ id }: { id: string }) {
       reply: (rootId, text) => latest.current.reply(rootId, text),
       openSource: (id, mode) => latest.current.openSource(id, mode),
       commitOps: (ops, label) => latest.current.commitOps(ops, label),
+      hoverNote: (elementId, kind, index, on) => latest.current.hoverNote(elementId, kind, index, on),
       uiRemoved,
     }),
     [editingId, tool, uiRemoved],
@@ -961,11 +1006,11 @@ function BoardInner({ id }: { id: string }) {
         const next = TRACE_MODES[(TRACE_MODES.indexOf(traceView.mode) + 1) % TRACE_MODES.length]
         setTraceView({ mode: next })
         store.toast(`Traces: ${TRACE_MODE_NAMES[next].toLowerCase()}`)
-      }
+      } else if (e.key === 'N') store.toast(`Notes: ${NOTES_MODE_NAMES[cycleNotes()].toLowerCase()}`)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView, views, locate])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView, cycleNotes, views, locate])
 
   // React Flow hands these to every node and wire (and writes the tracked ones into its store, waking every
   // subscriber), so a new function on each render re-rendered the whole board: the same functions are given every
@@ -1133,7 +1178,14 @@ function BoardInner({ id }: { id: string }) {
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
-            <WireControls view={wireView} onChange={setWireView} hasCatchAll={hasCatchAll} traces={hasTraces ? TRACE_MODE_NAMES[traceView.mode].toLowerCase() : undefined}>
+            <WireControls
+              view={wireView}
+              onChange={setWireView}
+              hasCatchAll={hasCatchAll}
+              traces={hasTraces ? TRACE_MODE_NAMES[traceView.mode].toLowerCase() : undefined}
+              notes={anyComments ? NOTES_MODE_NAMES[notesMode].toLowerCase() : undefined}
+              after={anyComments ? <NotesControls mode={notesMode} onChange={setNotesMode} /> : null}
+            >
               {hasTraces ? <TraceControls view={traceView} onChange={setTraceView} /> : null}
             </WireControls>
             <FrozenHeaders board={laid ?? board} />

@@ -47,24 +47,43 @@ export function threadState(messages: Item[]): ThreadState {
   return { unread, waiting, status }
 }
 
-export function CommentBadge({ messages, pulse }: { messages: Item[]; pulse: boolean }) {
+/**
+ * A folded thread: a small bubble, author by colour, state by dot. `done`: a settled proposal (flow/notesView.ts) —
+ * a quiet ✓ instead, no author colour, no unread dot; a click opens it for this viewer.
+ */
+export function CommentBadge({ messages, pulse, done }: { messages: Item[]; pulse: boolean; done?: boolean }) {
   const edit = useEdit()
   const root = messages[0]
   const last = messages[messages.length - 1]
   const { unread, waiting, status } = threadState(messages)
   const preview = (last.text ?? '').replace(/\s+/g, ' ').slice(0, 120)
   const count = messages.length > 1 ? `${messages.length} messages, ` : ''
+  const open = (e: { stopPropagation: () => void }) => {
+    if (edit.attachTarget) return
+    e.stopPropagation()
+    edit.setCommentOpen(root.id, true)
+  }
+  if (done)
+    return (
+      <button
+        type="button"
+        className={`comment-badge done ${pulse ? 'pulse' : ''}`}
+        title={`Proposal settled — ${preview}\n\nClick to open the thread`}
+        aria-label={`Settled proposal, ${count}${status.toLowerCase()}. Open`}
+        onClick={open}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+      </button>
+    )
   return (
     <button
       type="button"
       className={`comment-badge ${root.createdBy} ${unread ? 'unread' : waiting ? 'waiting' : ''} ${pulse ? 'pulse' : ''}`}
       title={`${count}${authorName(last)}: ${preview} (${status})`}
       aria-label={`${authorName(root)} comment, ${count}${status.toLowerCase()}. Open`}
-      onClick={(e) => {
-        if (edit.attachTarget) return
-        e.stopPropagation()
-        edit.setCommentOpen(root.id, true)
-      }}
+      onClick={open}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
         <path d="M4 5h16v11H9l-5 4z" />

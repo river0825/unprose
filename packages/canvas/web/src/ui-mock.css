@@ -904,6 +904,71 @@
   background: var(--ink-3);
 }
 
+/* a design note on one entry or row (`items[i].note`, `rowNotes`): a quiet graphite ⓘ at the end of the row, in the
+   canvas's own type and colour, not the mock's — an annotation, never product UI (docs/canvas.md → Notes) */
+.ui-note-mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-3);
+  color: var(--ink-3);
+  background: var(--paper);
+  font: italic 500 9px/1 var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+  vertical-align: middle;
+  opacity: 0.75;
+  cursor: help;
+}
+.ui-note-mark:hover {
+  opacity: 1;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.ui-note-mark.playing {
+  /* while the mock plays the marks are labels, not controls */
+  pointer-events: none;
+}
+.ui-table-el td > .ui-note-mark {
+  float: right;
+  margin-top: 4px;
+}
+.ui-option > .ui-note-mark {
+  float: right;
+  margin-top: 4px;
+}
+
+/* `data.ui.sample`: made-up words and numbers — a hatched stripe along the outside of the top edge with a tiny
+   "sample", a sibling of the box so a clipping box does not cut it; nothing inside the box changes */
+.ui-sample-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  height: 6px;
+  z-index: 2;
+  pointer-events: none;
+  background: repeating-linear-gradient(-45deg, var(--rule-2) 0 1px, transparent 1px 5px);
+  opacity: 0.8;
+}
+.ui-sample-stripe.phone {
+  top: -14px;
+}
+.ui-sample-word {
+  position: absolute;
+  right: 6px;
+  top: -2px;
+  padding: 0 3px;
+  background: var(--paper);
+  color: var(--ink-3);
+  font: 400 9px/10px var(--font-ui);
+  letter-spacing: 0.02em;
+}
+
 /* the side panel: severity of a finding, the element's own findings, adding an element */
 .dg-sev {
   display: inline-block;

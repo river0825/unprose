@@ -34,6 +34,8 @@ export interface EditApi {
   commitOps?: (ops: Op[], label: string) => void
   /** UI mock items proposed for removal, and what they hold: drawn struck until the file changes */
   uiRemoved?: ReadonlySet<string>
+  /** the pointer is on (or off) the ⓘ of a list entry / table row of a UI element: light up the note comment about it */
+  hoverNote?: (elementId: string, kind: 'item' | 'row', index: number, on: boolean) => void
 }
 
 export const EditContext = createContext<EditApi>({

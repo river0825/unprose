@@ -12,7 +12,7 @@ packages/canvas/
   src/outline.ts · read.ts   the outline (diagram frame → lane / column → items) · readBoard: filters, formats, pages, size cap
   src/snapshot.ts · raster.ts   server-side SVG of a frame / items / the board; PNG with resvg (npm package, else a pinned download)
   src/layoutCheck.ts · shown.ts · textMetrics.ts   layout findings · where the page draws things (kanban) · text metrics
-  src/place.ts · thumb.ts · docs.ts   auto-place agent comments · board thumbnails · the /docs site
+  src/place.ts · thumb.ts · docs.ts   auto-place agent comments (beside the target; in the gutter of a UI-mock screen) · board thumbnails · the /docs site
   src/server.ts           HTTP + WebSocket API, serves web/dist and /docs
   src/mcp.ts              MCP stdio server (the agent's tools), thin over the HTTP API
   src/remoteMcp.ts · designTools.ts   the same tools at /mcp for remote agents (design files as text)
@@ -71,7 +71,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
 | `canvas_wait` | `id, since, timeoutSec = 300 (≤ 1800), quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, untilMention = false, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short. `untilMention: true` wakes only when you are addressed personally (an @mention, a reply in a thread you were mentioned or asked in, a proposal to files you hold). Nothing for you within `timeoutSec`: one line, `nothing new on b_x (seq 93; 2 change(s) for others) — wait again with since: 93` ([Watching cheaply](#watching-cheaply)) |
 | `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image (resvg), else the SVG text; the result names the renderer ([Seeing the board](#seeing-the-board)) |
-| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden / on a card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban) — each with a suggestion; the same list is in the frame panel |
+| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden / on a card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban), comments covering an item or outside their target's frame — each with a suggestion; the same list is in the frame panel |
 | `canvas_approve` | `code, scope?, name?, board?` | **local agent only** (never on `/mcp`): approve a connect request by the pairing code the person read out; logged on `board` ([Who may approve and manage](#who-may-approve-and-manage)) |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
@@ -256,9 +256,11 @@ checked, wires, lines }`, `src/layoutCheck.ts`) is pure geometry on the position
 text likely cut off (the same text metrics), items outside their parent or off their lane, items 3× the median of
 their siblings or far larger than the template sticky (160×110), wire labels that do not fit beside their wire (cut
 with …, or only a dot — [Wires → Wire labels](#wires)) or were dragged onto a card, labels and domain-story number
-circles that sit on each other or on a pictogram, domain-story group outlines that intersect (kind `group`), and items drawn elsewhere than
-stored (a kanban card's x / y are not where it shows — its stored y only orders the column). Each finding says what to do. The frame panel on
-the page lists the same findings under **Layout**.
+circles that sit on each other or on a pictogram, domain-story group outlines that intersect (kind `group`), items drawn elsewhere than
+stored (a kanban card's x / y are not where it shows — its stored y only orders the column), and comments: one whose box covers an item
+(kind `comment-covers` — a frame or lane is the paper a comment sits on, a UI-mock screen is the product; the fix names the screen's
+gutter, docs/diagrams.md §6c) and one whose target is inside a diagram frame while the comment is not (`comment-outside`); both carry
+`severity: 'info'`. Each finding says what to do. The frame panel on the page lists the same findings under **Layout**.
 
 ```
 Layout: 5 finding(s) — 5 clipped (198 items and 64 wires checked; positions as the page draws them)
@@ -1123,8 +1125,8 @@ looking: nothing here is stored on the board, and a copied image shows what is s
   reports a label that is cut, hidden as a dot or dragged onto a card (`[label]`), with how far to move a card or a
   `short` to give.
 - **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
-- **One button in the bottom-right corner** says what is drawn (`Traces: selected · Lines: all`) and opens the
-  settings below; Escape or a click elsewhere closes them.
+- **One button in the bottom-right corner** says what is drawn (`Traces: selected · Lines: all · Notes: badges`)
+  and opens the settings below — the notes part is under [Notes](#notes); Escape or a click elsewhere closes them.
 - **Lines: All / Selected / None** (**W** cycles; remembered per viewer in this browser) — every line but a trace.
   *Selected* draws only the wires touching the selected blocks (others are hidden, not faded); *None* hides
   every line. A wire picked under the Inspector's Links is drawn in any mode. Traces are not lines of the
@@ -1159,6 +1161,34 @@ looking: nothing here is stored on the board, and a copied image shows what is s
   5. *fan-in*: its target listens to **4 or more** different blocks (a hub such as `park` on every failure).
 
   Rules 4–5 count only the wires rules 1–3 left, so a trigger's resume fan-out does not hide its real start wire.
+
+## Notes
+
+Comments pile up on a UI mock's screens — the file's `note:`s, the threads, finished proposals that stay open for
+ever — and a design annotation is easily read as product text. Three things keep them apart from the mock
+(`web/src/flow/notesView.ts`; all of it a way of looking, nothing stored on the board):
+
+- **Notes: All / Badges / None** (in the same settings as Lines and Traces, shown when the board has a comment;
+  **Shift+N** cycles; remembered per viewer in this browser, `awd.canvas.notes`; the button says
+  `Lines: all · Notes: badges`). *All* draws every comment as you left it — open or folded. *Badges* folds every
+  comment — a note, a thread, a loose comment about the board — into a small marker at what it is about; click
+  one to read it, fold it to put it back (what you open this way is forgotten when the mode changes). *None*
+  draws no comment at all; the panel's **Chats** tab still lists them. A comment being written, or one you opened
+  in this session, is drawn in every mode until you fold it.
+- **A finished proposal folds by itself.** A proposal thread (a root from `canvas_propose_edit` — id `prop_…` — or
+  one carrying `data.discuss.edit`) that the holder answered with *Applied to <file>* (`--applied`; the reply's id
+  starts `applied.`) — or that the person declined with the Decline button — is drawn as a quiet graphite **✓**
+  at its anchor, in *All* too, however it was left. Click the ✓ to read the thread (the applied answer is its last
+  message); the fold button puts the ✓ back. Nothing is removed and nothing is written: the thread is still
+  there for the agent and the panel.
+- **Design notes on rows, and sample data, outside the product chrome.** A UI mock's `data.ui.items[i].note`
+  (a list entry, a tab, a sidebar or navbar item, a select option) and `data.ui.rowNotes` (`{ "<row index>":
+  note }` on a table) draw a small **ⓘ** at the end of that row — graphite, 12 px, in the canvas's own type, never
+  the mock's; the note is its tooltip, and pointing at it lights up the note comment about that row (a comment
+  with `target` = the element and `data.item` / `data.row` = the index). A closed select shows one ⓘ for all its
+  noted options. `data.ui.sample: true` on a screen or element draws a hatched stripe along the **outside** of
+  its top edge with a tiny *sample* — nothing inside the box changes, so nobody reads it as a badge of the
+  product. While the mock plays, these are labels only.
 
 ## Going to something
 

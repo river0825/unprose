@@ -172,7 +172,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.20.0' },
+    { name: 'unprose', version: '0.21.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -297,7 +297,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_add_items',
     {
       title: 'Render a template onto an existing board',
-      description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist — re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } — leave x/y out and the server places it beside the target without covering anything.\n\n${CONTENT_HELP}`,
+      description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist — re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } — leave x/y out and the server places it beside the target without covering anything (a target in a UI mock gets it in the gutter right of its screen, never on the product).\n\n${CONTENT_HELP}`,
       inputSchema: {
         id: z.string(),
         kind: kindEnum.optional().describe("Defaults to the board's kind"),
@@ -453,7 +453,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     {
       title: 'Check the layout of a board or frame',
       description:
-        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with …, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect — with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
+        'Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with …, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect — with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.',
       inputSchema: {
         id: z.string().describe('board id'),
         frame: z.string().optional().describe('a diagram key or frame / lane id; default the whole board'),

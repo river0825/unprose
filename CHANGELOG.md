@@ -6,6 +6,51 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-10-08
+
+### Added
+- **UI mock: notes beside the screen, never on it.** Every screen has a gutter column to its right (24 px gap,
+  260 px wide; docs/diagrams.md §6c): the screen's `note` goes at its top, the element notes stack below it in the
+  order of what they are about, and comments added later (`canvas_add_items` without x/y, a proposal) land in the
+  same gutter below what is there — `src/place.ts` finds the screen through the target's parents. The diagram frame is
+  fitted to hold every gutter. Before, a screen note sat on the top-right corner of the screen and an element note
+  on its right-hand neighbours.
+- **Notes on list items and table rows.** `items: [{ text, note }]` and `rows: [[cells], { cells, note }]` carry
+  a design note where there was no place for one, so "TBD" and "sample" stop being written into the product text.
+  Drawn: `data.ui.items[i].note`, `data.ui.rowNotes: { "<row index>": note }` (rows stay cell arrays), and a gutter
+  comment per note — id `<key>.note.<screen>.<element>.item-<i>` / `.row-<i>`, `target` the element, `data.item` /
+  `data.row` the index.
+- **`sample: true`** on a screen or an element: this content is sample data; passed through as `data.ui.sample`
+  so the board can mark it on the frame instead of a badge inside the product.
+- **Lint `ui-text-reads-like-a-note`** (`awd design lint`, `design_lint`, the board's *Checks*): a warning when
+  product text — an element's text / label / placeholder / hint / value, an item's text / meta, a table cell, a
+  column name — contains a note word (`OPEN TBD TODO FIXME sample proposal proposed placeholder lorem` as a whole
+  word, case-insensitive; `待定 待確認 待決定 示例 範例 假資料 提案` anywhere): *reads like a design note, not
+  product text: move it to `note` (on the element, the item or the row), and keep the product words here*.
+- **The layout check sees comments** (`canvas_check_layout`, `GET /api/boards/:id/layout`, the frame panel):
+  `comment-covers` when a comment's box lies on an item (a frame or lane is the paper, a UI-mock screen is the
+  product — the fix names the screen's gutter) and `comment-outside` when its target is inside a diagram frame but
+  the comment is not. Both carry `severity: 'info'`.
+
+### Fixed
+- `design/unprose-board-list.ui.yaml` no longer says "proposal" / "Proposed" in its activity rows (the new lint
+  would flag them); the rewire row carries the question as a row note and the table is marked `sample: true`.
+
+### Changed
+- **Notes have a switch, finished proposals fold by themselves, annotations stay outside the mock.** Comments
+  piled up on UI-mock screens and a design note was easily read as product text (docs/canvas.md → Notes). The
+  settings in the bottom-right corner now have **Notes: All / Badges / None** next to Lines and Traces (shown when
+  the board has a comment; **Shift+N** cycles; per viewer, `awd.canvas.notes`; the button says `Lines: all · Notes:
+  badges`): *Badges* folds every comment — notes, threads, a loose comment about the board — into a marker at what it
+  is about, opened by a click; *None* draws none (the panel's Chats tab still lists them). A proposal thread
+  (`prop_…`, or one carrying `data.discuss.edit`) that was answered *Applied to <file>* — or declined with the
+  button — is drawn as a quiet **✓** at its anchor in every mode; click it to read the thread, fold it to put the ✓
+  back. On a UI mock, `data.ui.items[i].note` (list entry, tab, sidebar / navbar item, select option) and
+  `data.ui.rowNotes` (table rows) draw a small graphite **ⓘ** at the end of the row with the note as its tooltip;
+  pointing at it lights up the note comment about that row. `data.ui.sample: true` on a screen or element draws a
+  hatched *sample* stripe along the outside of its top edge, nothing inside the box. While the mock plays these
+  are labels only. The rules are pure (`web/src/flow/notesView.ts`) and tested.
+
 ## [0.20.0] — 2026-10-08
 
 ### Changed
@@ -791,7 +836,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/river0825/unprose/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/river0825/unprose/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/river0825/unprose/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/river0825/unprose/compare/v0.17.0...v0.18.0

@@ -2,6 +2,7 @@
 // Pure: the server hands in the board's items and the rendered ones, and gets back what to write.
 import { diagramFrameId, type DiagramSpec, type Item } from '../model.js'
 import { parseTraceRef, TRACE_LABEL, type Trace } from '../diagrams/ids.js'
+import { isUiScreen, uiGutterOf } from '../diagrams/uiMock.js'
 import { LANE_HEADER, PAD, arrow, fit, make } from './util.js'
 
 export interface FrameRequest extends DiagramSpec {
@@ -41,7 +42,9 @@ export function placeInFrame(boardItems: Record<string, Item>, req: FrameRequest
   } else {
     const origin = frameOrigin(boardItems, req)
     const base = make({ id: frameId, type: 'frame', x: origin.x, y: origin.y - LANE_HEADER, w: 0, h: 0, text: req.title ?? req.key, role: 'diagram', color: 'white', data: { diagram } }, now)
-    frame = fit(base, children.filter((c) => c.type !== 'arrow'), PAD / 2, LANE_HEADER)
+    // a UI-mock screen reserves a gutter for its notes and threads (docs/diagrams.md §6c): the frame holds it too
+    const boxes = children.filter((c) => c.type !== 'arrow').flatMap((c) => (isUiScreen(c) ? [c, { ...c, ...uiGutterOf(c) }] : [c]))
+    frame = fit(base, boxes, PAD / 2, LANE_HEADER)
   }
   return { frame, items: [frame, ...children] }
 }

@@ -54,6 +54,13 @@ function applyItemText(file: string, elPath: UiPath, i: number, text: string): s
   return applyUiText(file, { path: [...elPath, 'items'], key: i, after: { text } })
 }
 
+/** A table cell: in `rows[r]` when the row is a list of cells, in `rows[r].cells` when it carries a `note`. */
+function applyRowText(file: string, elPath: UiPath, r: number, c: number, after: { text: string }): string {
+  const node = parse(file).getIn([...elPath, 'rows', r], true)
+  if (isMap(node)) return applyUiText(file, { path: [...elPath, 'rows', r, 'cells'], key: c, after })
+  return applyUiText(file, { path: [...elPath, 'rows', r], key: c, after })
+}
+
 /** The new element as one line: `{ type: button, id: new-button, text: New button }`. */
 export function uiNodeLine(node: UiAddPending['node']): string {
   return `{ type: ${node.type}, id: ${yamlScalar(node.id)}, text: ${yamlScalar(node.text)} }`
@@ -182,7 +189,7 @@ export function applyUiPending(file: string, p: UiPending, element?: string): st
 }
 
 function applyTextPending(file: string, p: UiTextPending, path: UiPath): string {
-  if (p.sub?.[0] === 'rows') return applyUiText(file, { path: [...path, 'rows', Number(p.sub[1])], key: Number(p.sub[2]), after: p.after })
+  if (p.sub?.[0] === 'rows') return applyRowText(file, path, Number(p.sub[1]), Number(p.sub[2]), p.after)
   if (p.sub?.[0] === 'items') return applyItemText(file, path, Number(p.sub[1]), p.after.text)
   return applyUiText(file, { path, key: p.key, after: p.after })
 }

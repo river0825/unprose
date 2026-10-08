@@ -1,7 +1,7 @@
 // Unprose's version and the User-Agent every Unprose client sends (docs/agents-setup.md "Behind Cloudflare").
 // Pure: no imports. scripts/version.mjs writes VERSION together with package.json (scripts/release-files.mjs).
 
-export const VERSION = '0.20.0'
+export const VERSION = '0.21.0'
 
 /**
  * `unprose/<version> (<component>)` — what every request Unprose makes carries. Cloudflare (in front of most

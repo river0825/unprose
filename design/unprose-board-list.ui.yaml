@@ -84,11 +84,13 @@ screens:
           - type: table
             id: recent
             text: Recent activity
+            sample: true           # the rows are made up: the board marks the table as sample data, nothing in the product says so
             columns: [Board, Change, Who, When]
             rows:
-              - [Studio design, Commented on “publish proposal”, '[You]', 2 min ago]
+              - [Studio design, Commented on “publish flow”, '[You]', 2 min ago]
               - [Unprose UI, Drew 3 screens, '[Agent]', 5 min ago]
-              - [card-pipeline, Proposed a rewire, '[Review]', 1 h ago]
+              - cells: [card-pipeline, Asked to rewire the pipeline, '[Review]', 1 h ago]
+                note: Does a rewire that is still open belong under Recent activity, or under a Waiting for you list?
 
   - id: new-board
     name: New board

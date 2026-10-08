@@ -41246,9 +41246,9 @@ function renderEventStorming(raw, opts = {}) {
     const unit = /* @__PURE__ */ new Map();
     const perCell = /* @__PURE__ */ new Map();
     for (const s of inBand) {
-      const cell = `${s.rank}|${s.row}|${s.strip}`;
-      const k2 = (perCell.get(cell) ?? 0) + 1;
-      perCell.set(cell, k2);
+      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
+      const k2 = (perCell.get(cell2) ?? 0) + 1;
+      perCell.set(cell2, k2);
       const key = `${s.row}|${s.strip}`;
       depth.set(key, Math.max(depth.get(key) ?? 0, k2));
       unit.set(key, Math.max(unit.get(key) ?? STRIP_H[s.strip], s.h));
@@ -41268,9 +41268,9 @@ function renderEventStorming(raw, opts = {}) {
     }
     const placed = /* @__PURE__ */ new Map();
     const positioned = inBand.map((s) => {
-      const cell = `${s.rank}|${s.row}|${s.strip}`;
-      const k2 = placed.get(cell) ?? 0;
-      placed.set(cell, k2 + 1);
+      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
+      const k2 = placed.get(cell2) ?? 0;
+      placed.set(cell2, k2 + 1);
       const key = `${s.row}|${s.strip}`;
       const dx = s.rank * COL + Math.max(0, (STICKY_W - s.w) / 2);
       return { s, dx, dy: top.get(key) + k2 * (unit.get(key) + STACK) };
@@ -42782,15 +42782,15 @@ var PREFERENCES = [
 ];
 var SLOTS = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]];
 function layoutWith(m2, sentences, order, pref, g2) {
-  const cell = /* @__PURE__ */ new Map();
+  const cell2 = /* @__PURE__ */ new Map();
   const taken = /* @__PURE__ */ new Set();
   const put = (id, c, r2) => {
-    cell.set(id, [c, r2]);
+    cell2.set(id, [c, r2]);
     taken.add(`${c},${r2}`);
   };
   put(order[0], 0, 0);
   const near = (id, partner) => {
-    const [pc, pr] = cell.get(partner);
+    const [pc, pr] = cell2.get(partner);
     for (const [dc, dr] of pref)
       if (!taken.has(`${pc + dc},${pr + dr}`))
         return put(id, pc + dc, pr + dr);
@@ -42802,17 +42802,17 @@ function layoutWith(m2, sentences, order, pref, g2) {
   for (const s of sentences) {
     const cast = [s.actor, ...receiversOf(s)];
     for (const id of cast) {
-      if (cell.has(id))
+      if (cell2.has(id))
         continue;
-      const partner = cast.find((p) => cell.has(p)) ?? [...cell.keys()][cell.size - 1];
+      const partner = cast.find((p) => cell2.has(p)) ?? [...cell2.keys()][cell2.size - 1];
       near(id, partner);
     }
   }
   for (const id of order)
-    if (!cell.has(id))
-      near(id, [...cell.keys()][cell.size - 1]);
+    if (!cell2.has(id))
+      near(id, [...cell2.keys()][cell2.size - 1]);
   const actor = /* @__PURE__ */ new Map();
-  for (const [id, [c, r2]] of cell)
+  for (const [id, [c, r2]] of cell2)
     actor.set(id, { x: c * g2.cellW, y: r2 * g2.cellH, w: ICON_W, h: ICON_H });
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
@@ -43203,8 +43203,24 @@ var tone = external_exports.enum(["neutral", "info", "success", "warning", "dang
 var size = external_exports.enum(["sm", "md", "lg"]);
 var listItem = external_exports.union([
   external_exports.string(),
-  external_exports.object({ id: external_exports.string().optional(), text: external_exports.string(), meta: external_exports.string().optional(), icon: external_exports.string().optional(), badge: external_exports.string().optional(), active: external_exports.boolean().optional() })
+  external_exports.object({
+    id: external_exports.string().optional(),
+    text: external_exports.string(),
+    meta: external_exports.string().optional(),
+    icon: external_exports.string().optional(),
+    badge: external_exports.string().optional(),
+    active: external_exports.boolean().optional(),
+    /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+    note: external_exports.string().optional()
+  })
 ]);
+var cell = external_exports.union([external_exports.string(), external_exports.number()]);
+var tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
+var UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 };
+function uiGutterOf(screen) {
+  return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h };
+}
+var isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
 var uiNodeSchema = external_exports.lazy(() => external_exports.object({
   type: external_exports.enum(UI_TYPES),
   /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
@@ -43238,7 +43254,8 @@ var uiNodeSchema = external_exports.lazy(() => external_exports.object({
   /** The selected entry of items: its text or index. */
   active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
   columns: external_exports.array(external_exports.string()).optional(),
-  rows: external_exports.array(external_exports.array(external_exports.union([external_exports.string(), external_exports.number()]))).optional(),
+  /** table: `[cells]` per row, or `{ cells, note }` for a row with a design note; chart: `[[numbers]]`. */
+  rows: external_exports.array(tableRow).optional(),
   value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
   placeholder: external_exports.string().optional(),
   hint: external_exports.string().optional(),
@@ -43247,8 +43264,10 @@ var uiNodeSchema = external_exports.lazy(() => external_exports.object({
   ratio: external_exports.string().optional(),
   /** stat: '+12%' / '-3' — the change, coloured by its sign. */
   delta: external_exports.string().optional(),
-  /** An open question about this element (a comment bubble on the board). */
+  /** An open question about this element (a comment in the gutter beside the screen, never on it). */
   note: external_exports.string().optional(),
+  /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
+  sample: external_exports.boolean().optional(),
   /** Tapping this element goes to that screen: a flow arrow. */
   goto: external_exports.string().optional(),
   traces: external_exports.array(traceSchema).optional()
@@ -43277,6 +43296,8 @@ var uiMockSchema = external_exports.object({
     pad: external_exports.number().min(0).optional(),
     gap: external_exports.number().min(0).optional(),
     note: external_exports.string().optional(),
+    /** The whole screen shows sample data (see the element's `sample`). */
+    sample: external_exports.boolean().optional(),
     traces: external_exports.array(traceSchema).optional(),
     body: external_exports.array(uiNodeSchema).default([])
   })).min(1),
@@ -43290,8 +43311,21 @@ function itemsOf(items, active) {
   return items.map((it, i) => {
     const o = typeof it === "string" ? { text: it } : it;
     const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
-    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {} };
+    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {}, ...o.note ? { note: o.note } : {} };
   });
+}
+function rowsOf(rows) {
+  if (!rows)
+    return {};
+  const notes = {};
+  const cells = rows.map((r2, i) => {
+    if (Array.isArray(r2))
+      return r2;
+    if (r2.note)
+      notes[String(i)] = r2.note;
+    return r2.cells;
+  });
+  return { rows: cells, ...Object.keys(notes).length ? { rowNotes: notes } : {} };
 }
 function normalizeUiMock(raw) {
   const c = uiMockSchema.parse(raw);
@@ -43313,7 +43347,7 @@ function normalizeUiMock(raw) {
       return id;
     };
     const el = (n4, path15) => {
-      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, ...props } = n4;
+      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n4;
       const words = text3 ?? label2;
       const id = alloc(n4.id, words, type);
       return {
@@ -43324,7 +43358,7 @@ function normalizeUiMock(raw) {
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
         path: path15,
         children: (children ?? []).map((ch, i) => el(ch, [...path15, "children", i])),
-        props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {} },
+        props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
         traces: traces2 ?? []
@@ -43340,6 +43374,7 @@ function normalizeUiMock(raw) {
       gap: s.gap ?? 0,
       theme,
       ...s.note ? { note: s.note } : {},
+      ...s.sample ? { sample: true } : {},
       traces: s.traces ?? [],
       path: ["screens", si],
       body: s.body.map((n4, i) => el(n4, ["screens", si, "body", i]))
@@ -43595,6 +43630,38 @@ function layoutScreen(s) {
   const content = y2 - (s.body.length ? s.gap : 0) + s.pad;
   return { w: s.w, h: Math.max(s.minH, Math.ceil(content)), boxes: out.map((b2) => ({ ...b2, x: Math.round(b2.x), y: Math.round(b2.y), w: Math.round(b2.w), h: Math.round(b2.h) })) };
 }
+var NOTE_WORDS = ["OPEN", "TBD", "TODO", "FIXME", "sample", "proposal", "proposed", "placeholder", "lorem"];
+var NOTE_WORDS_CJK = ["\u5F85\u5B9A", "\u5F85\u78BA\u8A8D", "\u5F85\u6C7A\u5B9A", "\u793A\u4F8B", "\u7BC4\u4F8B", "\u5047\u8CC7\u6599", "\u63D0\u6848"];
+var NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
+var NOTE_RULE = "ui-text-reads-like-a-note";
+var NOTE_RULE_MESSAGE = "reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here";
+function noteWordIn(text3) {
+  const latin = NOTE_WORD_RE.exec(text3);
+  if (latin)
+    return latin[0];
+  return NOTE_WORDS_CJK.find((w2) => text3.includes(w2));
+}
+function productTexts(e) {
+  const out = [];
+  const p = e.props;
+  if (e.text)
+    out.push({ at: e.textKey, text: e.text });
+  if (p.placeholder)
+    out.push({ at: "placeholder", text: p.placeholder });
+  if (p.hint)
+    out.push({ at: "hint", text: p.hint });
+  if (typeof p.value === "string" && p.value)
+    out.push({ at: "value", text: p.value });
+  p.items?.forEach((it, i) => {
+    out.push({ at: `items[${i}].text`, text: it.text });
+    if (it.meta)
+      out.push({ at: `items[${i}].meta`, text: it.meta });
+  });
+  p.columns?.forEach((c, i) => out.push({ at: `columns[${i}]`, text: c }));
+  if (e.type === "table")
+    p.rows?.forEach((r2, i) => r2.forEach((c, j2) => typeof c === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c })));
+  return out;
+}
 function checkUiMock(raw) {
   const m2 = normalizeUiMock(raw);
   const out = [];
@@ -43621,6 +43688,11 @@ function checkUiMock(raw) {
         out.push({ severity: "warning", element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) \u2014 they are not drawn` });
       if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
         out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
+      for (const t of productTexts(e)) {
+        const word = noteWordIn(t.text);
+        if (word)
+          out.push({ severity: "warning", element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` });
+      }
     }
     for (const [id, n4] of explicit)
       if (n4 > 1)
@@ -43634,6 +43706,10 @@ function checkUiMock(raw) {
   }
   return out;
 }
+var shortText = (s, n4 = 48) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
 var uiPathText = (p) => p.map((k2) => typeof k2 === "number" ? `[${k2}]` : `.${k2}`).join("").replace(/^\./, "");
 function lintUiMock(raw) {
   const m2 = normalizeUiMock(raw);
@@ -43690,13 +43766,14 @@ function attachUiFindings(items, raw) {
 
 // packages/canvas/dist/templates/ui-mock.js
 var SCREEN_LABEL = 28;
-var SCREEN_GAP2 = 140;
+var SCREEN_GAP2 = 120;
 function renderUiMock(raw, opts = {}) {
   const m2 = normalizeUiMock(raw);
   const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
   const scope = opts.scope ?? "ui";
   const screenId = (s) => `${scope}.screen.${s}`;
   const elId = (ref2) => `${scope}.ui.${ref2.replace("/", ".")}`;
+  const noteId = (ref2) => `${scope}.note.${ref2.replace("/", ".")}`;
   const items = [];
   const byRef = /* @__PURE__ */ new Map();
   let sx = PAD;
@@ -43706,7 +43783,7 @@ function renderUiMock(raw, opts = {}) {
     const sid = screenId(s.id);
     byRef.set(s.id, sid);
     const look = { theme: s.theme.theme, accent: s.theme.accent, radius: s.theme.radius, font: s.theme.font };
-    items.push(make({
+    const screen = make({
       id: sid,
       type: "ui",
       role: "screen",
@@ -43716,24 +43793,28 @@ function renderUiMock(raw, opts = {}) {
       h: lay.h,
       text: s.name,
       order: si,
-      data: { element: s.id, ui: { type: "screen", device: s.device, path: s.path, textKey: "name", container: true, ...look }, ...s.traces.length ? { traces: s.traces } : {} }
-    }, now));
+      data: { element: s.id, ui: { type: "screen", device: s.device, path: s.path, textKey: "name", container: true, ...look, ...s.sample ? { sample: true } : {} }, ...s.traces.length ? { traces: s.traces } : {} }
+    }, now);
+    items.push(screen);
+    const notes = [];
     if (s.note)
-      items.push(make({ id: `${scope}.note.${s.id}`, type: "comment", x: sx + lay.w - 40, y: sy - 50, w: 220, h: 64, text: s.note, role: "note", color: "yellow", target: sid }, now));
-    lay.boxes.forEach((b2, bi) => items.push(...elementItems(b2, bi, sx, sy, sid, look)));
-    sx += lay.w + SCREEN_GAP2;
+      notes.push({ id: noteId(s.id), text: s.note, target: sid, anchorY: sy });
+    lay.boxes.forEach((b2, bi) => items.push(...elementItems(b2, bi, sx, sy, sid, look, notes)));
+    items.push(...gutterItems(uiGutterOf(screen), notes));
+    sx += lay.w + UI_GUTTER.gap + UI_GUTTER.w + SCREEN_GAP2;
   });
-  function elementItems(b2, order, sx2, sy, sid, look) {
+  function elementItems(b2, order, sx2, sy, sid, look, notes) {
     const e = b2.el;
     const id = elId(e.ref);
     byRef.set(e.ref, id);
+    const top = sy + b2.y;
     const out = [
       make({
         id,
         type: "ui",
         role: e.type,
         x: sx2 + b2.x,
-        y: sy + b2.y,
+        y: top,
         w: b2.w,
         h: b2.h,
         text: e.text,
@@ -43743,8 +43824,28 @@ function renderUiMock(raw, opts = {}) {
       }, now)
     ];
     if (e.note)
-      out.push(make({ id: `${scope}.note.${e.ref.replace("/", ".")}`, type: "comment", x: sx2 + b2.x + b2.w + 12, y: sy + b2.y - 12, w: 220, h: 64, text: e.note, role: "note", color: "yellow", target: id }, now));
+      notes.push({ id: noteId(e.ref), text: e.note, target: id, anchorY: top });
+    const title = e.text ? 1 : 0;
+    e.props.items?.forEach((it, i) => {
+      if (!it.note)
+        return;
+      const rowH = e.type === "list" ? e.props.items.some((x2) => x2.meta) ? 60 : 44 : 36;
+      notes.push({ id: `${noteId(e.ref)}.item-${i}`, text: it.note, target: id, anchorY: top + title * 30 + i * rowH, data: { item: i } });
+    });
+    for (const [k2, note] of Object.entries(e.props.rowNotes ?? {})) {
+      const i = Number(k2);
+      notes.push({ id: `${noteId(e.ref)}.row-${i}`, text: note, target: id, anchorY: top + title * 34 + 42 + i * 46, data: { row: i } });
+    }
     return out;
+  }
+  function gutterItems(gutter, notes) {
+    const order = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.id.localeCompare(b2.id));
+    let bottom = -Infinity;
+    return order.map((n4) => {
+      const y2 = Math.max(n4.anchorY, gutter.y, bottom + UI_GUTTER.noteGap);
+      bottom = y2 + UI_GUTTER.noteH;
+      return make({ id: n4.id, type: "comment", x: gutter.x, y: y2, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, text: n4.text, role: "note", color: "yellow", target: n4.target, ...n4.data ? { data: n4.data } : {} }, now);
+    });
   }
   const flows = [
     ...m2.screens.flatMap((s) => walkUi(s.body).filter((e) => e.goto).map((e) => ({ from: e.ref, to: e.goto, label: void 0 }))),
@@ -43799,7 +43900,8 @@ function placeInFrame(boardItems, req, rendered, now) {
   } else {
     const origin = frameOrigin(boardItems, req);
     const base = make({ id: frameId, type: "frame", x: origin.x, y: origin.y - LANE_HEADER, w: 0, h: 0, text: req.title ?? req.key, role: "diagram", color: "white", data: { diagram } }, now);
-    frame = fit(base, children.filter((c) => c.type !== "arrow"), PAD / 2, LANE_HEADER);
+    const boxes = children.filter((c) => c.type !== "arrow").flatMap((c) => isUiScreen(c) ? [c, { ...c, ...uiGutterOf(c) }] : [c]);
+    frame = fit(base, boxes, PAD / 2, LANE_HEADER);
   }
   return { frame, items: [frame, ...children] };
 }
@@ -45806,9 +45908,10 @@ function autoPlaceComments(board, content) {
     const t = board.items[it.target];
     if (!t)
       continue;
+    const screen = uiScreenOf(board, t);
     const w2 = typeof it.w === "number" ? it.w : W2;
     const h = typeof it.h === "number" ? it.h : H2;
-    const spot = findSpot(t, w2, h, taken);
+    const spot = screen ? gutterSpot(screen, t, w2, h, taken) : findSpot(t, w2, h, taken);
     it.x = spot.x;
     it.y = spot.y;
     it.w = w2;
@@ -45816,6 +45919,30 @@ function autoPlaceComments(board, content) {
     taken.push({ x: spot.x, y: spot.y, w: w2, h });
   }
   return content;
+}
+function uiScreenOf(board, it) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = it;
+  while (cur && !seen.has(cur.id)) {
+    if (isUiScreen(cur))
+      return cur;
+    seen.add(cur.id);
+    cur = cur.parent ? board.items[cur.parent] : void 0;
+  }
+  return void 0;
+}
+function gutterSpot(screen, t, w2, h, taken) {
+  const g2 = uiGutterOf(screen);
+  const x2 = g2.x;
+  let y2 = Math.max(t.y, g2.y);
+  for (let n4 = 0; n4 < taken.length + 1; n4++) {
+    const rect2 = { x: x2, y: y2, w: w2, h };
+    const hit2 = taken.filter((r2) => overlaps2(rect2, r2)).sort((a, b2) => a.y + a.h - (b2.y + b2.h));
+    if (!hit2.length)
+      return { x: x2, y: y2 };
+    y2 = hit2[hit2.length - 1].y + hit2[hit2.length - 1].h + UI_GUTTER.noteGap;
+  }
+  return { x: x2, y: y2 };
 }
 function findSpot(t, w2, h, taken) {
   const candidates = [
@@ -51053,7 +51180,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.20.0";
+var VERSION = "0.21.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -51538,7 +51665,7 @@ function growFrame(frame, drawn, placed, pad = 20) {
   if (placed.has(frame.id))
     return void 0;
   const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
-  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id);
+  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) }) }] : [it]);
   if (!boxes.length)
     return void 0;
   const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
@@ -52088,7 +52215,7 @@ ${CLOSE}`
     arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
     fallback: "the screen we are discussing \u2014 ask me which one",
     body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
-Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question (on the screen, an element, a list item or a table row \u2014 notes are drawn in a gutter beside the screen, never on it; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
 When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
   },
@@ -60502,7 +60629,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.20.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.21.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60601,7 +60728,7 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
   });
   server.registerTool("canvas_add_items", {
     title: "Render a template onto an existing board",
-    description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist \u2014 re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } \u2014 leave x/y out and the server places it beside the target without covering anything.
+    description: `Render structured content with a template and apply it to an existing board (add, or update items whose deterministic ids already exist \u2014 re-rendering the same content updates in place). Use \`at\` to place it beside existing items and \`scope\` to keep separate renders apart. To reply to a user's comment or annotate an item, use kind 'freeform' with a comment item: { items: [{ type: 'comment', text: '...', target: '<item id>' }] } \u2014 leave x/y out and the server places it beside the target without covering anything (a target in a UI mock gets it in the gutter right of its screen, never on the product).
 
 ${CONTENT_HELP}`,
     inputSchema: {
@@ -60734,7 +60861,7 @@ ${svg}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), and items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -62073,8 +62200,8 @@ function drawUi(c, it) {
         if (y2 + rh > bx.y + bx.h + 1)
           return;
         out.push(`<line x1="${n3(bx.x)}" y1="${n3(y2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(y2)}" stroke="${pal.line}"/>`);
-        (Array.isArray(r2) ? r2 : []).forEach((cell, ci) => {
-          const s = String(cell ?? "");
+        (Array.isArray(r2) ? r2 : []).forEach((cell2, ci) => {
+          const s = String(cell2 ?? "");
           const status = /^\[(.+)\]$/.exec(s);
           if (status) {
             const w2 = measure(status[1], 12, 600) + 16;
@@ -62292,7 +62419,7 @@ var LayoutError = class extends Error {
     this.status = status;
   }
 };
-var KINDS = ["clipped", "overlap", "group", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout"];
+var KINDS = ["clipped", "overlap", "group", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
 var OVERLAP_TOL = 6;
 var CONTAINER_COVER = 25;
 var OUTSIDE_TOL = 6;
@@ -62550,6 +62677,55 @@ function checkLayout(board, opts = {}) {
       const fix = m2.wire.data?.bend ? "drag that label onto a free stretch of its wire, or clear data.bend" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
       add(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
     }
+  const paper = (it) => it.type === "frame" || it.type === "lane";
+  const coverable = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment" && !paper(it) && it.w > 8 && it.h > 8);
+  const uiScreenOf2 = (it) => {
+    const seen = /* @__PURE__ */ new Set();
+    for (let cur = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : void 0) {
+      if (isUiScreen(cur))
+        return cur;
+      seen.add(cur.id);
+    }
+    return void 0;
+  };
+  for (const c of Object.values(shown.items)) {
+    if (c.type !== "comment" || c.w <= 8 || c.h <= 8)
+      continue;
+    const t = c.target ? shown.items[c.target] : void 0;
+    if (root && !inside2(shown, c, root) && !(t && inScope.has(t.id)))
+      continue;
+    const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c);
+    const screen = t ? uiScreenOf2(t) : void 0;
+    const gutter = screen ? uiGutterOf(screen) : void 0;
+    const label2 = `comment "${short3(c.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
+    const into = gutter && screen && t ? `move it into the gutter right of ${nameOf2(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) \u2014 notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf2(t)} onto free paper, or add it without x/y so the canvas places it` : "move it onto free paper";
+    const push = (f2) => found.push({ id: c.id, ...f2, severity: "info", ...info?.key ? { frame: info.key } : {} });
+    const covered = coverable.map((it) => ({ it, ox: Math.min(c.x + c.w, it.x + it.w) - Math.max(c.x, it.x), oy: Math.min(c.y + c.h, it.y + it.h) - Math.max(c.y, it.y) })).filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL).sort((a, b2) => byReading(a.it, b2.it));
+    if (covered.length) {
+      const names = covered.slice(0, 3).map((o) => nameOf2(o.it)).join(", ");
+      const more = covered.length > 3 ? ` and ${covered.length - 3} more` : "";
+      const leaves = covered.filter((o) => !isContainer3(o.it));
+      const worst = (leaves.length ? leaves : covered).reduce((a, b2) => a.ox * a.oy >= b2.ox * b2.oy ? a : b2);
+      push({ kind: "comment-covers", message: `${label2} covers ${names}${more} (${r(worst.ox)}\xD7${r(worst.oy)} px on ${nameOf2(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) });
+    }
+    if (!t || !info?.frameId)
+      continue;
+    const f = shown.items[info.frameId];
+    if (!f)
+      continue;
+    const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) };
+    if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL)
+      continue;
+    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
+    const nx = Math.min(Math.max(c.x, f.x + 10), f.x + f.w - c.w - 10);
+    const ny = Math.min(Math.max(c.y, f.y + 10), f.y + f.h - c.h - 10);
+    push({
+      kind: "comment-outside",
+      message: `${label2} is outside its frame ${nameOf2(f)}: ${sides.join(", ")}`,
+      suggestion: gutter ? `${into}, or grow the frame to hold the gutter` : `move it inside the frame beside ${nameOf2(t)} (x ${r(nx)}, y ${r(ny)}), or grow the frame`,
+      others: [f.id, t.id]
+    });
+  }
   for (const d of shownDifferences(board)) {
     if (!inScope.has(d.id))
       continue;

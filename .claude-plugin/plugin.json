@@ -1,6 +1,6 @@
 {
   "name": "unprose",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "A shared visual canvas where people and AI agents talk designs through — EventStorming, story maps, kanban, wireframes and workflows, each backed by a file the agent edits.",
   "author": {
     "name": "Unprose contributors"

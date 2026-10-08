@@ -4,7 +4,7 @@
 // file's text from a remote agent — docs/canvas.md "Remote agents"). No YAML here: callers parse.
 import { contentSchemaFor, unknownContentFields } from './check.js'
 import { checkDomainStory } from './domainStory.js'
-import { attachUiFindings, lintUiMock } from './uiMock.js'
+import { attachUiFindings, isUiScreen, lintUiMock, uiGutterOf } from './uiMock.js'
 import { checkEventStorming } from './grammar.js'
 import type { StoryCandidate } from './proposeStories.js'
 import type { BoardItem } from './redraw.js'
@@ -136,7 +136,8 @@ export function frameOf(board: { items: Record<string, BoardItem> }, key: string
 export function growFrame(frame: BoardItem, drawn: BoardItem[], placed: Set<string>, pad = 20): { kind: 'update'; id: string; patch: { w: number; h: number } } | undefined {
   if (placed.has(frame.id)) return undefined
   const num = (v: unknown) => (typeof v === 'number' ? v : 0)
-  const boxes = drawn.filter((it) => it.type !== 'arrow' && it.parent === frame.id)
+  // a UI-mock screen's gutter (its notes and threads) counts as part of the drawing
+  const boxes = drawn.filter((it) => it.type !== 'arrow' && it.parent === frame.id).flatMap((it) => (isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num(it.x), y: num(it.y), w: num(it.w), h: num(it.h) }) }] : [it]))
   if (!boxes.length) return undefined
   const [fx, fy, fw, fh] = [num(frame.x), num(frame.y), num(frame.w), num(frame.h)]
   const w = Math.max(fw, ...boxes.map((b) => num(b.x) + num(b.w) + pad - fx))

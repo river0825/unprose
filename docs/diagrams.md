@@ -465,6 +465,13 @@ screens:
           - type: grid
             cols: 3
             children: [{ type: card, id: studio, text: Studio design, children: [{ type: badge, text: Freeform }] }]
+          - type: table
+            id: recent
+            sample: true         # made-up rows: a hatched stripe on the frame, no "sample" inside the product
+            columns: [Board, When]
+            rows:
+              - [Studio design, 2 min ago]
+              - { cells: [Runner, 1 h ago], note: Relative times, or the date after a day? }   # a row note: a comment in the gutter
   - { id: new-board, name: New board, device: phone, theme: dark, body: [ … ] }
 flows: [{ from: boards/studio, to: new-board, label: open }]
 ```
@@ -482,15 +489,35 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   (`tone`), `progress` (`value` 0–100), `tabs`, `breadcrumb`, `pagination`, `spacer`, `empty`, `chart` (`variant:
   bar|line`, `rows: [[numbers]]`), `sidebar` (`items` with `icon` / `badge`, `active`). Icons are a small set of
   our own line glyphs (`plus search settings user users bell home menu filter …`; lint lists them).
+- **Notes are design talk, never product text.** A screen, an element, a list / navbar / sidebar / tabs entry
+  (`items: [{ text, note }]`) and a table row (`rows: [[cells], { cells: [...], note }]`) each take a `note` — the
+  question or remark you would otherwise be tempted to write into the UI ("TBD", "sample", "proposal"). The
+  product words stay in `text` / the cells; the note is drawn as a yellow comment (`role: note`) in the **gutter**,
+  a column right of the screen (`UI_GUTTER`: 24 px gap, 260 px wide), never on the screen: the screen's note at
+  the top, the others stacked below it in the order of what they are about (a row's note at that row's height
+  when the gutter is free there). Ids are stable — `<key>.note.<screen>`, `<key>.note.<screen>.<element>`,
+  `….<element>.item-<i>` / `.row-<i>` — with `target` the element and `data.item` / `data.row` the index.
+  Comments added later (`canvas_add_items` without x/y, a proposal) land in the same gutter, below what is
+  there; the frame is fitted to hold every screen's gutter. Lint warns (`ui-text-reads-like-a-note`) when a
+  product text — an element's text / label / placeholder / hint / value, an item's text / meta, a table cell, a
+  column name — contains a note word: `OPEN TBD TODO FIXME sample proposal proposed placeholder lorem` as a whole
+  word, case-insensitive ("Open" the button label is a hit — name it "Open board" or accept the warning; `reopen` is
+  not), or `待定 待確認 待決定 示例 範例 假資料 提案` anywhere: *reads like a design note, not product text: move it
+  to `note` (on the element, the item or the row), and keep the product words here*.
+- **`sample: true`** on a screen or an element says this content is sample data (made-up rows, a stand-in name);
+  the board shows it as a hatched stripe on the frame, not as a badge inside the product, so nothing in the mock
+  has to say "sample" in its own words.
 - **Ids.** Every element has an id unique in its screen — `id`, else the slug of its text, else its type — and is
   referenced as `<screen>/<element>` (traces from other diagrams: `<key>/<screen>/<element>`). Give an explicit `id`
   to anything you will talk about: a default id follows the words, so rewording it in the file makes a new item.
 - **Drawn** as screens side by side, each a device frame with its name above it, and one `ui` board item per
   drawn element (`role` = its type) inside its screen / card / section / navbar, at the position the template's
   layout gives it (text is measured approximately). Ids: `<key>.screen.<screen>`, `<key>.ui.<screen>.<element>`;
-  `data.element` carries the reference, `data.ui` the props, the screen's look and the element's `path` in the
-  file. `goto: <screen>` on an element and `flows` draw `navigate` arrows to the target screen. `note` is a comment
-  bubble; `traces` work as everywhere (a screen `shows` a story).
+  `data.element` carries the reference, `data.ui` the props (`items[i].note`, table `rows` always as cell arrays
+  with their notes in `rowNotes: { "<row index>": note }` — only when there is one —, `sample: true` only when
+  set), the screen's look and the element's `path` in the file. `goto: <screen>` on an element and `flows` draw
+  `navigate` arrows to the target screen. `note` is a comment in the gutter beside the screen (above); `traces`
+  work as everywhere (a screen `shows` a story).
 - **Talking about it.** Select an element to comment on it or chat about it (the brief names the diagram and file).
   Moving or resizing elements is the person's layout on this board: kept on redraw, never written to the file.
   **Editing an element's words on the board is a proposal**: the item keeps the new words and `data.pending =
@@ -515,7 +542,9 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   another one was applied; edits are made in the text, so comments, flow style and every other line stay.
 - **Lint** (`awd design lint`, offline): the schema with unknown fields, plus `goto` / `flows` to screens that do
   not exist, table rows whose cell count differs from the columns, unknown icons, children under an element that
-  cannot hold them, ids used twice in a screen. **The board shows the same findings**: the drawing puts each on the
+  cannot hold them, ids used twice in a screen, product text that reads like a design note (above). After a draw,
+  `canvas_check_layout` adds the geometry: a comment that covers a screen or an element (`comment-covers`), a
+  comment outside the frame its target is in (`comment-outside`). **The board shows the same findings**: the drawing puts each on the
   element it is about (`data.ui.findings`; a `stack` / `row` / `grid`'s go to what holds it, a flow's to the first
   screen) — a small ! (warning) or i (info) mark on the element, "N to check" on the frame, and the list in the
   frame's panel under *Checks*: a click moves the board to the element and flashes it, the › opens its details.
