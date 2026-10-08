@@ -69,13 +69,13 @@ var require_buffer_util = __commonJS({
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
-    function concat(list2, totalLength) {
-      if (list2.length === 0) return EMPTY_BUFFER;
-      if (list2.length === 1) return list2[0];
+    function concat(list3, totalLength) {
+      if (list3.length === 0) return EMPTY_BUFFER;
+      if (list3.length === 1) return list3[0];
       const target = Buffer.allocUnsafe(totalLength);
       let offset = 0;
-      for (let i = 0; i < list2.length; i++) {
-        const buf = list2[i];
+      for (let i = 0; i < list3.length; i++) {
+        const buf = list3[i];
         target.set(buf, offset);
         offset += buf.length;
       }
@@ -1861,14 +1861,14 @@ var require_sender = __commonJS({
        * @param {Function} [cb] Callback
        * @private
        */
-      sendFrame(list2, cb) {
-        if (list2.length === 2) {
+      sendFrame(list3, cb) {
+        if (list3.length === 2) {
           this._socket.cork();
-          this._socket.write(list2[0]);
-          this._socket.write(list2[1], cb);
+          this._socket.write(list3[0]);
+          this._socket.write(list3[1], cb);
           this._socket.uncork();
         } else {
-          this._socket.write(list2[0], cb);
+          this._socket.write(list3[0], cb);
         }
       }
     };
@@ -10141,15 +10141,15 @@ var require_parser = __commonJS({
     var node_process = __require("process");
     var cst = require_cst();
     var lexer = require_lexer();
-    function includesToken(list2, type) {
-      for (let i = 0; i < list2.length; ++i)
-        if (list2[i].type === type)
+    function includesToken(list3, type) {
+      for (let i = 0; i < list3.length; ++i)
+        if (list3[i].type === type)
           return true;
       return false;
     }
-    function findNonEmptyIndex(list2) {
-      for (let i = 0; i < list2.length; ++i) {
-        switch (list2[i].type) {
+    function findNonEmptyIndex(list3) {
+      for (let i = 0; i < list3.length; ++i) {
+        switch (list3[i].type) {
           case "space":
           case "comment":
           case "newline":
@@ -18297,8 +18297,8 @@ var require_dist2 = __commonJS({
         return ajv;
       }
       const [formats, exportName] = opts.mode === "fast" ? [formats_1.fastFormats, fastName] : [formats_1.fullFormats, fullName];
-      const list2 = opts.formats || formats_1.formatNames;
-      addFormats(ajv, list2, formats, exportName);
+      const list3 = opts.formats || formats_1.formatNames;
+      addFormats(ajv, list3, formats, exportName);
       if (opts.keywords)
         (0, limit_1.default)(ajv);
       return ajv;
@@ -18310,11 +18310,11 @@ var require_dist2 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs14, exportName) {
+    function addFormats(ajv, list3, fs14, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
-      for (const f of list2)
+      for (const f of list3)
         ajv.addFormat(f, fs14[f]);
     }
     module.exports = exports = formatsPlugin;
@@ -19048,8 +19048,8 @@ async function projectsRoute(store, req, method, readBody) {
     for (const b2 of store.list())
       counts.set(store.projectOf(b2.id), (counts.get(store.projectOf(b2.id)) ?? 0) + 1);
   if (method === "GET") {
-    const list2 = hasProjects(store) ? store.projects() : [{ id: PERSONAL_PROJECT, name: "Personal", root: null, boardsDir: null, personal: true }];
-    return { status: 200, body: { projects: list2.map((p) => projectView(p, local, hasProjects(store) ? counts.get(p.id) ?? 0 : store.list().length)) } };
+    const list3 = hasProjects(store) ? store.projects() : [{ id: PERSONAL_PROJECT, name: "Personal", root: null, boardsDir: null, personal: true }];
+    return { status: 200, body: { projects: list3.map((p) => projectView(p, local, hasProjects(store) ? counts.get(p.id) ?? 0 : store.list().length)) } };
   }
   if (method === "POST") {
     if (!local)
@@ -19112,10 +19112,10 @@ function pickBoardByTitle(boards, title, project, match = () => true) {
     ["personal", loose.filter((b2) => (b2.project ?? "personal") === "personal")],
     ["any", loose]
   ];
-  for (const [where, list2] of tiers) {
-    if (!list2.length)
+  for (const [where, list3] of tiers) {
+    if (!list3.length)
       continue;
-    const sorted = [...list2].sort((a, b2) => String(b2.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
+    const sorted = [...list3].sort((a, b2) => String(b2.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
     return { board: sorted[0], ambiguous: sorted.length > 1 ? sorted : [], where };
   }
   return { ambiguous: [] };
@@ -19212,8 +19212,8 @@ function installedUpdate(json4, root, current, exists) {
   const parent = dirname(root);
   const plugins = json4.plugins;
   let best;
-  for (const list2 of Object.values(plugins ?? {})) {
-    for (const e of Array.isArray(list2) ? list2 : []) {
+  for (const list3 of Object.values(plugins ?? {})) {
+    for (const e of Array.isArray(list3) ? list3 : []) {
       const p = typeof e?.installPath === "string" ? norm2(e.installPath) : void 0;
       const v2 = typeof e?.version === "string" ? e.version : void 0;
       if (!p || !v2 || dirname(p) !== parent || p === norm2(root))
@@ -19255,10 +19255,10 @@ function lineOps(a, b2) {
   const n4 = endA - start;
   const m2 = endB - start;
   const lcs = new Int32Array((n4 + 1) * (m2 + 1));
-  const at2 = (i2, j3) => i2 * (m2 + 1) + j3;
+  const at3 = (i2, j3) => i2 * (m2 + 1) + j3;
   for (let i2 = n4 - 1; i2 >= 0; i2--)
     for (let j3 = m2 - 1; j3 >= 0; j3--)
-      lcs[at2(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at2(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at2(i2 + 1, j3)], lcs[at2(i2, j3 + 1)]);
+      lcs[at3(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at3(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at3(i2 + 1, j3)], lcs[at3(i2, j3 + 1)]);
   const ops = [];
   for (let k2 = 0; k2 < start; k2++)
     ops.push({ kind: " ", text: a[k2], a: k2, b: k2 });
@@ -19269,7 +19269,7 @@ function lineOps(a, b2) {
       ops.push({ kind: " ", text: a[start + i], a: start + i, b: start + j2 });
       i++;
       j2++;
-    } else if (i < n4 && (j2 === m2 || lcs[at2(i + 1, j2)] >= lcs[at2(i, j2 + 1)])) {
+    } else if (i < n4 && (j2 === m2 || lcs[at3(i + 1, j2)] >= lcs[at3(i, j2 + 1)])) {
       ops.push({ kind: "-", text: a[start + i], a: start + i, b: start + j2 });
       i++;
     } else {
@@ -19431,29 +19431,29 @@ function applyUnifiedDiff(text3, diff) {
   const offsets = [];
   for (const [k2, h] of parsed.entries()) {
     const want = (h.aLen === 0 ? h.aStart : h.aStart - 1) + delta;
-    const fits = (at3) => at3 >= cursor && at3 + h.old.length <= lines2.length && h.old.every((l, i) => lines2[at3 + i] === l);
-    let at2 = -1;
+    const fits = (at4) => at4 >= cursor && at4 + h.old.length <= lines2.length && h.old.every((l, i) => lines2[at4 + i] === l);
+    let at3 = -1;
     if (h.old.length === 0)
-      at2 = Math.min(Math.max(want, cursor), lines2.length);
+      at3 = Math.min(Math.max(want, cursor), lines2.length);
     else
       for (let d = 0; d <= lines2.length; d++) {
         if (fits(want - d)) {
-          at2 = want - d;
+          at3 = want - d;
           break;
         }
         if (d && fits(want + d)) {
-          at2 = want + d;
+          at3 = want + d;
           break;
         }
       }
-    if (at2 < 0) {
+    if (at3 < 0) {
       const near = lines2.slice(Math.max(0, want - 1), want + Math.max(3, h.old.length + 1)).map((l) => l.replace(NO_EOL, ""));
       return { ok: false, hunk: k2 + 1, error: `hunk ${k2 + 1} (${h.header}) does not apply: its context and removed lines are not in the file${near.length ? ` (around line ${Math.max(1, want)} the file says: ${JSON.stringify(near.join("\n").slice(0, 200))})` : ""}` };
     }
-    delta = at2 - (h.aLen === 0 ? h.aStart : h.aStart - 1);
+    delta = at3 - (h.aLen === 0 ? h.aStart : h.aStart - 1);
     offsets.push(delta);
-    out.push(...lines2.slice(cursor, at2), ...h.new);
-    cursor = at2 + h.old.length;
+    out.push(...lines2.slice(cursor, at3), ...h.new);
+    cursor = at3 + h.old.length;
   }
   out.push(...lines2.slice(cursor));
   const fixed = out.map((l, i) => i < out.length - 1 && l.endsWith(NO_EOL) ? l.slice(0, -1) : l);
@@ -19519,26 +19519,26 @@ function agentLabel(name) {
   const d = displayName(name);
   return h === d ? `@${h}` : `@${h} (${d})`;
 }
-function parseResponder(raw, caller, by, at2) {
+function parseResponder(raw, caller, by, at3) {
   if (raw === null || raw === "" || raw === "default")
     return null;
   if (typeof raw === "object" && raw) {
     const r2 = raw;
-    return parseResponder(r2.mode === "agent" ? r2.agent : r2.mode, caller, by, at2);
+    return parseResponder(r2.mode === "agent" ? r2.agent : r2.mode, caller, by, at3);
   }
   if (typeof raw !== "string")
     return void 0;
   const v2 = raw.trim();
   if (v2 === "any")
-    return { mode: "any", by, at: at2 };
+    return { mode: "any", by, at: at3 };
   if (v2 === "studio" || v2 === LOCAL_AGENT)
-    return { mode: "studio", by, at: at2 };
+    return { mode: "studio", by, at: at3 };
   const name = v2 === "me" ? caller : v2;
   if (!name)
     return void 0;
   if (sameAgent(name, LOCAL_AGENT))
-    return { mode: "studio", by, at: at2 };
-  return { mode: "agent", agent: name.slice(0, 60), by, at: at2 };
+    return { mode: "studio", by, at: at3 };
+  return { mode: "agent", agent: name.slice(0, 60), by, at: at3 };
 }
 var holderIn = (v2) => {
   const h = v2?.holder;
@@ -19610,6 +19610,18 @@ function stampHolders(current, next, caller, now) {
       h.applied = cur.applied;
       h.appliedAt = cur.appliedAt;
     }
+    if (cur && sameAgent(cur.agent, caller)) {
+      if (str(cur.from))
+        h.from = cur.from;
+      if (str(cur.handover))
+        h.handover = cur.handover;
+      if (!h.repo && !h.remote && !h.root) {
+        if (str(cur.repo))
+          h.repo = cur.repo;
+        if (str(cur.remote))
+          h.remote = cur.remote;
+      }
+    }
     return h;
   };
   const diagrams = next.diagrams;
@@ -19649,6 +19661,45 @@ function mergeBoardMeta(meta3, patch) {
       out[k2] = v2;
   }
   return out;
+}
+function heldElsewhereText(key, source, holder) {
+  return `the files of "${key}"${source ? ` (${source})` : ""} are held by ${displayName(holder)}: you cannot redraw them. Propose instead (canvas_files \u2192 canvas_propose_edit), or ask the person to hand them over to you (board panel \u2192 Hand over files).`;
+}
+var stable = (v2) => JSON.stringify(v2, (_k, x2) => x2 && typeof x2 === "object" && !Array.isArray(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k2) => [k2, x2[k2]])) : x2) ?? "";
+function keepHeldEntries(current, sent, caller) {
+  const out = { ...sent };
+  const curD = current?.diagrams ?? {};
+  const held = Object.entries(curD).filter(([, d]) => {
+    const h = holderIn(d);
+    return h && !sameAgent(h.agent, caller);
+  });
+  if (held.length) {
+    const sentD = sent.diagrams && typeof sent.diagrams === "object" && !Array.isArray(sent.diagrams) ? { ...sent.diagrams } : {};
+    for (const [key, d] of held)
+      if (!(key in sentD))
+        sentD[key] = d;
+    out.diagrams = sentD;
+  }
+  const wh = holderIn(current?.workflow);
+  if (wh && !sameAgent(wh.agent, caller) && !("workflow" in sent))
+    out.workflow = current.workflow;
+  return out;
+}
+function heldRefusal(current, next, caller) {
+  const curD = current?.diagrams ?? {};
+  const nextD = next.diagrams && typeof next.diagrams === "object" ? next.diagrams : {};
+  for (const [key, d] of Object.entries(curD)) {
+    const h = holderIn(d);
+    if (!h || sameAgent(h.agent, caller))
+      continue;
+    if (stable(d) !== stable(nextD[key]))
+      return heldElsewhereText(key, str(d?.source), h.agent);
+  }
+  const wf = current?.workflow;
+  const wh = holderIn(wf);
+  if (wh && !sameAgent(wh.agent, caller) && stable(wf) !== stable(next.workflow))
+    return heldElsewhereText("workflow", str(wf?.file), wh.agent);
+  return void 0;
 }
 function diagramRoots(meta3) {
   return [...new Set(holdersOf(meta3).map((h) => h.holder.root).filter((r2) => typeof r2 === "string" && r2.length > 0))];
@@ -19691,17 +19742,159 @@ function renameInMeta(meta3, from, to) {
   }
   const fix = (v2) => {
     const h = holderIn(v2);
-    if (!h || !sameAgent(h.agent, from))
+    if (!h || !sameAgent(h.agent, from) && !sameAgent(h.from, from))
       return v2;
     changed = true;
-    return { ...v2, holder: { ...h, agent: to } };
+    return { ...v2, holder: { ...h, ...sameAgent(h.agent, from) ? { agent: to } : {}, ...sameAgent(h.from, from) ? { from: to } : {} } };
   };
   const diagrams = meta3.diagrams;
   if (diagrams && typeof diagrams === "object")
     out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, fix(d)]));
   if (meta3.workflow)
     out.workflow = fix(meta3.workflow);
+  const ho = handoverOf(meta3);
+  if (ho && (sameAgent(ho.to, from) || sameAgent(ho.by, from) || ho.keys.some((k2) => sameAgent(k2.from, from) || sameAgent(k2.ready?.by, from)))) {
+    const swap = (n4) => sameAgent(n4, from) ? to : n4;
+    out.handover = { ...ho, to: swap(ho.to), by: swap(ho.by), keys: ho.keys.map((k2) => ({ ...k2, from: swap(k2.from), ...k2.ready ? { ready: { ...k2.ready, by: swap(k2.ready.by) } } : {} })) };
+    changed = true;
+  }
   return changed ? out : void 0;
+}
+function handoverOf(meta3) {
+  const h = meta3?.handover;
+  if (!h || typeof h !== "object" || Array.isArray(h))
+    return void 0;
+  if (!str(h.id) || !str(h.to) || !str(h.thread) || !str(h.by) || !str(h.at) || typeof h.answeredBy !== "boolean" || !Array.isArray(h.keys) || !h.keys.length)
+    return void 0;
+  const keys = [];
+  for (const raw of h.keys) {
+    const k2 = raw;
+    if (!k2 || typeof k2 !== "object" || !str(k2.key) || !str(k2.from))
+      return void 0;
+    const r2 = k2.ready;
+    const files = r2 && typeof r2 === "object" && r2.files && typeof r2.files === "object" && !Array.isArray(r2.files) ? Object.fromEntries(Object.entries(r2.files).filter(([, v2]) => typeof v2 === "string")) : void 0;
+    const ready = r2 && typeof r2 === "object" && str(r2.by) && str(r2.at) && files ? { by: r2.by, at: r2.at, files, ...r2.forced === true ? { forced: true } : {} } : void 0;
+    keys.push({ key: k2.key, from: k2.from, ...str(k2.source) ? { source: k2.source } : {}, ...str(k2.title) ? { title: k2.title } : {}, ...ready ? { ready } : {} });
+  }
+  return { id: h.id, to: h.to, answeredBy: h.answeredBy, thread: h.thread, by: h.by, at: h.at, keys };
+}
+function handoverFroms(h) {
+  const out = [];
+  for (const k2 of h.keys)
+    if (!out.some((o) => sameAgent(o, k2.from)))
+      out.push(k2.from);
+  return out;
+}
+function handoverThreadOf(root) {
+  const h = root?.type === "comment" ? root.data?.handover : void 0;
+  if (!h || typeof h !== "object" || !str(h.id))
+    return void 0;
+  return { id: h.id, ...str(h.state) ? { state: h.state } : {}, ...str(h.to) ? { to: h.to } : {}, ...Array.isArray(h.from) ? { from: h.from.filter((x2) => typeof x2 === "string") } : {} };
+}
+var at = (name) => `@${handleOf(name)}`;
+var named = (k2) => `\xAB${k2.title ?? k2.key}\xBB`;
+var list = (names) => names.join(", ");
+var whenText = (iso) => iso && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? `${iso.slice(0, 16).replace("T", " ")} UTC` : "its last draw";
+function handoverStartText(h) {
+  const froms = handoverFroms(h);
+  const one = froms.length === 1;
+  const files = list(h.keys.map((k2) => `${named(k2)}${k2.source ? ` (${k2.source})` : ""}${one ? "" : ` from ${at(k2.from)}`}`));
+  return [
+    `Handing over the files of ${files}${one ? ` from ${at(froms[0])}` : ""} to ${at(h.to)}.`,
+    `${list(froms.map(at))}: settle the open proposals on them, redraw any of them whose file changed since your last draw, then canvas_handover({ ready: true }).`,
+    `${at(h.to)}: when they are ready, canvas_handover({ accept: true }), keep the files in your repo (canvas_files), and redraw once from your copy. From then on proposals on them go to you.`
+  ].join("\n");
+}
+function handoverReadyText(h, marked, o = {}) {
+  const lines2 = [];
+  if (o.forced) {
+    for (const from of handoverFroms({ keys: marked })) {
+      const mine = marked.filter((k2) => sameAgent(k2.from, from));
+      lines2.push(`Handed over without ${at(from)}'s confirmation: ${list(mine.map((k2) => `${named(k2)} as of its last draw, ${whenText(o.lastDraw?.[k2.key])}`))}`);
+    }
+  } else {
+    const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
+    lines2.push(`Ready: ${list(marked.map(named))} \u2014 the files as of my last draw (${files.length ? list(files) : "no files on the board"})`);
+  }
+  if (h.keys.every((k2) => k2.ready))
+    lines2.push(`Every file is ready \u2014 ${at(h.to)}: canvas_handover({ accept: true }).`);
+  return lines2.join("\n");
+}
+function handoverAcceptText(h) {
+  const keys = list(h.keys.map(named));
+  return [`Accepted \u2014 ${at(h.to)} holds the files of ${keys} now; proposals on them go to ${at(h.to)}. ${list(handoverFroms(h).filter((f) => !sameAgent(f, h.to)).map(at))}: propose from now on (canvas_files \u2192 canvas_propose_edit).`, ...h.answeredBy ? [`"Answered by" is ${at(h.to)} now, as the person asked when handing over.`] : []].join("\n");
+}
+function handoverCancelText(by, reason) {
+  return `Cancelled by ${by ? at(by) : "the person"}${reason?.trim() ? `: ${reason.trim()}` : ""}`;
+}
+function handoverLines(h) {
+  const keys = list(h.keys.map((k2) => `${named(k2)}${k2.source ? ` (${k2.source})` : ""}${k2.ready ? ` [ready${k2.ready.forced ? ", handed over by the person" : ""}]` : ""}`));
+  const out = [`Handover open (thread ${h.thread}, started by ${h.by === "user" ? "the person" : displayName(h.by)}): the files of ${keys} go from ${list(handoverFroms(h).map(displayName))} to ${displayName(h.to)}${h.answeredBy ? '; "Answered by" becomes it on accept' : ""}`];
+  const waiting = handoverFroms({ keys: h.keys.filter((k2) => !k2.ready) });
+  for (const from of waiting) {
+    const mine = h.keys.filter((k2) => !k2.ready && sameAgent(k2.from, from));
+    out.push(`  waiting for ${displayName(from)}: settle the open proposals on ${list(mine.map(named))}, redraw any whose file changed, then canvas_handover({ ready: true })`);
+  }
+  out.push(waiting.length ? `  then ${displayName(h.to)} accepts: canvas_handover({ accept: true })` : `  every file is ready \u2014 waiting for ${displayName(h.to)} to accept: canvas_handover({ accept: true })`);
+  out.push("  either side may decline it (canvas_handover({ cancel: true, reason })); only the person starts or forces a handover");
+  return out;
+}
+function handoverWaiting(h) {
+  return list(h.keys.filter((k2) => !k2.ready).map((k2) => `${named(k2)} waits for ${at(k2.from)}`));
+}
+var DECLINE_TEXT = "No, leave the file as it is.";
+function isSettledThread(thread) {
+  return thread.some((m2, i) => i > 0 && (m2.id.startsWith("applied.") || (m2.text ?? "").trimStart().startsWith("Applied to ") || m2.createdBy === "user" && (m2.text ?? "").trim() === DECLINE_TEXT));
+}
+function proposalKeyOf(board, root) {
+  const edit = editOf(root);
+  if (edit && typeof edit.file === "string") {
+    const diagrams = board.meta?.diagrams;
+    for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+      if (d?.source === edit.file || d?.files && typeof d.files === "object" && edit.file in d.files)
+        return key;
+    }
+    const wf = board.meta?.workflow;
+    if (wf?.files && typeof wf.files === "object" && edit.file in wf.files)
+      return "workflow";
+  }
+  const ids = [...Array.isArray(wireProposalOf(root)?.about) ? wireProposalOf(root).about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
+  for (const id of ids) {
+    const d = diagramOf(board, board.items[id]);
+    if (d)
+      return d.frameId ? d.key : d.kind === "workflow" ? "workflow" : d.key;
+  }
+  return void 0;
+}
+function openProposals(board, keys) {
+  const roots = Object.values(board.items).filter((i) => i.type === "comment" && isProposal(i) && threadRoot(board, i).id === i.id);
+  return roots.filter((r2) => {
+    const key = proposalKeyOf(board, r2);
+    return key !== void 0 && keys.includes(key) && !isSettledThread(threadOf(board, r2));
+  }).sort((a, b2) => String(a.data?.postedAt ?? a.updatedAt).localeCompare(String(b2.data?.postedAt ?? b2.updatedAt))).map((r2) => r2.id);
+}
+function keepHandoverMarks(board, ops) {
+  return ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment" && op.item.data && "handover" in op.item.data) {
+      const was = board.items[op.item.id]?.data?.handover;
+      const data = { ...op.item.data };
+      if (was !== void 0)
+        data.handover = was;
+      else
+        delete data.handover;
+      return { ...op, item: { ...op.item, data } };
+    }
+    if (op.kind === "update" && op.patch.data && typeof op.patch.data === "object" && board.items[op.id]?.type === "comment") {
+      const was = board.items[op.id].data?.handover;
+      const data = { ...op.patch.data };
+      if (was !== void 0)
+        data.handover = was;
+      else
+        delete data.handover;
+      return { ...op, patch: { ...op.patch, data } };
+    }
+    return op;
+  });
 }
 function mentionIn(text3, known) {
   if (!text3 || !text3.includes("@"))
@@ -19718,8 +19911,8 @@ function mentionIn(text3, known) {
   const re2 = /(^|[^\p{L}\p{N}_.@-])@/gu;
   let m2;
   while (m2 = re2.exec(text3)) {
-    const at2 = m2.index + m2[0].length;
-    const rest = text3.slice(at2).toLowerCase();
+    const at3 = m2.index + m2[0].length;
+    const rest = text3.slice(at3).toLowerCase();
     for (const { token, name } of tokens) {
       if (!rest.startsWith(token))
         continue;
@@ -19786,6 +19979,17 @@ function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
     const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length);
     if (trailingAgentTurns(upTo) > maxTurns)
       return { to: [], route: "paused" };
+  }
+  const ho = handoverThreadOf(root);
+  if (ho) {
+    const open2 = handoverOf(board.meta);
+    const parties = ho.to ? { to: ho.to, from: ho.from ?? [] } : open2 && open2.thread === root.id ? { to: open2.to, from: handoverFroms(open2) } : void 0;
+    if (parties) {
+      for (const f of parties.from)
+        add(f);
+      add(parties.to);
+      return { to: out, route: "handover" };
+    }
   }
   const asked = str(comment.data?.mention) ? comment : thread.filter((i) => str(i.data?.mention)).sort((a, b2) => String(b2.data?.mentionAt ?? "").localeCompare(String(a.data?.mentionAt ?? "")))[0];
   const proposal = isProposal(root);
@@ -19905,7 +20109,7 @@ function mentionsMe(board, change, me) {
       return false;
     const route = it.data?.route;
     const to = it.data?.to;
-    return (route === "mention" || route === "proposal") && Array.isArray(to) && to.some((n4) => typeof n4 === "string" && sameAgent(n4, me));
+    return (route === "mention" || route === "proposal" || route === "handover") && Array.isArray(to) && to.some((n4) => typeof n4 === "string" && sameAgent(n4, me));
   });
 }
 var hasPendingNow = (op, before) => {
@@ -19955,8 +20159,11 @@ function settingsLines(meta3) {
   if (!r2 && s)
     out.push(`Answered by: not set \u2014 ${s.by ? displayName(s.by) : "an agent"} suggested ${responderLabel(s)}; only the person can confirm it`);
   for (const { key, source, holder } of holdersOf(meta3)) {
-    out.push(`Files of ${key}${source ? ` (${source})` : ""}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ""}${holder.remote ? ` \xB7 ${holder.remote}` : ""} \u2014 proposals on it go to that agent`);
+    out.push(`Files of ${key}${source ? ` (${source})` : ""}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ""}${holder.remote ? ` \xB7 ${holder.remote}` : ""}${holder.from ? ` (handed over from ${displayName(holder.from)})` : ""} \u2014 proposals on it go to that agent; only it redraws it`);
   }
+  const h = handoverOf(meta3);
+  if (h)
+    out.push(...handoverLines(h));
   return out;
 }
 
@@ -20159,8 +20366,8 @@ function outline(board, opts = {}) {
       replies.set(root.id, [...replies.get(root.id) ?? [], c]);
   }
   const when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
-  for (const list2 of replies.values())
-    list2.sort((a, b2) => when(a).localeCompare(when(b2)));
+  for (const list3 of replies.values())
+    list3.sort((a, b2) => when(a).localeCompare(when(b2)));
   const threadsOn = /* @__PURE__ */ new Map();
   for (const r2 of roots)
     if (r2.target && board.items[r2.target])
@@ -20175,7 +20382,7 @@ function outline(board, opts = {}) {
   const printed = /* @__PURE__ */ new Set();
   const maxReplies = opts.replies ?? 3;
   const said = (c) => {
-    const to = Array.isArray(c.data?.to) && c.data.route === "mention" && c.data.to.length ? ` \u2192 ${c.data.to.join(", ")}` : "";
+    const to = Array.isArray(c.data?.to) && (c.data.route === "mention" || c.data.route === "handover") && c.data.to.length ? ` \u2192 ${c.data.to.join(", ")}` : "";
     return `(${who(c)}${to})${c.data?.paused ? " [agents paused here \u2014 waits for the person]" : ""}`;
   };
   const thread = (c, indent) => {
@@ -36906,8 +37113,8 @@ var contributors = {
 function aggregateChecks(schema) {
   const agg = {};
   const def2 = schema._zod.def;
-  const list2 = schema._zod.traits.has("$ZodCheck") ? [schema, ...def2.checks ?? []] : def2.checks ?? [];
-  for (const ch of list2)
+  const list3 = schema._zod.traits.has("$ZodCheck") ? [schema, ...def2.checks ?? []] : def2.checks ?? [];
+  for (const ch of list3)
     contributors[ch._zod.def.check]?.(agg, ch._zod.def);
   const bag = schema._zod.bag;
   if (bag.minimum !== void 0)
@@ -40533,7 +40740,7 @@ var eventStormingSchema = external_exports.object({
   /** Definitions of domain terms, kept below the flow (p.144). */
   definitions: external_exports.array(external_exports.object({ id: external_exports.string().optional(), term: external_exports.string(), text: external_exports.string() })).default([])
 });
-var list = (v2) => v2 === void 0 ? [] : Array.isArray(v2) ? v2 : [v2];
+var list2 = (v2) => v2 === void 0 ? [] : Array.isArray(v2) ? v2 : [v2];
 function normalizeEventStorming(raw) {
   const c = eventStormingSchema.parse(raw);
   const alloc = idAllocator();
@@ -40561,7 +40768,7 @@ function normalizeEventStorming(raw) {
     unresolved.push({ element, field, ref: r2 });
     return void 0;
   };
-  const resolveAll = (v2, kinds, element, field) => list(v2).flatMap((r2) => resolve(r2, kinds, element, field) ?? []);
+  const resolveAll = (v2, kinds, element, field) => list2(v2).flatMap((r2) => resolve(r2, kinds, element, field) ?? []);
   const laneNames = c.lanes ?? [];
   const laneOf = (name) => name && laneNames.includes(name) ? laneNames.indexOf(name) : 0;
   const people = c.people.map((p) => typeof p === "string" ? { text: p } : p).map((p) => ({ id: declare("person", p.id, p.text), text: p.text }));
@@ -40815,8 +41022,8 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
     return false;
   };
   const causal = /* @__PURE__ */ new Set();
-  for (const [a, list2] of succ)
-    for (const b2 of list2)
+  for (const [a, list3] of succ)
+    for (const b2 of list3)
       causal.add(`${a}>${b2}`);
   const events = timeline.filter((e) => known.has(e));
   for (let i = 1; i < events.length; i++) {
@@ -40981,10 +41188,10 @@ function fit(container, children, pad = PAD, header = LANE_HEADER) {
     h: Math.max(container.h, maxY + pad - Math.min(container.y, minY - pad - header))
   };
 }
-function offsetAll(items, at2) {
-  if (!at2 || at2.x === 0 && at2.y === 0)
+function offsetAll(items, at3) {
+  if (!at3 || at3.x === 0 && at3.y === 0)
     return items;
-  return items.map((i) => i.type === "arrow" ? i : { ...i, x: i.x + at2.x, y: i.y + at2.y });
+  return items.map((i) => i.type === "arrow" ? i : { ...i, x: i.x + at3.x, y: i.y + at3.y });
 }
 
 // packages/canvas/dist/templates/event-storming.js
@@ -41133,10 +41340,10 @@ function renderEventStorming(raw, opts = {}) {
     }
   }
   const bandOf = new Map(nodes.map((n4) => [n4.id, n4.band]));
-  const at2 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
+  const at3 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
   const atElement = (element) => {
     const n4 = element ? nodeOf.get(element) : void 0;
-    return n4 && rank.has(n4) ? at2(n4) : void 0;
+    return n4 && rank.has(n4) ? at3(n4) : void 0;
   };
   const slots = [];
   const slot = (s) => slots.push({ ...s, data: s.data ?? {} });
@@ -41153,7 +41360,7 @@ function renderEventStorming(raw, opts = {}) {
   };
   for (const e of m2.events) {
     slot({
-      ...at2(ev(e.id)),
+      ...at3(ev(e.id)),
       strip: "main",
       id: ev(e.id),
       role: "event",
@@ -41166,27 +41373,27 @@ function renderEventStorming(raw, opts = {}) {
     });
     const commandHasPerson = detailed && m2.commands.some((k2) => k2.by && k2.produces.includes(e.id));
     if (e.person && !commandHasPerson)
-      personSlot(e.person, at2(ev(e.id)), e.id);
+      personSlot(e.person, at3(ev(e.id)), e.id);
   }
   if (detailed) {
     for (const k2 of m2.commands) {
       const cmd = itemId("command", k2.id);
-      slot({ ...at2(cmd), strip: "main", id: cmd, role: "command", text: k2.text, color: ES_COLORS.command, w: STICKY_W, h: STICKY_H, data: { element: k2.id, produces: k2.produces, ...k2.aggregate ? { aggregate: k2.aggregate } : {}, ...k2.traces.length ? { traces: k2.traces } : {} } });
+      slot({ ...at3(cmd), strip: "main", id: cmd, role: "command", text: k2.text, color: ES_COLORS.command, w: STICKY_W, h: STICKY_H, data: { element: k2.id, produces: k2.produces, ...k2.aggregate ? { aggregate: k2.aggregate } : {}, ...k2.traces.length ? { traces: k2.traces } : {} } });
       if (k2.by)
-        personSlot(k2.by, at2(cmd), k2.id);
+        personSlot(k2.by, at3(cmd), k2.id);
       const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
       if (sys && k2.system)
-        slot({ ...at2(sys), strip: "main", id: sys, role: systemRole(k2.system), text: systemText(k2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: k2.system, occurrence: true, for: k2.id } });
+        slot({ ...at3(sys), strip: "main", id: sys, role: systemRole(k2.system), text: systemText(k2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: k2.system, occurrence: true, for: k2.id } });
     }
     for (const p of m2.policies) {
       const po = itemId("policy", p.id);
-      slot({ ...at2(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
+      slot({ ...at3(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
     }
     for (const r2 of m2.readModels) {
       const rm = itemId("read-model", r2.id);
       const lastUpdate = r2.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
       const inline = inlineRm.has(r2.id) && rank.has(rm);
-      const where = inline ? at2(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
+      const where = inline ? at3(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
       nodeOf.set(r2.id, rm);
       rmWhere.set(r2.id, where);
       slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r2.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r2.id, updatedBy: r2.updatedBy, informs: r2.informs, ...r2.traces.length ? { traces: r2.traces } : {} } });
@@ -41194,18 +41401,18 @@ function renderEventStorming(raw, opts = {}) {
   }
   for (const x2 of raisers) {
     if (detailed)
-      slot({ ...at2(x2.id), strip: "main", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
+      slot({ ...at3(x2.id), strip: "main", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
     else
-      slot({ ...at2(ev(x2.event)), strip: "below", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
+      slot({ ...at3(ev(x2.event)), strip: "below", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
   }
   for (const a of again) {
     const orig = slots.find((s) => s.id === a.of);
     if (!orig)
       continue;
-    slot({ ...at2(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } });
+    slot({ ...at3(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } });
     const k2 = orig.role === "command" ? m2.commands.find((c) => c.id === orig.data.element) : void 0;
     if (k2?.by)
-      personSlot(k2.by, at2(a.id), a.id.slice(`${scope}.command.`.length));
+      personSlot(k2.by, at3(a.id), a.id.slice(`${scope}.command.`.length));
   }
   if (detailed) {
     for (const r2 of m2.readModels) {
@@ -41431,11 +41638,11 @@ function flowTimes(m2, itemId, systemOcc, inlineRm) {
   for (const k2 of m2.commands) {
     const produced = k2.produces.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
     const by = m2.policies.filter((p) => p.then.includes(k2.id) && policyT.has(p.id)).map((p) => policyT.get(p.id));
-    const at2 = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : void 0;
-    if (at2 === void 0)
+    const at3 = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : void 0;
+    if (at3 === void 0)
       continue;
-    commandT.set(k2.id, at2);
-    t.set(itemId("command", k2.id), at2);
+    commandT.set(k2.id, at3);
+    t.set(itemId("command", k2.id), at3);
   }
   for (const [key, id] of systemOcc) {
     const anchor3 = key.slice(key.indexOf("|") + 1);
@@ -41449,9 +41656,9 @@ function flowTimes(m2, itemId, systemOcc, inlineRm) {
       continue;
     const updates = r2.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
     const cmds = r2.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
-    const at2 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
-    if (at2 !== void 0)
-      t.set(itemId("read-model", r2.id), at2);
+    const at3 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
+    if (at3 !== void 0)
+      t.set(itemId("read-model", r2.id), at3);
   }
   return t;
 }
@@ -41839,9 +42046,9 @@ function layered(nodes, edges, opts = {}) {
   index();
   const y2 = /* @__PURE__ */ new Map();
   for (const ls of layers) {
-    let at2 = 0;
+    let at3 = 0;
     for (const s of ls)
-      y2.set(s.id, at2), at2 += s.h + gap;
+      y2.set(s.id, at3), at3 += s.h + gap;
   }
   const centre2 = (id, h) => y2.get(id) + h / 2;
   const hOf = new Map(layers.flat().map((s) => [s.id, s.h]));
@@ -42215,7 +42422,7 @@ function reviewDomainStory(m2) {
 // packages/canvas/dist/diagrams/domainStory.js
 var DS_ACTOR_KINDS = ["person", "group", "system"];
 var DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
-var named = () => external_exports.union([
+var named2 = () => external_exports.union([
   external_exports.string(),
   external_exports.object({
     id: external_exports.string().optional(),
@@ -42230,8 +42437,8 @@ var domainStorySchema = external_exports.object({
     time: external_exports.enum(["as-is", "to-be"]).optional(),
     purity: external_exports.enum(["pure", "digitalized"]).optional()
   }).optional(),
-  actors: external_exports.array(named()).min(1),
-  workObjects: external_exports.array(named()).default([]),
+  actors: external_exports.array(named2()).min(1),
+  workObjects: external_exports.array(named2()).default([]),
   sentences: external_exports.array(external_exports.object({
     id: external_exports.string().optional(),
     /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
@@ -42269,7 +42476,7 @@ function normalizeDomainStory(raw) {
   const actors = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
   const workObjects = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
   const unresolved = [];
-  const find = (list2, ref2) => list2.find((x2) => x2.id === ref2) ?? list2.find((x2) => x2.text === ref2) ?? list2.find((x2) => x2.id === slugify2(ref2));
+  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
   const actorRef = (ref2, element, field) => {
     const hit2 = find(actors, ref2);
     if (hit2)
@@ -42608,15 +42815,15 @@ function pointAlong(path15, t) {
   return path15[0];
 }
 var FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
-function spots(path15, at2) {
+function spots(path15, at3) {
   const out = [];
   const segs = path15.slice(1).map((b2, i) => ({ a: path15[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
   const dirOf = (s) => {
     const l = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) || 1;
     return { x: (s.b.x - s.a.x) / l, y: (s.b.y - s.a.y) / l };
   };
-  if (at2 !== void 0 && segs.length) {
-    const p = pointAlong(path15, at2);
+  if (at3 !== void 0 && segs.length) {
+    const p = pointAlong(path15, at3);
     const seg = segs.find((s) => Math.abs((s.b.x - s.a.x) * (p.y - s.a.y) - (s.b.y - s.a.y) * (p.x - s.a.x)) < 1 && p.x >= Math.min(s.a.x, s.b.x) - 1 && p.x <= Math.max(s.a.x, s.b.x) + 1 && p.y >= Math.min(s.a.y, s.b.y) - 1 && p.y <= Math.max(s.a.y, s.b.y) + 1) ?? segs[0];
     out.push({ p, dir: dirOf(seg) });
   }
@@ -42746,18 +42953,18 @@ function segmentHitsBox(p, q2, b2, pad = 0) {
   }
   return true;
 }
-function nearestFree(at2, w2, h, boxes, step, start = { x: 0, y: 1 }) {
+function nearestFree(at3, w2, h, boxes, step, start = { x: 0, y: 1 }) {
   const box = (p) => ({ x: p.x - w2 / 2, y: p.y - h / 2, w: w2, h });
   const a0 = Math.atan2(start.y, start.x);
   for (let ring = 1; ring <= 40; ring++) {
     for (let k2 = 0; k2 < 12; k2++) {
       const a = a0 + Math.ceil(k2 / 2) * (k2 % 2 ? 1 : -1) * Math.PI / 6;
-      const b2 = box({ x: at2.x + Math.cos(a) * ring * step, y: at2.y + Math.sin(a) * ring * step });
+      const b2 = box({ x: at3.x + Math.cos(a) * ring * step, y: at3.y + Math.sin(a) * ring * step });
       if (!boxes.some((o) => overlaps(o, b2)))
         return b2;
     }
   }
-  return box({ x: at2.x, y: at2.y + 41 * step });
+  return box({ x: at3.x, y: at3.y + 41 * step });
 }
 function countCrossings(segs) {
   const same2 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
@@ -42827,7 +43034,7 @@ function layoutWith(m2, sentences, order, pref, g2) {
     if (!s.objectText)
       continue;
     const a = centre(actor.get(s.actor));
-    let at2;
+    let at3;
     let perp;
     const recv = receiversOf(s);
     if (recv.length) {
@@ -42839,21 +43046,21 @@ function layoutWith(m2, sentences, order, pref, g2) {
       const k2 = wayIndex.get(wayKey(s)) ?? 0;
       wayIndex.set(wayKey(s), k2 + 1);
       const shift = (k2 - (n4 - 1) / 2) * g2.spread;
-      at2 = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift };
+      at3 = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift };
     } else {
       perp = { x: 0, y: 1 };
-      at2 = { x: a.x + g2.slot, y: a.y };
+      at3 = { x: a.x + g2.slot, y: a.y };
       const own2 = actor.get(s.actor);
       const slots = SLOTS.map(([dx, dy]) => ({ x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 })).filter((c) => free({ x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }));
-      at2 = slots.find((c) => !boxes.some((o) => o !== own2 && segmentHitsBox(a, c, o, -10))) ?? slots[0] ?? at2;
+      at3 = slots.find((c) => !boxes.some((o) => o !== own2 && segmentHitsBox(a, c, o, -10))) ?? slots[0] ?? at3;
     }
-    let box = { x: at2.x - ICON_W / 2, y: at2.y - ICON_H / 2, w: ICON_W, h: ICON_H };
+    let box = { x: at3.x - ICON_W / 2, y: at3.y - ICON_H / 2, w: ICON_W, h: ICON_H };
     for (let step = 1; !free(box) && step <= 12; step++) {
       const d = Math.ceil(step / 2) * g2.nudge * (step % 2 ? 1 : -1);
-      box = { x: at2.x + perp.x * d - ICON_W / 2, y: at2.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H };
+      box = { x: at3.x + perp.x * d - ICON_W / 2, y: at3.y + perp.y * d - ICON_H / 2, w: ICON_W, h: ICON_H };
     }
     if (!free(box))
-      box = nearestFree(at2, ICON_W, ICON_H, boxes, g2.nudge, perp);
+      box = nearestFree(at3, ICON_W, ICON_H, boxes, g2.nudge, perp);
     boxes.push(box);
     object3.set(s.id, box);
   }
@@ -42963,10 +43170,10 @@ function renderDomainStory(raw, opts = {}) {
     const cuts = (p) => segs.filter(([a, b2]) => segmentHitsBox(a, b2, { ...p, w: nw, h: nh }, 4)).length;
     const tc = centre(base);
     const score = (p) => cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
-    let at2 = candidates.filter(clear).sort((p, q2) => score(p) - score(q2))[0] ?? candidates[0];
-    for (let k2 = 0; !clear(at2) && k2 < 60; k2++)
-      at2 = { x: at2.x, y: at2.y + 40 };
-    const note = make({ id: itemId("note", n4.id), type: "text", x: at2.x, y: at2.y, w: nw, h: nh, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
+    let at3 = candidates.filter(clear).sort((p, q2) => score(p) - score(q2))[0] ?? candidates[0];
+    for (let k2 = 0; !clear(at3) && k2 < 60; k2++)
+      at3 = { x: at3.x, y: at3.y + 40 };
+    const note = make({ id: itemId("note", n4.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
     placed.push(note);
     items.push(note);
     if (target)
@@ -43097,7 +43304,7 @@ function unwrap(s) {
   return s;
 }
 var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
+var at2 = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
 function unknownFields(schema, value, path15 = "") {
   const s = unwrap(schema);
   const d = def(s);
@@ -43107,16 +43314,16 @@ function unknownFields(schema, value, path15 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at(path15, k2)));
+        out.push(...unknownFields(shape[k2], v2, at2(path15, k2)));
       else if (!open2)
         out.push({ path: path15 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path15, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path15, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path15, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path15, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -43739,9 +43946,9 @@ function attachUiFindings(items, raw) {
   const m2 = normalizeUiMock(raw);
   const shownAt = /* @__PURE__ */ new Map();
   const hold = (els, holder) => els.forEach((e) => {
-    const at2 = isLayout(e.type) ? holder : e.ref;
-    shownAt.set(e.ref, at2);
-    hold(e.children, at2);
+    const at3 = isLayout(e.type) ? holder : e.ref;
+    shownAt.set(e.ref, at3);
+    hold(e.children, at3);
   });
   for (const s of m2.screens) {
     shownAt.set(s.id, s.id);
@@ -43749,8 +43956,8 @@ function attachUiFindings(items, raw) {
   }
   const found = /* @__PURE__ */ new Map();
   for (const f of lintUiMock(raw)) {
-    const at2 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
-    found.set(at2, [...found.get(at2) ?? [], { severity: f.severity, message: f.message }]);
+    const at3 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
+    found.set(at3, [...found.get(at3) ?? [], { severity: f.severity, message: f.message }]);
   }
   return items.map((it) => {
     const ui = it.data?.ui;
@@ -43880,8 +44087,8 @@ function frameOrigin(boardItems, req) {
   const existing = boardItems[diagramFrameId(req.key)];
   if (existing)
     return { x: existing.x, y: existing.y + LANE_HEADER };
-  const at2 = req.at ?? rightOfEverything(boardItems);
-  return { x: at2.x, y: at2.y + LANE_HEADER };
+  const at3 = req.at ?? rightOfEverything(boardItems);
+  return { x: at3.x, y: at3.y + LANE_HEADER };
 }
 function rightOfEverything(boardItems) {
   const boxes = Object.values(boardItems).filter((i) => i.type !== "arrow" && i.type !== "comment");
@@ -46043,12 +46250,12 @@ function buildProposal(board, input2, who3, now, newId2) {
   if (!input2 || typeof input2 !== "object")
     throw new ProposalError(400, "body must be an object");
   const files = boardFiles(board);
-  const list2 = () => files.length ? files.map((f2) => f2.path).join(", ") : "none \u2014 this board was drawn without files; propose on a board that `awd graph --canvas` or `awd design draw` drew";
+  const list3 = () => files.length ? files.map((f2) => f2.path).join(", ") : "none \u2014 this board was drawn without files; propose on a board that `awd graph --canvas` or `awd design draw` drew";
   if (typeof input2.file !== "string" || !input2.file)
-    throw new ProposalError(400, `file is required (one of: ${list2()})`);
+    throw new ProposalError(400, `file is required (one of: ${list3()})`);
   const f = files.find((x2) => x2.path === input2.file);
   if (!f)
-    throw new ProposalError(404, `"${input2.file}" is not among the files behind this board (${list2()}); canvas_files lists them with their base`);
+    throw new ProposalError(404, `"${input2.file}" is not among the files behind this board (${list3()}); canvas_files lists them with their base`);
   if (f.truncated)
     throw new ProposalError(422, `${f.path} is cut short on the board (over 100 000 characters), so an edit cannot be checked against it; ask the person to have their local agent make this change`);
   if (typeof input2.base !== "string" || !input2.base)
@@ -46068,9 +46275,9 @@ function buildProposal(board, input2, who3, now, newId2) {
   if (hasDiff) {
     if (input2.diff.length > MAX_DIFF)
       throw new ProposalError(413, `diff is larger than ${MAX_DIFF} characters; split the change`);
-    const named2 = diffPath(input2.diff);
-    if (named2 && named2 !== f.path)
-      throw new ProposalError(400, `the diff is for ${named2}, not ${f.path}`);
+    const named3 = diffPath(input2.diff);
+    if (named3 && named3 !== f.path)
+      throw new ProposalError(400, `the diff is for ${named3}, not ${f.path}`);
     const r2 = applyUnifiedDiff(f.text, input2.diff);
     if (!r2.ok)
       throw new ProposalError(422, `the diff does not apply to ${f.path} at base ${f.sha.slice(0, 12)}: ${r2.error}. Make the diff against the text canvas_files returns, or send newText instead.`);
@@ -46086,8 +46293,8 @@ function buildProposal(board, input2, who3, now, newId2) {
   const diff = unifiedDiff(f.text, after, f.path);
   if (diff.length > MAX_DIFF)
     throw new ProposalError(413, `the change is larger than ${MAX_DIFF} characters as a diff; split it`);
-  const at2 = firstChange(f.text, after) ?? { line: 1, endLine: 1 };
-  const quote = f.text.split("\n").slice(at2.line - 1, at2.endLine).join("\n");
+  const at3 = firstChange(f.text, after) ?? { line: 1, endLine: 1 };
+  const quote = f.text.split("\n").slice(at3.line - 1, at3.endLine).join("\n");
   const ids = Array.isArray(input2.about) ? [...new Set(input2.about)] : [];
   if (ids.some((id) => typeof id !== "string"))
     throw new ProposalError(400, "about must be item ids");
@@ -46096,7 +46303,7 @@ function buildProposal(board, input2, who3, now, newId2) {
     throw new ProposalError(404, `no item ${missing.map((m2) => `"${m2}"`).join(", ")} on this board`);
   if (ids.some((id) => board.items[id].type === "comment"))
     throw new ProposalError(400, "about lists items to talk about, not comments");
-  const owner = ownerOf(board, f.path, at2.line);
+  const owner = ownerOf(board, f.path, at3.line);
   const about = ids.length ? ids : owner ? [owner] : [];
   const commentId = newId2();
   const author = who3.author;
@@ -46140,7 +46347,7 @@ function buildProposal(board, input2, who3, now, newId2) {
   const target = allAbout[0];
   const { added, removed } = diffStat(diff);
   const data = {
-    anchor: { file: f.path, line: at2.line, ...at2.endLine > at2.line ? { endLine: at2.endLine } : {}, quote },
+    anchor: { file: f.path, line: at3.line, ...at3.endLine > at3.line ? { endLine: at3.endLine } : {}, quote },
     discuss: { about: allAbout, edit: { file: f.path, base: f.sha, diff, ...who3.by ? { by: who3.by } : {} } },
     ...who3.by ? { by: who3.by } : {}
   };
@@ -46582,14 +46789,14 @@ var AccessService = class {
       else
         delete r2.boards;
     }
-    const list2 = (v2) => v2?.length ? v2.join(", ") : "all";
+    const list3 = (v2) => v2?.length ? v2.join(", ") : "all";
     const changed = [];
     if (before.scope !== r2.scope)
       changed.push(`access ${scopeText(before.scope)} \u2192 ${scopeText(r2.scope)}`);
-    if (list2(before.projects) !== list2(r2.projects))
-      changed.push(`projects ${list2(before.projects)} \u2192 ${list2(r2.projects)}`);
-    if (list2(before.boards) !== list2(r2.boards))
-      changed.push(`boards ${list2(before.boards)} \u2192 ${list2(r2.boards)}`);
+    if (list3(before.projects) !== list3(r2.projects))
+      changed.push(`projects ${list3(before.projects)} \u2192 ${list3(r2.projects)}`);
+    if (list3(before.boards) !== list3(r2.boards))
+      changed.push(`boards ${list3(before.boards)} \u2192 ${list3(r2.boards)}`);
     if (changed.length) {
       this.log(by, `changed ${r2.name}: ${changed.join("; ")}`, r2.id);
       this.emit({ type: "access-changed", at: this.iso() });
@@ -47131,15 +47338,15 @@ var mayManage = (req, g2) => localPage(req, g2) || g2?.as === "browser" && g2.ma
 var who2 = (req, g2) => localPage(req, g2) ? "this machine" : g2.name;
 function whyNotManage(req, g2) {
   const port = req.socket?.localPort;
-  const at2 = `http://localhost:${port ?? 4400}/agents`;
+  const at3 = `http://localhost:${port ?? 4400}/agents`;
   const base = { ...port ? { port } : {} };
   if (g2?.as === "agent")
     return { reason: "agent", text: "agent tokens never manage agents", canRequest: false, ...base };
   if (g2?.kind === "local")
-    return { reason: "host", text: `this page is on the canvas machine but not opened as localhost \u2014 open ${at2}`, canRequest: false, ...base };
+    return { reason: "host", text: `this page is on the canvas machine but not opened as localhost \u2014 open ${at3}`, canRequest: false, ...base };
   if (g2?.as === "browser")
-    return { reason: "remote", text: `this page was opened from elsewhere and this browser was not given the right to manage agents \u2014 open ${at2} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`), or ask for manage rights for this browser on the Connected agents page`, canRequest: true, ...base };
-  return { reason: "not-signed-in", text: `this page was opened from elsewhere without signing in \u2014 open ${at2} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`)`, canRequest: false, ...base };
+    return { reason: "remote", text: `this page was opened from elsewhere and this browser was not given the right to manage agents \u2014 open ${at3} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`), or ask for manage rights for this browser on the Connected agents page`, canRequest: true, ...base };
+  return { reason: "not-signed-in", text: `this page was opened from elsewhere without signing in \u2014 open ${at3} on the canvas machine (or through \`ssh -L ${port ?? 4400}:localhost:${port ?? 4400} <host>\`)`, canRequest: false, ...base };
 }
 function sessionCookie(req, origin, value, maxAge) {
   const secure = origin.startsWith("https:") || req.headers["x-forwarded-proto"] === "https";
@@ -51180,7 +51387,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.21.0";
+var VERSION = "0.22.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -51360,8 +51567,8 @@ var CanvasClient = class {
   apply(id, ops, author = "agent", note) {
     return this.req("POST", `/api/boards/${encodeURIComponent(id)}/ops`, { author, ops, note });
   }
-  template(id, kind, content, at2, scope, frame) {
-    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at2, scope, ...frame ? { frame } : {} });
+  template(id, kind, content, at3, scope, frame) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at3, scope, ...frame ? { frame } : {} });
   }
   /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
   updateBoard(id, patch) {
@@ -51417,9 +51624,39 @@ var CanvasClient = class {
   settings(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/settings`);
   }
+  /**
+   * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of
+   * diagram `key` ('workflow' for a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds
+   * them, nobody does yet, or the canvas is too old to say).
+   */
+  async redrawRefusal(id, key, o = {}) {
+    const s = await this.settings(id).catch(() => void 0);
+    if (!s || !Array.isArray(s.holders))
+      return void 0;
+    const me = s.you ?? LOCAL_AGENT;
+    const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
+    return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
+  }
   /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
   setSettings(id, patch, author = "agent") {
     return this.req("PUT", `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author });
+  }
+  // ---- Handing over the files (docs/canvas.md "Handing over the files"); only the person starts one ----
+  /** The open handover on a board, and who holds the files of each diagram. */
+  handover(id) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/handover`);
+  }
+  /** As the agent handing files over: its diagrams (or only `keys`) are ready to be taken, as the board has them now. */
+  handoverReady(id, o = {}) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/ready`, { ...o, author: "agent" });
+  }
+  /** As the agent receiving them: take the files over (once every one is ready); `repo` / `remote` say where you keep them. */
+  handoverAccept(id, o = {}) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/accept`, { ...o, author: "agent" });
+  }
+  /** Decline (either side of it): the files stay where they are. */
+  handoverCancel(id, o = {}) {
+    return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: "agent" });
   }
   /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
   sendFeedback(input2) {
@@ -51498,12 +51735,12 @@ var CanvasClient = class {
     return this.req("POST", "/api/approve", { code, ...o });
   }
   /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
-  boardUrl(id, at2 = {}) {
+  boardUrl(id, at3 = {}) {
     const q2 = new URLSearchParams();
-    if (at2.frame)
-      q2.set("frame", at2.frame);
-    if (at2.focus)
-      q2.set("focus", at2.focus);
+    if (at3.frame)
+      q2.set("frame", at3.frame);
+    if (at3.focus)
+      q2.set("focus", at3.focus);
     const qs = q2.toString();
     return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
   }
@@ -52000,12 +52237,12 @@ function planLines(plan, o = {}) {
 // packages/canvas/dist/diagrams/proposeStories.js
 function segments(m2) {
   const order = m2.events.map((e) => e.id);
-  const at2 = (id) => id ? order.indexOf(id) : -1;
+  const at3 = (id) => id ? order.indexOf(id) : -1;
   const phased = m2.phases.filter((p) => p.from || p.to);
   if (phased.length) {
     return phased.map((p) => {
-      const from = Math.max(at2(p.from), 0);
-      const to = p.to ? at2(p.to) : order.length - 1;
+      const from = Math.max(at3(p.from), 0);
+      const to = p.to ? at3(p.to) : order.length - 1;
       return { id: p.id, text: p.text, events: order.slice(from, to + 1) };
     });
   }
@@ -52298,8 +52535,8 @@ async function resolveBoard(client, ref2) {
   const many = r2.ambiguous && r2.ambiguous.length > 1 ? `${r2.ambiguous.length} boards are titled "${title}" (${r2.ambiguous.map((b2) => `${b2.id} [${b2.project}]`).join(", ")}) \u2014 used ${r2.board.id}, the most recently changed; pass a board id to use another` : void 0;
   return { id: r2.board.id, ...many ? { note: many } : {} };
 }
-async function planDesignRedraw(client, d, name, boardId, at2) {
-  const r2 = await client.template(boardId, d.kind, d.content, void 0, void 0, { key: d.key, title: d.title, source: name, level: d.level, ...at2 ? { at: at2 } : {} });
+async function planDesignRedraw(client, d, name, boardId, at3) {
+  const r2 = await client.template(boardId, d.kind, d.content, void 0, void 0, { key: d.key, title: d.title, source: name, level: d.level, ...at3 ? { at: at3 } : {} });
   const drawn = withDesignFindings(d, r2.items);
   const current = await client.getBoard(boardId);
   const items = current.items;
@@ -52320,9 +52557,10 @@ async function previewDesignContent(client, name, content, board, o = {}) {
   if (!boardId)
     return { key: d.key, lines: [`Redraw preview \u2014 ${d.key} (dry run: nothing written)`, `  no board ${board} yet: a real draw creates it and adds the whole frame`, ...lintLine] };
   const { plan, current } = await planDesignRedraw(client, d, name, boardId, o.at);
-  return { key: d.key, boardId, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 ${d.key} from ${name} on "${current.title}" (${client.boardUrl(boardId)})`, limit: o.limit }), ...lintLine] };
+  const refused = await client.redrawRefusal(boardId, d.key);
+  return { key: d.key, boardId, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 ${d.key} from ${name} on "${current.title}" (${client.boardUrl(boardId)})`, limit: o.limit }), ...lintLine, ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
 }
-async function drawDesignContent(client, name, content, board, at2) {
+async function drawDesignContent(client, name, content, board, at3) {
   const d = parseDesignText(name, content);
   const findings = lintDesignContent(d);
   const errors = findings.filter((f) => f.severity === "error");
@@ -52330,7 +52568,10 @@ async function drawDesignContent(client, name, content, board, at2) {
     throw new Error([`not drawn: ${errors.length} lint error(s) in ${name}`, ...errors.map(findingLine)].join("\n"));
   const found = await resolveBoard(client, board);
   const boardId = found.id;
-  const { ops, current, unresolved } = await planDesignRedraw(client, d, name, boardId, at2);
+  const refused = await client.redrawRefusal(boardId, d.key);
+  if (refused)
+    throw new Error(refused);
+  const { ops, current, unresolved } = await planDesignRedraw(client, d, name, boardId, at3);
   const { seq } = await client.apply(boardId, ops, "agent", `design_draw: ${name}`);
   await client.patchBoard(boardId, { meta: { diagrams: { [d.key]: { kind: d.kind, source: name, files: { [name]: content }, holder: {} } } } });
   return { boardId, seq, key: d.key, notes: findings.filter((f) => f.severity !== "error"), unresolved, ...found.note ? { note: found.note } : {} };
@@ -52361,7 +52602,7 @@ function registerContentDesignTools(server, client, o = {}) {
     title: "Draw a diagram file on a board",
     description: `${WHICH_DIAGRAM}
 For a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}
-Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors. Pass the file's text as \`content\` and its name as \`name\` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).`,
+Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors, and a diagram whose files another agent holds (only the holder redraws it: propose instead with canvas_files \u2192 canvas_propose_edit, or ask the person to hand the files over \u2014 canvas_handover). Pass the file's text as \`content\` and its name as \`name\` (this canvas cannot read your files); keep the file itself as the truth on your side. You become the holder of a diagram nobody holds yet. Returns the board link and the frame key (use it with canvas_focus).`,
     inputSchema: {
       ...fileArgs,
       board: external_exports.string().describe('A board id, or "title:<title>" (found, or created)'),
@@ -52369,10 +52610,10 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
       dryRun: external_exports.boolean().optional().describe("true: only preview the redraw (what it adds, updates, removes, keeps, and why); nothing is written and no board is created"),
       limit: external_exports.number().int().min(1).max(200).optional().describe("dryRun: lines per section (default 8)")
     }
-  }, async ({ name, content, board, at: at2, dryRun, limit }) => guard(async () => {
+  }, async ({ name, content, board, at: at3, dryRun, limit }) => guard(async () => {
     if (dryRun)
-      return text((await previewDesignContent(client, name, content, board, { ...at2 ? { at: at2 } : {}, ...limit ? { limit } : {} })).lines.join("\n"));
-    const r2 = await drawDesignContent(client, name, content, board, at2);
+      return text((await previewDesignContent(client, name, content, board, { ...at3 ? { at: at3 } : {}, ...limit ? { limit } : {} })).lines.join("\n"));
+    const r2 = await drawDesignContent(client, name, content, board, at3);
     const unresolved = r2.unresolved.length ? [`\u26A0 ${r2.unresolved.length} trace(s) not drawn:`, ...r2.unresolved.map((u3) => `  ${u3.item} \u2014${u3.trace.rel}\u2192 ${u3.trace.from}: ${u3.reason === "bad-ref" ? "not a <diagram key>/<element id> ref" : "target not found on the board"}`)] : [];
     const d = parseDesignText(name, content);
     return text([`\u2714 ${name} \u2192 frame ${r2.key} on ${client.boardUrl(r2.boardId, { frame: r2.key })} (seq ${r2.seq})`, ...r2.note ? [`\u26A0 ${r2.note}`] : [], ...r2.notes.map(findingLine), ...unresolved, ...d.kind === "domain-story" ? tellBack(d.content) : []].join("\n"));
@@ -60576,7 +60817,7 @@ function helpText(o) {
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
     'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
-    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
+    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files \u2014 and only that agent redraws them; canvas_wait wakes you only for what is yours`,
     "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
@@ -60604,12 +60845,12 @@ function helpText(o) {
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? "this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)" : "local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)"}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     "- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects",
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
-    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
+    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }). A diagram whose files another agent holds cannot be redrawn by you (design_draw refuses it): propose instead, or ask the person to hand the files over to you \u2014 they start it (board panel \u2192 Hand over files), the holder marks them ready (canvas_handover({ ready: true })), you accept (canvas_handover({ accept: true })), keep the files in your repo and redraw once from your copy.`,
     "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python's default one with a 403.",
-    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person \u2014 drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.`
+    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person \u2014 drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits. Only the holder redraws a diagram; the files change hands only when the person hands them over (canvas_handover: the holder marks them ready, the new holder accepts and becomes the holder \u2014 and "Answered by" when the person asked for it).`
   ].join("\n");
 }
 function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os5.homedir()) {
@@ -60629,7 +60870,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.21.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.22.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -60739,8 +60980,8 @@ ${CONTENT_HELP}`,
       scope: external_exports.string().optional().describe("Id prefix; different scopes never collide"),
       note: external_exports.string().optional()
     }
-  }, async ({ id, kind, content, at: at2, scope, note }) => {
-    const { ops } = await client.template(id, kind, content, at2, scope);
+  }, async ({ id, kind, content, at: at3, scope, note }) => {
+    const { ops } = await client.template(id, kind, content, at3, scope);
     if (!ops.length)
       return text2("template produced no items");
     const r2 = await client.apply(id, ops, "agent", note);
@@ -60900,14 +61141,15 @@ ${svg}`);
   }, async ({ id, text: t, answeredBy }) => {
     const s = t !== void 0 || answeredBy !== void 0 ? await client.setSettings(id, { ...t !== void 0 ? { context: t } : {}, ...answeredBy !== void 0 ? { answeredBy } : {} }) : await client.settings(id);
     seenContext.set(id, s.context?.at ?? "");
-    const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}`);
+    const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ""}`);
     const agents = s.agents.map((a) => `@${a.handle ?? handleOf(a.name)}${(a.handle ?? handleOf(a.name)) !== a.label ? ` (${a.label})` : ""}${a.watching ? " \u2014 watching" : ""}`).join(", ");
     return text2([
       s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace("T", " ")}` : ""})` : ""}:
 ${s.context.text}` : "No board context yet \u2014 write one (text) when the board comes from a discussion, so other agents know what was said.",
       "",
       `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${displayName(s.suggestion)}${s.suggestionWhy === "asked" ? `${s.suggestionBy ? ` by ${displayName(s.suggestionBy)}` : ""} \u2014 waiting for the person to confirm it in the board header` : ", who holds every diagram's files \u2014 the person can confirm it"})` : ""}`,
-      ...holders.length ? ["Files behind the diagrams:", ...holders] : [],
+      ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : [],
+      ...s.handover ? handoverLines(s.handover) : [],
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));
@@ -60955,6 +61197,58 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     }
     return text2(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`);
   });
+  server.registerTool("canvas_handover", {
+    title: "Hand the files behind diagrams over to another agent",
+    description: 'The files behind a diagram are held by one agent (it drew them from its repo): only it redraws that diagram, and proposals on it go to it. The PERSON moves them to another agent with a handover (board panel \u2192 Hand over files) \u2014 you cannot start one: if you should take over some files, ask the person in a comment. Then, in the handover thread (it wakes both sides, also with untilMention): the agent handing over settles the open proposals on those diagrams, redraws any whose file changed since its last draw, and marks them ready (`ready: true`, optionally only some `keys`); the agent receiving them accepts (`accept: true`, once every one is ready \u2014 the person may hand them over anyway when the holder is gone), becomes their holder (and "Answered by" when the person asked for it), reads each file (canvas_files), writes it into its repo and redraws once from its copy. Either side may decline (`cancel: true`, with a `reason`). Without ready / accept / cancel: the open handover, who must do what next, and who holds which files.',
+    inputSchema: {
+      board: external_exports.string().describe("board id"),
+      ready: external_exports.boolean().optional().describe("you are handing the files over: they are ready to be taken as the board has them now (settle open proposals and redraw what changed first)"),
+      keys: external_exports.array(external_exports.string()).optional().describe('ready: only these diagram keys ("workflow" for a workflow board); default every one you are handing over'),
+      accept: external_exports.boolean().optional().describe("you are receiving the files: take them over (every one must be ready)"),
+      repo: external_exports.string().max(300).optional().describe("accept: the folder name of the repo you keep them in (shown to people)"),
+      remote: external_exports.string().max(300).optional().describe("accept: that repo's git remote (credentials are removed)"),
+      cancel: external_exports.boolean().optional().describe("decline the handover (either side): the files stay where they are"),
+      reason: external_exports.string().max(500).optional().describe("cancel: why, in a sentence (posted in the thread)")
+    }
+  }, async ({ board, ready, keys, accept, repo, remote, cancel, reason }) => {
+    const asked = [ready && "ready", accept && "accept", cancel && "cancel"].filter(Boolean);
+    if (asked.length > 1)
+      return { ...text2(`give one of ready, accept or cancel (not ${asked.join(" and ")})`), isError: true };
+    const status = await client.handover(board);
+    const ho = status.handover;
+    if (ready) {
+      const r2 = await client.handoverReady(board, { ...keys?.length ? { keys } : {} });
+      const before = new Map((ho?.keys ?? []).map((k2) => [k2.key, k2.ready?.at]));
+      const marked = r2.handover.keys.filter((k2) => k2.ready && k2.ready.at !== before.get(k2.key));
+      const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
+      const left = handoverWaiting(r2.handover);
+      return text2([
+        `Marked ready for ${displayName(r2.handover.to)}: ${marked.map((k2) => `\xAB${k2.title ?? k2.key}\xBB`).join(", ") || "(nothing new)"}${files.length ? ` \u2014 ${files.join(", ")}` : ""} (board seq ${r2.seq}).`,
+        r2.open.length ? `Open proposals on them: ${r2.open.join(", ")} \u2014 settle them in their threads if you can (apply after the person agrees, or say why not); whatever is still open goes to ${displayName(r2.handover.to)} after the handover.` : "No open proposals on them.",
+        left ? `Still waiting: ${left}.` : `Every file is ready: ${displayName(r2.handover.to)} accepts next (canvas_handover({ accept: true })). Propose from then on (canvas_files \u2192 canvas_propose_edit); you cannot redraw them any more after that.`
+      ].join("\n"));
+    }
+    if (accept) {
+      const r2 = await client.handoverAccept(board, { ...repo ? { repo } : {}, ...remote ? { remote } : {} });
+      const titles = r2.keys.map((k2) => `\xAB${ho?.keys.find((x2) => x2.key === k2)?.title ?? k2}\xBB`).join(", ");
+      const how = opts.remote ? `design_draw({ name, content, board: "${board}" }) with your copy's text` : `design_draw({ file, board: "${board}" }) from your copy`;
+      return text2([
+        `You hold the files of ${titles} now${ho ? ` (handed over from ${handoverFroms(ho).map(displayName).join(", ")})` : ""} \u2014 board seq ${r2.seq}. Proposals on them come to you, and only you redraw them; apply a proposal only after the person agrees in its thread.`,
+        `Next: read each file below with canvas_files({ id: "${board}", path }), write it into your repo at that path (a repo you keep \u2014 e.g. commit it), and redraw once from your copy: ${how}. From then on the file in your repo is the truth.`,
+        "Files:",
+        ...r2.files.map((f) => `- ${f.path}	base ${f.sha}	${f.lines} lines`)
+      ].join("\n"));
+    }
+    if (cancel) {
+      const r2 = await client.handoverCancel(board, { ...reason ? { reason } : {} });
+      return text2(`Cancelled the handover (board seq ${r2.seq}); the files stay with ${ho ? handoverFroms(ho).map(displayName).join(", ") : "their holders"}.`);
+    }
+    const holders = status.holders.map((h) => `- ${h.key}${h.title ? ` \xAB${h.title}\xBB` : ""}${h.source ? ` (${h.source})` : ""}: held by ${displayName(h.holder.agent)}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ""}`);
+    return text2([
+      ...ho ? handoverLines(ho) : ["No handover is open on this board. Only the person starts one (board panel \u2192 Hand over files); if you should take over some files, ask them in a comment."],
+      ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : ["No diagram on this board has files held by an agent."]
+    ].join("\n"));
+  });
   server.registerTool("unprose_feedback", {
     title: "Tell the owner what to improve in Unprose",
     description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.",
@@ -60972,10 +61266,10 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     description: "The feedback agents left with unprose_feedback, newest first. Only for an agent on the canvas machine (or with manage rights); others get a refusal.",
     inputSchema: { limit: external_exports.number().int().min(1).max(200).default(30) }
   }, async ({ limit }) => {
-    const list2 = (await client.feedback()).slice(-limit).reverse();
-    if (!list2.length)
+    const list3 = (await client.feedback()).slice(-limit).reverse();
+    if (!list3.length)
       return text2("no feedback yet");
-    return text2(list2.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
+    return text2(list3.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
   });
   server.registerTool("canvas_files", {
     title: "Read the files behind a board",
@@ -61471,8 +61765,8 @@ function alignKanban(board, origins = kanbanOrigins(board)) {
       const top = (locked ? col.y : origin.y) + KANBAN_HEADER + KANBAN_GAP;
       const cards = /* @__PURE__ */ new Map();
       const bottom = stackCards(board, col, cx, top, cards);
-      for (const [id, at2] of cards)
-        set2(board.items[id], at2);
+      for (const [id, at3] of cards)
+        set2(board.items[id], at3);
       if (!locked) {
         tallest = Math.max(tallest, col.h, bottom - KANBAN_GAP + KANBAN_PAD - origin.y);
         placed.push({ col, x: cx });
@@ -61639,16 +61933,16 @@ function planWires(b2, ids) {
     const len = Math.hypot(shape.p2.x - shape.p1.x, shape.p2.y - shape.p1.y);
     const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
     const along = (d) => ({ x: shape.p1.x + (shape.p2.x - shape.p1.x) / (len || 1) * d, y: shape.p1.y + (shape.p2.y - shape.p1.y) / (len || 1) * d });
-    let at2 = dsSeqAt(shape);
+    let at3 = dsSeqAt(shape);
     for (let d = Math.min(24, len / 3); d <= Math.max(24, len * 0.42); d += 8) {
       const p = along(d);
       if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
-        at2 = p;
+        at3 = p;
         break;
       }
     }
-    circles.push(seqBox(at2));
-    out.get(it.id).seq = at2;
+    circles.push(seqBox(at3));
+    out.get(it.id).seq = at3;
   }
   const placed = [];
   for (const { it, shape } of ds) {
@@ -62236,15 +62530,15 @@ function drawUi(c, it) {
     case "breadcrumb":
     case "pagination": {
       let x2 = bx.x + (type === "pagination" ? 0 : 4);
-      const list2 = items.length ? items : t ? [{ text: t }] : [];
+      const list3 = items.length ? items : t ? [{ text: t }] : [];
       const out = type === "tabs" ? [`<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h - 0.5)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h - 0.5)}" stroke="${pal.line}"/>`] : [];
-      list2.forEach((l, i) => {
-        const on = !!l.active || type === "breadcrumb" && i === list2.length - 1 || l.text === u3.active;
+      list3.forEach((l, i) => {
+        const on = !!l.active || type === "breadcrumb" && i === list3.length - 1 || l.text === u3.active;
         out.push(word(l.text ?? "", x2, midY, { size: 14, weight: on ? 600 : 500, fill: on ? type === "tabs" ? accent : pal.ink : pal.ink2 }));
         if (on && type === "tabs")
           out.push(rect({ x: x2, y: bx.y + bx.h - 2, w: measure(l.text ?? "", 14, 600), h: 2 }, `fill="${accent}"`));
         x2 += measure(l.text ?? "", 14, 500) + (type === "breadcrumb" ? 26 : 22);
-        if (type === "breadcrumb" && i < list2.length - 1)
+        if (type === "breadcrumb" && i < list3.length - 1)
           out.push(word("\u203A", x2 - 16, midY, { fill: pal.ink3 }));
       });
       return out.join("");
@@ -62314,8 +62608,8 @@ function drawArrow(c, it) {
     stroke = p.marker, dash = "6 4", marker = "marker";
   const parts2 = [`<path d="${shape.d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dash ? ` stroke-dasharray="${dash}"` : ""}${marker ? ` marker-end="url(#ah-${marker})"` : ""}${it.role === "trace" || it.role === "owns" ? ' stroke-opacity="0.8"' : ""}/>`];
   if (ds && it.role === "activity" && c.text && typeof it.data?.seq === "number" && planned.seq) {
-    const at2 = planned.seq;
-    parts2.push(`<circle cx="${n3(at2.x)}" cy="${n3(at2.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n3(at2.x)}" y="${n3(at2.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`);
+    const at3 = planned.seq;
+    parts2.push(`<circle cx="${n3(at3.x)}" cy="${n3(at3.y)}" r="11" fill="${p.paper}" stroke="${p.ink}" stroke-width="1.6"/><text x="${n3(at3.x)}" y="${n3(at3.y + 4.2)}" font-size="12" font-weight="600" text-anchor="middle" fill="${p.ink}">${it.data.seq}</text>`);
   }
   const label2 = c.text ? planned.label : void 0;
   if (label2?.mode === "dot") {
@@ -63092,7 +63386,7 @@ var MIME = {
   ".woff": "font/woff",
   ".map": "application/json"
 };
-var SETTINGS_KEYS = ["responder", "responderSuggestion", "context", "agentTurns"];
+var SETTINGS_KEYS = ["responder", "responderSuggestion", "context", "agentTurns", "handover"];
 function studioArgv(template, project) {
   const [command, ...args] = template.trim().split(/\s+/).map((t) => t.split("{project}").join(project).split("{file}").join(project));
   if (!command)
@@ -63235,6 +63529,10 @@ function startServer(opts = {}) {
         onBoard.add(n4);
       for (const h of holdersOf(b2.meta))
         onBoard.add(h.holder.agent);
+      const ho = handoverOf(b2.meta);
+      if (ho)
+        for (const n4 of [ho.to, ...handoverFroms(ho)])
+          onBoard.add(n4);
       const r2 = responderName(responderOf(b2.meta));
       if (r2)
         onBoard.add(r2);
@@ -63308,6 +63606,7 @@ function startServer(opts = {}) {
       context: contextOf(b2.meta) ?? null,
       agentTurns: maxTurns(b2),
       holders,
+      handover: handoverOf(b2.meta) ?? null,
       suggestion,
       ...suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? "asked" : "holder" } : {},
       agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w2) => sameAgent(w2, name)), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
@@ -63319,7 +63618,7 @@ function startServer(opts = {}) {
       const m2 = renameInMeta(b2.meta, from, to);
       if (!m2)
         continue;
-      const patch = Object.fromEntries(["responder", "responderSuggestion", "diagrams", "workflow"].filter((k2) => JSON.stringify(m2[k2]) !== JSON.stringify(b2.meta?.[k2])).map((k2) => [k2, m2[k2]]));
+      const patch = Object.fromEntries(["responder", "responderSuggestion", "diagrams", "workflow", "handover"].filter((k2) => JSON.stringify(m2[k2]) !== JSON.stringify(b2.meta?.[k2])).map((k2) => [k2, m2[k2]]));
       if (Object.keys(patch).length)
         store.setMeta(b2.id, patch, "user", `renamed agent ${from} \u2192 ${to}`);
     }
@@ -63387,6 +63686,217 @@ function startServer(opts = {}) {
     if (ops.length)
       store.apply(id, ops, "agent", "seen", name);
     return store.get(id);
+  };
+  const handoverActor = (req, g2, asked) => {
+    if (asked !== void 0 && !isAuthor(asked))
+      throw new HttpError(400, "author must be 'agent' or 'user'");
+    return actor(req, g2, asked, agentName(req, g2) ? "agent" : "user");
+  };
+  const handoverComment = (b2, id, text3, target, data, author) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const w2 = 280;
+    const h = 120;
+    let geo = { x: 0, y: 0 };
+    if (target && b2.items[target]) {
+      const placed = autoPlaceComments(b2, { items: [{ type: "comment", target, w: w2, h }] });
+      geo = { x: placed.items[0].x, y: placed.items[0].y };
+    } else {
+      const all = Object.values(b2.items);
+      geo = { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - h - 20 };
+    }
+    return { id, type: "comment", ...geo, w: w2, h, text: text3, ...target && b2.items[target] ? { target } : {}, data, createdBy: author, updatedBy: author, updatedAt: now };
+  };
+  const isWorkflowKey = (meta3, key) => key === "workflow" && Boolean(meta3?.workflow?.holder);
+  const filesOfKey = (meta3, key) => {
+    const raw = isWorkflowKey(meta3, key) ? meta3?.workflow?.files : meta3?.diagrams?.[key]?.files;
+    return Object.fromEntries(Object.entries(raw && typeof raw === "object" ? raw : {}).filter((e) => typeof e[1] === "string"));
+  };
+  const titleOfKey = (b2, key) => {
+    const frame = b2.items[diagramFrameId(key)];
+    if (frame?.text?.trim())
+      return frame.text.trim().slice(0, 120);
+    if (isWorkflowKey(b2.meta, key))
+      return String(b2.meta?.workflow?.name ?? "").trim() || b2.title;
+    return void 0;
+  };
+  const quoteKeys = (keys) => keys.map((k2) => `"${k2.title ?? k2.key}"`).join(", ");
+  const closeThread = (b2, ho, state) => {
+    const root = b2.items[ho.thread];
+    if (root?.type !== "comment")
+      return [];
+    return [{ kind: "update", id: root.id, patch: { data: { ...root.data ?? {}, handover: { ...root.data?.handover ?? { id: ho.id }, state } } } }];
+  };
+  const replyId = (ho, what) => `${ho.thread}.${what}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const handoverRoute = async (req, res, grant, id, method, action) => {
+    const board = store.get(id);
+    const ho = handoverOf(board.meta);
+    if (!action) {
+      if (method === "GET") {
+        const holders2 = holdersOf(viewOf(grant, board).meta).map((h) => {
+          const title = titleOfKey(board, h.key);
+          return { key: h.key, ...h.source ? { source: h.source } : {}, ...title ? { title } : {}, holder: h.holder };
+        });
+        return json4(res, 200, { handover: ho ?? null, holders: holders2, agents: knownAgents(id, grant) });
+      }
+      if (method !== "POST")
+        throw new HttpError(405, "method not allowed");
+      const body2 = await readBody(req);
+      const who4 = handoverActor(req, grant, body2.author);
+      if (who4.author === "agent")
+        throw new HttpError(403, "only the person hands files over \u2014 ask them (board panel \u2192 Hand over files)");
+      if (ho)
+        throw new HttpError(409, "finish or cancel the open handover first");
+      const known = knownAgents(id);
+      const knownText = known.map(displayName).join(", ");
+      if (typeof body2.to !== "string" || !body2.to.trim())
+        throw new HttpError(400, `to is required: the agent that should hold the files (known agents: ${knownText})`);
+      const to = resolveAgent(body2.to, known);
+      if (!to)
+        throw new HttpError(400, `"${body2.to}" is not an agent this canvas knows \u2014 known agents: ${knownText}`);
+      if (body2.answeredBy !== void 0 && typeof body2.answeredBy !== "boolean")
+        throw new HttpError(400, "answeredBy must be true or false");
+      const holders = holdersOf(board.meta);
+      let picked = holders;
+      if (body2.keys !== void 0) {
+        if (!Array.isArray(body2.keys) || !body2.keys.length || !body2.keys.every((k2) => typeof k2 === "string"))
+          throw new HttpError(400, 'keys must be a list of diagram keys (or "workflow")');
+        const missing = body2.keys.filter((k2) => !holders.some((h) => h.key === k2));
+        if (missing.length)
+          throw new HttpError(400, `no diagram ${missing.map((m2) => `"${m2}"`).join(", ")} with files held by an agent on this board (held: ${holders.map((h) => h.key).join(", ") || "none"})`);
+        picked = [...new Set(body2.keys)].map((k2) => holders.find((h) => h.key === k2));
+      }
+      const left = picked.filter((h) => !sameAgent(h.holder.agent, to));
+      if (!left.length)
+        throw new HttpError(400, holders.length ? `nothing to hand over: ${body2.keys ? "those diagrams are" : "every diagram's files are"} held by ${displayName(to)} already` : "nothing to hand over: no diagram on this board has files held by an agent (they are recorded when an agent draws them from its files)");
+      const now2 = (/* @__PURE__ */ new Date()).toISOString();
+      const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+      const keys = left.map((h) => {
+        const title = titleOfKey(board, h.key);
+        const root2 = h.holder.root?.replace(/\/+$/, "");
+        const source = h.source && root2 && h.source.startsWith(`${root2}/`) ? h.source.slice(root2.length + 1) : h.source;
+        return { key: h.key, from: h.holder.agent, ...source ? { source } : {}, ...title ? { title } : {} };
+      });
+      const handover = { id: `ho_${suffix}`, to, answeredBy: body2.answeredBy !== false, thread: `handover.${suffix}`, by: "user", at: now2, keys };
+      const froms2 = handoverFroms(handover);
+      store.setMeta(id, { handover }, "user", `asked ${froms2.map(displayName).join(", ")} to hand over the files of ${quoteKeys(keys)} to ${displayName(to)}`);
+      const cur2 = store.get(id);
+      const frames = keys.map((k2) => diagramFrameId(k2.key)).filter((f) => cur2.items[f]);
+      const root = handoverComment(cur2, handover.thread, handoverStartText(handover), frames[0], { handover: { id: handover.id, state: "open", to, from: froms2 }, about: frames }, "user");
+      const change2 = store.apply(id, routed(cur2, [{ kind: "add", item: root }], "user"), "user");
+      return json4(res, 201, { seq: change2.seq, handover });
+    }
+    if (method !== "POST")
+      throw new HttpError(405, "method not allowed");
+    if (!["ready", "accept", "cancel"].includes(action))
+      throw new HttpError(404, "not found");
+    const body = await readBody(req);
+    if (!ho)
+      throw new HttpError(404, "no open handover on this board \u2014 the person starts one (board panel \u2192 Hand over files)");
+    const who3 = handoverActor(req, grant, body.author);
+    const me = who3.author === "agent" ? who3.by ?? LOCAL_AGENT : void 0;
+    const froms = handoverFroms(ho);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    if (action === "ready") {
+      if (body.force !== void 0 && typeof body.force !== "boolean")
+        throw new HttpError(400, "force must be true or false");
+      let asked;
+      if (body.keys !== void 0) {
+        if (!Array.isArray(body.keys) || !body.keys.every((k2) => typeof k2 === "string"))
+          throw new HttpError(400, "keys must be a list of diagram keys");
+        const unknown2 = body.keys.filter((k2) => !ho.keys.some((x2) => x2.key === k2));
+        if (unknown2.length)
+          throw new HttpError(400, `${unknown2.map((u3) => `"${u3}"`).join(", ")} ${unknown2.length > 1 ? "are" : "is"} not part of this handover (${ho.keys.map((k2) => k2.key).join(", ")})`);
+        asked = body.keys;
+      }
+      const forced = me === void 0;
+      let marked;
+      if (me !== void 0) {
+        if (body.force)
+          throw new HttpError(403, "only the person hands files over without their holder's confirmation (board panel \u2192 Hand over anyway)");
+        const mine = ho.keys.filter((k2) => sameAgent(k2.from, me));
+        if (!mine.length)
+          throw new HttpError(403, `${displayName(me)} is not handing files over here \u2014 ${froms.map(displayName).join(", ")} ${froms.length > 1 ? "are" : "is"}`);
+        const notMine = (asked ?? []).filter((k2) => !mine.some((m2) => m2.key === k2));
+        if (notMine.length)
+          throw new HttpError(403, `you are not handing over ${notMine.map((k2) => `"${k2}"`).join(", ")} \u2014 ${ho.keys.filter((k2) => notMine.includes(k2.key)).map((k2) => displayName(k2.from)).join(", ")} is`);
+        marked = asked ? mine.filter((k2) => asked.includes(k2.key)) : mine;
+      } else {
+        if (body.force !== true)
+          throw new HttpError(403, "the agent handing the files over marks them ready itself (canvas_handover({ ready: true })); the person only hands them over anyway, with force: true (board panel \u2192 Hand over anyway)");
+        const pool = ho.keys.filter((k2) => !k2.ready);
+        marked = asked ? pool.filter((k2) => asked.includes(k2.key)) : pool;
+        if (!marked.length)
+          throw new HttpError(409, `${asked ? "those files are" : "every file in this handover is"} ready already \u2014 ${displayName(ho.to)} accepts it next`);
+      }
+      const by = me ?? "user";
+      remember(who3.by);
+      const markedKeys = new Set(marked.map((k2) => k2.key));
+      const next = {
+        ...ho,
+        keys: ho.keys.map((k2) => markedKeys.has(k2.key) ? { ...k2, ready: { by, at: now, files: Object.fromEntries(Object.entries(filesOfKey(board.meta, k2.key)).map(([p, t]) => [p, sha1(t)])), ...forced ? { forced: true } : {} } } : k2)
+      };
+      const nextMarked = next.keys.filter((k2) => markedKeys.has(k2.key));
+      const lastDraw = Object.fromEntries(holdersOf(board.meta).filter((h) => markedKeys.has(h.key)).map((h) => [h.key, h.holder.at]));
+      store.setMeta(id, { handover: next }, who3.author, forced ? `handed over the files of ${quoteKeys(marked)} to ${displayName(ho.to)} without ${[...new Set(marked.map((k2) => displayName(k2.from)))].join(", ")}'s confirmation` : `${displayName(by)} marked the files of ${quoteKeys(marked)} ready for ${displayName(ho.to)}`, who3.by);
+      const cur2 = store.get(id);
+      const reply2 = handoverComment(cur2, replyId(ho, "ready"), handoverReadyText(next, nextMarked, { forced, lastDraw }), ho.thread, who3.by ? { by: who3.by } : {}, who3.author);
+      const change2 = store.apply(id, routed(cur2, [{ kind: "add", item: reply2 }], who3.author), who3.author, void 0, who3.by);
+      return json4(res, 200, { seq: change2.seq, handover: next, open: openProposals(store.get(id), [...markedKeys]) });
+    }
+    if (action === "accept") {
+      if (me === void 0)
+        throw new HttpError(403, `the person cannot accept for ${displayName(ho.to)}: ${displayName(ho.to)} accepts it itself (canvas_handover({ accept: true })) \u2014 or cancel it`);
+      if (!sameAgent(me, ho.to))
+        throw new HttpError(403, `only ${displayName(ho.to)} accepts this handover \u2014 the files go to it`);
+      if (ho.keys.some((k2) => !k2.ready))
+        throw new HttpError(409, `not ready yet: ${handoverWaiting(ho)} (canvas_handover({ ready: true })) \u2014 or the person hands them over anyway (board panel \u2192 Hand over files \u2192 Hand over anyway)`);
+      const str2 = (v2, n4) => typeof v2 === "string" && v2.trim() ? v2.trim().slice(0, n4) : void 0;
+      const repo = str2(body.repo, 300);
+      const remote = str2(body.remote, 300);
+      const holder = (k2) => ({ agent: ho.to, at: now, from: k2.from, handover: ho.thread, ...repo ? { repo } : {}, ...remote ? { remote: withoutCredentials(remote) } : {} });
+      const meta3 = board.meta ?? {};
+      const diagrams = { ...meta3.diagrams ?? {} };
+      let workflow;
+      let diagramsChanged = false;
+      const taken = [];
+      for (const k2 of ho.keys) {
+        if (isWorkflowKey(meta3, k2.key)) {
+          workflow = { ...meta3.workflow, holder: holder(k2) };
+          taken.push(k2);
+        } else if (diagrams[k2.key] && typeof diagrams[k2.key] === "object") {
+          diagrams[k2.key] = { ...diagrams[k2.key], holder: holder(k2) };
+          diagramsChanged = true;
+          taken.push(k2);
+        }
+      }
+      if (!taken.length)
+        throw new HttpError(409, `the diagrams of this handover (${quoteKeys(ho.keys)}) are no longer on this board \u2014 cancel it (canvas_handover({ cancel: true }))`);
+      remember(who3.by);
+      const patch = { handover: null, ...diagramsChanged ? { diagrams } : {}, ...workflow ? { workflow } : {} };
+      const notes = [`${displayName(ho.to)} took over the files of ${quoteKeys(taken)} from ${froms.map(displayName).join(", ")}`];
+      if (ho.answeredBy) {
+        const r2 = parseResponder(ho.to, void 0, ho.by, now);
+        if (r2)
+          patch.responder = Object.fromEntries(Object.entries(r2).filter(([, v2]) => v2 !== void 0));
+        if (suggestionOf(meta3))
+          patch.responderSuggestion = null;
+        notes.push(`set "Answered by" to ${displayName(ho.to)} \u2014 the person asked for it when handing the files over`);
+      }
+      store.setMeta(id, patch, "agent", notes.join("; "), who3.by);
+      const cur2 = store.get(id);
+      const reply2 = handoverComment(cur2, replyId(ho, "accepted"), handoverAcceptText({ ...ho, keys: taken }), ho.thread, who3.by ? { by: who3.by } : {}, "agent");
+      const change2 = store.apply(id, routed(cur2, [...closeThread(cur2, ho, "done"), { kind: "add", item: reply2 }], "agent"), "agent", void 0, who3.by);
+      const files = taken.flatMap((k2) => Object.entries(filesOfKey(cur2.meta, k2.key)).map(([p, t]) => ({ path: p, sha: sha1(t), lines: t === "" ? 0 : t.replace(/\n$/, "").split("\n").length })));
+      return json4(res, 200, { seq: change2.seq, keys: taken.map((k2) => k2.key), files });
+    }
+    if (me !== void 0 && !sameAgent(me, ho.to) && !froms.some((f) => sameAgent(f, me)))
+      throw new HttpError(403, `only the person, ${displayName(ho.to)} or ${froms.map(displayName).join(", ")} can cancel this handover`);
+    const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim().slice(0, 500) : void 0;
+    store.setMeta(id, { handover: null }, who3.author, `cancelled the handover of ${quoteKeys(ho.keys)} to ${displayName(ho.to)}${reason ? `: ${reason}` : ""}`, who3.by);
+    const cur = store.get(id);
+    const reply = handoverComment(cur, replyId(ho, "cancelled"), handoverCancelText(me, reason), ho.thread, who3.by ? { by: who3.by } : {}, who3.author);
+    const change = store.apply(id, routed(cur, [...closeThread(cur, ho, "cancelled"), { kind: "add", item: reply }], who3.author), who3.author, void 0, who3.by);
+    return json4(res, 200, { seq: change.seq });
   };
   const serveStatic = (res, rel) => {
     const safe = path10.normalize(rel).replace(/^(\.\.[/\\])+/, "");
@@ -63638,9 +64148,13 @@ function startServer(opts = {}) {
           if (typeof body.title === "string")
             patch.title = body.title;
           if (body.meta && typeof body.meta === "object") {
-            const sent = method === "PATCH" ? mergeBoardMeta(board.meta, body.meta) : body.meta;
             const w2 = actor(req, grant, "agent", "agent");
-            const meta3 = stampHolders(board.meta, sent, w2.by ?? (w2.author === "user" ? "user" : LOCAL_AGENT), (/* @__PURE__ */ new Date()).toISOString());
+            const caller = w2.by ?? (w2.author === "user" ? "user" : LOCAL_AGENT);
+            const sent = method === "PATCH" ? mergeBoardMeta(board.meta, body.meta) : keepHeldEntries(board.meta, body.meta, caller);
+            const meta3 = stampHolders(board.meta, sent, caller, (/* @__PURE__ */ new Date()).toISOString());
+            const refused = heldRefusal(board.meta, meta3, caller);
+            if (refused)
+              throw new HttpError(409, refused);
             for (const k2 of SETTINGS_KEYS) {
               if (board.meta?.[k2] !== void 0)
                 meta3[k2] = board.meta[k2];
@@ -63663,7 +64177,7 @@ function startServer(opts = {}) {
         if (!isAuthor(body.author) && !grant.as)
           throw new HttpError(400, "author must be 'agent' or 'user'");
         const who3 = actor(req, grant, body.author, "agent");
-        const ops = routed(board, stampAttribution(board, assertOps(body.ops), who3.by), who3.author);
+        const ops = routed(board, keepHandoverMarks(board, stampAttribution(board, assertOps(body.ops), who3.by)), who3.author);
         checkMentionRate(ops, who3.author, who3.by);
         if (who3.author === "agent")
           remember(who3.by);
@@ -63824,6 +64338,8 @@ function startServer(opts = {}) {
           return reply(500, { error: e.message ?? "internal error" });
         }
       }
+      if (sub === "handover")
+        return handoverRoute(req, res, grant, id, method, parts2[4]);
       if (sub === "settings") {
         if (method === "GET")
           return json4(res, 200, settingsOf(grant, board, req));
@@ -63833,13 +64349,13 @@ function startServer(opts = {}) {
         if (body.author !== void 0 && !isAuthor(body.author))
           throw new HttpError(400, "author must be 'agent' or 'user'");
         const w2 = actor(req, grant, body.author, "user");
-        const at2 = (/* @__PURE__ */ new Date()).toISOString();
+        const at3 = (/* @__PURE__ */ new Date()).toISOString();
         const by = w2.by ?? (w2.author === "agent" ? LOCAL_AGENT : void 0);
         const patch = {};
         const notes = [];
         const asked = "responder" in body ? body.responder : "answeredBy" in body ? body.answeredBy : void 0;
         if (asked !== void 0) {
-          const r2 = parseResponder(asked, w2.author === "agent" ? w2.by ?? LOCAL_AGENT : void 0, by, at2);
+          const r2 = parseResponder(asked, w2.author === "agent" ? w2.by ?? LOCAL_AGENT : void 0, by, at3);
           if (r2 === void 0)
             throw new HttpError(400, "answeredBy must be 'any', 'studio', 'me' (an agent) or an agent's name");
           const cur = responderOf(board.meta);
@@ -63873,7 +64389,7 @@ function startServer(opts = {}) {
           if (text3.length > CONTEXT_MAX)
             throw new HttpError(400, `the context is longer than ${CONTEXT_MAX} characters \u2014 keep it short and link to the notes (docs/meetings/\u2026md)`);
           if (text3 !== (contextOf(board.meta)?.text ?? "")) {
-            patch.context = text3 ? { text: text3, ...by ? { by } : {}, at: at2 } : null;
+            patch.context = text3 ? { text: text3, ...by ? { by } : {}, at: at3 } : null;
             notes.push(text3 ? "updated the board context" : "cleared the board context");
           }
         }

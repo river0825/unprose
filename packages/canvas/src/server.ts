@@ -19,9 +19,10 @@ import { findDocsDir, renderDoc, renderIndex, resolveDocAsset } from './docs.js'
 import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
-import { boardFiles, buildProposal, ProposalError, stampAttribution, type ProposalInput } from './proposals.js'
-import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Op, type Wake, type WsMessage } from './model.js'
+import { boardFiles, buildProposal, ProposalError, sha1, stampAttribution, type ProposalInput } from './proposals.js'
+import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
 import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
+import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
@@ -90,8 +91,8 @@ export interface ServerOptions {
   waitKeepAliveMs?: number
 }
 
-/** Board settings kept in `meta`, changed only through /settings (logged), never by a PUT of the whole meta. */
-const SETTINGS_KEYS = ['responder', 'responderSuggestion', 'context', 'agentTurns'] as const
+/** Board settings kept in `meta`, changed only through /settings and /handover (logged), never by a PUT of the whole meta. */
+const SETTINGS_KEYS = ['responder', 'responderSuggestion', 'context', 'agentTurns', 'handover'] as const
 
 /** One project the owner allowed studio for, resolved at startup — never taken from a board or a request. */
 export interface StudioProject {
@@ -276,6 +277,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     if (b) {
       for (const n of [...store.watcherNames(id), ...Object.keys(store.watcherSeen(id))]) onBoard.add(n)
       for (const h of holdersOf(b.meta)) onBoard.add(h.holder.agent)
+      const ho = handoverOf(b.meta)
+      if (ho) for (const n of [ho.to, ...handoverFroms(ho)]) onBoard.add(n)
       const r = responderName(responderOf(b.meta))
       if (r) onBoard.add(r)
       for (const it of Object.values(b.items)) if (it.type === 'comment' && it.createdBy === 'agent' && typeof it.data?.by === 'string') onBoard.add(it.data.by)
@@ -347,6 +350,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       context: contextOf(b.meta) ?? null,
       agentTurns: maxTurns(b),
       holders,
+      handover: handoverOf(b.meta) ?? null,
       suggestion,
       ...(suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? 'asked' : 'holder' } : {}),
       agents: knownAgents(b.id, g)
@@ -360,7 +364,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     for (const b of store.list()) {
       const m = renameInMeta(b.meta, from, to)
       if (!m) continue
-      const patch = Object.fromEntries(['responder', 'responderSuggestion', 'diagrams', 'workflow'].filter((k) => JSON.stringify(m[k]) !== JSON.stringify(b.meta?.[k])).map((k) => [k, m[k]]))
+      const patch = Object.fromEntries(['responder', 'responderSuggestion', 'diagrams', 'workflow', 'handover'].filter((k) => JSON.stringify(m[k]) !== JSON.stringify(b.meta?.[k])).map((k) => [k, m[k]]))
       if (Object.keys(patch).length) store.setMeta(b.id, patch, 'user', `renamed agent ${from} → ${to}`)
     }
   }
@@ -435,6 +439,200 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     const ops = author === 'agent' ? [] : agentSeenOps(store.get(id)!, changes, name)
     if (ops.length) store.apply(id, ops, 'agent', 'seen', name)
     return store.get(id)!
+  }
+
+  // ---- Handing over the files behind diagrams (docs/canvas.md "Handing over the files") ----
+  /** A caller on this machine that named itself (UNPROSE_AGENT_NAME) is an agent unless it says it is the person. */
+  const handoverActor = (req: http.IncomingMessage, g: Grant, asked: unknown) => {
+    if (asked !== undefined && !isAuthor(asked)) throw new HttpError(400, "author must be 'agent' or 'user'")
+    return actor(req, g, asked, agentName(req, g) ? 'agent' : 'user')
+  }
+  /** A comment the canvas writes in a handover thread: beside its target (the frame, or the thread's first message). */
+  const handoverComment = (b: Board, id: string, text: string, target: string | undefined, data: Record<string, unknown>, author: Author): Item => {
+    const now = new Date().toISOString()
+    const w = 280
+    const h = 120
+    let geo = { x: 0, y: 0 }
+    if (target && b.items[target]) {
+      const placed = autoPlaceComments(b, { items: [{ type: 'comment', target, w, h }] }) as { items: Array<{ x: number; y: number }> }
+      geo = { x: placed.items[0].x, y: placed.items[0].y }
+    } else {
+      const all = Object.values(b.items)
+      geo = { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - h - 20 }
+    }
+    return { id, type: 'comment', ...geo, w, h, text, ...(target && b.items[target] ? { target } : {}), data, createdBy: author, updatedBy: author, updatedAt: now }
+  }
+  /** `key` means `meta.workflow` ('workflow', when the workflow has a holder), else the diagram with that key. */
+  const isWorkflowKey = (meta: Board['meta'], key: string) => key === 'workflow' && Boolean((meta?.workflow as { holder?: unknown } | undefined)?.holder)
+  /** The files the board carries for one diagram (or the workflow): path → text. */
+  const filesOfKey = (meta: Board['meta'], key: string): Record<string, string> => {
+    const raw = isWorkflowKey(meta, key) ? (meta?.workflow as { files?: unknown } | undefined)?.files : ((meta?.diagrams as Record<string, { files?: unknown }> | undefined)?.[key])?.files
+    return Object.fromEntries(Object.entries(raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}).filter((e): e is [string, string] => typeof e[1] === 'string'))
+  }
+  /** The frame's title, for people: the frame's text, else the workflow's name, else the key. */
+  const titleOfKey = (b: Board, key: string): string | undefined => {
+    const frame = b.items[diagramFrameId(key)]
+    if (frame?.text?.trim()) return frame.text.trim().slice(0, 120)
+    if (isWorkflowKey(b.meta, key)) return String((b.meta?.workflow as { name?: unknown } | undefined)?.name ?? '').trim() || b.title
+    return undefined
+  }
+  const quoteKeys = (keys: Array<Pick<HandoverKey, 'key' | 'title'>>) => keys.map((k) => `"${k.title ?? k.key}"`).join(', ')
+  /** The thread's first message, marked done / cancelled — plus a reply in the thread. */
+  const closeThread = (b: Board, ho: Handover, state: 'done' | 'cancelled'): Op[] => {
+    const root = b.items[ho.thread]
+    if (root?.type !== 'comment') return []
+    return [{ kind: 'update', id: root.id, patch: { data: { ...(root.data ?? {}), handover: { ...((root.data?.handover as Record<string, unknown> | undefined) ?? { id: ho.id }), state } } } }]
+  }
+  const replyId = (ho: Handover, what: string) => `${ho.thread}.${what}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+  const handoverRoute = async (req: http.IncomingMessage, res: http.ServerResponse, grant: Grant, id: string, method: string, action: string | undefined) => {
+    const board = store.get(id)!
+    const ho = handoverOf(board.meta)
+    if (!action) {
+      if (method === 'GET') {
+        const holders = holdersOf(viewOf(grant, board).meta).map((h) => {
+          const title = titleOfKey(board, h.key)
+          return { key: h.key, ...(h.source ? { source: h.source } : {}), ...(title ? { title } : {}), holder: h.holder }
+        })
+        return json(res, 200, { handover: ho ?? null, holders, agents: knownAgents(id, grant) })
+      }
+      if (method !== 'POST') throw new HttpError(405, 'method not allowed')
+      // START: the person only
+      const body = (await readBody(req)) as { to?: unknown; keys?: unknown; answeredBy?: unknown; author?: unknown }
+      const who = handoverActor(req, grant, body.author)
+      if (who.author === 'agent') throw new HttpError(403, 'only the person hands files over — ask them (board panel → Hand over files)')
+      if (ho) throw new HttpError(409, 'finish or cancel the open handover first')
+      const known = knownAgents(id)
+      const knownText = known.map(displayName).join(', ')
+      if (typeof body.to !== 'string' || !body.to.trim()) throw new HttpError(400, `to is required: the agent that should hold the files (known agents: ${knownText})`)
+      const to = resolveAgent(body.to, known)
+      if (!to) throw new HttpError(400, `"${body.to}" is not an agent this canvas knows — known agents: ${knownText}`)
+      if (body.answeredBy !== undefined && typeof body.answeredBy !== 'boolean') throw new HttpError(400, 'answeredBy must be true or false')
+      const holders = holdersOf(board.meta)
+      let picked = holders
+      if (body.keys !== undefined) {
+        if (!Array.isArray(body.keys) || !body.keys.length || !body.keys.every((k) => typeof k === 'string')) throw new HttpError(400, 'keys must be a list of diagram keys (or "workflow")')
+        const missing = (body.keys as string[]).filter((k) => !holders.some((h) => h.key === k))
+        if (missing.length) throw new HttpError(400, `no diagram ${missing.map((m) => `"${m}"`).join(', ')} with files held by an agent on this board (held: ${holders.map((h) => h.key).join(', ') || 'none'})`)
+        picked = [...new Set(body.keys as string[])].map((k) => holders.find((h) => h.key === k)!)
+      }
+      const left = picked.filter((h) => !sameAgent(h.holder.agent, to))
+      if (!left.length) throw new HttpError(400, holders.length ? `nothing to hand over: ${body.keys ? 'those diagrams are' : "every diagram's files are"} held by ${displayName(to)} already` : 'nothing to hand over: no diagram on this board has files held by an agent (they are recorded when an agent draws them from its files)')
+      const now = new Date().toISOString()
+      const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const keys: HandoverKey[] = left.map((h) => {
+        const title = titleOfKey(board, h.key)
+        // a workflow's file is recorded as an absolute path on the holder's machine: name it within its repo
+        const root = h.holder.root?.replace(/\/+$/, '')
+        const source = h.source && root && h.source.startsWith(`${root}/`) ? h.source.slice(root.length + 1) : h.source
+        return { key: h.key, from: h.holder.agent, ...(source ? { source } : {}), ...(title ? { title } : {}) }
+      })
+      const handover: Handover = { id: `ho_${suffix}`, to, answeredBy: body.answeredBy !== false, thread: `handover.${suffix}`, by: 'user', at: now, keys }
+      const froms = handoverFroms(handover)
+      store.setMeta(id, { handover }, 'user', `asked ${froms.map(displayName).join(', ')} to hand over the files of ${quoteKeys(keys)} to ${displayName(to)}`)
+      const cur = store.get(id)!
+      const frames = keys.map((k) => diagramFrameId(k.key)).filter((f) => cur.items[f])
+      const root = handoverComment(cur, handover.thread, handoverStartText(handover), frames[0], { handover: { id: handover.id, state: 'open', to, from: froms }, about: frames }, 'user')
+      const change = store.apply(id, routed(cur, [{ kind: 'add', item: root }], 'user'), 'user')
+      return json(res, 201, { seq: change.seq, handover })
+    }
+    if (method !== 'POST') throw new HttpError(405, 'method not allowed')
+    if (!['ready', 'accept', 'cancel'].includes(action)) throw new HttpError(404, 'not found')
+    const body = (await readBody(req)) as { keys?: unknown; force?: unknown; author?: unknown; repo?: unknown; remote?: unknown; reason?: unknown }
+    if (!ho) throw new HttpError(404, 'no open handover on this board — the person starts one (board panel → Hand over files)')
+    const who = handoverActor(req, grant, body.author)
+    const me = who.author === 'agent' ? (who.by ?? LOCAL_AGENT) : undefined
+    const froms = handoverFroms(ho)
+    const now = new Date().toISOString()
+
+    if (action === 'ready') {
+      if (body.force !== undefined && typeof body.force !== 'boolean') throw new HttpError(400, 'force must be true or false')
+      let asked: string[] | undefined
+      if (body.keys !== undefined) {
+        if (!Array.isArray(body.keys) || !body.keys.every((k) => typeof k === 'string')) throw new HttpError(400, 'keys must be a list of diagram keys')
+        const unknown = (body.keys as string[]).filter((k) => !ho.keys.some((x) => x.key === k))
+        if (unknown.length) throw new HttpError(400, `${unknown.map((u) => `"${u}"`).join(', ')} ${unknown.length > 1 ? 'are' : 'is'} not part of this handover (${ho.keys.map((k) => k.key).join(', ')})`)
+        asked = body.keys as string[]
+      }
+      const forced = me === undefined
+      let marked: HandoverKey[]
+      if (me !== undefined) {
+        if (body.force) throw new HttpError(403, "only the person hands files over without their holder's confirmation (board panel → Hand over anyway)")
+        const mine = ho.keys.filter((k) => sameAgent(k.from, me))
+        if (!mine.length) throw new HttpError(403, `${displayName(me)} is not handing files over here — ${froms.map(displayName).join(', ')} ${froms.length > 1 ? 'are' : 'is'}`)
+        const notMine = (asked ?? []).filter((k) => !mine.some((m) => m.key === k))
+        if (notMine.length) throw new HttpError(403, `you are not handing over ${notMine.map((k) => `"${k}"`).join(', ')} — ${ho.keys.filter((k) => notMine.includes(k.key)).map((k) => displayName(k.from)).join(', ')} is`)
+        marked = asked ? mine.filter((k) => asked!.includes(k.key)) : mine
+      } else {
+        if (body.force !== true) throw new HttpError(403, 'the agent handing the files over marks them ready itself (canvas_handover({ ready: true })); the person only hands them over anyway, with force: true (board panel → Hand over anyway)')
+        const pool = ho.keys.filter((k) => !k.ready)
+        marked = asked ? pool.filter((k) => asked!.includes(k.key)) : pool
+        if (!marked.length) throw new HttpError(409, `${asked ? 'those files are' : 'every file in this handover is'} ready already — ${displayName(ho.to)} accepts it next`)
+      }
+      const by = me ?? 'user'
+      remember(who.by)
+      const markedKeys = new Set(marked.map((k) => k.key))
+      const next: Handover = {
+        ...ho,
+        keys: ho.keys.map((k) => (markedKeys.has(k.key) ? { ...k, ready: { by, at: now, files: Object.fromEntries(Object.entries(filesOfKey(board.meta, k.key)).map(([p, t]) => [p, sha1(t)])), ...(forced ? { forced: true as const } : {}) } } : k)),
+      }
+      const nextMarked = next.keys.filter((k) => markedKeys.has(k.key))
+      const lastDraw = Object.fromEntries(holdersOf(board.meta).filter((h) => markedKeys.has(h.key)).map((h) => [h.key, h.holder.at]))
+      store.setMeta(id, { handover: next }, who.author, forced ? `handed over the files of ${quoteKeys(marked)} to ${displayName(ho.to)} without ${[...new Set(marked.map((k) => displayName(k.from)))].join(', ')}'s confirmation` : `${displayName(by)} marked the files of ${quoteKeys(marked)} ready for ${displayName(ho.to)}`, who.by)
+      const cur = store.get(id)!
+      const reply = handoverComment(cur, replyId(ho, 'ready'), handoverReadyText(next, nextMarked, { forced, lastDraw }), ho.thread, who.by ? { by: who.by } : {}, who.author)
+      const change = store.apply(id, routed(cur, [{ kind: 'add', item: reply }], who.author), who.author, undefined, who.by)
+      return json(res, 200, { seq: change.seq, handover: next, open: openProposals(store.get(id)!, [...markedKeys]) })
+    }
+
+    if (action === 'accept') {
+      if (me === undefined) throw new HttpError(403, `the person cannot accept for ${displayName(ho.to)}: ${displayName(ho.to)} accepts it itself (canvas_handover({ accept: true })) — or cancel it`)
+      if (!sameAgent(me, ho.to)) throw new HttpError(403, `only ${displayName(ho.to)} accepts this handover — the files go to it`)
+      if (ho.keys.some((k) => !k.ready)) throw new HttpError(409, `not ready yet: ${handoverWaiting(ho)} (canvas_handover({ ready: true })) — or the person hands them over anyway (board panel → Hand over files → Hand over anyway)`)
+      const str = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined)
+      const repo = str(body.repo, 300)
+      const remote = str(body.remote, 300)
+      const holder = (k: HandoverKey): FileHolder => ({ agent: ho.to, at: now, from: k.from, handover: ho.thread, ...(repo ? { repo } : {}), ...(remote ? { remote: withoutCredentials(remote) } : {}) })
+      const meta = board.meta ?? {}
+      const diagrams = { ...((meta.diagrams as Record<string, Record<string, unknown>> | undefined) ?? {}) }
+      let workflow: Record<string, unknown> | undefined
+      let diagramsChanged = false
+      const taken: HandoverKey[] = []
+      for (const k of ho.keys) {
+        if (isWorkflowKey(meta, k.key)) {
+          workflow = { ...(meta.workflow as Record<string, unknown>), holder: holder(k) }
+          taken.push(k)
+        } else if (diagrams[k.key] && typeof diagrams[k.key] === 'object') {
+          diagrams[k.key] = { ...diagrams[k.key], holder: holder(k) }
+          diagramsChanged = true
+          taken.push(k)
+        }
+      }
+      if (!taken.length) throw new HttpError(409, `the diagrams of this handover (${quoteKeys(ho.keys)}) are no longer on this board — cancel it (canvas_handover({ cancel: true }))`)
+      remember(who.by)
+      const patch: Record<string, unknown> = { handover: null, ...(diagramsChanged ? { diagrams } : {}), ...(workflow ? { workflow } : {}) }
+      const notes = [`${displayName(ho.to)} took over the files of ${quoteKeys(taken)} from ${froms.map(displayName).join(', ')}`]
+      if (ho.answeredBy) {
+        const r = parseResponder(ho.to, undefined, ho.by, now)
+        if (r) patch.responder = Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined))
+        if (suggestionOf(meta)) patch.responderSuggestion = null
+        notes.push(`set "Answered by" to ${displayName(ho.to)} — the person asked for it when handing the files over`)
+      }
+      store.setMeta(id, patch, 'agent', notes.join('; '), who.by)
+      const cur = store.get(id)!
+      const reply = handoverComment(cur, replyId(ho, 'accepted'), handoverAcceptText({ ...ho, keys: taken }), ho.thread, who.by ? { by: who.by } : {}, 'agent')
+      const change = store.apply(id, routed(cur, [...closeThread(cur, ho, 'done'), { kind: 'add', item: reply }], 'agent'), 'agent', undefined, who.by)
+      const files = taken.flatMap((k) => Object.entries(filesOfKey(cur.meta, k.key)).map(([p, t]) => ({ path: p, sha: sha1(t), lines: t === '' ? 0 : t.replace(/\n$/, '').split('\n').length })))
+      return json(res, 200, { seq: change.seq, keys: taken.map((k) => k.key), files })
+    }
+
+    // cancel: the person, or an agent named in it (to decline)
+    if (me !== undefined && !sameAgent(me, ho.to) && !froms.some((f) => sameAgent(f, me))) throw new HttpError(403, `only the person, ${displayName(ho.to)} or ${froms.map(displayName).join(', ')} can cancel this handover`)
+    const reason = typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim().slice(0, 500) : undefined
+    store.setMeta(id, { handover: null }, who.author, `cancelled the handover of ${quoteKeys(ho.keys)} to ${displayName(ho.to)}${reason ? `: ${reason}` : ''}`, who.by)
+    const cur = store.get(id)!
+    const reply = handoverComment(cur, replyId(ho, 'cancelled'), handoverCancelText(me, reason), ho.thread, who.by ? { by: who.by } : {}, who.author)
+    const change = store.apply(id, routed(cur, [...closeThread(cur, ho, 'cancelled'), { kind: 'add', item: reply }], who.author), who.author, undefined, who.by)
+    return json(res, 200, { seq: change.seq })
   }
 
   const serveStatic = (res: http.ServerResponse, rel: string): boolean => {
@@ -677,12 +875,18 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           const patch: { title?: string; meta?: Record<string, unknown> } = {}
           if (typeof body.title === 'string') patch.title = body.title
           if (body.meta && typeof body.meta === 'object') {
-            // PUT replaces meta whole (kept for older clients); PATCH merges the keys given, `diagrams` per diagram key,
-            // so two machines drawing in turn never overwrite each other's entries (docs/canvas.md "HTTP API")
-            const sent = method === 'PATCH' ? mergeBoardMeta(board.meta, body.meta) : body.meta
             // the file holders are stamped from the caller; the board settings change only through /settings
             const w = actor(req, grant, 'agent', 'agent')
-            const meta = stampHolders(board.meta, sent, w.by ?? (w.author === 'user' ? 'user' : LOCAL_AGENT), new Date().toISOString())
+            const caller = w.by ?? (w.author === 'user' ? 'user' : LOCAL_AGENT)
+            // PUT replaces meta whole (kept for older clients) — but keeps the diagrams other agents hold that it left
+            // out; PATCH merges the keys given, `diagrams` per diagram key, so two machines drawing in turn never
+            // overwrite each other's entries (docs/canvas.md "HTTP API")
+            const sent = method === 'PATCH' ? mergeBoardMeta(board.meta, body.meta) : keepHeldEntries(board.meta, body.meta, caller)
+            const meta = stampHolders(board.meta, sent, caller, new Date().toISOString())
+            // the guard: nobody takes over, changes or drops a diagram whose files another agent holds — the files
+            // change hands only by a handover the person starts (docs/canvas.md "Handing over the files")
+            const refused = heldRefusal(board.meta, meta, caller)
+            if (refused) throw new HttpError(409, refused)
             for (const k of SETTINGS_KEYS) {
               if (board.meta?.[k] !== undefined) meta[k] = board.meta[k]
               else delete meta[k]
@@ -704,7 +908,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (!isAuthor(body.author) && !grant.as) throw new HttpError(400, "author must be 'agent' or 'user'")
         const who = actor(req, grant, body.author, 'agent')
         // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity")
-        const ops = routed(board, stampAttribution(board, assertOps(body.ops), who.by), who.author)
+        const ops = routed(board, keepHandoverMarks(board, stampAttribution(board, assertOps(body.ops), who.by)), who.author)
         checkMentionRate(ops, who.author, who.by)
         if (who.author === 'agent') remember(who.by)
         const change = store.apply(id, ops, who.author, body.note, who.by)
@@ -856,6 +1060,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           return reply(500, { error: (e as Error).message ?? 'internal error' })
         }
       }
+      // ---- Handing over the files behind diagrams (docs/canvas.md "Handing over the files") ----
+      if (sub === 'handover') return handoverRoute(req, res, grant, id, method, parts[4])
       // ---- Board settings: who answers, the context note, the loop guard (docs/canvas.md "Several agents on one board") ----
       if (sub === 'settings') {
         if (method === 'GET') return json(res, 200, settingsOf(grant, board, req))

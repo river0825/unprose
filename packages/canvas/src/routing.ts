@@ -45,6 +45,9 @@ export interface FileHolder {
   /** the proposal thread last applied (`--applied <comment id>`) and when */
   applied?: string
   appliedAt?: string
+  /** handed over: the agent that held the files before, and the handover thread (docs/canvas.md "Handing over the files") */
+  from?: string
+  handover?: string
 }
 
 export const CONTEXT_MAX = 4000
@@ -230,6 +233,16 @@ export function stampHolders(current: Meta, next: Record<string, unknown>, calle
       h.applied = cur.applied
       h.appliedAt = cur.appliedAt
     }
+    // a handover is remembered across the new holder's own redraws (never taken from what the caller sent), and so is
+    // where it said it keeps the files when a redraw from file text (the remote design_draw) says nothing about it
+    if (cur && sameAgent(cur.agent, caller)) {
+      if (str(cur.from)) h.from = cur.from
+      if (str(cur.handover)) h.handover = cur.handover
+      if (!h.repo && !h.remote && !h.root) {
+        if (str(cur.repo)) h.repo = cur.repo
+        if (str(cur.remote)) h.remote = cur.remote
+      }
+    }
     return h
   }
   const diagrams = next.diagrams as Record<string, Data> | undefined
@@ -272,6 +285,74 @@ export function mergeBoardMeta(meta: Meta, patch: Record<string, unknown>): Reco
     else out[k] = v
   }
   return out
+}
+
+// ── who may redraw a diagram (the guard; docs/canvas.md "Handing over the files") ───────────────────────────
+
+/**
+ * What an agent hears when it would redraw (change, or drop) a diagram whose files another agent holds. The only way
+ * the files change hands is a handover the person starts.
+ */
+export function heldElsewhereText(key: string, source: string | undefined, holder: string): string {
+  return `the files of "${key}"${source ? ` (${source})` : ''} are held by ${displayName(holder)}: you cannot redraw them. Propose instead (canvas_files → canvas_propose_edit), or ask the person to hand them over to you (board panel → Hand over files).`
+}
+
+/** Before a redraw of diagram `key`: the refusal when another agent holds its files; undefined when `caller` may draw it (it holds them, or nobody does yet). */
+export function diagramRefusal(meta: Meta, key: string, caller: string): string | undefined {
+  const d = (meta?.diagrams as Record<string, Data> | undefined)?.[key]
+  const h = holderIn(d)
+  return h && !sameAgent(h.agent, caller) ? heldElsewhereText(key, str(d?.source), h.agent) : undefined
+}
+
+/** Before a redraw of the workflow (`meta.workflow`): the refusal when another agent holds its files. */
+export function workflowRefusal(meta: Meta, caller: string): string | undefined {
+  const wf = meta?.workflow as Data | undefined
+  const h = holderIn(wf)
+  return h && !sameAgent(h.agent, caller) ? heldElsewhereText('workflow', str(wf?.file), h.agent) : undefined
+}
+
+/** JSON with sorted keys: two metas that say the same thing compare equal, whatever order their keys came in. */
+const stable = (v: unknown): string =>
+  JSON.stringify(v, (_k, x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x as Data).sort().map((k) => [k, (x as Data)[k]])) : x)) ?? ''
+
+/**
+ * A PUT replaces the meta whole: a diagram (or the workflow) whose files another agent holds, left out of what the
+ * caller sent, is kept instead of dropped — an older client redrawing its own diagram cannot drop another's.
+ */
+export function keepHeldEntries(current: Meta, sent: Record<string, unknown>, caller: string): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...sent }
+  const curD = (current?.diagrams ?? {}) as Record<string, Data>
+  const held = Object.entries(curD).filter(([, d]) => {
+    const h = holderIn(d)
+    return h && !sameAgent(h.agent, caller)
+  })
+  if (held.length) {
+    const sentD = sent.diagrams && typeof sent.diagrams === 'object' && !Array.isArray(sent.diagrams) ? { ...(sent.diagrams as Data) } : {}
+    for (const [key, d] of held) if (!(key in sentD)) sentD[key] = d
+    out.diagrams = sentD
+  }
+  const wh = holderIn(current?.workflow)
+  if (wh && !sameAgent(wh.agent, caller) && !('workflow' in sent)) out.workflow = current!.workflow
+  return out
+}
+
+/**
+ * The guard on PUT / PATCH of a board's meta (after the holders are stamped): a caller may not take over, change or
+ * drop a diagram — or the workflow — whose files another agent holds. A diagram nobody holds yet is free for the first
+ * drawer; the holder redraws its own as often as it likes. Returns the refusal, or undefined.
+ */
+export function heldRefusal(current: Meta, next: Record<string, unknown>, caller: string): string | undefined {
+  const curD = (current?.diagrams ?? {}) as Record<string, Data>
+  const nextD = (next.diagrams && typeof next.diagrams === 'object' ? next.diagrams : {}) as Record<string, unknown>
+  for (const [key, d] of Object.entries(curD)) {
+    const h = holderIn(d)
+    if (!h || sameAgent(h.agent, caller)) continue
+    if (stable(d) !== stable(nextD[key])) return heldElsewhereText(key, str(d?.source), h.agent)
+  }
+  const wf = current?.workflow as Data | undefined
+  const wh = holderIn(wf)
+  if (wh && !sameAgent(wh.agent, caller) && stable(wf) !== stable(next.workflow)) return heldElsewhereText('workflow', str(wf?.file), wh.agent)
+  return undefined
 }
 
 /** The project roots a board's diagrams were drawn from (their holders' `root`), for "which project is this board in". */
@@ -317,14 +398,221 @@ export function renameInMeta(meta: Meta, from: string, to: string): Record<strin
   }
   const fix = (v: unknown) => {
     const h = holderIn(v)
-    if (!h || !sameAgent(h.agent, from)) return v
+    if (!h || (!sameAgent(h.agent, from) && !sameAgent(h.from, from))) return v
     changed = true
-    return { ...(v as Data), holder: { ...h, agent: to } }
+    return { ...(v as Data), holder: { ...h, ...(sameAgent(h.agent, from) ? { agent: to } : {}), ...(sameAgent(h.from, from) ? { from: to } : {}) } }
   }
   const diagrams = meta.diagrams as Record<string, unknown> | undefined
   if (diagrams && typeof diagrams === 'object') out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k, d]) => [k, fix(d)]))
   if (meta.workflow) out.workflow = fix(meta.workflow)
+  const ho = handoverOf(meta)
+  if (ho && (sameAgent(ho.to, from) || sameAgent(ho.by, from) || ho.keys.some((k) => sameAgent(k.from, from) || sameAgent(k.ready?.by, from)))) {
+    const swap = (n: string) => (sameAgent(n, from) ? to : n)
+    out.handover = { ...ho, to: swap(ho.to), by: swap(ho.by), keys: ho.keys.map((k) => ({ ...k, from: swap(k.from), ...(k.ready ? { ready: { ...k.ready, by: swap(k.ready.by) } } : {}) })) }
+    changed = true
+  }
   return changed ? out : undefined
+}
+
+// ── handing over the files (docs/canvas.md "Handing over the files") ───────────────────────────────────────
+//
+// The person moves the files behind some diagrams from the agent holding them (`from`) to another agent (`to`):
+// the person starts it (board panel → Hand over files), each `from` agent settles its open proposals, redraws what
+// changed and marks its diagrams ready, then `to` accepts and becomes their holder (and, if the person asked, the
+// board's "Answered by"). At most one is open per board (`meta.handover`, a board setting); its thread's root comment
+// (`handover.<id>`, `data.handover`) routes every message there to both sides.
+
+/** One diagram (or 'workflow' = `meta.workflow`) being handed over. */
+export interface HandoverKey {
+  key: string
+  /** the holder when the handover started */
+  from: string
+  /** the file the diagram is drawn from */
+  source?: string
+  /** the frame's title (for people) */
+  title?: string
+  /** `from` (or the person, `forced`) said the files on the board are the ones to take: path → sha-1 */
+  ready?: { by: string; at: string; files: Record<string, string>; forced?: true }
+}
+
+/** The open handover of a board (`meta.handover`). */
+export interface Handover {
+  /** 'ho_<base36 random>' */
+  id: string
+  /** canonical name of the agent receiving the files */
+  to: string
+  /** on accept, "Answered by" becomes `to` */
+  answeredBy: boolean
+  /** id of the handover thread's root comment */
+  thread: string
+  /** who started it ('user' = the person) */
+  by: string
+  at: string
+  keys: HandoverKey[]
+}
+
+/** The board's open handover, validated; undefined when there is none (or it is not well formed). */
+export function handoverOf(meta: Meta): Handover | undefined {
+  const h = meta?.handover as Partial<Handover> | undefined
+  if (!h || typeof h !== 'object' || Array.isArray(h)) return undefined
+  if (!str(h.id) || !str(h.to) || !str(h.thread) || !str(h.by) || !str(h.at) || typeof h.answeredBy !== 'boolean' || !Array.isArray(h.keys) || !h.keys.length) return undefined
+  const keys: HandoverKey[] = []
+  for (const raw of h.keys as unknown[]) {
+    const k = raw as Partial<HandoverKey> | undefined
+    if (!k || typeof k !== 'object' || !str(k.key) || !str(k.from)) return undefined
+    const r = k.ready as HandoverKey['ready'] | undefined
+    const files = r && typeof r === 'object' && r.files && typeof r.files === 'object' && !Array.isArray(r.files) ? Object.fromEntries(Object.entries(r.files).filter(([, v]) => typeof v === 'string')) : undefined
+    const ready = r && typeof r === 'object' && str(r.by) && str(r.at) && files ? { by: r.by, at: r.at, files, ...(r.forced === true ? { forced: true as const } : {}) } : undefined
+    keys.push({ key: k.key!, from: k.from!, ...(str(k.source) ? { source: k.source } : {}), ...(str(k.title) ? { title: k.title } : {}), ...(ready ? { ready } : {}) })
+  }
+  return { id: h.id!, to: h.to!, answeredBy: h.answeredBy, thread: h.thread!, by: h.by!, at: h.at!, keys }
+}
+
+/** The agents handing files over, each once, in the order of the keys. */
+export function handoverFroms(h: Pick<Handover, 'keys'>): string[] {
+  const out: string[] = []
+  for (const k of h.keys) if (!out.some((o) => sameAgent(o, k.from))) out.push(k.from)
+  return out
+}
+
+/** The handover a thread's root comment belongs to (`data.handover`: { id, state, to, from }). */
+export function handoverThreadOf(root: Item | undefined): { id: string; state?: string; to?: string; from?: string[] } | undefined {
+  const h = root?.type === 'comment' ? (root.data?.handover as { id?: unknown; state?: unknown; to?: unknown; from?: unknown } | undefined) : undefined
+  if (!h || typeof h !== 'object' || !str(h.id)) return undefined
+  return { id: h.id as string, ...(str(h.state) ? { state: h.state as string } : {}), ...(str(h.to) ? { to: h.to as string } : {}), ...(Array.isArray(h.from) ? { from: (h.from as unknown[]).filter((x): x is string => typeof x === 'string') } : {}) }
+}
+
+const at = (name: string) => `@${handleOf(name)}`
+const named = (k: Pick<HandoverKey, 'key' | 'title'>) => `«${k.title ?? k.key}»`
+const list = (names: string[]) => names.join(', ')
+/** "2026-10-08 10:12 UTC" */
+export const whenText = (iso: string | undefined) => (iso && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? `${iso.slice(0, 16).replace('T', ' ')} UTC` : 'its last draw')
+
+/** The handover thread's first message — for the person and for both agents. */
+export function handoverStartText(h: Handover): string {
+  const froms = handoverFroms(h)
+  const one = froms.length === 1
+  const files = list(h.keys.map((k) => `${named(k)}${k.source ? ` (${k.source})` : ''}${one ? '' : ` from ${at(k.from)}`}`))
+  return [
+    `Handing over the files of ${files}${one ? ` from ${at(froms[0])}` : ''} to ${at(h.to)}.`,
+    `${list(froms.map(at))}: settle the open proposals on them, redraw any of them whose file changed since your last draw, then canvas_handover({ ready: true }).`,
+    `${at(h.to)}: when they are ready, canvas_handover({ accept: true }), keep the files in your repo (canvas_files), and redraw once from your copy. From then on proposals on them go to you.`,
+  ].join('\n')
+}
+
+/**
+ * The reply when keys are marked ready: by their holder ("Ready: …", with each file's short sha-1), or by the person
+ * without the holder (`forced`, "Handed over without @a's confirmation: …", as of the holder's last draw).
+ */
+export function handoverReadyText(h: Handover, marked: HandoverKey[], o: { forced?: boolean; lastDraw?: Record<string, string | undefined> } = {}): string {
+  const lines: string[] = []
+  if (o.forced) {
+    for (const from of handoverFroms({ keys: marked })) {
+      const mine = marked.filter((k) => sameAgent(k.from, from))
+      lines.push(`Handed over without ${at(from)}'s confirmation: ${list(mine.map((k) => `${named(k)} as of its last draw, ${whenText(o.lastDraw?.[k.key])}`))}`)
+    }
+  } else {
+    const files = marked.flatMap((k) => Object.entries(k.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`))
+    lines.push(`Ready: ${list(marked.map(named))} — the files as of my last draw (${files.length ? list(files) : 'no files on the board'})`)
+  }
+  if (h.keys.every((k) => k.ready)) lines.push(`Every file is ready — ${at(h.to)}: canvas_handover({ accept: true }).`)
+  return lines.join('\n')
+}
+
+/** The reply when `to` accepted. */
+export function handoverAcceptText(h: Handover): string {
+  const keys = list(h.keys.map(named))
+  return [`Accepted — ${at(h.to)} holds the files of ${keys} now; proposals on them go to ${at(h.to)}. ${list(handoverFroms(h).filter((f) => !sameAgent(f, h.to)).map(at))}: propose from now on (canvas_files → canvas_propose_edit).`, ...(h.answeredBy ? [`"Answered by" is ${at(h.to)} now, as the person asked when handing over.`] : [])].join('\n')
+}
+
+/** The reply when the handover was cancelled (by the person: `by` undefined). */
+export function handoverCancelText(by: string | undefined, reason?: string): string {
+  return `Cancelled by ${by ? at(by) : 'the person'}${reason?.trim() ? `: ${reason.trim()}` : ''}`
+}
+
+/** Who must do what next, one line each (canvas_context, canvas_read_board's outline, canvas_handover). */
+export function handoverLines(h: Handover): string[] {
+  const keys = list(h.keys.map((k) => `${named(k)}${k.source ? ` (${k.source})` : ''}${k.ready ? ` [ready${k.ready.forced ? ', handed over by the person' : ''}]` : ''}`))
+  const out = [`Handover open (thread ${h.thread}, started by ${h.by === 'user' ? 'the person' : displayName(h.by)}): the files of ${keys} go from ${list(handoverFroms(h).map(displayName))} to ${displayName(h.to)}${h.answeredBy ? '; "Answered by" becomes it on accept' : ''}`]
+  const waiting = handoverFroms({ keys: h.keys.filter((k) => !k.ready) })
+  for (const from of waiting) {
+    const mine = h.keys.filter((k) => !k.ready && sameAgent(k.from, from))
+    out.push(`  waiting for ${displayName(from)}: settle the open proposals on ${list(mine.map(named))}, redraw any whose file changed, then canvas_handover({ ready: true })`)
+  }
+  out.push(waiting.length ? `  then ${displayName(h.to)} accepts: canvas_handover({ accept: true })` : `  every file is ready — waiting for ${displayName(h.to)} to accept: canvas_handover({ accept: true })`)
+  out.push('  either side may decline it (canvas_handover({ cancel: true, reason })); only the person starts or forces a handover')
+  return out
+}
+
+/** The keys of `h` not ready yet, as "«X» waits for @a" — the 409 an early accept gets. */
+export function handoverWaiting(h: Handover): string {
+  return list(h.keys.filter((k) => !k.ready).map((k) => `${named(k)} waits for ${at(k.from)}`))
+}
+
+/** The Decline button's answer in a proposal thread (web components/EditProposal.tsx, flow/notesView.ts). */
+export const DECLINE_TEXT = 'No, leave the file as it is.'
+
+/**
+ * A finished proposal thread — the holder answered "Applied to …" (`--applied`: a reply `applied.<t>`), or the person
+ * declined it: the same rule as the web's notesView.isSettled.
+ */
+export function isSettledThread(thread: Item[]): boolean {
+  return thread.some((m, i) => i > 0 && (m.id.startsWith('applied.') || (m.text ?? '').trimStart().startsWith('Applied to ') || (m.createdBy === 'user' && (m.text ?? '').trim() === DECLINE_TEXT)))
+}
+
+/** The diagram key a proposal thread is about: the diagram whose files hold the edited file ('workflow' for meta.workflow), else the diagram its items are in. */
+export function proposalKeyOf(board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Item): string | undefined {
+  const edit = editOf(root)
+  if (edit && typeof edit.file === 'string') {
+    const diagrams = board.meta?.diagrams as Record<string, { source?: unknown; files?: unknown }> | undefined
+    for (const [key, d] of Object.entries(diagrams && typeof diagrams === 'object' ? diagrams : {})) {
+      if (d?.source === edit.file || (d?.files && typeof d.files === 'object' && edit.file in (d.files as object))) return key
+    }
+    const wf = board.meta?.workflow as { files?: unknown } | undefined
+    if (wf?.files && typeof wf.files === 'object' && edit.file in (wf.files as object)) return 'workflow'
+  }
+  const ids = [...(Array.isArray(wireProposalOf(root)?.about) ? ((wireProposalOf(root)!.about as unknown[]).filter((x): x is string => typeof x === 'string')) : []), root.target].filter(Boolean) as string[]
+  for (const id of ids) {
+    const d = diagramOf(board, board.items[id])
+    if (d) return d.frameId ? d.key : d.kind === 'workflow' ? 'workflow' : d.key
+  }
+  return undefined
+}
+
+/** Proposal threads still open on these diagrams (no "Applied to" / declined reply), oldest first. */
+export function openProposals(board: Pick<Board, 'kind' | 'items' | 'meta'>, keys: string[]): string[] {
+  const roots = Object.values(board.items).filter((i) => i.type === 'comment' && isProposal(i) && threadRoot(board, i).id === i.id)
+  return roots
+    .filter((r) => {
+      const key = proposalKeyOf(board, r)
+      return key !== undefined && keys.includes(key) && !isSettledThread(threadOf(board, r))
+    })
+    .sort((a, b) => String(a.data?.postedAt ?? a.updatedAt).localeCompare(String(b.data?.postedAt ?? b.updatedAt)))
+    .map((r) => r.id)
+}
+
+/**
+ * `data.handover` on comments is the canvas's own (the handover endpoints write it): a new comment cannot carry one,
+ * and an update keeps what the stored comment has — so nobody routes a thread to both sides of a handover by hand.
+ */
+export function keepHandoverMarks(board: Pick<Board, 'items'>, ops: Op[]): Op[] {
+  return ops.map((op): Op => {
+    if (op.kind === 'add' && op.item.type === 'comment' && op.item.data && 'handover' in op.item.data) {
+      const was = board.items[op.item.id]?.data?.handover
+      const data = { ...op.item.data }
+      if (was !== undefined) data.handover = was
+      else delete data.handover
+      return { ...op, item: { ...op.item, data } }
+    }
+    if (op.kind === 'update' && op.patch.data && typeof op.patch.data === 'object' && board.items[op.id]?.type === 'comment') {
+      const was = board.items[op.id].data?.handover
+      const data = { ...(op.patch.data as Data) }
+      if (was !== undefined) data.handover = was
+      else delete data.handover
+      return { ...op, patch: { ...op.patch, data } }
+    }
+    return op
+  })
 }
 
 // ── mentions and who a comment is for ─────────────────────────────────────────
@@ -394,7 +682,7 @@ const isProposal = (it: Item) => Boolean(editOf(it) || wireProposalOf(it)?.propo
 export const agentOf = (it: Item): string | undefined => (it.createdBy === 'agent' ? (str(it.data?.by) ?? LOCAL_AGENT) : undefined)
 
 /** Why a comment goes where it goes. */
-export type Route = 'mention' | 'proposal' | 'responder' | 'paused'
+export type Route = 'mention' | 'proposal' | 'responder' | 'paused' | 'handover'
 
 /** Consecutive agent messages in one thread, without a person's message, before agents pause there (the loop guard). */
 export const DEFAULT_AGENT_TURNS = 6
@@ -423,6 +711,8 @@ export function isPaused(board: Pick<Board, 'items'>, root: Item): boolean {
 /**
  * Who a comment is for (the agents it wakes) and why; `to` undefined = anyone (as before):
  *   0. loop guard: an agent's message past `maxTurns` agent messages in a row in its thread wakes nobody (`paused`);
+ *   ½. a handover thread (its root carries `data.handover`) goes to both sides: every agent handing files over and the
+ *      agent receiving them — before any @mention (its first message mentions them all);
  *   1. an @mention — in the comment, else the latest one in its thread — makes it a conversation between the agent
  *      mentioned and whoever mentioned it: each message goes to the other side (an agent asking another agent gets the
  *      answer back; the person asking an agent gets nobody else woken);
@@ -441,6 +731,17 @@ export function routeOf(board: Pick<Board, 'kind' | 'items' | 'meta'>, comment: 
   if (author) {
     const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length)
     if (trailingAgentTurns(upTo) > maxTurns) return { to: [], route: 'paused' }
+  }
+  const ho = handoverThreadOf(root)
+  if (ho) {
+    // the parties are on the root (they stay after the handover is done); else the open handover of this thread
+    const open = handoverOf(board.meta)
+    const parties = ho.to ? { to: ho.to, from: ho.from ?? [] } : open && open.thread === root.id ? { to: open.to, from: handoverFroms(open) } : undefined
+    if (parties) {
+      for (const f of parties.from) add(f)
+      add(parties.to)
+      return { to: out, route: 'handover' }
+    }
   }
   const asked = str(comment.data?.mention)
     ? comment
@@ -562,7 +863,8 @@ export function asksMe(board: Board, change: Change, me: string): boolean {
 
 /**
  * A change that addresses `me` personally — a comment routed to `me` by an @mention (or a reply in a thread
- * where `me` was mentioned / did the asking) or by a proposal to files `me` holds — by anyone but `me`.
+ * where `me` was mentioned / did the asking), by a proposal to files `me` holds, or in a handover `me` is part of —
+ * by anyone but `me`.
  * Being the board's responder ("Answered by") does not count: `canvas_wait({ untilMention: true })` wakes only on this.
  */
 export function mentionsMe(board: Board, change: Change, me: string): boolean {
@@ -573,7 +875,7 @@ export function mentionsMe(board: Board, change: Change, me: string): boolean {
     if (it?.type !== 'comment') return false
     const route = it.data?.route
     const to = it.data?.to
-    return (route === 'mention' || route === 'proposal') && Array.isArray(to) && to.some((n) => typeof n === 'string' && sameAgent(n, me))
+    return (route === 'mention' || route === 'proposal' || route === 'handover') && Array.isArray(to) && to.some((n) => typeof n === 'string' && sameAgent(n, me))
   })
 }
 
@@ -623,7 +925,9 @@ export function settingsLines(meta: Meta): string[] {
   const s = suggestionOf(meta)
   if (!r && s) out.push(`Answered by: not set — ${s.by ? displayName(s.by) : 'an agent'} suggested ${responderLabel(s)}; only the person can confirm it`)
   for (const { key, source, holder } of holdersOf(meta)) {
-    out.push(`Files of ${key}${source ? ` (${source})` : ''}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ''}${holder.remote ? ` · ${holder.remote}` : ''} — proposals on it go to that agent`)
+    out.push(`Files of ${key}${source ? ` (${source})` : ''}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ''}${holder.remote ? ` · ${holder.remote}` : ''}${holder.from ? ` (handed over from ${displayName(holder.from)})` : ''} — proposals on it go to that agent; only it redraws it`)
   }
+  const h = handoverOf(meta)
+  if (h) out.push(...handoverLines(h))
   return out
 }

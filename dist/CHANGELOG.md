@@ -6,6 +6,31 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-10-08
+
+### Added
+- **Hand the files behind diagrams over to another agent** (docs/canvas.md → Handing over the files). A board drawn
+  by one agent (say, the one with the meeting notes) can now be led by another (the one that reads the code): the
+  person opens **Hand over files…** in the board panel (or **Hand over…** on a frame's panel), picks the diagrams —
+  all checked by default — and the agent, and leaves **Also make it Answered by** on. The holder settles its open
+  proposals, redraws what changed and marks the files ready (`canvas_handover({ ready: true })`), or the person hands
+  them over anyway when it is gone; the new agent accepts (`canvas_handover({ accept: true })`), gets the list of files
+  to copy into its repo with `canvas_files` and redraws once from its copy. Its holder line keeps where the files came
+  from (`holder.from`, `holder.handover`). Every message of the handover thread reaches both sides, also with
+  `untilMention`; the panel shows who it waits for; the finished thread folds into a ✓. Only the person starts a
+  handover (`POST /api/boards/:id/handover`, then `…/ready`, `…/accept`, `…/cancel`; `GET …/handover`).
+- MCP **`canvas_handover`** (local and `/mcp`): the status, `ready`, `accept`, `cancel`. `canvas_context` and the
+  top of `canvas_read_board` say what the open handover waits for.
+
+### Changed
+- **Only the holder redraws a diagram.** Until now any agent that redrew a diagram silently became its holder, so two
+  agents could take it from each other. Now a draw that would take over, change or drop a diagram (or the workflow)
+  another agent holds is refused before anything is drawn — `design_draw` (local and remote), `awd design draw`,
+  `awd graph --canvas`, and `PUT` / `PATCH` of the board meta (`409`): *the files of "<key>" (<file>) are held by
+  <agent>: you cannot redraw them. Propose instead (canvas_files → canvas_propose_edit), or ask the person to hand them
+  over to you (board panel → Hand over files).* A diagram nobody holds yet is free for the first drawer, as before; a
+  `PUT` that leaves out another agent's diagram keeps it. `GET /api/boards/:id/settings` also returns `handover`.
+
 ## [0.21.0] — 2026-10-08
 
 ### Added
@@ -836,7 +861,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/river0825/unprose/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/river0825/unprose/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/river0825/unprose/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/river0825/unprose/compare/v0.18.0...v0.19.0

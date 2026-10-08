@@ -6362,15 +6362,15 @@ var require_parser = __commonJS({
     var node_process = __require("process");
     var cst = require_cst();
     var lexer = require_lexer();
-    function includesToken(list2, type) {
-      for (let i = 0; i < list2.length; ++i)
-        if (list2[i].type === type)
+    function includesToken(list3, type) {
+      for (let i = 0; i < list3.length; ++i)
+        if (list3[i].type === type)
           return true;
       return false;
     }
-    function findNonEmptyIndex(list2) {
-      for (let i = 0; i < list2.length; ++i) {
-        switch (list2[i].type) {
+    function findNonEmptyIndex(list3) {
+      for (let i = 0; i < list3.length; ++i) {
+        switch (list3[i].type) {
           case "space":
           case "comment":
           case "newline":
@@ -7383,9 +7383,9 @@ function reflectNotesOf(output2) {
   if (!output2 || typeof output2 !== "object")
     return [];
   const raw = output2.reflect;
-  const list2 = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
+  const list3 = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
   const out = [];
-  for (const item of list2) {
+  for (const item of list3) {
     if (typeof item === "string" && item.trim())
       out.push({ note: item.trim(), kind: "friction" });
     else if (item && typeof item === "object" && typeof item.note === "string") {
@@ -7466,9 +7466,9 @@ function learnNotesOf(output2) {
   if (!output2 || typeof output2 !== "object")
     return [];
   const raw = output2.learn;
-  const list2 = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
+  const list3 = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
   const out = [];
-  for (const item of list2) {
+  for (const item of list3) {
     if (typeof item === "string" && item.trim())
       out.push({ note: item.trim() });
     else if (item && typeof item === "object" && typeof item.note === "string") {
@@ -7537,8 +7537,8 @@ function asRecord(v2, where) {
 function parseListeners(raw, where) {
   if (raw === void 0 || raw === null)
     return [];
-  const list2 = Array.isArray(raw) ? raw : [raw];
-  return list2.map((item, i) => {
+  const list3 = Array.isArray(raw) ? raw : [raw];
+  return list3.map((item, i) => {
     if (typeof item === "string")
       return { event: item };
     const r = asRecord(item, `${where}.on[${i}]`);
@@ -34237,8 +34237,8 @@ ${tail}`);
         return jsonFromText(fs8.readFileSync(file2, "utf8")) ?? void 0;
       }
       async ensureAgent(name, kind, cwd) {
-        const list2 = await this.exec(["agent", "list"]);
-        const rows = parseAgents(list2.stdout);
+        const list3 = await this.exec(["agent", "list"]);
+        const rows = parseAgents(list3.stdout);
         const mine = rows.find((a) => a.name === name);
         if (mine) {
           if (mine.agent_status === "blocked")
@@ -34775,11 +34775,11 @@ function canvasSource(opts) {
         if (useCards !== false) {
           try {
             const r = await getJson(`${base}/api/boards/${board.id}/cards?since=${since}`);
-            const list2 = r.moves ?? r.cards ?? [];
+            const list3 = r.moves ?? r.cards ?? [];
             const fresh = (await getJson(`${base}/api/boards/${board.id}`)).board;
             board = fresh;
             inScope = kanbanScope(board, t.frame);
-            moves = list2.map((m2) => ({ ...m2, card: m2.card ?? { id: m2.cardId, title: m2.title } })).filter((m2) => inScope(board.items[m2.cardId]?.parent));
+            moves = list3.map((m2) => ({ ...m2, card: m2.card ?? { id: m2.cardId, title: m2.title } })).filter((m2) => inScope(board.items[m2.cardId]?.parent));
             useCards = true;
           } catch (e) {
             if (e.status === 404)
@@ -35281,7 +35281,7 @@ function proposalOf(discuss) {
   return { kind: p.kind, ...before ? { before } : {}, ...after ? { after } : {} };
 }
 function describeProposal(p, opts = {}) {
-  const list2 = opts.resume ? "human.resume_on" : "on";
+  const list3 = opts.resume ? "human.resume_on" : "on";
   const sub = (w2) => `\`${w2.event ?? "?"}\`${w2.condition ? ` if \`${w2.condition}\`` : ""}`;
   const pick2 = (w2) => {
     if (w2.event)
@@ -35292,20 +35292,20 @@ function describeProposal(p, opts = {}) {
   const b2 = p.before;
   const a = p.after;
   if (p.kind === "remove" && b2)
-    return [`Remove the wire \`${b2.from}\` \u2192 \`${b2.to}\` (${sub(b2)}): \`${b2.to}\` would no longer run on it.`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list2}\`.`];
+    return [`Remove the wire \`${b2.from}\` \u2192 \`${b2.to}\` (${sub(b2)}): \`${b2.to}\` would no longer run on it.`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list3}\`.`];
   if (p.kind === "add" && a)
-    return [`Add a wire \`${a.from}\` \u2192 \`${a.to}\`: \`${a.to}\` would also run on ${pick2(a)}.`, `Yaml intent: add ${pick2(a)} to \`${a.to}.${list2}\`.`];
+    return [`Add a wire \`${a.from}\` \u2192 \`${a.to}\`: \`${a.to}\` would also run on ${pick2(a)}.`, `Yaml intent: add ${pick2(a)} to \`${a.to}.${list3}\`.`];
   if (!b2 || !a)
     return [];
   if (p.kind === "relabel")
-    return [`Change the wire \`${b2.from}\` \u2192 \`${b2.to}\` from ${sub(b2)} to ${pick2({ ...a, event: a.event ?? b2.event })}.`, `Yaml intent: in \`${b2.to}.${list2}\`, replace ${sub(b2)} with ${pick2({ ...a, event: a.event ?? b2.event })}.`];
+    return [`Change the wire \`${b2.from}\` \u2192 \`${b2.to}\` from ${sub(b2)} to ${pick2({ ...a, event: a.event ?? b2.event })}.`, `Yaml intent: in \`${b2.to}.${list3}\`, replace ${sub(b2)} with ${pick2({ ...a, event: a.event ?? b2.event })}.`];
   const event = a.event ?? (a.from === b2.from ? b2.event : void 0);
   const moved = { ...a, event, condition: a.condition ?? b2.condition };
   if (a.to !== b2.to && a.from === b2.from)
-    return [`\`${a.to}\` would run on ${pick2(moved)} instead of \`${b2.to}\`.`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list2}\` and add ${pick2(moved)} to \`${a.to}.on\`.`];
+    return [`\`${a.to}\` would run on ${pick2(moved)} instead of \`${b2.to}\`.`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list3}\` and add ${pick2(moved)} to \`${a.to}.on\`.`];
   if (a.to === b2.to)
-    return [`\`${b2.to}\` would run on ${pick2(moved)} from \`${a.from}\` instead of ${sub(b2)} from \`${b2.from}\`.`, `Yaml intent: in \`${b2.to}.${list2}\`, replace ${sub(b2)} with ${pick2(moved)}.`];
-  return [`The wire \`${b2.from}\` \u2192 \`${b2.to}\` (${sub(b2)}) would become \`${a.from}\` \u2192 \`${a.to}\` (${pick2(moved)}).`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list2}\` and add ${pick2(moved)} to \`${a.to}.on\`.`];
+    return [`\`${b2.to}\` would run on ${pick2(moved)} from \`${a.from}\` instead of ${sub(b2)} from \`${b2.from}\`.`, `Yaml intent: in \`${b2.to}.${list3}\`, replace ${sub(b2)} with ${pick2(moved)}.`];
+  return [`The wire \`${b2.from}\` \u2192 \`${b2.to}\` (${sub(b2)}) would become \`${a.from}\` \u2192 \`${a.to}\` (${pick2(moved)}).`, `Yaml intent: remove ${sub(b2)} from \`${b2.to}.${list3}\` and add ${pick2(moved)} to \`${a.to}.on\`.`];
 }
 function whereOf(a, board, target) {
   const lines = `${a.line}${a.endLine ? `\u2013${a.endLine}` : ""}`;
@@ -35593,8 +35593,8 @@ function editSection(req) {
   ];
 }
 function itemSection(item, a, detail) {
-  const at2 = detail?.source;
-  const where = at2?.workflow ? ` \xB7 defined at \`${at2.workflow}${at2.line ? `:${at2.line}` : ""}\`` : "";
+  const at3 = detail?.source;
+  const where = at3?.workflow ? ` \xB7 defined at \`${at3.workflow}${at3.line ? `:${at3.line}` : ""}\`` : "";
   const head = `### \`${nameOf(a)}\` \u2014 ${item?.type ?? "item"}${item?.role ? ` (${item.role})` : ""}${where}`;
   const body = detail ? ["Snapshot from the last redraw (`item.data.detail`; long text \u2014 persona, prompt, script code \u2014 left out, read the files):", "", "```json", JSON.stringify(withoutLongText(detail), null, 2), "```"] : [
     ...a.text ? [`Text: ${a.text}`] : [],
@@ -35680,8 +35680,8 @@ function workOf(status) {
   return void 0;
 }
 function stampOf(board) {
-  const at2 = board.meta?.studio?.newSessionAt;
-  return typeof at2 === "string" ? at2 : void 0;
+  const at3 = board.meta?.studio?.newSessionAt;
+  return typeof at3 === "string" ? at3 : void 0;
 }
 function uuidish() {
   const h = () => Math.floor(Math.random() * 65536).toString(16).padStart(4, "0");
@@ -35796,10 +35796,10 @@ var init_studioLoop = __esm({
       /** "New session" (the Studio control stamps `meta.studio.newSessionAt`): the board session retires; the next chat starts fresh. */
       renew(board) {
         const c2 = this.boards[board.id];
-        const at2 = stampOf(board);
-        if (!at2 || at2 === c2.resetAt)
+        const at3 = stampOf(board);
+        if (!at3 || at3 === c2.resetAt)
           return;
-        c2.resetAt = at2;
+        c2.resetAt = at3;
         const name = boardSessionName(c2.scope, c2.gen);
         if (this.sessions[name])
           this.sessions[name].role = "retired";
@@ -35820,7 +35820,7 @@ var init_studioLoop = __esm({
         }
         for (const req of discussRequests(board, changes, c2.seq, this.o.model))
           await this.enqueueNew(board.id, req);
-        for (const { seq: at2, comment, by } of newUserComments(board, changes, c2.seq)) {
+        for (const { seq: at3, comment, by } of newUserComments(board, changes, c2.seq)) {
           if (!comment.target || board.items[comment.target]?.type !== "comment")
             continue;
           const root = rootOf(board, comment.id);
@@ -35831,7 +35831,7 @@ var init_studioLoop = __esm({
           if (chat || queuedNew) {
             const base = chat?.req ?? queuedNew.req;
             const { askedBy: _was, ...rest } = base;
-            const req2 = { ...rest, text: text3, seq: at2, followUp: true, ...by ? { askedBy: by } : {} };
+            const req2 = { ...rest, text: text3, seq: at3, followUp: true, ...by ? { askedBy: by } : {} };
             this.queue.push({ board: board.id, kind: "followup", session: chat?.session, req: req2 });
             const s = chat && this.sessions[chat.session];
             if (s && !s.pane)
@@ -35839,7 +35839,7 @@ var init_studioLoop = __esm({
             continue;
           }
           const rootComment = board.items[root];
-          const req = rootComment && chatRequest(board, rootComment, at2, this.o.model, "studio", text3);
+          const req = rootComment && chatRequest(board, rootComment, at3, this.o.model, "studio", text3);
           if (req)
             await this.enqueueNew(board.id, req);
         }
@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.21.0";
+    VERSION2 = "0.22.0";
   }
 });
 
@@ -36600,10 +36600,10 @@ function pickBoardByTitle(boards, title, project, match = () => true) {
     ["personal", loose2.filter((b2) => (b2.project ?? "personal") === "personal")],
     ["any", loose2]
   ];
-  for (const [where, list2] of tiers) {
-    if (!list2.length)
+  for (const [where, list3] of tiers) {
+    if (!list3.length)
       continue;
-    const sorted = [...list2].sort((a, b2) => String(b2.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
+    const sorted = [...list3].sort((a, b2) => String(b2.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
     return { board: sorted[0], ambiguous: sorted.length > 1 ? sorted : [], where };
   }
   return { ambiguous: [] };
@@ -36617,6 +36617,112 @@ var norm;
 var init_boardLookup = __esm({
   "packages/canvas/dist/boardLookup.js"() {
     norm = (s) => s.trim().replace(/\s+/g, " ");
+  }
+});
+
+// packages/canvas/dist/model.js
+function layoutLock(items, id) {
+  const it = items[id];
+  if (!it)
+    return void 0;
+  if (ownLock(it))
+    return "item";
+  if (it.type === "comment")
+    return void 0;
+  const seen = /* @__PURE__ */ new Set([id]);
+  for (let p = it.parent ? items[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? items[p.parent] : void 0) {
+    seen.add(p.id);
+    if (p.type === "frame" && ownLock(p))
+      return "frame";
+  }
+  return void 0;
+}
+var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, LAYOUT_LOCK, ownLock;
+var init_model = __esm({
+  "packages/canvas/dist/model.js"() {
+    WAIT_MAX_SEC = 1800;
+    WAIT_DEFAULT_SEC = 300;
+    LAYOUT_LOCK = "layout";
+    ownLock = (it) => it?.data?.lock === LAYOUT_LOCK;
+  }
+});
+
+// packages/canvas/dist/routing.js
+function displayName(name) {
+  return name === LOCAL_AGENT ? "studio" : name;
+}
+function handleOf(name) {
+  const raw = name.trim().replace(/^@+/, "");
+  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === "studio")
+    return "studio";
+  const h = raw.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}_.-]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 60).replace(/[-.]+$/, "");
+  return h || "agent";
+}
+function sameAgent(a, b2) {
+  if (!a || !b2)
+    return false;
+  return handleOf(a) === handleOf(b2);
+}
+function resolveAgent(raw, known) {
+  if (!raw || !raw.trim())
+    return void 0;
+  const want = raw.trim().replace(/^@+/, "");
+  if (sameAgent(want, LOCAL_AGENT))
+    return LOCAL_AGENT;
+  return known.find((n) => n === want) ?? known.find((n) => n.toLowerCase() === want.toLowerCase()) ?? known.find((n) => sameAgent(n, want));
+}
+function agentLabel(name) {
+  const h = handleOf(name);
+  const d = displayName(name);
+  return h === d ? `@${h}` : `@${h} (${d})`;
+}
+function heldElsewhereText(key, source, holder) {
+  return `the files of "${key}"${source ? ` (${source})` : ""} are held by ${displayName(holder)}: you cannot redraw them. Propose instead (canvas_files \u2192 canvas_propose_edit), or ask the person to hand them over to you (board panel \u2192 Hand over files).`;
+}
+function handoverFroms(h) {
+  const out = [];
+  for (const k2 of h.keys)
+    if (!out.some((o) => sameAgent(o, k2.from)))
+      out.push(k2.from);
+  return out;
+}
+function handoverLines(h) {
+  const keys = list(h.keys.map((k2) => `${named(k2)}${k2.source ? ` (${k2.source})` : ""}${k2.ready ? ` [ready${k2.ready.forced ? ", handed over by the person" : ""}]` : ""}`));
+  const out = [`Handover open (thread ${h.thread}, started by ${h.by === "user" ? "the person" : displayName(h.by)}): the files of ${keys} go from ${list(handoverFroms(h).map(displayName))} to ${displayName(h.to)}${h.answeredBy ? '; "Answered by" becomes it on accept' : ""}`];
+  const waiting = handoverFroms({ keys: h.keys.filter((k2) => !k2.ready) });
+  for (const from of waiting) {
+    const mine = h.keys.filter((k2) => !k2.ready && sameAgent(k2.from, from));
+    out.push(`  waiting for ${displayName(from)}: settle the open proposals on ${list(mine.map(named))}, redraw any whose file changed, then canvas_handover({ ready: true })`);
+  }
+  out.push(waiting.length ? `  then ${displayName(h.to)} accepts: canvas_handover({ accept: true })` : `  every file is ready \u2014 waiting for ${displayName(h.to)} to accept: canvas_handover({ accept: true })`);
+  out.push("  either side may decline it (canvas_handover({ cancel: true, reason })); only the person starts or forces a handover");
+  return out;
+}
+function handoverWaiting(h) {
+  return list(h.keys.filter((k2) => !k2.ready).map((k2) => `${named(k2)} waits for ${at(k2.from)}`));
+}
+function threadRoot(board, it) {
+  let cur = it;
+  const seen = /* @__PURE__ */ new Set();
+  while (!seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur;
+    cur = next;
+  }
+  return it;
+}
+var LOCAL_AGENT, str, at, named, list, agentOf;
+var init_routing = __esm({
+  "packages/canvas/dist/routing.js"() {
+    init_model();
+    LOCAL_AGENT = "agent";
+    str = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
+    at = (name) => `@${handleOf(name)}`;
+    named = (k2) => `\xAB${k2.title ?? k2.key}\xBB`;
+    list = (names) => names.join(", ");
+    agentOf = (it) => it.createdBy === "agent" ? str(it.data?.by) ?? LOCAL_AGENT : void 0;
   }
 });
 
@@ -36659,6 +36765,7 @@ function addQuery(q2, extra) {
 var CanvasClient;
 var init_client2 = __esm({
   "packages/canvas/dist/client.js"() {
+    init_routing();
     init_credentials3();
     init_version2();
     CanvasClient = class {
@@ -36763,8 +36870,8 @@ var init_client2 = __esm({
       apply(id, ops, author = "agent", note) {
         return this.req("POST", `/api/boards/${encodeURIComponent(id)}/ops`, { author, ops, note });
       }
-      template(id, kind, content, at2, scope, frame) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at2, scope, ...frame ? { frame } : {} });
+      template(id, kind, content, at3, scope, frame) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at3, scope, ...frame ? { frame } : {} });
       }
       /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
       updateBoard(id, patch) {
@@ -36820,9 +36927,39 @@ var init_client2 = __esm({
       settings(id) {
         return this.req("GET", `/api/boards/${encodeURIComponent(id)}/settings`);
       }
+      /**
+       * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of
+       * diagram `key` ('workflow' for a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds
+       * them, nobody does yet, or the canvas is too old to say).
+       */
+      async redrawRefusal(id, key, o = {}) {
+        const s = await this.settings(id).catch(() => void 0);
+        if (!s || !Array.isArray(s.holders))
+          return void 0;
+        const me = s.you ?? LOCAL_AGENT;
+        const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
+        return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
+      }
       /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
       setSettings(id, patch, author = "agent") {
         return this.req("PUT", `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author });
+      }
+      // ---- Handing over the files (docs/canvas.md "Handing over the files"); only the person starts one ----
+      /** The open handover on a board, and who holds the files of each diagram. */
+      handover(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/handover`);
+      }
+      /** As the agent handing files over: its diagrams (or only `keys`) are ready to be taken, as the board has them now. */
+      handoverReady(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/ready`, { ...o, author: "agent" });
+      }
+      /** As the agent receiving them: take the files over (once every one is ready); `repo` / `remote` say where you keep them. */
+      handoverAccept(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/accept`, { ...o, author: "agent" });
+      }
+      /** Decline (either side of it): the files stay where they are. */
+      handoverCancel(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: "agent" });
       }
       /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
       sendFeedback(input2) {
@@ -36901,12 +37038,12 @@ var init_client2 = __esm({
         return this.req("POST", "/api/approve", { code, ...o });
       }
       /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
-      boardUrl(id, at2 = {}) {
+      boardUrl(id, at3 = {}) {
         const q2 = new URLSearchParams();
-        if (at2.frame)
-          q2.set("frame", at2.frame);
-        if (at2.focus)
-          q2.set("focus", at2.focus);
+        if (at3.frame)
+          q2.set("frame", at3.frame);
+        if (at3.focus)
+          q2.set("focus", at3.focus);
         const qs = q2.toString();
         return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
       }
@@ -36924,6 +37061,7 @@ __export(projects_exports, {
   cmdBoards: () => cmdBoards,
   cmdProjects: () => cmdProjects,
   holderInfo: () => holderInfo,
+  redrawRefusal: () => redrawRefusal,
   registerProject: () => registerProject
 });
 import fs12 from "node:fs";
@@ -36965,6 +37103,19 @@ function holderInfo(root) {
   } catch {
   }
   return { machine: os3.hostname().replace(/\.local$/, ""), root, repo: path13.basename(root), ...remote ? { remote: remote.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1") } : {} };
+}
+async function redrawRefusal(api, boardId, key, o = {}) {
+  let s;
+  try {
+    s = await api("GET", `/api/boards/${encodeURIComponent(boardId)}/settings`);
+  } catch {
+    return void 0;
+  }
+  if (!Array.isArray(s.holders))
+    return void 0;
+  const me = s.you ?? "agent";
+  const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
+  return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
 }
 async function registerProject(api, root) {
   try {
@@ -37048,6 +37199,7 @@ var init_projects = __esm({
     init_credentials3();
     init_boardLookup();
     init_client2();
+    init_routing();
   }
 });
 
@@ -53164,8 +53316,8 @@ var init_to_json_schema = __esm({
 function aggregateChecks(schema) {
   const agg = {};
   const def2 = schema._zod.def;
-  const list2 = schema._zod.traits.has("$ZodCheck") ? [schema, ...def2.checks ?? []] : def2.checks ?? [];
-  for (const ch of list2)
+  const list3 = schema._zod.traits.has("$ZodCheck") ? [schema, ...def2.checks ?? []] : def2.checks ?? [];
+  for (const ch of list3)
     contributors[ch._zod.def.check]?.(agg, ch._zod.def);
   const bag = schema._zod.bag;
   if (bag.minimum !== void 0)
@@ -57518,7 +57670,7 @@ function normalizeEventStorming(raw) {
     unresolved.push({ element, field, ref: r });
     return void 0;
   };
-  const resolveAll = (v2, kinds, element, field) => list(v2).flatMap((r) => resolve2(r, kinds, element, field) ?? []);
+  const resolveAll = (v2, kinds, element, field) => list2(v2).flatMap((r) => resolve2(r, kinds, element, field) ?? []);
   const laneNames = c2.lanes ?? [];
   const laneOf = (name) => name && laneNames.includes(name) ? laneNames.indexOf(name) : 0;
   const people = c2.people.map((p) => typeof p === "string" ? { text: p } : p).map((p) => ({ id: declare("person", p.id, p.text), text: p.text }));
@@ -57654,7 +57806,7 @@ function normalizeEventStorming(raw) {
     unresolved
   };
 }
-var ref, refs, trace, traces, eventStormingSchema, list;
+var ref, refs, trace, traces, eventStormingSchema, list2;
 var init_eventStorming = __esm({
   "packages/canvas/dist/diagrams/eventStorming.js"() {
     init_zod();
@@ -57745,7 +57897,7 @@ var init_eventStorming = __esm({
       /** Definitions of domain terms, kept below the flow (p.144). */
       definitions: external_exports.array(external_exports.object({ id: external_exports.string().optional(), term: external_exports.string(), text: external_exports.string() })).default([])
     });
-    list = (v2) => v2 === void 0 ? [] : Array.isArray(v2) ? v2 : [v2];
+    list2 = (v2) => v2 === void 0 ? [] : Array.isArray(v2) ? v2 : [v2];
   }
 });
 
@@ -57950,7 +58102,7 @@ function normalizeDomainStory(raw) {
   const actors = c2.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
   const workObjects = c2.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
   const unresolved = [];
-  const find = (list2, ref2) => list2.find((x2) => x2.id === ref2) ?? list2.find((x2) => x2.text === ref2) ?? list2.find((x2) => x2.id === slugify2(ref2));
+  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
   const actorRef = (ref2, element, field) => {
     const hit = find(actors, ref2);
     if (hit)
@@ -58078,7 +58230,7 @@ function checkDomainStory(content) {
   out.push(...reviewDomainStory(m2));
   return out;
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
+var DS_ACTOR_KINDS, DS_GRANULARITY, named2, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
@@ -58087,7 +58239,7 @@ var init_domainStory = __esm({
     init_domainStoryReview();
     DS_ACTOR_KINDS = ["person", "group", "system"];
     DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
-    named = () => external_exports.union([
+    named2 = () => external_exports.union([
       external_exports.string(),
       external_exports.object({
         id: external_exports.string().optional(),
@@ -58102,8 +58254,8 @@ var init_domainStory = __esm({
         time: external_exports.enum(["as-is", "to-be"]).optional(),
         purity: external_exports.enum(["pure", "digitalized"]).optional()
       }).optional(),
-      actors: external_exports.array(named()).min(1),
-      workObjects: external_exports.array(named()).default([]),
+      actors: external_exports.array(named2()).min(1),
+      workObjects: external_exports.array(named2()).default([]),
       sentences: external_exports.array(external_exports.object({
         id: external_exports.string().optional(),
         /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
@@ -58191,16 +58343,16 @@ function unknownFields(schema, value, path24 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at(path24, k2)));
+        out.push(...unknownFields(shape[k2], v2, at2(path24, k2)));
       else if (!open2)
         out.push({ path: path24 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at(path24, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path24, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at(path24, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path24, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -58213,13 +58365,13 @@ function unknownFields(schema, value, path24 = "") {
   }
   return [];
 }
-var def, WRAPPERS, isPlainObject2, at;
+var def, WRAPPERS, isPlainObject2, at2;
 var init_unknownFields = __esm({
   "packages/canvas/dist/diagrams/unknownFields.js"() {
     def = (s) => s._zod.def;
     WRAPPERS = /* @__PURE__ */ new Set(["optional", "default", "nullable", "readonly", "catch", "prefault", "nonoptional"]);
     isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-    at = (path24, key) => typeof key === "number" ? `${path24}[${key}]` : path24 ? `${path24}.${key}` : key;
+    at2 = (path24, key) => typeof key === "number" ? `${path24}[${key}]` : path24 ? `${path24}.${key}` : key;
   }
 });
 
@@ -58406,9 +58558,9 @@ function attachUiFindings(items, raw) {
   const m2 = normalizeUiMock(raw);
   const shownAt = /* @__PURE__ */ new Map();
   const hold = (els, holder) => els.forEach((e) => {
-    const at2 = isLayout(e.type) ? holder : e.ref;
-    shownAt.set(e.ref, at2);
-    hold(e.children, at2);
+    const at3 = isLayout(e.type) ? holder : e.ref;
+    shownAt.set(e.ref, at3);
+    hold(e.children, at3);
   });
   for (const s of m2.screens) {
     shownAt.set(s.id, s.id);
@@ -58416,8 +58568,8 @@ function attachUiFindings(items, raw) {
   }
   const found = /* @__PURE__ */ new Map();
   for (const f of lintUiMock(raw)) {
-    const at2 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
-    found.set(at2, [...found.get(at2) ?? [], { severity: f.severity, message: f.message }]);
+    const at3 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
+    found.set(at3, [...found.get(at3) ?? [], { severity: f.severity, message: f.message }]);
   }
   return items.map((it) => {
     const ui = it.data?.ui;
@@ -58682,12 +58834,12 @@ var init_grammar = __esm({
 // packages/canvas/dist/diagrams/proposeStories.js
 function segments(m2) {
   const order = m2.events.map((e) => e.id);
-  const at2 = (id) => id ? order.indexOf(id) : -1;
+  const at3 = (id) => id ? order.indexOf(id) : -1;
   const phased = m2.phases.filter((p) => p.from || p.to);
   if (phased.length) {
     return phased.map((p) => {
-      const from = Math.max(at2(p.from), 0);
-      const to = p.to ? at2(p.to) : order.length - 1;
+      const from = Math.max(at3(p.from), 0);
+      const to = p.to ? at3(p.to) : order.length - 1;
       return { id: p.id, text: p.text, events: order.slice(from, to + 1) };
     });
   }
@@ -58854,7 +59006,7 @@ function toEgon(content, opts = {}) {
   const objs = [];
   const shapeOf = /* @__PURE__ */ new Map();
   const COL4 = 250;
-  const at2 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
+  const at3 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
   const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
   const firstSeen = [];
   for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq))
@@ -58866,7 +59018,7 @@ function toEgon(content, opts = {}) {
       firstSeen.push(a.id);
   firstSeen.forEach((aid, i) => {
     const a = m2.actors.find((x2) => x2.id === aid);
-    const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at2(i, 0), pickedColor: "black" };
+    const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at3(i, 0), pickedColor: "black" };
     shapeOf.set(a.id, o);
     objs.push(o);
   });
@@ -58878,7 +59030,7 @@ function toEgon(content, opts = {}) {
     const actor = shapeOf.get(s.actor);
     if (s.objectText) {
       icons.workObjects.add(capIcon(s.objectKind));
-      const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at2(col, 1 + stack), pickedColor: "black" };
+      const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at3(col, 1 + stack), pickedColor: "black" };
       objs.push(wo);
       shapeOf.set(s.id, wo);
       objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
@@ -58990,33 +59142,6 @@ var init_proposeFromDomainStory = __esm({
   "packages/canvas/dist/diagrams/proposeFromDomainStory.js"() {
     init_domainStory();
     init_userStoryMap();
-  }
-});
-
-// packages/canvas/dist/model.js
-function layoutLock(items, id) {
-  const it = items[id];
-  if (!it)
-    return void 0;
-  if (ownLock(it))
-    return "item";
-  if (it.type === "comment")
-    return void 0;
-  const seen = /* @__PURE__ */ new Set([id]);
-  for (let p = it.parent ? items[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? items[p.parent] : void 0) {
-    seen.add(p.id);
-    if (p.type === "frame" && ownLock(p))
-      return "frame";
-  }
-  return void 0;
-}
-var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, LAYOUT_LOCK, ownLock;
-var init_model = __esm({
-  "packages/canvas/dist/model.js"() {
-    WAIT_MAX_SEC = 1800;
-    WAIT_DEFAULT_SEC = 300;
-    LAYOUT_LOCK = "layout";
-    ownLock = (it) => it?.data?.lock === LAYOUT_LOCK;
   }
 });
 
@@ -59819,6 +59944,9 @@ async function pushGraphToCanvas(def2, opts = {}) {
   const api = canvasApi(base);
   const project = opts.file ? await registerProject(api, repoRoot(path15.dirname(path15.resolve(opts.file)))) : void 0;
   const board = await boardByTitle(api, title, "workflow", project, (b2) => b2.kind === "workflow", true);
+  const refused = await redrawRefusal(api, board.id, "workflow", { workflow: true });
+  if (refused)
+    throw new Error(refused);
   const { items: drawn } = await api("POST", `/api/boards/${board.id}/template`, { kind: "workflow", content: graph });
   const { board: current } = await api("GET", `/api/boards/${board.id}`);
   const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0`);
@@ -59844,7 +59972,8 @@ async function previewGraph(def2, opts = {}) {
   const { board: current } = await api("GET", `/api/boards/${hit.id}`);
   const { changes } = await api("GET", `/api/boards/${hit.id}/changes?since=0`);
   const { plan } = explainRedraw(current.items, drawn, redrawInputs(changes));
-  return { base, boardId: hit.id, plan, lines: planLines(plan, { title: `Redraw preview \u2014 workflow ${def2.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }) };
+  const refused = await redrawRefusal(api, hit.id, "workflow", { workflow: true });
+  return { base, boardId: hit.id, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 workflow ${def2.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
 }
 function withDetails(graph, file2) {
   if (!file2)
@@ -59971,13 +60100,13 @@ async function findBoard(api, ref2, projectRoot, kind) {
     return (await api("GET", `/api/boards/${encodeURIComponent(ref2)}`)).board;
   const title = ref2.slice(6).trim();
   const { boards } = await api("GET", "/api/boards");
-  const named2 = boards.filter((b2) => b2.title === title && (!kind || b2.kind === kind));
+  const named3 = boards.filter((b2) => b2.title === title && (!kind || b2.kind === kind));
   let project;
-  if (projectRoot && named2.length > 1) {
+  if (projectRoot && named3.length > 1) {
     const { projects = [] } = await api("GET", "/api/projects").catch(() => ({ projects: [] }));
     project = projects.find((p) => p.root && path16.resolve(p.root) === path16.resolve(projectRoot))?.id;
   }
-  const hit = (project ? named2.find((b2) => b2.project === project) : void 0) ?? named2[0];
+  const hit = (project ? named3.find((b2) => b2.project === project) : void 0) ?? named3[0];
   return hit ? (await api("GET", `/api/boards/${hit.id}`)).board : void 0;
 }
 async function previewDesign(file2, opts) {
@@ -60000,7 +60129,8 @@ async function previewDesign(file2, opts) {
   const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0`);
   const frame = drawn.find((it) => it.type === "frame" && it.data?.diagram?.key === d.key) ?? frameOf(board, d.key);
   const { plan } = explainRedraw(board.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && board.items[frame.id] ? { frame: frame.id } : {} });
-  return { base, boardId: board.id, key: d.key, plan, lines: planLines(plan, { title: `Redraw preview \u2014 ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }) };
+  const refused = await redrawRefusal(api, board.id, d.key);
+  return { base, boardId: board.id, key: d.key, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
 }
 async function drawDesign(file2, opts) {
   const base = canvasBase(opts.canvas);
@@ -60011,6 +60141,9 @@ async function drawDesign(file2, opts) {
   const root = repoRoot(path16.dirname(abs));
   const source = path16.relative(root, abs);
   const board = await resolveBoard(api, opts.board, root);
+  const refused = await redrawRefusal(api, board.id, d.key);
+  if (refused)
+    throw new Error(refused);
   const wf = d.kind === "workflow" ? withDetails(toGraph(loadWorkflow(abs).def), abs) : void 0;
   const { items: served, unresolvedTraces = [] } = await api("POST", `/api/boards/${board.id}/template`, {
     kind: d.kind,
@@ -60029,11 +60162,11 @@ async function drawDesign(file2, opts) {
   const applied = opts.applied ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: source }) : void 0;
   return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, ...applied ? { applied } : {} };
 }
-function unresolvedReport(list2) {
-  if (!list2.length)
+function unresolvedReport(list3) {
+  if (!list3.length)
     return [];
   const why = (u3) => u3.reason === "bad-ref" ? "not a <diagram key>/<element id> ref" : "target not found on the board";
-  return [`\u26A0 ${list2.length} trace(s) not drawn:`, ...list2.map((u3) => `  ${u3.item} \u2014${u3.trace.rel}\u2192 ${u3.trace.from}: ${why(u3)}`)];
+  return [`\u26A0 ${list3.length} trace(s) not drawn:`, ...list3.map((u3) => `  ${u3.item} \u2014${u3.trace.rel}\u2192 ${u3.trace.from}: ${why(u3)}`)];
 }
 async function proposeStoriesToBoard(esFile, usmFile, opts) {
   const base = canvasBase(opts.canvas);
@@ -60052,8 +60185,8 @@ async function proposeStoriesToBoard(esFile, usmFile, opts) {
 }
 async function cmdDesign(args2, flags2) {
   const [sub, file2] = args2;
-  const boardRef = str(flags2.board);
-  const canvas = str(flags2.canvas);
+  const boardRef = str2(flags2.board);
+  const canvas = str2(flags2.canvas);
   if (sub === "lint") {
     if (!file2)
       throw new Error("usage: awd design lint <design/<name>.<kind>.yaml>");
@@ -60072,15 +60205,15 @@ async function cmdDesign(args2, flags2) {
     }
     for (const w2 of findings.filter((f) => f.severity === "warning" && f.message.startsWith("unknown field")))
       console.warn(`\u26A0 ${w2.message}`);
-    const at2 = str(flags2.at)?.split(",").map(Number);
-    const applied = str(flags2.applied);
+    const at3 = str2(flags2.at)?.split(",").map(Number);
+    const applied = str2(flags2.applied);
     if (flags2["dry-run"]) {
-      const p = await previewDesign(file2, { board: boardRef, canvas, limit: Number(str(flags2.limit)) || void 0, ...at2 && at2.length === 2 && at2.every(Number.isFinite) ? { at: { x: at2[0], y: at2[1] } } : {} });
+      const p = await previewDesign(file2, { board: boardRef, canvas, limit: Number(str2(flags2.limit)) || void 0, ...at3 && at3.length === 2 && at3.every(Number.isFinite) ? { at: { x: at3[0], y: at3[1] } } : {} });
       for (const line of p.lines)
         console.log(line);
       return true;
     }
-    const r = await drawDesign(file2, { board: boardRef, canvas, ...applied ? { applied } : {}, ...at2 && at2.length === 2 && at2.every(Number.isFinite) ? { at: { x: at2[0], y: at2[1] } } : {} });
+    const r = await drawDesign(file2, { board: boardRef, canvas, ...applied ? { applied } : {}, ...at3 && at3.length === 2 && at3.every(Number.isFinite) ? { at: { x: at3[0], y: at3[1] } } : {} });
     console.log(`\u2714 ${path16.basename(file2)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== "error").length} note(s) \u2014 awd design lint ${file2})`);
     if (r.applied)
       console.log(`\u2714 answered "Applied to ${r.applied.file ?? file2}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`);
@@ -60092,7 +60225,7 @@ async function cmdDesign(args2, flags2) {
     return true;
   }
   if (sub === "propose-stories") {
-    const into = str(flags2.into);
+    const into = str2(flags2.into);
     if (!file2 || !into || !boardRef)
       throw new Error("usage: awd design propose-stories <es file> --into <story map file> --board <id | title:\u2026> [--canvas URL]");
     const r = await proposeStoriesToBoard(file2, into, { board: boardRef, canvas });
@@ -60100,7 +60233,7 @@ async function cmdDesign(args2, flags2) {
     return true;
   }
   if (sub === "import-egon") {
-    const out = str(flags2.out);
+    const out = str2(flags2.out);
     if (!file2 || !out)
       throw new Error("usage: awd design import-egon <story.egn> --out design/<name>.domain-story.yaml");
     const r = importEgonFile(file2, out);
@@ -60110,7 +60243,7 @@ async function cmdDesign(args2, flags2) {
     return cmdDesignLint(out);
   }
   if (sub === "export-egon") {
-    const out = str(flags2.out);
+    const out = str2(flags2.out);
     if (!file2 || !out)
       throw new Error("usage: awd design export-egon <design/<name>.domain-story.yaml> --out <story.egn>");
     exportEgonFile(file2, out);
@@ -60142,7 +60275,7 @@ function exportEgonFile(file2, out) {
     throw new Error(`${file2} is a ${d.kind} diagram, not a domain story`);
   fs15.writeFileSync(out, JSON.stringify(toEgon(d.content, { title: d.title ?? d.key }), null, 2));
 }
-var import_yaml3, str, canvasApi2;
+var import_yaml3, str2, canvasApi2;
 var init_design = __esm({
   "packages/cli/dist/design.js"() {
     import_yaml3 = __toESM(require_dist(), 1);
@@ -60154,7 +60287,7 @@ var init_design = __esm({
     init_projects();
     init_applied();
     init_diagrams();
-    str = (v2) => typeof v2 === "string" ? v2 : void 0;
+    str2 = (v2) => typeof v2 === "string" ? v2 : void 0;
     canvasApi2 = canvasApi;
   }
 });
@@ -60169,33 +60302,39 @@ import path17 from "node:path";
 import { randomUUID as randomUUID3 } from "node:crypto";
 import { fileURLToPath } from "node:url";
 async function cmdStudio(file2, flags2) {
-  const model = str2(flags2.model) ?? "opus";
+  const model = str3(flags2.model) ?? "opus";
   if (!STUDIO_MODELS.includes(model))
     throw new Error(`--model must be one of ${STUDIO_MODELS.join(", ")}`);
-  const permissionMode = str2(flags2["permission-mode"]) ?? "auto";
+  const permissionMode = str3(flags2["permission-mode"]) ?? "auto";
   if (!/^[A-Za-z]+$/.test(permissionMode))
     throw new Error(`--permission-mode: "${permissionMode}" is not a Claude Code permission mode`);
-  const intervalMs = flags2.interval ? parseDuration(str2(flags2.interval), "--interval") : 2e3;
-  const maxSessions = flags2["max-sessions"] ? Number(str2(flags2["max-sessions"])) : 3;
+  const intervalMs = flags2.interval ? parseDuration(str3(flags2.interval), "--interval") : 2e3;
+  const maxSessions = flags2["max-sessions"] ? Number(str3(flags2["max-sessions"])) : 3;
   if (!Number.isInteger(maxSessions) || maxSessions < 1)
     throw new Error("--max-sessions must be a whole number \u2265 1");
-  const idleCloseMs = flags2["idle-close"] ? parseDuration(str2(flags2["idle-close"]), "--idle-close") : 30 * 6e4;
-  const projectFlag = str2(flags2.project);
+  const idleCloseMs = flags2["idle-close"] ? parseDuration(str3(flags2["idle-close"]), "--idle-close") : 30 * 6e4;
+  const projectFlag = str3(flags2.project);
   if (!projectFlag && !file2)
     throw new Error("awd studio needs --project <dir> or a workflow file");
-  let base = str2(flags2.canvas) ?? process.env.AWD_CANVAS_URL ?? "http://localhost:4400";
+  let base = str3(flags2.canvas) ?? process.env.AWD_CANVAS_URL ?? "http://localhost:4400";
   let root = projectFlag ? fs16.realpathSync(path17.resolve(projectFlag)) : "";
   if (file2) {
     const wf = loadWorkflow(file2);
     root ||= fs16.realpathSync(repoRoot(wf.dir));
-    const drawn = await pushGraphToCanvas(wf.def, { canvas: str2(flags2.canvas), runtime: str2(flags2.runtime), file: file2 });
-    base = drawn.base;
-    console.log(`studio: ${wf.def.name} \u2192 ${drawn.base}/b/${drawn.boardId} (seq ${drawn.seq})`);
+    try {
+      const drawn = await pushGraphToCanvas(wf.def, { canvas: str3(flags2.canvas), runtime: str3(flags2.runtime), file: file2 });
+      base = drawn.base;
+      console.log(`studio: ${wf.def.name} \u2192 ${drawn.base}/b/${drawn.boardId} (seq ${drawn.seq})`);
+    } catch (e) {
+      if (!/^the files of "workflow"/.test(e.message))
+        throw e;
+      console.log(`studio: not redrawn \u2014 ${e.message}`);
+    }
   }
   const name = path17.basename(root);
   const studio = new Studio({
     canvas: canvasBoardHttp({ base }),
-    channel: new HerdrChannel(str2(flags2["herdr-bin"]) ?? "herdr"),
+    channel: new HerdrChannel(str3(flags2["herdr-bin"]) ?? "herdr"),
     // per project: state.json + status.json; briefs per board under <board-scope>/
     store: new FileStudioStore(path17.join(root, ".awd", "studio")),
     project: root,
@@ -60233,13 +60372,13 @@ function awdCommand(root) {
   const bin = self.endsWith(".mjs") ? self : fileURLToPath(new URL("../bin/awd.js", import.meta.url));
   return `node ${path17.relative(root, bin) || bin}`;
 }
-var str2;
+var str3;
 var init_studio2 = __esm({
   "packages/cli/dist/studio.js"() {
     init_dist();
     init_dist2();
     init_graphCanvas();
-    str2 = (v2) => typeof v2 === "string" ? v2 : void 0;
+    str3 = (v2) => typeof v2 === "string" ? v2 : void 0;
   }
 });
 
@@ -60314,57 +60453,6 @@ var init_patch = __esm({
   }
 });
 
-// packages/canvas/dist/routing.js
-function displayName(name) {
-  return name === LOCAL_AGENT ? "studio" : name;
-}
-function handleOf(name) {
-  const raw = name.trim().replace(/^@+/, "");
-  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === "studio")
-    return "studio";
-  const h = raw.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}_.-]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 60).replace(/[-.]+$/, "");
-  return h || "agent";
-}
-function sameAgent(a, b2) {
-  if (!a || !b2)
-    return false;
-  return handleOf(a) === handleOf(b2);
-}
-function resolveAgent(raw, known) {
-  if (!raw || !raw.trim())
-    return void 0;
-  const want = raw.trim().replace(/^@+/, "");
-  if (sameAgent(want, LOCAL_AGENT))
-    return LOCAL_AGENT;
-  return known.find((n) => n === want) ?? known.find((n) => n.toLowerCase() === want.toLowerCase()) ?? known.find((n) => sameAgent(n, want));
-}
-function agentLabel(name) {
-  const h = handleOf(name);
-  const d = displayName(name);
-  return h === d ? `@${h}` : `@${h} (${d})`;
-}
-function threadRoot(board, it) {
-  let cur = it;
-  const seen = /* @__PURE__ */ new Set();
-  while (!seen.has(cur.id)) {
-    seen.add(cur.id);
-    const next = cur.target ? board.items[cur.target] : void 0;
-    if (next?.type !== "comment")
-      return cur;
-    cur = next;
-  }
-  return it;
-}
-var LOCAL_AGENT, str3, agentOf;
-var init_routing = __esm({
-  "packages/canvas/dist/routing.js"() {
-    init_model();
-    LOCAL_AGENT = "agent";
-    str3 = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
-    agentOf = (it) => it.createdBy === "agent" ? str3(it.data?.by) ?? LOCAL_AGENT : void 0;
-  }
-});
-
 // packages/canvas/dist/outline.js
 var init_outline = __esm({
   "packages/canvas/dist/outline.js"() {
@@ -60412,13 +60500,13 @@ var require_buffer_util = __commonJS({
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
-    function concat(list2, totalLength) {
-      if (list2.length === 0) return EMPTY_BUFFER;
-      if (list2.length === 1) return list2[0];
+    function concat(list3, totalLength) {
+      if (list3.length === 0) return EMPTY_BUFFER;
+      if (list3.length === 1) return list3[0];
       const target = Buffer.allocUnsafe(totalLength);
       let offset = 0;
-      for (let i = 0; i < list2.length; i++) {
-        const buf = list2[i];
+      for (let i = 0; i < list3.length; i++) {
+        const buf = list3[i];
         target.set(buf, offset);
         offset += buf.length;
       }
@@ -62204,14 +62292,14 @@ var require_sender = __commonJS({
        * @param {Function} [cb] Callback
        * @private
        */
-      sendFrame(list2, cb) {
-        if (list2.length === 2) {
+      sendFrame(list3, cb) {
+        if (list3.length === 2) {
           this._socket.cork();
-          this._socket.write(list2[0]);
-          this._socket.write(list2[1], cb);
+          this._socket.write(list3[0]);
+          this._socket.write(list3[1], cb);
           this._socket.uncork();
         } else {
-          this._socket.write(list2[0], cb);
+          this._socket.write(list3[0], cb);
         }
       }
     };
@@ -75155,8 +75243,8 @@ var require_dist3 = __commonJS({
         return ajv2;
       }
       const [formats, exportName] = opts.mode === "fast" ? [formats_1.fastFormats, fastName] : [formats_1.fullFormats, fullName];
-      const list2 = opts.formats || formats_1.formatNames;
-      addFormats(ajv2, list2, formats, exportName);
+      const list3 = opts.formats || formats_1.formatNames;
+      addFormats(ajv2, list3, formats, exportName);
       if (opts.keywords)
         (0, limit_1.default)(ajv2);
       return ajv2;
@@ -75168,11 +75256,11 @@ var require_dist3 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv2, list2, fs21, exportName) {
+    function addFormats(ajv2, list3, fs21, exportName) {
       var _a4;
       var _b;
       (_a4 = (_b = ajv2.opts.code).formats) !== null && _a4 !== void 0 ? _a4 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
-      for (const f of list2)
+      for (const f of list3)
         ajv2.addFormat(f, fs21[f]);
     }
     module.exports = exports = formatsPlugin;
@@ -76973,7 +77061,7 @@ function helpText(o) {
     "Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)",
     'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
-    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours`,
+    `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files \u2014 and only that agent redraws them; canvas_wait wakes you only for what is yours`,
     "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
@@ -77001,12 +77089,12 @@ function helpText(o) {
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? "this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)" : "local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)"}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     "- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects",
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
-    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).`,
+    `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }). A diagram whose files another agent holds cannot be redrawn by you (design_draw refuses it): propose instead, or ask the person to hand the files over to you \u2014 they start it (board panel \u2192 Hand over files), the holder marks them ready (canvas_handover({ ready: true })), you accept (canvas_handover({ accept: true })), keep the files in your repo and redraw once from your copy.`,
     "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python's default one with a 403.",
-    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person \u2014 drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.`
+    `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person \u2014 drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits. Only the holder redraws a diagram; the files change hands only when the person hands them over (canvas_handover: the holder marks them ready, the new holder accepts and becomes the holder \u2014 and "Answered by" when the person asked for it).`
   ].join("\n");
 }
 function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os5.homedir()) {
@@ -77025,7 +77113,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.21.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.22.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -77135,8 +77223,8 @@ ${CONTENT_HELP}`,
       scope: external_exports.string().optional().describe("Id prefix; different scopes never collide"),
       note: external_exports.string().optional()
     }
-  }, async ({ id, kind, content, at: at2, scope, note }) => {
-    const { ops } = await client.template(id, kind, content, at2, scope);
+  }, async ({ id, kind, content, at: at3, scope, note }) => {
+    const { ops } = await client.template(id, kind, content, at3, scope);
     if (!ops.length)
       return text("template produced no items");
     const r = await client.apply(id, ops, "agent", note);
@@ -77296,14 +77384,15 @@ ${svg2}`);
   }, async ({ id, text: t, answeredBy }) => {
     const s = t !== void 0 || answeredBy !== void 0 ? await client.setSettings(id, { ...t !== void 0 ? { context: t } : {}, ...answeredBy !== void 0 ? { answeredBy } : {} }) : await client.settings(id);
     seenContext.set(id, s.context?.at ?? "");
-    const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}`);
+    const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ""}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ""}${h.holder.remote ? ` \xB7 ${h.holder.remote}` : ""}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ""}`);
     const agents = s.agents.map((a) => `@${a.handle ?? handleOf(a.name)}${(a.handle ?? handleOf(a.name)) !== a.label ? ` (${a.label})` : ""}${a.watching ? " \u2014 watching" : ""}`).join(", ");
     return text([
       s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace("T", " ")}` : ""})` : ""}:
 ${s.context.text}` : "No board context yet \u2014 write one (text) when the board comes from a discussion, so other agents know what was said.",
       "",
       `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${displayName(s.suggestion)}${s.suggestionWhy === "asked" ? `${s.suggestionBy ? ` by ${displayName(s.suggestionBy)}` : ""} \u2014 waiting for the person to confirm it in the board header` : ", who holds every diagram's files \u2014 the person can confirm it"})` : ""}`,
-      ...holders.length ? ["Files behind the diagrams:", ...holders] : [],
+      ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : [],
+      ...s.handover ? handoverLines(s.handover) : [],
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));
@@ -77351,6 +77440,58 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     }
     return text(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`);
   });
+  server.registerTool("canvas_handover", {
+    title: "Hand the files behind diagrams over to another agent",
+    description: 'The files behind a diagram are held by one agent (it drew them from its repo): only it redraws that diagram, and proposals on it go to it. The PERSON moves them to another agent with a handover (board panel \u2192 Hand over files) \u2014 you cannot start one: if you should take over some files, ask the person in a comment. Then, in the handover thread (it wakes both sides, also with untilMention): the agent handing over settles the open proposals on those diagrams, redraws any whose file changed since its last draw, and marks them ready (`ready: true`, optionally only some `keys`); the agent receiving them accepts (`accept: true`, once every one is ready \u2014 the person may hand them over anyway when the holder is gone), becomes their holder (and "Answered by" when the person asked for it), reads each file (canvas_files), writes it into its repo and redraws once from its copy. Either side may decline (`cancel: true`, with a `reason`). Without ready / accept / cancel: the open handover, who must do what next, and who holds which files.',
+    inputSchema: {
+      board: external_exports.string().describe("board id"),
+      ready: external_exports.boolean().optional().describe("you are handing the files over: they are ready to be taken as the board has them now (settle open proposals and redraw what changed first)"),
+      keys: external_exports.array(external_exports.string()).optional().describe('ready: only these diagram keys ("workflow" for a workflow board); default every one you are handing over'),
+      accept: external_exports.boolean().optional().describe("you are receiving the files: take them over (every one must be ready)"),
+      repo: external_exports.string().max(300).optional().describe("accept: the folder name of the repo you keep them in (shown to people)"),
+      remote: external_exports.string().max(300).optional().describe("accept: that repo's git remote (credentials are removed)"),
+      cancel: external_exports.boolean().optional().describe("decline the handover (either side): the files stay where they are"),
+      reason: external_exports.string().max(500).optional().describe("cancel: why, in a sentence (posted in the thread)")
+    }
+  }, async ({ board, ready, keys, accept, repo, remote, cancel, reason }) => {
+    const asked = [ready && "ready", accept && "accept", cancel && "cancel"].filter(Boolean);
+    if (asked.length > 1)
+      return { ...text(`give one of ready, accept or cancel (not ${asked.join(" and ")})`), isError: true };
+    const status = await client.handover(board);
+    const ho = status.handover;
+    if (ready) {
+      const r = await client.handoverReady(board, { ...keys?.length ? { keys } : {} });
+      const before = new Map((ho?.keys ?? []).map((k2) => [k2.key, k2.ready?.at]));
+      const marked = r.handover.keys.filter((k2) => k2.ready && k2.ready.at !== before.get(k2.key));
+      const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
+      const left = handoverWaiting(r.handover);
+      return text([
+        `Marked ready for ${displayName(r.handover.to)}: ${marked.map((k2) => `\xAB${k2.title ?? k2.key}\xBB`).join(", ") || "(nothing new)"}${files.length ? ` \u2014 ${files.join(", ")}` : ""} (board seq ${r.seq}).`,
+        r.open.length ? `Open proposals on them: ${r.open.join(", ")} \u2014 settle them in their threads if you can (apply after the person agrees, or say why not); whatever is still open goes to ${displayName(r.handover.to)} after the handover.` : "No open proposals on them.",
+        left ? `Still waiting: ${left}.` : `Every file is ready: ${displayName(r.handover.to)} accepts next (canvas_handover({ accept: true })). Propose from then on (canvas_files \u2192 canvas_propose_edit); you cannot redraw them any more after that.`
+      ].join("\n"));
+    }
+    if (accept) {
+      const r = await client.handoverAccept(board, { ...repo ? { repo } : {}, ...remote ? { remote } : {} });
+      const titles = r.keys.map((k2) => `\xAB${ho?.keys.find((x2) => x2.key === k2)?.title ?? k2}\xBB`).join(", ");
+      const how = opts.remote ? `design_draw({ name, content, board: "${board}" }) with your copy's text` : `design_draw({ file, board: "${board}" }) from your copy`;
+      return text([
+        `You hold the files of ${titles} now${ho ? ` (handed over from ${handoverFroms(ho).map(displayName).join(", ")})` : ""} \u2014 board seq ${r.seq}. Proposals on them come to you, and only you redraw them; apply a proposal only after the person agrees in its thread.`,
+        `Next: read each file below with canvas_files({ id: "${board}", path }), write it into your repo at that path (a repo you keep \u2014 e.g. commit it), and redraw once from your copy: ${how}. From then on the file in your repo is the truth.`,
+        "Files:",
+        ...r.files.map((f) => `- ${f.path}	base ${f.sha}	${f.lines} lines`)
+      ].join("\n"));
+    }
+    if (cancel) {
+      const r = await client.handoverCancel(board, { ...reason ? { reason } : {} });
+      return text(`Cancelled the handover (board seq ${r.seq}); the files stay with ${ho ? handoverFroms(ho).map(displayName).join(", ") : "their holders"}.`);
+    }
+    const holders = status.holders.map((h) => `- ${h.key}${h.title ? ` \xAB${h.title}\xBB` : ""}${h.source ? ` (${h.source})` : ""}: held by ${displayName(h.holder.agent)}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ""}`);
+    return text([
+      ...ho ? handoverLines(ho) : ["No handover is open on this board. Only the person starts one (board panel \u2192 Hand over files); if you should take over some files, ask them in a comment."],
+      ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : ["No diagram on this board has files held by an agent."]
+    ].join("\n"));
+  });
   server.registerTool("unprose_feedback", {
     title: "Tell the owner what to improve in Unprose",
     description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.",
@@ -77368,10 +77509,10 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     description: "The feedback agents left with unprose_feedback, newest first. Only for an agent on the canvas machine (or with manage rights); others get a refusal.",
     inputSchema: { limit: external_exports.number().int().min(1).max(200).default(30) }
   }, async ({ limit: limit2 }) => {
-    const list2 = (await client.feedback()).slice(-limit2).reverse();
-    if (!list2.length)
+    const list3 = (await client.feedback()).slice(-limit2).reverse();
+    if (!list3.length)
       return text("no feedback yet");
-    return text(list2.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
+    return text(list3.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
   });
   server.registerTool("canvas_files", {
     title: "Read the files behind a board",
@@ -77697,6 +77838,7 @@ var init_server3 = __esm({
     init_proposals();
     init_model();
     init_routing();
+    init_routing();
     init_feedback();
     init_access();
     init_access2();
@@ -77803,7 +77945,7 @@ function registerDesignTools(server, o = {}) {
     title: "Draw a diagram file on a board",
     description: `${WHICH_DIAGRAM}
 For a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}
-Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors. Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of the file (proposals on this diagram come to you); a new board it creates suggests you as "Answered by" \u2014 the person confirms it.`,
+Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing \u2014 use it before redrawing a frame others worked on. Refuses a file with lint errors, and a diagram whose files another agent holds (only the holder redraws it: propose instead with canvas_files \u2192 canvas_propose_edit, or ask the person to hand the files over \u2014 canvas_handover). Returns the board link and the frame key (use it with canvas_focus). It records you as the holder of a diagram nobody holds yet (proposals on it come to you); a new board it creates suggests you as "Answered by" \u2014 the person confirms it.`,
     inputSchema: {
       file: external_exports.string().describe("Path to the diagram file, relative to the project"),
       board: external_exports.string().describe('A board id, or "title:<title>" (found or created in this project)'),
@@ -77812,15 +77954,15 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
       dryRun: external_exports.boolean().optional().describe("true: only preview the redraw (what it adds, updates, removes, keeps, and why); nothing is written and no board is created"),
       limit: external_exports.number().int().min(1).max(200).optional().describe("dryRun: lines per section (default 8)")
     }
-  }, async ({ file: file2, board, at: at2, applied, dryRun, limit: limit2 }) => guard(async () => {
+  }, async ({ file: file2, board, at: at3, applied, dryRun, limit: limit2 }) => guard(async () => {
     const f = abs(file2);
     if (dryRun)
-      return text2((await previewDesign(f, { board, ...at2 ? { at: at2 } : {}, ...limit2 ? { limit: limit2 } : {} })).lines.join("\n"));
+      return text2((await previewDesign(f, { board, ...at3 ? { at: at3 } : {}, ...limit2 ? { limit: limit2 } : {} })).lines.join("\n"));
     const { d, findings } = lintFile(f);
     const errors = findings.filter((x2) => x2.severity === "error");
     if (errors.length)
       return fail([`not drawn: ${errors.length} lint error(s) in ${file2}`, ...errors.map(findingLine)].join("\n"));
-    const r = await drawDesign(f, { board, ...at2 ? { at: at2 } : {}, ...applied ? { applied } : {} });
+    const r = await drawDesign(f, { board, ...at3 ? { at: at3 } : {}, ...applied ? { applied } : {} });
     const notes = findings.filter((x2) => x2.severity !== "error");
     return text2([
       `\u2714 ${path22.basename(f)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId}?frame=${encodeURIComponent(r.key)} (seq ${r.seq})`,
@@ -78124,14 +78266,14 @@ function cmdStatus(file2, key, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str4(flags2["store-dir"]) });
   const store = new FileEventStore(path23.join(wf.storeDir, "events.ndjson"));
   const states = projectStates(wf.def, store.all(), { roles: wf.roles, agents: wf.agents, env: process.env });
-  const list2 = [...states.values()].filter((s) => !key || s.key === key);
+  const list3 = [...states.values()].filter((s) => !key || s.key === key);
   if (flags2.json)
-    return console.log(JSON.stringify(list2, null, 2));
-  if (!list2.length)
+    return console.log(JSON.stringify(list3, null, 2));
+  if (!list3.length)
     return console.log(c.dim(`no runs (${store.size()} events in ${wf.storeDir})`));
-  for (const s of list2)
+  for (const s of list3)
     printRun(s);
-  console.log(c.dim(`${list2.length} runs, ${store.size()} events`));
+  console.log(c.dim(`${list3.length} runs, ${store.size()} events`));
 }
 function printRun(s) {
   const color = s.status === "done" ? c.green : s.status === "failed" ? c.red : s.status === "waiting" ? c.yellow : (x2) => x2;

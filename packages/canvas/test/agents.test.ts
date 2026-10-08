@@ -326,8 +326,11 @@ test('a proposal goes to the holder, who wakes for it', async () => {
   const plain = await (await send('POST', '/api/boards', { title: 'by hand', kind: 'freeform', answeredBy: 'me' })).json()
   assert.equal(plain.board.meta?.responderSuggestion, undefined, 'the default local agent suggests nothing')
   // claude-a (a local named agent) holds the file; codex proposes; claude-a waits for the person and still wakes
-  const b = newBoard()
-  await send('PUT', `/api/boards/${b.id}`, { meta: { ...store.get(b.id)!.meta, diagrams: { 'shop-es': { ...(store.get(b.id)!.meta!.diagrams as Record<string, object>)['shop-es'], holder: { repo: 'shop' } } } } }, local('claude-a'))
+  const held = heldBoard({}, 'claude-a')
+  const b = store.create({ title: 'held by claude-a', kind: 'freeform', items: Object.values(held.items), meta: held.meta })
+  // claude-a redraws its own diagram (it may); another agent taking it over is refused
+  assert.equal((await send('PUT', `/api/boards/${b.id}`, { meta: { ...store.get(b.id)!.meta, diagrams: { 'shop-es': { ...(store.get(b.id)!.meta!.diagrams as Record<string, object>)['shop-es'], holder: { repo: 'shop' } } } } }, local('claude-a'))).status, 200)
+  assert.equal((await send('PUT', `/api/boards/${b.id}`, { meta: { ...store.get(b.id)!.meta, diagrams: { 'shop-es': { ...(store.get(b.id)!.meta!.diagrams as Record<string, object>)['shop-es'], holder: { repo: 'gem' } } } } }, local('gemini'))).status, 409)
   const since = store.get(b.id)!.seq
   const claude = wait(b.id, since, local('claude-a'), '&author=user')
   const other = wait(b.id, since, local('gemini'), '&author=others')

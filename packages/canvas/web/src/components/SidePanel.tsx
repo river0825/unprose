@@ -21,6 +21,8 @@ import { diagramData, diagramOf } from '../diagrams/frame'
 import { Linkified } from '../flow/Linkified'
 import { PanelNavContext, type PanelNav } from '../inspector/panelNav'
 import { BoardContextPanel } from './BoardAgents'
+import { BoardHandover } from './Handover'
+import { handoverStamp } from '../inspector/handover'
 import { MentionText, MentionTextarea } from './Mention'
 
 interface Props {
@@ -99,8 +101,9 @@ type Filter = 'all' | 'agent' | 'user'
 export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onUiOps, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
-  // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta.
-  const board = useFreshMeta(liveBoard, changes, tab)
+  // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta. A handover's steps
+  // arrive over the websocket and change the holders, so each one re-reads it too.
+  const board = useFreshMeta(liveBoard, changes, `${tab}|${handoverStamp(liveBoard.meta)}`)
   const hasFiles = Object.keys(filesOf(board)).length > 0
   const [filter, setFilter] = useState<Filter>('all')
   const [draft, setDraft] = useState('')
@@ -149,6 +152,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
       onBlur={() => onHoverItems?.([])}
     >
       <BoardContextPanel board={board} onToast={onToast} />
+      <BoardHandover board={board} onLocate={onLocate} onToast={onToast} />
       <div className="panel-tabs" role="tablist">
         <button role="tab" aria-selected={activeTab === 'feed'} onClick={() => setTab('feed')}>
           Changes

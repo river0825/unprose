@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process'
 import { canvasHeaders as sharedHeaders } from '@awd/canvas/dist/credentials.js'
 import { ambiguityNote, pickBoardByTitle } from '@awd/canvas/dist/boardLookup.js'
 import { canvasOrigin } from '@awd/canvas/dist/client.js'
+import { heldElsewhereText, sameAgent } from '@awd/canvas/dist/routing.js'
 
 export type Api = <T>(method: string, p: string, body?: unknown) => Promise<T>
 
@@ -64,6 +65,25 @@ export function holderInfo(root: string): { machine: string; root: string; repo:
   }
   return { machine: os.hostname().replace(/\.local$/, ''), root, repo: path.basename(root), ...(remote ? { remote: remote.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, '$1') } : {}) }
 }
+/**
+ * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of diagram
+ * `key` (`workflow: true`: a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds them,
+ * nobody does yet), or when the canvas is too old to say (its own guard decides then). Nothing is drawn when it refuses.
+ */
+export async function redrawRefusal(api: Api, boardId: string, key: string, o: { workflow?: boolean } = {}): Promise<string | undefined> {
+  let s: { you?: string; holders?: Array<{ key: string; source?: string; holder: { agent: string } }> }
+  try {
+    s = await api('GET', `/api/boards/${encodeURIComponent(boardId)}/settings`)
+  } catch {
+    return undefined
+  }
+  if (!Array.isArray(s.holders)) return undefined
+  const me = s.you ?? 'agent'
+  // the canvas lists the diagrams first, then the workflow (key 'workflow')
+  const h = o.workflow ? [...s.holders].reverse().find((x) => x.key === 'workflow') : s.holders.find((x) => x.key === key)
+  return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : undefined
+}
+
 type Summary = { id: string; title: string; kind: string; project?: string; updatedAt?: string }
 
 /** Register `root` as a project on the canvas; undefined when the canvas does not take it (remote, old server, memory store). */

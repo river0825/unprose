@@ -1,7 +1,7 @@
 // Tiny HTTP client for the canvas API — used by the MCP server and the CLI.
 import type { Author, Board, Change, DiagramKind, Item, Op, Wake } from './model.js'
 import type { CardMove } from './diff.js'
-import type { BoardContext, FileHolder, Responder } from './routing.js'
+import { heldElsewhereText, LOCAL_AGENT, sameAgent, type BoardContext, type FileHolder, type Handover, type Responder } from './routing.js'
 import type { FeedbackRecord } from './ports/feedbackStore.js'
 import { savedToken } from './credentials.js'
 import { userAgent } from './version.js'
@@ -13,6 +13,8 @@ export interface BoardSettings {
   context: BoardContext | null
   agentTurns: number
   holders: Array<{ key: string; source?: string; holder: FileHolder }>
+  /** the open handover of the files (docs/canvas.md "Handing over the files") */
+  handover?: Handover | null
   /** a responder the person may confirm: one an agent asked for ('asked', by suggestionBy), or the sole file holder ('holder') */
   suggestion?: string
   suggestionBy?: string | null
@@ -54,6 +56,13 @@ export async function probeCanvas(base: string, timeoutMs = 4000, token?: string
     const err = e as Error & { cause?: { code?: string } }
     return { ok: false, reason: err.name === 'TimeoutError' ? `no answer within ${timeoutMs / 1000}s` : (err.cause?.code ?? err.message) }
   }
+}
+
+/** `GET /api/boards/:id/handover`: the open handover, who holds which diagram's files, the agents the canvas knows. */
+export interface HandoverStatus {
+  handover: Handover | null
+  holders: Array<{ key: string; source?: string; title?: string; holder: FileHolder }>
+  agents: string[]
 }
 
 /** A file behind a board, as `GET /api/boards/:id/files` lists it. */
@@ -232,9 +241,39 @@ export class CanvasClient {
   settings(id: string) {
     return this.req<BoardSettings>('GET', `/api/boards/${encodeURIComponent(id)}/settings`)
   }
+  /**
+   * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of
+   * diagram `key` ('workflow' for a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds
+   * them, nobody does yet, or the canvas is too old to say).
+   */
+  async redrawRefusal(id: string, key: string, o: { workflow?: boolean } = {}): Promise<string | undefined> {
+    const s = await this.settings(id).catch(() => undefined)
+    if (!s || !Array.isArray(s.holders)) return undefined
+    const me = s.you ?? LOCAL_AGENT
+    // holdersOf lists the diagrams first, then the workflow (key 'workflow')
+    const h = o.workflow ? [...s.holders].reverse().find((x) => x.key === 'workflow') : s.holders.find((x) => x.key === key)
+    return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : undefined
+  }
   /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
   setSettings(id: string, patch: { answeredBy?: string | null; context?: string | null; agentTurns?: number | null }, author: Author = 'agent') {
     return this.req<BoardSettings>('PUT', `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author })
+  }
+  // ---- Handing over the files (docs/canvas.md "Handing over the files"); only the person starts one ----
+  /** The open handover on a board, and who holds the files of each diagram. */
+  handover(id: string) {
+    return this.req<HandoverStatus>('GET', `/api/boards/${encodeURIComponent(id)}/handover`)
+  }
+  /** As the agent handing files over: its diagrams (or only `keys`) are ready to be taken, as the board has them now. */
+  handoverReady(id: string, o: { keys?: string[] } = {}) {
+    return this.req<{ seq: number; handover: Handover; open: string[] }>('POST', `/api/boards/${encodeURIComponent(id)}/handover/ready`, { ...o, author: 'agent' })
+  }
+  /** As the agent receiving them: take the files over (once every one is ready); `repo` / `remote` say where you keep them. */
+  handoverAccept(id: string, o: { repo?: string; remote?: string } = {}) {
+    return this.req<{ seq: number; keys: string[]; files: Array<{ path: string; sha: string; lines: number }> }>('POST', `/api/boards/${encodeURIComponent(id)}/handover/accept`, { ...o, author: 'agent' })
+  }
+  /** Decline (either side of it): the files stay where they are. */
+  handoverCancel(id: string, o: { reason?: string } = {}) {
+    return this.req<{ seq: number }>('POST', `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: 'agent' })
   }
   /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
   sendFeedback(input: { text: string; board?: string; about?: string[] }) {

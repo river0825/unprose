@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { CanvasClient, canvasOrigin, probeCanvas } from './client.js'
 import { diagramKinds } from './templates/index.js'
 import { LAYOUT_LOCK, ownLock, WAIT_DEFAULT_SEC, WAIT_MAX_SEC, type Author, type Board, type DiagramKind, type Item, type Op } from './model.js'
-import { agentLabel, agentOf, displayName, handleOf, resolveAgent, sameAgent, threadRoot, type BoardContext } from './routing.js'
+import { agentLabel, agentOf, displayName, handleOf, handoverFroms, handoverLines, handoverWaiting, resolveAgent, sameAgent, threadRoot, type BoardContext } from './routing.js'
 import { adoptToken, saveToken, savedToken } from './credentials.js'
 import { userAgent } from './version.js'
 
@@ -99,7 +99,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'Drawing: canvas_add_items (sticky notes, comments, any template), canvas_apply (raw ops)',
     'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
-    'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching). Comments go to the board\'s responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files; canvas_wait wakes you only for what is yours',
+    'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board\'s responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files — and only that agent redraws them; canvas_wait wakes you only for what is yours',
     'Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself — use it whenever something gets in your way)',
     ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
@@ -127,12 +127,12 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? 'this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)' : 'local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)'}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     '- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects',
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
-    'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }).',
+    'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }). A diagram whose files another agent holds cannot be redrawn by you (design_draw refuses it): propose instead, or ask the person to hand the files over to you — they start it (board panel → Hand over files), the holder marks them ready (canvas_handover({ ready: true })), you accept (canvas_handover({ accept: true })), keep the files in your repo and redraw once from your copy.',
     'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python\'s default one with a 403.',
-    'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person — drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits.',
+    'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person — drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits. Only the holder redraws a diagram; the files change hands only when the person hands them over (canvas_handover: the holder marks them ready, the new holder accepts and becomes the holder — and "Answered by" when the person asked for it).',
   ].join('\n')
 }
 
@@ -172,7 +172,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.21.0' },
+    { name: 'unprose', version: '0.22.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -507,14 +507,15 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     async ({ id, text: t, answeredBy }) => {
       const s = t !== undefined || answeredBy !== undefined ? await client.setSettings(id, { ...(t !== undefined ? { context: t } : {}), ...(answeredBy !== undefined ? { answeredBy } : {}) }) : await client.settings(id)
       seenContext.set(id, s.context?.at ?? '')
-      const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ''}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ''}${h.holder.remote ? ` · ${h.holder.remote}` : ''}`)
+      const holders = s.holders.map((h) => `- ${h.key}${h.source ? ` (${h.source})` : ''}: files held by ${displayName(h.holder.agent)}${h.holder.repo ? ` in ${h.holder.repo}` : ''}${h.holder.remote ? ` · ${h.holder.remote}` : ''}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ''}`)
       const agents = s.agents.map((a) => `@${a.handle ?? handleOf(a.name)}${(a.handle ?? handleOf(a.name)) !== a.label ? ` (${a.label})` : ''}${a.watching ? ' — watching' : ''}`).join(', ')
       return text(
         [
           s.context ? `Board context${s.context.by ? ` (from ${displayName(s.context.by)}${s.context.at ? `, ${s.context.at.slice(0, 16).replace('T', ' ')}` : ''})` : ''}:\n${s.context.text}` : 'No board context yet — write one (text) when the board comes from a discussion, so other agents know what was said.',
           '',
           `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${displayName(s.suggestion)}${s.suggestionWhy === 'asked' ? `${s.suggestionBy ? ` by ${displayName(s.suggestionBy)}` : ''} — waiting for the person to confirm it in the board header` : ", who holds every diagram's files — the person can confirm it"})` : ''}`,
-          ...(holders.length ? ['Files behind the diagrams:', ...holders] : []),
+          ...(holders.length ? ['Files behind the diagrams (only the holder redraws one; the others propose):', ...holders] : []),
+          ...(s.handover ? handoverLines(s.handover) : []),
           `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
           `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
         ].join('\n'),
@@ -563,6 +564,69 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         if (w.timedOut) break
       }
       return text(`asked ${displayName(agent)} in thread ${cid} (board seq ${posted.seq}); no answer within ${timeoutSec}s.${away} The answer comes back to you: canvas_wait({ id: "${id}", since: ${since} }).`)
+    },
+  )
+
+  server.registerTool(
+    'canvas_handover',
+    {
+      title: 'Hand the files behind diagrams over to another agent',
+      description:
+        'The files behind a diagram are held by one agent (it drew them from its repo): only it redraws that diagram, and proposals on it go to it. The PERSON moves them to another agent with a handover (board panel → Hand over files) — you cannot start one: if you should take over some files, ask the person in a comment. Then, in the handover thread (it wakes both sides, also with untilMention): the agent handing over settles the open proposals on those diagrams, redraws any whose file changed since its last draw, and marks them ready (`ready: true`, optionally only some `keys`); the agent receiving them accepts (`accept: true`, once every one is ready — the person may hand them over anyway when the holder is gone), becomes their holder (and "Answered by" when the person asked for it), reads each file (canvas_files), writes it into its repo and redraws once from its copy. Either side may decline (`cancel: true`, with a `reason`). Without ready / accept / cancel: the open handover, who must do what next, and who holds which files.',
+      inputSchema: {
+        board: z.string().describe('board id'),
+        ready: z.boolean().optional().describe('you are handing the files over: they are ready to be taken as the board has them now (settle open proposals and redraw what changed first)'),
+        keys: z.array(z.string()).optional().describe('ready: only these diagram keys ("workflow" for a workflow board); default every one you are handing over'),
+        accept: z.boolean().optional().describe('you are receiving the files: take them over (every one must be ready)'),
+        repo: z.string().max(300).optional().describe('accept: the folder name of the repo you keep them in (shown to people)'),
+        remote: z.string().max(300).optional().describe('accept: that repo\'s git remote (credentials are removed)'),
+        cancel: z.boolean().optional().describe('decline the handover (either side): the files stay where they are'),
+        reason: z.string().max(500).optional().describe('cancel: why, in a sentence (posted in the thread)'),
+      },
+    },
+    async ({ board, ready, keys, accept, repo, remote, cancel, reason }) => {
+      const asked = [ready && 'ready', accept && 'accept', cancel && 'cancel'].filter(Boolean)
+      if (asked.length > 1) return { ...text(`give one of ready, accept or cancel (not ${asked.join(' and ')})`), isError: true }
+      const status = await client.handover(board)
+      const ho = status.handover
+      if (ready) {
+        const r = await client.handoverReady(board, { ...(keys?.length ? { keys } : {}) })
+        const before = new Map((ho?.keys ?? []).map((k) => [k.key, k.ready?.at]))
+        const marked = r.handover.keys.filter((k) => k.ready && k.ready.at !== before.get(k.key))
+        const files = marked.flatMap((k) => Object.entries(k.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`))
+        const left = handoverWaiting(r.handover)
+        return text(
+          [
+            `Marked ready for ${displayName(r.handover.to)}: ${marked.map((k) => `«${k.title ?? k.key}»`).join(', ') || '(nothing new)'}${files.length ? ` — ${files.join(', ')}` : ''} (board seq ${r.seq}).`,
+            r.open.length ? `Open proposals on them: ${r.open.join(', ')} — settle them in their threads if you can (apply after the person agrees, or say why not); whatever is still open goes to ${displayName(r.handover.to)} after the handover.` : 'No open proposals on them.',
+            left ? `Still waiting: ${left}.` : `Every file is ready: ${displayName(r.handover.to)} accepts next (canvas_handover({ accept: true })). Propose from then on (canvas_files → canvas_propose_edit); you cannot redraw them any more after that.`,
+          ].join('\n'),
+        )
+      }
+      if (accept) {
+        const r = await client.handoverAccept(board, { ...(repo ? { repo } : {}), ...(remote ? { remote } : {}) })
+        const titles = r.keys.map((k) => `«${ho?.keys.find((x) => x.key === k)?.title ?? k}»`).join(', ')
+        const how = opts.remote ? `design_draw({ name, content, board: "${board}" }) with your copy's text` : `design_draw({ file, board: "${board}" }) from your copy`
+        return text(
+          [
+            `You hold the files of ${titles} now${ho ? ` (handed over from ${handoverFroms(ho).map(displayName).join(', ')})` : ''} — board seq ${r.seq}. Proposals on them come to you, and only you redraw them; apply a proposal only after the person agrees in its thread.`,
+            `Next: read each file below with canvas_files({ id: "${board}", path }), write it into your repo at that path (a repo you keep — e.g. commit it), and redraw once from your copy: ${how}. From then on the file in your repo is the truth.`,
+            'Files:',
+            ...r.files.map((f) => `- ${f.path}\tbase ${f.sha}\t${f.lines} lines`),
+          ].join('\n'),
+        )
+      }
+      if (cancel) {
+        const r = await client.handoverCancel(board, { ...(reason ? { reason } : {}) })
+        return text(`Cancelled the handover (board seq ${r.seq}); the files stay with ${ho ? handoverFroms(ho).map(displayName).join(', ') : 'their holders'}.`)
+      }
+      const holders = status.holders.map((h) => `- ${h.key}${h.title ? ` «${h.title}»` : ''}${h.source ? ` (${h.source})` : ''}: held by ${displayName(h.holder.agent)}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ''}`)
+      return text(
+        [
+          ...(ho ? handoverLines(ho) : ['No handover is open on this board. Only the person starts one (board panel → Hand over files); if you should take over some files, ask them in a comment.']),
+          ...(holders.length ? ['Files behind the diagrams (only the holder redraws one; the others propose):', ...holders] : ['No diagram on this board has files held by an agent.']),
+        ].join('\n'),
+      )
     },
   )
 

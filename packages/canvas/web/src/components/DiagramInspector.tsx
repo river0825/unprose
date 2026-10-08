@@ -19,6 +19,7 @@ import { headerGroups } from '../flow/headerStrips'
 import { PanelLink } from '../inspector/panelNav'
 import { holderOfItem } from '../../../src/routing'
 import { HolderLine } from './BoardAgents'
+import { FrameHandover } from './Handover'
 import { PlayStoryButton } from './ReplayBar'
 import { PlayMockButton } from './PlayBar'
 
@@ -65,7 +66,9 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         <dt>Elements</dt>
         <dd>{count}</dd>
       </dl>
-      <HolderLine holder={holderOfItem(board, diagram.frame)} />
+      <HolderLine holder={holderOfItem(board, diagram.frame)}>
+        <FrameHandover board={board} diagramKey={diagram.key} />
+      </HolderLine>
       {diagram.kind === 'domain-story' ? (
         <p className="dg-replay">
           <PlayStoryButton frameId={diagram.frame.id} /> <span className="muted">sentence by sentence, as in Egon.io</span>

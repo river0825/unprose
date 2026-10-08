@@ -2,12 +2,15 @@
 // "Answered by"), whether that agent is here ("<name> is away — your comments wait for it"), the board's context
 // note at the top of the panel, and the holder of a diagram's files on its frame panel. The settings live in the
 // board's meta; changing them is a logged change the canvas makes (PUT /api/boards/:id/settings).
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { Board } from '../../../src/model'
 import { contextOf, displayName, LOCAL_AGENT, responderName, responderOf, sameAgent, type FileHolder } from '../../../src/routing'
 import { Linkified } from '../flow/Linkified'
 import { timeAgo } from '../time'
+import { AWAY_MS, holderWhen, type HandedHolder } from '../inspector/handover'
 import './agents.css'
+
+export { AWAY_MS }
 
 export interface AgentRow {
   name: string
@@ -42,7 +45,8 @@ export function useBoardSettings(boardId: string, key = ''): BoardSettings | und
         .then((d) => {
           if (!d || !live) return
           cache.set(boardId, { at: Date.now(), data: d })
-          setData(d)
+          // every other reader of this board's settings (the panel's handover, @mentions) sees the fresh read too
+          for (const fn of listeners) fn()
         })
         .catch(() => undefined)
     void read()
@@ -65,17 +69,15 @@ export async function saveSettings(boardId: string, patch: { answeredBy?: string
   for (const fn of listeners) fn()
 }
 
-/** Re-render every `ms` (the "is away" notice follows the clock). */
-function useTick(ms: number) {
-  const [, set] = useState(0)
+/** Re-render every `ms` (the "is away" notice follows the clock); returns the tick count. */
+export function useTick(ms: number): number {
+  const [n, set] = useState(0)
   useEffect(() => {
-    const t = window.setInterval(() => set((n) => n + 1), ms)
+    const t = window.setInterval(() => set((x) => x + 1), ms)
     return () => window.clearInterval(t)
   }, [ms])
+  return n
 }
-
-/** An agent that has not waited on the board for this long is away. */
-export const AWAY_MS = 60_000
 
 /** Is this agent watching the board now, or did it in the last minute? */
 export function isHere(name: string, watching: string[], seen: Record<string, string>, now = Date.now()): boolean {
@@ -271,10 +273,15 @@ export function BoardContextPanel({ board, onToast }: { board: Board; onToast?: 
   )
 }
 
-/** Frame panel: "Files: team-notes · held by codex-b · last applied 3 min ago" (machine and path only on this machine). */
-export function HolderLine({ holder }: { holder: FileHolder | undefined }) {
+/**
+ * Frame panel: "Files: team-notes · held by codex-b · last applied 3 min ago" (machine and path only on this machine);
+ * after a handover "held by codex-b · from codex-a · handed over 3 min ago". `children`: the frame's handover line.
+ */
+export function HolderLine({ holder, children }: { holder: FileHolder | undefined; children?: ReactNode }) {
   if (!holder) return null
-  const when = holder.appliedAt ? `last applied ${timeAgo(holder.appliedAt)}` : holder.at ? `drawn ${timeAgo(holder.at)}` : ''
+  const h = holder as HandedHolder
+  const when = holderWhen(h)
+  const from = typeof h.from === 'string' && h.from.trim() && !sameAgent(h.from, h.agent) ? h.from : undefined
   const tail = holder.root ? holder.root.split('/').filter(Boolean).slice(-2).join('/') : ''
   const where = holder.machine ? `on ${holder.machine}${tail ? ` (…/${tail})` : ''}` : ''
   const remote = holder.remote?.replace(/^https?:\/\//, '').replace(/^git@([^:]+):/, '$1/').replace(/\.git$/, '')
@@ -283,9 +290,11 @@ export function HolderLine({ holder }: { holder: FileHolder | undefined }) {
       <p>
         <span className="muted">Files:</span> <strong>{holder.repo ?? "the agent's copy"}</strong>
         {' · '}held by <strong>{displayName(holder.agent)}</strong>
+        {from ? <> · from {displayName(from)}</> : null}
         {when ? <span className="muted"> · {when}</span> : null}
       </p>
       {remote || where ? <p className="muted mono holder-where">{[remote, where].filter(Boolean).join(' · ')}</p> : null}
+      {children}
     </div>
   )
 }

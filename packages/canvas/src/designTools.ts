@@ -72,7 +72,8 @@ export async function previewDesignContent(client: CanvasClient, name: string, c
   else boardId = (await client.listBoards()).find((b) => b.title === board.slice(6).trim())?.id
   if (!boardId) return { key: d.key, lines: [`Redraw preview — ${d.key} (dry run: nothing written)`, `  no board ${board} yet: a real draw creates it and adds the whole frame`, ...lintLine] }
   const { plan, current } = await planDesignRedraw(client, d, name, boardId, o.at)
-  return { key: d.key, boardId, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${name} on "${current.title}" (${client.boardUrl(boardId)})`, limit: o.limit }), ...lintLine] }
+  const refused = await client.redrawRefusal(boardId, d.key)
+  return { key: d.key, boardId, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${name} on "${current.title}" (${client.boardUrl(boardId)})`, limit: o.limit }), ...lintLine, ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
 }
 
 export async function drawDesignContent(client: CanvasClient, name: string, content: string, board: string, at?: { x: number; y: number }) {
@@ -82,6 +83,9 @@ export async function drawDesignContent(client: CanvasClient, name: string, cont
   if (errors.length) throw new Error([`not drawn: ${errors.length} lint error(s) in ${name}`, ...errors.map(findingLine)].join('\n'))
   const found = await resolveBoard(client, board)
   const boardId = found.id
+  // another agent holds this diagram's files: refuse before anything is drawn (the canvas refuses the meta too)
+  const refused = await client.redrawRefusal(boardId, d.key)
+  if (refused) throw new Error(refused)
   const { ops, current, unresolved } = await planDesignRedraw(client, d, name, boardId, at)
   const { seq } = await client.apply(boardId, ops as unknown as Op[], 'agent', `design_draw: ${name}`)
   // only this diagram's entry changes (PATCH merges per diagram key: another agent's diagrams stay as they are)
@@ -124,7 +128,7 @@ export function registerContentDesignTools(server: McpServer, client: CanvasClie
     'design_draw',
     {
       title: 'Draw a diagram file on a board',
-      description: `${WHICH_DIAGRAM}\nFor a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}\nDraw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors. Pass the file's text as \`content\` and its name as \`name\` (this canvas cannot read your files); keep the file itself as the truth on your side. Returns the board link and the frame key (use it with canvas_focus).`,
+      description: `${WHICH_DIAGRAM}\nFor a domain story: ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY}\nDraw (or refresh) one diagram frame from its file. What a redraw keeps: a locked item (data.lock "layout", on it or on its frame) keeps its place and size; else what the person moved keeps its place; else the file decides. Content always follows the file; pending proposals stay; items no longer in the file go; items in the frame this file did not draw (the person's, another agent's, comments) are kept. dryRun: true returns that plan (added / updated / removed / kept, and why) and writes nothing — use it before redrawing a frame others worked on. Refuses a file with lint errors, and a diagram whose files another agent holds (only the holder redraws it: propose instead with canvas_files → canvas_propose_edit, or ask the person to hand the files over — canvas_handover). Pass the file's text as \`content\` and its name as \`name\` (this canvas cannot read your files); keep the file itself as the truth on your side. You become the holder of a diagram nobody holds yet. Returns the board link and the frame key (use it with canvas_focus).`,
       inputSchema: {
         ...fileArgs,
         board: z.string().describe('A board id, or "title:<title>" (found, or created)'),

@@ -40,10 +40,16 @@ export function isDeclined(messages: readonly Item[]): boolean {
   return messages.some((m, i) => i > 0 && m.createdBy === 'user' && (m.text ?? '').trim() === DECLINE_TEXT)
 }
 
-/** A proposal thread that is finished — applied by the holder, or declined by the person: nothing left to discuss. */
+/**
+ * A finished thread — a proposal applied by the holder or declined by the person, or a handover of the files that
+ * is done or was cancelled (its root's `data.handover.state`): nothing left to discuss.
+ */
 export function isSettled(messages: readonly Item[]): boolean {
   const root = messages[0]
-  return Boolean(root) && isProposal(root) && (isApplied(messages) || isDeclined(messages))
+  if (!root) return false
+  const handover = (root.data?.handover as { state?: unknown } | undefined)?.state
+  if (root.type === 'comment' && (handover === 'done' || handover === 'cancelled')) return true
+  return isProposal(root) && (isApplied(messages) || isDeclined(messages))
 }
 
 export interface NotesView {

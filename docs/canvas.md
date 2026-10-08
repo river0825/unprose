@@ -78,11 +78,12 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
 | `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) **suggests** the responder for the person to confirm — both logged |
 | `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board (`agent`: its @handle or its name): posts an `@handle` thread (on `about[0]`, else loose) and blocks until it answers in the thread; the result says exactly who it was delivered to (*Delivered to @codex-b — watching this board now*, or that it is not watching / never seen); on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
+| `canvas_handover` | `board, ready? + keys?, accept? + repo?, remote?, cancel? + reason?` | the files behind diagrams changing hands, once **the person** started it (an agent cannot start one): `ready: true` — you hand them over, they are ready to be taken as the board has them (optionally only `keys`); `accept: true` — you receive them (once every one is ready): you become their holder, and the result lists the files to read with `canvas_files`, write into your repo and redraw once from; `cancel: true` — decline (either side). Without any: the open handover, who must do what next, who holds which files ([Handing over the files](#handing-over-the-files)) |
 | `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
 | `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
 | `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
-| `design_draw` | `file, board, at?, applied?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors; returns the `?frame=` link; records you as the holder of the file; `applied` = the proposal thread this redraw applies ([Applying](#applying---applied-and-committing)) |
+| `design_draw` | `file, board, at?, applied?` | `awd design draw`: draw or refresh the file's frame, keeping the person's layout; refuses a file with lint errors, and a diagram whose files another agent holds (before drawing anything — [the guard](#handing-over-the-files)); returns the `?frame=` link; records you as the holder of a diagram nobody holds yet; `applied` = the proposal thread this redraw applies ([Applying](#applying---applied-and-committing)) |
 | `design_propose_stories` | `from, into, board` | `awd design propose-stories`: story candidates from EventStorming / a domain story as dashed proposals; the story-map file is not written |
 | `design_egon` | `action: import\|export, file, out` | `awd design import-egon` / `export-egon` (Egon.io) |
 
@@ -300,6 +301,7 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | Read a board / diff / wait (filters, summary, pages, size cap — [Reading big boards](#reading-big-boards)) | the board | `awd-canvas outline`, `awd-canvas diff` | `canvas_read_board`, `canvas_diff`, `canvas_wait` | same |
 | Focus the person's page ("look here") | – (the person navigates; Go-to palette) | – | `canvas_focus` | `canvas_focus` |
 | Board settings: context, *Answered by* | header menu (sets it), context panel | – | `canvas_context` (context; *Answered by* only as a suggestion) | same |
+| **Hand the files over** to another agent ([Handing over the files](#handing-over-the-files)) | board panel → *Hand over files* (starts it), *Hand over anyway* | – | `canvas_handover` (ready / accept / cancel — never start) | same |
 | Ask another agent | `@name` in a comment | – | `canvas_ask` | `canvas_ask` |
 | **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG via resvg: the npm package in a checkout, a pinned, sha512-checked native download for the plugin; else SVG with the reason; the result names the renderer) | `canvas_snapshot` (same) |
 | **Layout check** (overlaps, cut-off text, oversized, drawn elsewhere) | frame panel → *Layout* | `GET /api/boards/:id/layout` | `canvas_check_layout` | `canvas_check_layout` |
@@ -581,7 +583,9 @@ the yaml change itself must be in the diff. The Chat shows the proposal: file, `
    environment says `UNPROSE_APPLY_COMMIT=1` ([Applying](#applying---applied-and-committing)).
 
 With several agents on the board the proposal goes to the **holder** of the file — the agent that drew it from its
-files — and wakes it, whoever answers the board ([Several agents on one board](#several-agents-on-one-board)).
+files — and wakes it, whoever answers the board ([Several agents on one board](#several-agents-on-one-board)). Only
+the holder redraws the diagram; another agent that should hold the files asks the person to hand them over
+([Handing over the files](#handing-over-the-files)).
 
 A later option, not built: proposals as a git branch / pull request.
 
@@ -597,7 +601,7 @@ meant for another agent that has the context. Four things sort it out, all kept 
 | **Answered by** | who answers the person's comments on this board: one agent by name, *studio* (this machine's default agent), *any agent*, or the default (as before: studio and any agent) | `meta.responder = { mode: 'agent' \| 'studio' \| 'any', agent?, by, at }` |
 | **@mentions** | `@codex-b` in a comment sends that thread to that agent, whoever answers the board | `data.mention` on the comment |
 | **Context** | a short markdown note on what the board is about — the meeting, decisions, links to the notes — that every agent gets first | `meta.context = { text, by, at }` |
-| **File holder** | who drew each diagram from which files: agent, machine, repo, git remote; proposals on a diagram go to its holder | `meta.diagrams[key].holder`, `meta.workflow.holder` |
+| **File holder** | who drew each diagram from which files: agent, machine, repo, git remote; proposals on a diagram go to its holder, and only it redraws the diagram — the files change hands only when the person [hands them over](#handing-over-the-files) | `meta.diagrams[key].holder`, `meta.workflow.holder`; an open handover in `meta.handover` |
 
 **Watching ≠ answering ≠ being mentioned ≠ allowed to apply.** These are four separate things; having one never
 gives an agent another:
@@ -607,7 +611,7 @@ gives an agent another:
 | **Watching** | the board's news: `canvas_wait` returns what is for it (`listen: 'all'`: everything); `canvas_read_board` / `canvas_diff` show everything | the agent (any token that may read the board) | `canvas_wait` / `GET /wait`; shown as *here* / *away* |
 | **Answering** (*Answered by*) | the person's comments that name nobody wake this agent | **the person only** | the header menu, or confirming a suggestion. An agent that draws a new board (`awd design draw`, `awd graph --canvas`, `design_draw`) or calls `canvas_context { answeredBy }` only **suggests** it (`meta.responderSuggestion`); the header shows *Suggested: codex-b — Confirm* |
 | **Being mentioned** | one thread: `@codex-b` (or `canvas_ask`) sends that thread to it, replies included | whoever writes the mention (the person, or an agent asking) | `data.mention` on the comment |
-| **Allowed to apply** | changing the files behind a diagram and redrawing with `--applied` | the person, **in the thread** | only the file holder (the agent that drew it from its files), only after the person agreed. A token's *read + draw* access, a watch, a mention or another agent's "agree" is **not** consent; a remote agent proposes (`canvas_propose_edit`) and never applies |
+| **Allowed to apply** | changing the files behind a diagram and redrawing with `--applied` | the person, **in the thread** | only the file holder (the agent that drew it from its files), only after the person agreed. A token's *read + draw* access, a watch, a mention or another agent's "agree" is **not** consent; a remote agent proposes (`canvas_propose_edit`) and never applies. Another agent cannot redraw the diagram either (`409`) — the person hands the files over ([Handing over the files](#handing-over-the-files)) |
 
 So watching a board does not make an agent its responder, being the responder does not let it apply proposals, and
 an agent never replies on behalf of another one (a comment routed to `codex-b` does not wake `claude-a`, and a token
@@ -651,15 +655,18 @@ hand:
    person, wakes nobody (`route: 'paused'`, `data.paused: true`). The thread shows *"Agents paused — reply to let them
    continue"*; the person's next message resets the count. *N* = the board's `agentTurns` (settings), else
    `UNPROSE_AGENT_TURNS` on the canvas, else **6**.
-2. **@mention** — a mention in the comment, else the latest one in its thread (by `data.mentionAt`), makes the thread
+2. **Handover** — a thread whose first comment is a handover's (`data.handover`, [Handing over the
+   files](#handing-over-the-files)) goes to both sides: every agent handing files over and the agent receiving them —
+   before any @mention (its first message mentions them all). `route: 'handover'`.
+3. **@mention** — a mention in the comment, else the latest one in its thread (by `data.mentionAt`), makes the thread
    a conversation between the agent mentioned and whoever mentioned it: each message goes to the other side. The
    person asking `@claude-a` wakes only claude-a, and claude-a's answer wakes no other agent; an agent asking another
    gets the answer back. A later mention in the thread takes it over. `route: 'mention'`.
-3. **Proposal** — a thread whose first comment proposes an edit (`data.discuss.edit`: `canvas_propose_edit`, the
+4. **Proposal** — a thread whose first comment proposes an edit (`data.discuss.edit`: `canvas_propose_edit`, the
    source dialog, a UI mock's text edit chat) or a wire change (`data.discuss.proposal`) goes to the **holder** of the
    file / of the diagram it is on, and back to the agent that proposed it — whoever answers the board.
    `route: 'proposal'`.
-4. **Responder** — otherwise the board's *Answered by* agent (and, if an agent started the thread, that agent too).
+5. **Responder** — otherwise the board's *Answered by* agent (and, if an agent started the thread, that agent too).
    No responder (or *any agent*) → `to` is absent: anyone, exactly as before.
 
 The comment's own author is never among its recipients. Mentions resolve against the agents the canvas knows on that
@@ -680,7 +687,8 @@ agent-to-agent mentions per 10 minutes (`429` past it, saying how long to wait).
 
 `canvas_wait` (`GET /wait`) wakes only on what is for you (`me` = your name, `agent` for the default local agent):
 the comments whose `to` includes you (or that have no `to`), proposals to files you hold, the responder's share of
-everything else. The rest neither wakes you nor comes back; the answer says how many were for others (`notForYou`,
+everything else. A mention, a proposal to your files and a handover you are part of address you personally: they
+wake `untilMention: true` too. The rest neither wakes you nor comes back; the answer says how many were for others (`notForYou`,
 *"3 change(s) on this board were for another agent — it is answered by codex-b"*). `listen: 'all'` (`?to=all`)
 wakes on everything, as before. `canvas_diff` and `canvas_read_board` always show everything — reading is not
 filtered. Studio applies the same `to` (docs/studio.md §11).
@@ -692,7 +700,7 @@ the canvas then sends the context only the first time this agent waits on the bo
 
 ### Settings: Answered by, context, loop guard
 
-`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, suggestion?, suggestionBy?,
+`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, handover, suggestion?, suggestionBy?,
 suggestionWhy?: 'asked' | 'holder', agents: [{ name, label, handle, watching, seen?, holder }], you? }` (`holders` without
 machine and root for a caller elsewhere; an agent token gets only the names active on that board). `PUT` the same
 path with any of `{ answeredBy: 'any' | 'studio' | 'me' | <name> | null, context: <markdown> | null, agentTurns:
@@ -732,6 +740,69 @@ diagram's holder (no paths).
 **A board an agent draws from its files is answered by it**: when `awd design draw` / `graph --canvas` / `design_draw`
 create the board (`POST /api/boards { answeredBy: 'me' }`), a *named* agent becomes its responder. The default local
 agent leaves the default. Boards that exist are never changed — the UI only suggests.
+
+**Only the holder redraws a diagram.** The first agent to draw a diagram from its files becomes its holder; after that
+the canvas refuses (`409`) a `PUT` / `PATCH` of the meta by any other caller that would take that diagram (or the
+workflow) over, change its entry or drop it:
+
+> the files of "signup-es" (design/signup.es.yaml) are held by codex-b: you cannot redraw them. Propose instead
+> (canvas_files → canvas_propose_edit), or ask the person to hand them over to you (board panel → Hand over files).
+
+A `PUT` (the whole meta, older clients) that leaves out a diagram another agent holds keeps that entry instead of
+dropping it. Because a draw puts the frame on the board before it patches the meta, every draw path checks first and
+changes nothing when it would be refused: `design_draw` (local and remote), `awd design draw`, `awd graph --canvas`
+(they read `GET …/settings` — `holders` and `you`; `--dry-run` / `dryRun` say *a real draw is refused*). A diagram
+nobody holds yet is free for the first drawer, and the holder redraws its own as often as it likes. The pure rules are
+`heldRefusal`, `keepHeldEntries`, `diagramRefusal` / `workflowRefusal` in `src/routing.ts`.
+
+### Handing over the files
+
+The files behind a diagram change hands only when **the person** says so: a board drawn by agent A (it has the meeting
+notes) that agent B (it reads the product's code) should lead from now on — B holds the files, applies proposals and
+redraws; A proposes. A handover is per diagram (one or several), at most one is open per board (`meta.handover`, a
+board setting: no `PUT` / `PATCH` writes it), and it runs in a thread every message of which goes to both sides.
+
+1. **The person starts it** — board panel → *Hand over files* (`POST /api/boards/:id/handover { to, keys?, answeredBy? }`):
+   to which agent, which diagrams (default: every one held by another agent), and whether *Answered by* becomes the new
+   holder too (default yes). An agent cannot start one (`403` *only the person hands files over — ask them (board panel
+   → Hand over files)*); an agent that should take over asks the person in a comment. The canvas opens the thread on
+   the first diagram's frame (`handover.<id>`, `data.handover = { id, state: 'open', to, from }`), written for both:
+   *Handing over the files of «Signup» (design/signup.es.yaml) from @claude-a to @codex-b. @claude-a: settle the open
+   proposals on them, redraw any of them whose file changed since your last draw, then canvas_handover({ ready: true }).
+   @codex-b: when they are ready, canvas_handover({ accept: true }), keep the files in your repo (canvas_files), and
+   redraw once from your copy. From then on proposals on them go to you.*
+2. **The holder gets them ready** — it is still the holder while the handover is open: it settles the open proposals
+   on those diagrams (the `ready` answer lists the ones still open — whatever is left goes to the new holder), redraws
+   what changed, then `canvas_handover({ ready: true, keys? })`. The canvas records the sha-1 of every file of those
+   diagrams as the board has them (`keys[].ready.files`) and answers *Ready: «Signup» — the files as of my last draw
+   (design/signup.es.yaml 1a2b3c4)*. When the holder is gone, the person can **Hand over anyway** (`ready { force: true
+   }`, `forced: true`): *Handed over without @claude-a's confirmation: «Signup» as of its last draw, 2026-10-08 10:12 UTC*.
+3. **The new holder accepts** — `canvas_handover({ accept: true, repo?, remote? })`, only `to` (the person cannot
+   accept for it), only when every diagram is ready (else `409` naming who each one waits for). In one logged change
+   each diagram's holder becomes `{ agent: to, at, from: <old holder>, handover: <thread id>, repo?, remote? }` and, when
+   the person asked for it, *Answered by* becomes `to` (the person consented when starting it — the change note says
+   so). The thread answers *Accepted — @codex-b holds the files of «Signup» now; proposals on them go to @codex-b.
+   @claude-a: propose from now on (canvas_files → canvas_propose_edit).* The result lists the files: the new holder
+   reads each with `canvas_files({ id, path })`, writes it into its repo and redraws once from its copy (`design_draw`)
+   — its own redraws keep `from` / `handover` on the holder. From then on the old holder's redraw is refused like
+   anyone's.
+4. **Either side may decline**, and the person may cancel: `canvas_handover({ cancel: true, reason? })` — *Cancelled by
+   @codex-b: …*; the files stay where they were.
+
+**On the page.** Under the context note the panel says *Files held by claude-a* with **Hand over files…**; a diagram
+frame's panel has **Hand over…** next to its holder line (only that diagram checked). The dialog lists every diagram
+with a holder, **all checked**, with its kind, file and holder (rows the chosen agent already holds are disabled), a
+*Hand over to* select (each agent with ● here / ○ away), **Also make it Answered by** (checked) and one sentence of what
+will happen (*claude-a confirms its files are current, then codex-b takes them; until then nothing changes*). While the
+handover is open the panel shows, per diagram, *waiting for claude-a to confirm* / *✓ ready* / *✓ ready (without
+claude-a's confirmation)*, then *waiting for codex-b to accept*, who is here, and **Hand over anyway** (it asks first:
+*Use the files as the board has them from claude-a's last draw, 3 h ago?*) and **Cancel handover**; each involved
+frame's panel has a one-line notice. When it is done a toast says *codex-b now holds the files of 2 diagrams*, the
+holder line reads *held by codex-b · from claude-a · handed over 6 min ago*, and the thread folds into a quiet ✓.
+
+`canvas_wait` wakes both sides on every message of the thread (also with `untilMention: true`: a handover addresses
+them personally), `canvas_context`, `canvas_handover` without arguments and the top of `canvas_read_board` say who
+must do what next (*waiting for claude-a: settle the open proposals on «Signup», …*).
 
 ### Applying: `--applied`, and committing
 
@@ -776,8 +847,8 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | DELETE | `/api/projects/:id` | `?force=1` | `{ removed, moved }` — forget a project (its files stay); `409` while it stores boards unless `force` (they move to personal); this machine only |
 | POST | `/api/boards/:id/move` | `{ project } \| { projectRoot }` | `{ board, project }` — move the snapshot and log into that project; this machine only |
 | GET | `/api/boards/:id` | | `{ board }` |
-| PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — replaces meta whole (older clients; prefer PATCH) |
-| PATCH | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — merges: each top-level meta key given replaces that key (`null` removes it); `meta.diagrams` merges per diagram key (an entry replaces that diagram's, `null` removes it). Settings keys are ignored (they change through `/settings`); holders are stamped from the caller |
+| PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — replaces meta whole (older clients; prefer PATCH), except a diagram (or the workflow) another agent holds: left out, it is kept |
+| PATCH | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — merges: each top-level meta key given replaces that key (`null` removes it); `meta.diagrams` merges per diagram key (an entry replaces that diagram's, `null` removes it). Settings keys are ignored (they change through `/settings` and `/handover`); holders are stamped from the caller. `409` when the caller would take over, change or drop a diagram / the workflow whose files another agent holds ([the guard](#file-holders)) |
 | DELETE | `/api/boards/:id` | | `{ deleted }` |
 | POST | `/api/boards/:id/ops` | `{ author: 'agent'\|'user', ops: Op[], note? }` | `{ seq, change }` (atomic batch) |
 | GET | `/api/boards/:id/changes` | `?since=N&author=&frame=&from=&kinds=` | `{ changes: Change[], seq }` — `frame` / `from` / `kinds` keep only the ops that pass ([Reading big boards](#reading-big-boards)) |
@@ -788,7 +859,12 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | POST | `/api/approve` | `{ code, scope?: 'read', name?, board? }` | `{ status, approved: { name, via, scope, ip }, audit, seq? }` — the local agent only (`canvas_approve`); `403` for tokens, sessions, browsers and anything not from loopback, `404` an unknown code, `429` after ten wrong ones |
 | POST | `/api/boards/:id/focus` | `{ ids?: string[], frame?: <diagram key>, note?, author? = 'agent' }` | broadcasts `{ type: 'focus', ids, frame?, note?, author, at }` to the board's open pages (a frame key resolves to its frame item; a legacy board's own kind means the whole board). Not a board change: nothing is stored or diffed. `{ ok, viewers, focus }`; 404 for unknown items / frames |
 | GET | `/api/boards/:id/wait` | `?since=N&timeout=ms&author=&quiet=ms&wake=meaningful\|any\|handoff&to=all&until=mention&context=changed&frame=&from=&kinds=&summary=1&maxChars=` | long-poll, `timeout` up to 1 800 000 ms (30 min; a longer wait sends a space every 20 s before the JSON, and ends when the client goes away); `until=mention`: only changes addressing the caller personally wake it (`notMentioned` counts the rest); `context=changed`: `context` only when this agent has not seen it; resolves `quiet` ms (default 2500) after the last waking change (see `canvas_wait`), or at once on a change whose `note` is `handoff`; `{ timedOut, changes, lines, seq, notForYou, answeredBy, responder, context }` — only changes for the caller unless `to=all` ([Several agents on one board](#what-waits-see)). `diff` and `wait` record `data.seenBy: ['agent']` on the user comments they return |
-| GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, suggestion?, agents: [{ name, label, handle, watching, seen?, holder }], you?, seq? }`; a PUT is a logged change (`403` read-only) |
+| GET/PUT | `/api/boards/:id/settings` | PUT `{ answeredBy?, context?, agentTurns?, author? }` | `{ responder, answeredBy, context, agentTurns, holders, handover, suggestion?, agents: [{ name, label, handle, watching, seen?, holder }], you?, seq? }`; a PUT is a logged change (`403` read-only) |
+| GET | `/api/boards/:id/handover` | | `{ handover: Handover \| null, holders: [{ key, source?, title?, holder }], agents: string[] }` — the open handover, who holds which diagram's files (no paths for callers elsewhere), the agents the canvas knows ([Handing over the files](#handing-over-the-files)) |
+| POST | `/api/boards/:id/handover` | `{ to, keys?, answeredBy? = true, author? }` | `201 { seq, handover }` — **the person only** (`403` for an agent); `to` must be a known agent (`400` names them); `keys` default: every diagram (and the workflow) held by another agent than `to`; `409` while one is open. Sets `meta.handover`, opens the thread `handover.<id>` |
+| POST | `/api/boards/:id/handover/ready` | `{ keys?, force?, author? }` | `{ seq, handover, open: string[] }` — the holder marks its keys ready (`keys[].ready = { by, at, files: path → sha-1 }`); the person only with `force: true` (*Hand over anyway*, `forced: true`); `open` = proposal threads still open on those diagrams |
+| POST | `/api/boards/:id/handover/accept` | `{ repo?, remote? }` | `{ seq, keys, files: [{ path, sha, lines }] }` — `to` only (`403` for the person or another agent), `409` until every key is ready; the holders become `to` (`from`, `handover` kept on them), *Answered by* too when asked for, `meta.handover` goes |
+| POST | `/api/boards/:id/handover/cancel` | `{ reason?, author? }` | `{ seq }` — the person, `to` or a `from` agent; `404` when none is open |
 | POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
 | POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |

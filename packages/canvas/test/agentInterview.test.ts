@@ -184,9 +184,9 @@ test('PATCH /api/boards/:id: two machines drawing in turn keep each other\'s dia
   assert.equal(seen.board.meta.diagrams['flow-es'].holder.root, undefined)
   await send('PATCH', `/api/boards/${b.id}`, { meta: { responder: { mode: 'agent', agent: 'codex-b2' } } }, remote(bb))
   assert.equal(store.get(b.id)!.meta?.responder, undefined, 'settings change only through /settings')
-  // PUT still replaces meta whole (older clients)
+  // PUT still replaces meta whole (older clients) — but a diagram another agent holds, left out, is kept
   await send('PUT', `/api/boards/${b.id}`, { meta: { diagrams: {} } }, remote(a))
-  assert.deepEqual(store.get(b.id)!.meta?.diagrams, {})
+  assert.deepEqual(Object.keys(store.get(b.id)!.meta?.diagrams as object), ['scope-map'], "A dropped its own diagram, not B's")
 })
 
 // ── 4. no bogus projects, no duplicate boards ────────────────────────────────────

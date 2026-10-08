@@ -231,3 +231,315 @@
   color: var(--ink);
   font-weight: 600;
 }
+
+/* handing the files over to another agent (components/Handover.tsx, HandoverDialog.tsx): graphite throughout —
+   marker blue only on focus and the dialog's Start; presence is a filled (here) or hollow (away) dot plus its word */
+button.link.quiet {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+button.link.quiet:hover {
+  color: var(--ink);
+}
+.presence-dot-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.presence-dot-text.here {
+  color: var(--ink-2);
+}
+.presence-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--rule-2);
+  flex: none;
+}
+.presence-dot-text.here .presence-dot {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+}
+
+/* the quiet line under the context note */
+.board-files {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 2px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--chrome);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.board-files-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.board-files button {
+  flex: none;
+}
+
+/* the open handover */
+.board-handover {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--chrome);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.board-handover-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.board-handover-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.board-handover-title strong {
+  font-weight: 600;
+}
+.board-handover-sub {
+  margin: 1px 0 6px;
+  font-size: 12px;
+}
+.handover-status {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 1px solid var(--rule-2);
+}
+.handover-status li {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+.handover-status .handover-title {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.handover-status .s-waiting .handover-state {
+  color: var(--ink-3);
+}
+.handover-status .s-ready .handover-state,
+.handover-status .s-forced .handover-state {
+  color: var(--ink-2);
+}
+.handover-status .handover-accept {
+  color: var(--ink-3);
+  padding-top: 4px;
+}
+.handover-status .handover-accept.now {
+  color: var(--ink);
+  font-weight: 500;
+}
+.handover-presence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 6px 0 0;
+}
+.handover-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+.handover-confirm {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px dashed var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.handover-confirm p {
+  margin: 0;
+  color: var(--ink);
+}
+.handover-confirm .handover-buttons {
+  margin-top: 6px;
+}
+.handover-error {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+/* on a frame's panel, under the holder line */
+.holder-handover {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+p.holder-handover {
+  padding-left: 8px;
+  border-left: 2px solid var(--rule-2);
+}
+
+/* the dialog */
+.handover-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+  font-size: 13.5px;
+}
+.handover-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.handover-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.handover-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.handover-head p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+}
+.handover-diagrams {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.handover-diagrams legend,
+.handover-to > label {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.handover-diagrams ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  max-height: 300px;
+  overflow: auto;
+}
+.handover-diagrams li + li {
+  border-top: 1px solid var(--rule);
+}
+.handover-diagrams label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.handover-diagrams li.is-theirs label {
+  cursor: default;
+}
+.handover-diagrams li.is-theirs .handover-row {
+  opacity: 0.55;
+}
+.handover-diagrams input[type='checkbox'] {
+  margin: 3px 0 0;
+  flex: none;
+}
+.handover-dialog input[type='checkbox'] {
+  accent-color: var(--marker);
+}
+.handover-row {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.handover-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.handover-dialog .handover-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.handover-kind {
+  flex: none;
+  font-size: 12px;
+}
+.handover-row-meta {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.handover-row-meta .mono {
+  font-size: 11.5px;
+}
+.handover-to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.handover-to > label {
+  flex: 0 0 100%;
+  margin: 0;
+}
+.handover-to select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  min-height: 32px;
+  max-width: 100%;
+}
+.handover-answered {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.handover-answered input {
+  margin: 0;
+}
+.handover-plan {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--rule-2);
+  background: var(--chrome-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.handover-dialog .handover-error {
+  margin: 0;
+}
+.handover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

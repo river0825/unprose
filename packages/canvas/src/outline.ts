@@ -243,7 +243,7 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const maxReplies = opts.replies ?? 3
 
   const said = (c: Item) => {
-    const to = Array.isArray(c.data?.to) && c.data.route === 'mention' && (c.data.to as unknown[]).length ? ` → ${(c.data.to as string[]).join(', ')}` : ''
+    const to = Array.isArray(c.data?.to) && (c.data.route === 'mention' || c.data.route === 'handover') && (c.data.to as unknown[]).length ? ` → ${(c.data.to as string[]).join(', ')}` : ''
     return `(${who(c)}${to})${c.data?.paused ? ' [agents paused here — waits for the person]' : ''}`
   }
   const thread = (c: Item, indent: string) => {

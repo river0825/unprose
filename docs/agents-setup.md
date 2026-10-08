@@ -267,6 +267,14 @@ the proposal goes to **codex-b**, the holder. It explains it in the thread; afte
 *"Applied to design/signup.es.yaml — committed 3e81cda and pushed"* (because machine B set `UNPROSE_APPLY_COMMIT=1`
 and `UNPROSE_APPLY_PUSH=1`). Machine A runs `git pull` in its clone of team-notes when it wants the files.
 
+**6. Handing the board over.** Later Claude on machine A (it reads the product's code) should lead instead: open the
+board panel → **Hand over files**, pick *claude-a* and the diagrams. Codex settles its open proposals, redraws what
+changed and answers `canvas_handover({ ready: true })`; Claude accepts (`canvas_handover({ accept: true })`), writes
+the files from `canvas_files` into its repo and redraws once from its copy. From then on the frames say *held by
+claude-a (handed over from codex-b)*, proposals go to Claude, *Answered by* is claude-a, and Codex proposes — its
+redraw is refused. If Codex is gone, **Hand over anyway** marks the files ready for it (docs/canvas.md → Handing over
+the files).
+
 Notes: a person on machine A may change *Answered by* back to studio at any time (logged). A read-only token can read
 the board and the context but not change them. Names are how routing works — rename an agent rather than making a
 second token for it.

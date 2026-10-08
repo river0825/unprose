@@ -7,8 +7,11 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { loadWorkflow } from '@awd/runtime'
 import { AccessService, MemoryAccessStore, MemoryBoardRepository, startServer, VERSION, type RunningServer } from '@awd/canvas'
-import { drawDesign } from '../src/design.js'
+import { drawDesign, previewDesign } from '../src/design.js'
+import { pushGraphToCanvas } from '../src/graphCanvas.js'
 import { afterApplied, appliedMessage } from '../src/applied.js'
 import { canvasHeaders, holderInfo, type Api } from '../src/projects.js'
 
@@ -142,4 +145,26 @@ test('two machines drawing on one board in turn: each keeps its diagram, the boa
   // A redraws: B's diagram stays
   await drawDesign(path.join(repo, 'design', 'shop.es.yaml'), { board: a.boardId, canvas: srv.url })
   assert.ok((store.get(a.boardId)!.meta as { diagrams: Record<string, unknown> }).diagrams[b.key])
+})
+
+test('awd design draw and awd graph --canvas refuse — before drawing anything — a diagram whose files another agent holds', async () => {
+  const file = path.join(repo, 'design', 'shop.es.yaml')
+  // the default local agent (studio) drew it, so it holds the files
+  const r = await withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: undefined, UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => drawDesign(file, { board: 'title:Held by studio', canvas: srv.url }))
+  const seq = store.get(r.boardId)!.seq
+  const want = 'the files of "shop-es" (design/shop.es.yaml) are held by studio: you cannot redraw them. Propose instead (canvas_files → canvas_propose_edit), or ask the person to hand them over to you (board panel → Hand over files).'
+  await assert.rejects(withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: 'claude-x', UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => drawDesign(file, { board: r.boardId, canvas: srv.url })), (e: Error) => e.message === want)
+  assert.equal(store.get(r.boardId)!.seq, seq, 'nothing drawn')
+  // the dry run says so too
+  const p = await withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: 'claude-x', UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => previewDesign(file, { board: r.boardId, canvas: srv.url }))
+  assert.ok(p.lines.at(-1)!.includes(`✖ a real draw is refused: ${want}`))
+  // the holder itself redraws as before
+  await withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: undefined, UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => drawDesign(file, { board: r.boardId, canvas: srv.url }))
+  // a workflow board the same way
+  const wfFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'examples', 'herdr-smoke', 'workflow.yaml')
+  const def = loadWorkflow(wfFile).def
+  const w = await withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: undefined, UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => pushGraphToCanvas(def, { canvas: srv.url, file: wfFile }))
+  const wseq = store.get(w.boardId)!.seq
+  await assert.rejects(withEnv({ UNPROSE_TOKEN: undefined, UNPROSE_AGENT_NAME: 'claude-x', UNPROSE_TOKENS_FILE: path.join(os.tmpdir(), 'unprose-no-such-tokens.json') }, () => pushGraphToCanvas(def, { canvas: srv.url, file: wfFile })), (e: Error) => /^the files of "workflow" \(.*herdr-smoke\/workflow\.yaml\) are held by studio: you cannot redraw them\./.test(e.message))
+  assert.equal(store.get(w.boardId)!.seq, wseq, 'nothing drawn')
 })

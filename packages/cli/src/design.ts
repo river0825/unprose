@@ -11,7 +11,7 @@ import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
 import { repoRoot, withDetails } from './graphCanvas.js'
-import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, registerProject } from './projects.js'
+import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, redrawRefusal, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 
 type Flags = Record<string, string | boolean>
@@ -147,7 +147,8 @@ export async function previewDesign(file: string, opts: DrawOptions): Promise<Dr
   const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(board, d.key)
   const { plan } = explainRedraw(board.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && board.items[frame.id] ? { frame: frame.id } : {}) })
-  return { base, boardId: board.id, key: d.key, plan, lines: planLines(plan, { title: `Redraw preview — ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }) }
+  const refused = await redrawRefusal(api, board.id, d.key)
+  return { base, boardId: board.id, key: d.key, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }), ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
 }
 
 export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult }> {
@@ -159,6 +160,9 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const root = repoRoot(path.dirname(abs))
   const source = path.relative(root, abs)
   const board = await resolveBoard(api, opts.board, root)
+  // another agent holds this diagram's files: refuse before anything is drawn (docs/canvas.md "Handing over the files")
+  const refused = await redrawRefusal(api, board.id, d.key)
+  if (refused) throw new Error(refused)
   // A workflow is drawn with the runner's own projection (graph + block details); the files behind it
   // (agent prompts, scripts) go into the snapshot so the Inspector and Files tab can show them.
   const wf = d.kind === 'workflow' ? withDetails(toGraph(loadWorkflow(abs).def), abs) : undefined

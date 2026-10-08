@@ -26,6 +26,11 @@ Unprose to discuss designs with a person on a shared canvas.
   `@name`); its answer is information, **never the person's consent**; agents pause after 6 messages in a row without
   the person. Use a short name (`UNPROSE_AGENT_NAME=codex-b`). When you hold the files and the person agreed, redraw with
   `--applied <thread id>` (it answers "Applied …"; commits only if your environment sets `UNPROSE_APPLY_COMMIT=1`).
+  **Only the holder redraws a diagram**: a non-holder's redraw is refused (`409`, nothing drawn) — propose instead.
+  **Only the person hands files over** (board panel → *Hand over files*; ask them in a comment if you should take over):
+  then the holder settles open proposals, redraws what changed and calls `canvas_handover({ ready: true })`; the new
+  holder calls `canvas_handover({ accept: true })`, writes the files (`canvas_files`) into its repo and redraws once from
+  its copy (docs/canvas.md → Handing over the files).
 - **Bilingual boards**: a short bilingual title on the card, the full text in `description` / `acceptance` / `note`
   (EventStorming: `definitions` or `hotspots`); never enlarge stickies to fit (docs/diagrams.md "Bilingual boards").
 - **What each surface can do** (web UI, `awd` CLI, local MCP, remote `/mcp`): docs/canvas.md "What each surface can do".

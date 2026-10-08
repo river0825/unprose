@@ -32,9 +32,15 @@ export async function cmdStudio(file: string | undefined, flags: Flags) {
   if (file) {
     const wf = loadWorkflow(file)
     root ||= fs.realpathSync(repoRoot(wf.dir))
-    const drawn = await pushGraphToCanvas(wf.def, { canvas: str(flags.canvas), runtime: str(flags.runtime), file })
-    base = drawn.base
-    console.log(`studio: ${wf.def.name} → ${drawn.base}/b/${drawn.boardId} (seq ${drawn.seq})`)
+    try {
+      const drawn = await pushGraphToCanvas(wf.def, { canvas: str(flags.canvas), runtime: str(flags.runtime), file })
+      base = drawn.base
+      console.log(`studio: ${wf.def.name} → ${drawn.base}/b/${drawn.boardId} (seq ${drawn.seq})`)
+    } catch (e) {
+      // the person handed the workflow's files to another agent: studio serves the board without redrawing it
+      if (!/^the files of "workflow"/.test((e as Error).message)) throw e
+      console.log(`studio: not redrawn — ${(e as Error).message}`)
+    }
   }
   const name = path.basename(root)
 

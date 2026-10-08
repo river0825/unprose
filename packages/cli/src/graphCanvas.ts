@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { boardByTitle, canvasApi, canvasBase, holderInfo, registerProject } from './projects.js'
+import { boardByTitle, canvasApi, canvasBase, holderInfo, redrawRefusal, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
@@ -31,6 +31,9 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   // the board lives in the workflow's project (its repo), found there by title or created there
   const project = opts.file ? await registerProject(api, repoRoot(path.dirname(path.resolve(opts.file)))) : undefined
   const board = await boardByTitle(api, title, 'workflow', project, (b) => b.kind === 'workflow', true)
+  // another agent holds the workflow's files: refuse before anything is drawn (docs/canvas.md "Handing over the files")
+  const refused = await redrawRefusal(api, board.id, 'workflow', { workflow: true })
+  if (refused) throw new Error(refused)
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem>; meta?: { workflow?: { statusUrl?: string } } & Record<string, unknown> } }>('GET', `/api/boards/${board.id}`)
   // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
@@ -61,7 +64,8 @@ export async function previewGraph(def: WorkflowDefinition, opts: PushGraphOptio
   const { board: current } = await api<{ board: { items: Record<string, BoardItem> } }>('GET', `/api/boards/${hit.id}`)
   const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${hit.id}/changes?since=0`)
   const { plan } = explainRedraw(current.items, drawn, redrawInputs(changes))
-  return { base, boardId: hit.id, plan, lines: planLines(plan, { title: `Redraw preview — workflow ${def.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }) }
+  const refused = await redrawRefusal(api, hit.id, 'workflow', { workflow: true })
+  return { base, boardId: hit.id, plan, lines: [...planLines(plan, { title: `Redraw preview — workflow ${def.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }), ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
 }
 
 /**
