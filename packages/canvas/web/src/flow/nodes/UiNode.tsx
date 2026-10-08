@@ -11,11 +11,22 @@ import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { play, usePlay } from '../uiPlay'
-import { itemNote, rowNote } from '../notesView'
+import { itemCallout, itemNote, rowCallout, rowNote } from '../notesView'
 import { Rims, Shell } from './index'
 import '../../ui-mock.css'
 
-interface UiItem { id?: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean; /** a design note about this entry (docs/diagrams.md §6c): a ⓘ at the end of its row */ note?: string }
+interface UiItem {
+  id?: string
+  text: string
+  meta?: string
+  icon?: string
+  badge?: string
+  active?: boolean
+  /** what this entry is for (docs/diagrams.md §6c): the tooltip of its pin */
+  note?: string
+  /** the number of its pin, at the end of the entry; its card is beside the screen */
+  callout?: number
+}
 export interface UiData {
   type: string
   theme?: 'light' | 'dark'
@@ -42,8 +53,13 @@ export interface UiData {
   path?: Array<string | number>
   textKey?: string
   container?: boolean
-  /** design notes about table rows, keyed by the row index as a string: a ⓘ at the end of that row */
+  /** design notes about table rows, keyed by the row index as a string: the tooltips of their pins */
   rowNotes?: Record<string, string>
+  /** the pin numbers of those rows, keyed the same way: a pin at the end of the row */
+  rowCallouts?: Record<string, number>
+  /** the element's own note (docs/diagrams.md §6c): a numbered pin on its top-right corner, `note` its tooltip */
+  callout?: number
+  note?: string
   /** the words and numbers here are made up to show the layout: a hatched "sample" stripe outside the top edge */
   sample?: boolean
 }
@@ -150,39 +166,71 @@ function Val({ sub, text, children }: { sub: UiPath; text: string; children?: Re
   )
 }
 
-// ── design notes on entries and rows (docs/diagrams.md §6c): a quiet ⓘ at the end of the row, the note in its tooltip ──
-/** What the marks of one element need: its id (to find the note comment) and whether the mock is being played. */
-const NoteCtx = createContext<{ elementId: string; playing: boolean } | null>(null)
+// ── callouts (docs/diagrams.md §6c): a numbered pin on the element, entry or row, its card beside the screen ──
+/** What the pins of one element need: its id (to find the card), whether the mock is being played, the pin to outline. */
+const NoteCtx = createContext<{ elementId: string; playing: boolean; lit?: number } | null>(null)
+
+const stopPin = (e: { stopPropagation: () => void }) => e.stopPropagation()
 
 /**
- * The ⓘ of a list entry, tab, sidebar / navbar item, option or table row. Graphite, 12 px, outside the mock's own
- * type: a design annotation, not product UI. Pointing at it lights up the note comment about this entry (flow/notesView.ts
- * noteCommentOf); while the mock plays it is a label only.
+ * A callout pin: a 16 px graphite circle on paper with its number, in the canvas's own type, not the mock's — a design
+ * annotation, never product UI. Pointing at it lights up its card (and the card lights it up, `lit`); a click selects
+ * the card and brings it into view. The note is its tooltip, so `Notes: badges` (cards hidden) still says it. While
+ * the mock plays, or inside the card itself (no `elementId`), it is a label only. Notes: none hides every pin (CSS).
  */
-function NoteMark({ note, kind, index }: { note: string | undefined; kind: 'item' | 'row'; index: number }) {
-  const ctx = useContext(NoteCtx)
+export function CalloutPin({ n, note, elementId, playing = false, lit = false, className = '' }: { n: number; note?: string; elementId?: string; playing?: boolean; lit?: boolean; className?: string }) {
   const edit = useEdit()
-  if (!note || !ctx) return null
-  const hover = !ctx.playing && edit.hoverNote ? (on: boolean) => edit.hoverNote!(ctx.elementId, kind, index, on) : undefined
+  const cls = `ui-pin ${lit ? 'lit' : ''} ${playing ? 'playing' : ''} ${className}`
+  const label = note ? `Note ${n}: ${note}` : `Note ${n}`
+  if (playing || !elementId)
+    return (
+      <span className={cls} role="img" aria-label={label} title={elementId ? note : undefined}>
+        {n}
+      </span>
+    )
   return (
-    <span
-      className={`ui-note-mark ${ctx.playing ? 'playing' : ''}`}
-      role="img"
-      aria-label={`Design note: ${note}`}
+    <button
+      type="button"
+      className={`${cls} nodrag nopan`}
+      aria-label={`${label}. Show the note`}
       title={note}
-      onPointerEnter={hover ? () => hover(true) : undefined}
-      onPointerLeave={hover ? () => hover(false) : undefined}
+      onPointerEnter={() => edit.hoverCallout?.(elementId, n, true, 'pin')}
+      onPointerLeave={() => edit.hoverCallout?.(elementId, n, false, 'pin')}
+      onPointerDown={stopPin}
+      onMouseDown={stopPin}
+      onDoubleClick={stopPin}
+      onClick={(e) => {
+        e.stopPropagation()
+        edit.showCallout?.(elementId, n)
+      }}
     >
-      i
-    </span>
+      {n}
+    </button>
   )
 }
 
-/** A closed select shows its options' notes as one ⓘ after the chevron (`option: note` per line); open, each option has its own. */
-function SelectNotes({ items }: { items: UiItem[] }) {
-  const noted = items.map((it, i) => ({ it, i })).filter(({ it }) => typeof it.note === 'string' && it.note.trim())
-  if (!noted.length) return null
-  return <NoteMark note={noted.map(({ it }) => `${it.text}: ${it.note}`).join('\n')} kind="item" index={noted[0].i} />
+/** The pin of one entry or row, at the end of it (in place of the old ⓘ). */
+function EntryPin({ n, note }: { n: number | undefined; note: string | undefined }) {
+  const ctx = useContext(NoteCtx)
+  if (n === undefined || !ctx) return null
+  return <CalloutPin n={n} note={note} elementId={ctx.elementId} playing={ctx.playing} lit={ctx.lit === n} className="ui-pin-entry" />
+}
+
+/** A closed select shows its options' pins after the chevron (the tooltip names the option); open, each option has its own. */
+function SelectPins({ items }: { items: UiItem[] }) {
+  const pins = items.flatMap((it, i) => {
+    const n = itemCallout(items, i)
+    const note = itemNote(items, i)
+    return n === undefined ? [] : [{ n, note: note ? `${it.text}: ${note}` : undefined }]
+  })
+  if (!pins.length) return null
+  return (
+    <span className="ui-pin-group">
+      {pins.map((p) => (
+        <EntryPin key={p.n} n={p.n} note={p.note} />
+      ))}
+    </span>
+  )
 }
 
 
@@ -221,7 +269,7 @@ function Options({ live, items, value }: { live: Live; items: UiItem[]; value: s
         rows.map((t, i) => (
           <div key={i} role="option" aria-selected={t === value} className={`ui-option ${t === value ? 'on' : ''}`} onClick={() => live.pick(t)}>
             {t}
-            <NoteMark note={itemNote(items, i)} kind="item" index={i} />
+            <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
           </div>
         ))
       ) : (
@@ -284,7 +332,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
             {items.map((l, i) => (
               <span key={i} className={l.active ? 'on' : ''}>
                 <Val sub={['items', i]} text={l.text} />
-                <NoteMark note={itemNote(items, i)} kind="item" index={i} />
+                <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
               </span>
             ))}
           </nav>
@@ -299,7 +347,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               <UiIcon name={l.icon} />
               <span className="ui-grow"><Val sub={['items', i]} text={l.text} /></span>
               {l.badge ? <span className="ui-count">{l.badge}</span> : null}
-              <NoteMark note={itemNote(items, i)} kind="item" index={i} />
+              <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
             </div>
           ))}
         </div>
@@ -345,7 +393,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               <span className={`ui-grow ${val ? '' : 'ui-ph'}`}>{val || placeholder}</span>
             )}
             {u.type === 'select' ? <UiIcon name="chevron-down" /> : null}
-            {u.type === 'select' && !live?.open ? <SelectNotes items={items} /> : null}
+            {u.type === 'select' && !live?.open ? <SelectPins items={items} /> : null}
           </div>
           {live?.open && u.type === 'select' ? <Options live={live} items={items} value={val} /> : null}
           {u.hint ? <div className="ui-hint">{u.hint}</div> : null}
@@ -409,7 +457,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
                       <Val sub={['rows', i, j]} text={c === undefined ? '' : String(c)}>
                         <Cell v={c} />
                       </Val>
-                      {j === r.length - 1 ? <NoteMark note={rowNote(u, i)} kind="row" index={i} /> : null}
+                      {j === r.length - 1 ? <EntryPin n={rowCallout(u, i)} note={rowNote(u, i)} /> : null}
                     </td>
                   ))}
                 </tr>
@@ -431,7 +479,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
               </span>
               {l.badge ? <Cell v={/^\[.*\]$/.test(l.badge) ? l.badge : `[${l.badge}]`} /> : null}
               {u.variant !== 'plain' ? <UiIcon name="chevron-right" className="ui-faint" /> : null}
-              <NoteMark note={itemNote(items, i)} kind="item" index={i} />
+              <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
             </div>
           ))}
         </>
@@ -482,7 +530,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
         >
           <Val sub={['items', i]} text={t.text} />
           {t.badge ? <span className="ui-count">{t.badge}</span> : null}
-          <NoteMark note={itemNote(items, i)} kind="item" index={i} />
+          <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
         </span>
       ))
     case 'breadcrumb':
@@ -490,6 +538,7 @@ function body(item: Item, u: UiData, editing: boolean, live: Live | null): React
         <span key={i} className={`ui-crumb ${i === items.length - 1 ? 'on' : ''}`}>
           {i > 0 ? <UiIcon name="chevron-right" size={12} /> : null}
           <Val sub={['items', i]} text={t.text} />
+          <EntryPin n={itemCallout(items, i)} note={itemNote(items, i)} />
         </span>
       ))
     case 'pagination': {
@@ -609,10 +658,17 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   ]
   const toggles = live && (u.type === 'checkbox' || u.type === 'radio' || u.type === 'toggle')
   const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : undefined
-  const noteCtx = useMemo(() => ({ elementId: item.id, playing }), [item.id, playing])
+  // the pin whose card is pointed at (BoardPage: only this element's node gets a new `calloutLit`)
+  const lit = (data as { calloutLit?: number }).calloutLit
+  const noteCtx = useMemo(() => ({ elementId: item.id, playing, lit }), [item.id, playing, lit])
+  const corner = typeof u.callout === 'number' && u.type !== 'screen' ? u.callout : undefined
   return (
     <>
     {u.sample === true ? <SampleStripe phone={u.type === 'screen' && u.device === 'phone'} /> : null}
+    {corner !== undefined ? (
+      // the element's own callout: on its top-right corner, half outside, a sibling of the box so a clipping box does not cut it
+      <CalloutPin n={corner} note={u.note} elementId={item.id} playing={playing} lit={lit === corner} className={`ui-pin-corner ${findings.length ? 'beside-finding' : ''}`} />
+    ) : null}
     <Shell
       item={item}
       pulse={pulse}

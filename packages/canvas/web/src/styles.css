@@ -2114,3 +2114,41 @@ kbd {
   background: var(--marker-soft);
   transition: background 120ms var(--ease);
 }
+
+/* ---------- callout cards (docs/diagrams.md §6c) ----------
+   The explanation of a UI mock's numbered pin, beside the screen: the same circle, then the note — quiet, no author
+   line, no reply box. src/diagrams/uiMock.ts UI_CALLOUT sizes the card with these numbers (12 px on 17 px lines,
+   padding 6 / 8 / 6 / 30, a hairline border), so keep them together. */
+.callout-card {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 17px;
+}
+.callout-card .callout {
+  position: relative;
+  flex: 1 0 auto;
+  padding: 6px 8px 6px 30px;
+}
+.callout-card .callout > .ui-pin {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+}
+.callout-card .callout-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.callout-card:hover {
+  border-color: var(--rule-2);
+}
+.callout-card:hover .ui-pin {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}

@@ -1,9 +1,9 @@
 // The notes view (web/src/flow/notesView.ts): which comments are drawn, and how, under all / badges / none; a
-// proposal thread that was applied (or declined) folds into a ✓ by itself; the ⓘ notes of list entries and table rows.
+// proposal thread that was applied (or declined) folds into a ✓ by itself; a UI mock's callouts (numbered pins and their cards).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Board, Item } from '../src/model.js'
-import { DECLINE_TEXT, hasComments, isApplied, isDeclined, isProposal, isSettled, itemNote, noteCommentOf, notesShown, rowNote, NOTES_MODES } from '../web/src/flow/notesView.js'
+import { DECLINE_TEXT, calloutCommentOf, hasComments, isApplied, isDeclined, isProposal, isSettled, itemCallout, itemNote, litCallouts, notesShown, rowCallout, rowNote, uiCalloutOf, NOTES_MODES } from '../web/src/flow/notesView.js'
 import { boardToFlow } from '../web/src/flow/boardToFlow.js'
 
 const now = '2026-10-08T00:00:00.000Z'
@@ -131,14 +131,63 @@ test('itemNote / rowNote: a non-empty string note, keyed by index (rows by the i
   assert.equal(rowNote({}, 0), undefined)
 })
 
-test('noteCommentOf: the note comment targeting the element with that data.item / data.row', () => {
-  const el = item('ui1', { type: 'ui' })
-  const n1 = item('n1', { target: 'ui1', data: { item: 1 } })
-  const r0 = item('r0', { target: 'ui1', data: { row: 0 } })
-  const other = item('n2', { target: 'other', data: { item: 1 } })
-  const b = board(el, n1, r0, other)
-  assert.equal(noteCommentOf(b, 'ui1', 'item', 1)?.id, 'n1')
-  assert.equal(noteCommentOf(b, 'ui1', 'row', 0)?.id, 'r0')
-  assert.equal(noteCommentOf(b, 'ui1', 'item', 0), undefined)
-  assert.equal(noteCommentOf(b, 'ui1', 'row', 1), undefined)
+test('itemCallout / rowCallout: a positive whole number, keyed by index (rows by the index as a string)', () => {
+  const items = [{ text: 'a' }, { text: 'b', callout: 2 }, { text: 'c', callout: 0 }, { text: 'd', callout: '3' }]
+  assert.deepEqual([0, 1, 2, 3].map((i) => itemCallout(items, i)), [undefined, 2, undefined, undefined])
+  assert.equal(itemCallout(undefined, 0), undefined)
+  assert.equal(rowCallout({ rowCallouts: { '1': 4 } }, 1), 4)
+  assert.equal(rowCallout({ rowCallouts: { '1': 4 } }, 0), undefined)
+  assert.equal(rowCallout({}, 0), undefined)
+})
+
+// a UI mock's callouts: a card about an element, one about an entry, one about a row; the screen's own note is a thread
+const el = item('ui1', { type: 'ui' })
+const c1 = item('n1', { role: 'note', target: 'ui1', data: { callout: 1 } })
+const c2 = item('n2', { role: 'note', target: 'ui1', data: { item: 1, callout: 2 } })
+const c3 = item('n3', { role: 'note', target: 'ui2', data: { row: 0, callout: 1 } })
+const screenNote = item('n0', { role: 'note', target: 'screen' })
+const mock = board(el, item('ui2', { type: 'ui' }), item('screen', { type: 'ui', role: 'screen' }), c1, c2, c3, screenNote, item('c_q', { target: 'ui1', createdBy: 'user' }))
+
+test('uiCalloutOf: a note comment with a positive data.callout; the screen note, a person’s comment, a non-comment are not', () => {
+  assert.deepEqual([c1, c2, c3].map(uiCalloutOf), [1, 2, 1])
+  assert.equal(uiCalloutOf(screenNote), undefined)
+  assert.equal(uiCalloutOf(item('x', { data: { callout: 1 } })), undefined, 'not role note')
+  assert.equal(uiCalloutOf(item('x', { type: 'sticky', role: 'note', data: { callout: 1 } })), undefined)
+  assert.equal(uiCalloutOf(item('x', { role: 'note', data: { callout: 1.5 } })), undefined)
+  assert.equal(uiCalloutOf(undefined), undefined)
+})
+
+test('calloutCommentOf: the card with that number about that element', () => {
+  assert.equal(calloutCommentOf(mock, 'ui1', 1)?.id, 'n1')
+  assert.equal(calloutCommentOf(mock, 'ui1', 2)?.id, 'n2')
+  assert.equal(calloutCommentOf(mock, 'ui2', 1)?.id, 'n3')
+  assert.equal(calloutCommentOf(mock, 'ui1', 3), undefined)
+  assert.equal(calloutCommentOf(mock, 'screen', 1), undefined)
+})
+
+test('litCallouts: the pins of the callout cards among the ids, by element; nothing else, the same empty map', () => {
+  assert.deepEqual([...litCallouts(mock, ['n2', 'c_q', 'ui1', 'gone'])], [['ui1', 2]])
+  assert.deepEqual([...litCallouts(mock, ['n3', 'n1'])].sort(), [['ui1', 1], ['ui2', 1]])
+  assert.equal(litCallouts(mock, []), litCallouts(undefined, ['n1']))
+  assert.equal(litCallouts(mock, ['c_q']), litCallouts(mock, []), 'no new map for a plain comment')
+})
+
+test('notesShown: a callout card is drawn in all, in badges only once its pin opened it, never in none; threads as before', () => {
+  const view = (mode: (typeof NOTES_MODES)[number], expanded: string[] = [], open: string[] = []) => notesShown(mock, { mode, open: new Set(open), expanded: new Set(expanded) })
+  assert.deepEqual(['n1', 'n2', 'n3'].map((id) => view('all').get(id)), ['open', 'open', 'open'])
+  assert.equal(view('all').get('n0'), 'badge', 'the screen note is a thread, folded until opened')
+  assert.equal(view('all').get('c_q'), 'badge')
+  assert.deepEqual(['n1', 'n2'].map((id) => view('badges').get(id)), ['hidden', 'hidden'])
+  assert.equal(view('badges', ['n2']).get('n2'), 'open')
+  assert.equal(view('badges').get('c_q'), 'badge')
+  assert.deepEqual(['n1', 'n2', 'n3'].map((id) => view('none', ['n1']).get(id)), ['hidden', 'hidden', 'hidden'])
+  assert.equal(view('all', [], ['n0']).get('n0'), 'open')
+})
+
+test('boardToFlow: a callout card has no tether (its number is on what it explains); other notes keep theirs', () => {
+  const flow = boardToFlow(mock, none, notesShown(mock, { mode: 'all', open: new Set(), expanded: new Set() }))
+  assert.ok(flow.nodes.some((n) => n.id === 'n1'))
+  assert.ok(!flow.edges.some((e) => e.id === 'tether:n1' || e.id === 'tether:n2' || e.id === 'tether:n3'))
+  assert.ok(flow.edges.some((e) => e.id === 'tether:n0'))
+  assert.ok(flow.edges.some((e) => e.id === 'tether:c_q'))
 })

@@ -2,10 +2,12 @@
 // The web draws each item from `data.ui` with its design system; no HTML from the file is ever rendered.
 // Ids: a screen is `<key>.screen.<screen id>`, an element `<key>.ui.<screen id>.<element id>`; both carry
 // `data.element` ('<screen>' / '<screen>/<element>') for traces and flows.
-// Notes never sit on the product: every screen has a gutter column to its right (UI_GUTTER) where the screen's
-// note goes first and the element, item and row notes stack below it in the order of what they are about.
+// Notes are design annotations — what an item is for, why it is there — drawn as callouts: a numbered pin on the
+// element, list entry or table row (the web draws it from `data.ui.callout`, `items[i].callout`, `rowCallouts`) and a
+// card with the same number in the gutter, a column right of the screen (UI_GUTTER), never on the product. The
+// screen's own note goes first, unnumbered; the callouts follow in reading order, 1…n per screen.
 import type { Item } from '../model.js'
-import { attachUiFindings, layoutScreen, normalizeUiMock, walkUi, isDrawnContainer, uiGutterOf, UI_GUTTER, type UiBox, type UiEl, type UiMockContent } from '../diagrams/uiMock.js'
+import { attachUiFindings, layoutScreen, normalizeUiMock, walkUi, isDrawnContainer, uiCalloutSize, uiGutterOf, UI_GUTTER, type UiBox, type UiEl, type UiItem, type UiMockContent } from '../diagrams/uiMock.js'
 import { PAD, arrow, make, offsetAll, type RenderOpts } from './util.js'
 
 export { uiMockSchema, type UiMockContent } from '../diagrams/uiMock.js'
@@ -14,9 +16,51 @@ export { uiMockSchema, type UiMockContent } from '../diagrams/uiMock.js'
 export const SCREEN_LABEL = 28
 /** Between a screen's gutter and the next screen. */
 const SCREEN_GAP = 120
+/** Anchors whose tops are this close read as one line: left to right, then the file's order. */
+const LINE = 16
 
-/** A note to draw in the gutter: what it is about, where that is (its top, in board coordinates), and its id. */
-interface GutterNote { id: string; text: string; target: string; anchorY: number; data?: Record<string, unknown> }
+/** What a callout is about: the element's own note, or one entry / row of it (the item drawn for the element). */
+type CalloutOn = { item: Item; kind: 'element' } | { item: Item; kind: 'item' | 'row'; index: number }
+
+/**
+ * A note to draw in the gutter: its id and text, what it is about (`target`, and `on` for a callout), where that is
+ * (its top-left in board coordinates) and its place in the file (`seq`) for ties.
+ */
+interface GutterNote { id: string; text: string; target: string; anchorX: number; anchorY: number; seq: number; on?: CalloutOn; data?: Record<string, unknown> }
+
+/**
+ * Callouts in reading order: by the top of what they are about — tops within LINE px are one line, read left to
+ * right — and, for the same spot (a list and its first entry, the tabs of one bar), in the order of the file.
+ */
+export function readingOrder<T extends { anchorX: number; anchorY: number; seq: number }>(notes: readonly T[]): T[] {
+  const byTop = [...notes].sort((a, b) => a.anchorY - b.anchorY || a.seq - b.seq)
+  const lines: T[][] = []
+  for (const n of byTop) {
+    const line = lines[lines.length - 1]
+    if (line && n.anchorY - line[0].anchorY <= LINE) line.push(n)
+    else lines.push([n])
+  }
+  return lines.flatMap((l) => l.sort((a, b) => a.anchorX - b.anchorX || a.seq - b.seq))
+}
+
+/** Where entry `i` of an element is drawn, below the element's top (the list / sidebar geometry of measure()). */
+function entryTop(e: UiEl, i: number): number {
+  const title = e.text ? 1 : 0
+  switch (e.type) {
+    case 'list':
+      return title * 30 + i * (e.props.items!.some((x) => x.meta) ? 60 : 44)
+    case 'sidebar':
+      return 16 + title * 48 + i * 36
+    case 'tabs':
+    case 'navbar':
+    case 'breadcrumb':
+      return 0 // side by side on one line: read in the file's order
+    case 'select':
+      return title * 26 // the options' pins sit in the field
+    default:
+      return title * 30 + i * 36
+  }
+}
 
 export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] {
   const m = normalizeUiMock(raw)
@@ -44,9 +88,10 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
     )
     items.push(screen)
     const notes: GutterNote[] = []
-    if (s.note) notes.push({ id: noteId(s.id), text: s.note, target: sid, anchorY: sy })
     lay.boxes.forEach((b, bi) => items.push(...elementItems(b, bi, sx, sy, sid, look, notes)))
-    items.push(...gutterItems(uiGutterOf(screen), notes))
+    const callouts = numberCallouts(notes)
+    const screenNote = s.note ? { id: noteId(s.id), text: s.note, target: sid } : undefined
+    items.push(...gutterItems(uiGutterOf(screen), screenNote, callouts))
     sx += lay.w + UI_GUTTER.gap + UI_GUTTER.w + SCREEN_GAP
   })
 
@@ -54,41 +99,65 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
     const e = b.el
     const id = elId(e.ref)
     byRef.set(e.ref, id)
-    const top = sy + b.y
-    const out: Item[] = [
-      make(
-        {
-          id, type: 'ui', role: e.type, x: sx + b.x, y: top, w: b.w, h: b.h, text: e.text, order,
-          parent: b.parent ? elId(b.parent) : sid,
-          data: { element: e.ref, ui: uiData(e, look), ...(e.traces.length ? { traces: e.traces } : {}) },
-        },
-        now,
-      ),
-    ]
-    if (e.note) notes.push({ id: noteId(e.ref), text: e.note, target: id, anchorY: top })
-    // an item's or a row's note is anchored where that entry is drawn (the list / table geometry of measure())
-    const title = e.text ? 1 : 0
+    const [left, top] = [sx + b.x, sy + b.y]
+    const item = make(
+      {
+        id, type: 'ui', role: e.type, x: left, y: top, w: b.w, h: b.h, text: e.text, order,
+        parent: b.parent ? elId(b.parent) : sid,
+        data: { element: e.ref, ui: uiData(e, look), ...(e.traces.length ? { traces: e.traces } : {}) },
+      },
+      now,
+    )
+    const note = (n: Omit<GutterNote, 'target' | 'anchorX' | 'seq'>) => notes.push({ ...n, target: id, anchorX: left, seq: notes.length })
+    if (e.note) note({ id: noteId(e.ref), text: e.note, anchorY: top, on: { item, kind: 'element' } })
+    // an entry's or a row's note is anchored where that entry is drawn (the list / table geometry of measure())
     e.props.items?.forEach((it, i) => {
-      if (!it.note) return
-      const rowH = e.type === 'list' ? (e.props.items!.some((x) => x.meta) ? 60 : 44) : 36
-      notes.push({ id: `${noteId(e.ref)}.item-${i}`, text: it.note, target: id, anchorY: top + title * 30 + i * rowH, data: { item: i } })
+      if (it.note) note({ id: `${noteId(e.ref)}.item-${i}`, text: it.note, anchorY: top + entryTop(e, i), on: { item, kind: 'item', index: i }, data: { item: i } })
     })
-    for (const [k, note] of Object.entries(e.props.rowNotes ?? {})) {
+    for (const [k, text] of Object.entries(e.props.rowNotes ?? {}).sort(([a], [b]) => Number(a) - Number(b))) {
       const i = Number(k)
-      notes.push({ id: `${noteId(e.ref)}.row-${i}`, text: note, target: id, anchorY: top + title * 34 + 42 + i * 46, data: { row: i } })
+      note({ id: `${noteId(e.ref)}.row-${i}`, text, anchorY: top + (e.text ? 34 : 0) + 42 + i * 46, on: { item, kind: 'row', index: i }, data: { row: i } })
     }
-    return out
+    return [item]
   }
 
-  /** The notes of one screen, stacked in its gutter: by the top of what they are about, never on each other. */
-  function gutterItems(gutter: { x: number; y: number; w: number; h: number }, notes: GutterNote[]): Item[] {
-    const order = [...notes].sort((a, b) => a.anchorY - b.anchorY || a.id.localeCompare(b.id))
-    let bottom = -Infinity
-    return order.map((n) => {
-      const y = Math.max(n.anchorY, gutter.y, bottom + UI_GUTTER.noteGap)
-      bottom = y + UI_GUTTER.noteH
-      return make({ id: n.id, type: 'comment', x: gutter.x, y, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, text: n.text, role: 'note', color: 'yellow', target: n.target, ...(n.data ? { data: n.data } : {}) }, now)
+  /**
+   * Number a screen's callouts 1…n in reading order and tell each item drawn for an element its numbers: `callout`
+   * (and the note, for the pin's tooltip) for its own note, `items[i].callout`, `rowCallouts[<row>]`.
+   */
+  function numberCallouts(notes: GutterNote[]): Array<GutterNote & { callout: number }> {
+    return readingOrder(notes).map((n, i) => {
+      const callout = i + 1
+      const on = n.on!
+      const ui = { ...(on.item.data!.ui as Record<string, unknown>) }
+      if (on.kind === 'element') Object.assign(ui, { callout, note: n.text })
+      else if (on.kind === 'item') ui.items = (ui.items as UiItem[]).map((it, j) => (j === on.index ? { ...it, callout } : it))
+      else ui.rowCallouts = { ...(ui.rowCallouts as Record<string, number> | undefined), [String(on.index)]: callout }
+      on.item.data = { ...on.item.data, ui }
+      return { ...n, callout }
     })
+  }
+
+  /**
+   * A screen's gutter: its own note first (a thread, unnumbered), then the callout cards in their order, each at the
+   * height of what it is about when that is free, else right below the one before — never on each other.
+   */
+  function gutterItems(gutter: { x: number; y: number; w: number; h: number }, screenNote: { id: string; text: string; target: string } | undefined, callouts: Array<GutterNote & { callout: number }>): Item[] {
+    const out: Item[] = []
+    let bottom = -Infinity
+    let gap: number = UI_GUTTER.noteGap
+    if (screenNote) {
+      out.push(make({ ...screenNote, type: 'comment', x: gutter.x, y: gutter.y, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, role: 'note', color: 'yellow' }, now))
+      bottom = gutter.y + UI_GUTTER.noteH
+    }
+    for (const n of callouts) {
+      const size = uiCalloutSize(n.text)
+      const y = Math.max(n.anchorY, gutter.y, bottom + gap)
+      out.push(make({ id: n.id, type: 'comment', x: gutter.x, y, w: size.w, h: size.h, text: n.text, role: 'note', color: 'yellow', target: n.target, data: { ...n.data, callout: n.callout } }, now))
+      bottom = y + size.h
+      gap = UI_GUTTER.calloutGap
+    }
+    return out
   }
 
   // flows: element `goto` and the file's `flows`, drawn as arrows to the target screen

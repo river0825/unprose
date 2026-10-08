@@ -904,42 +904,99 @@
   background: var(--ink-3);
 }
 
-/* a design note on one entry or row (`items[i].note`, `rowNotes`): a quiet graphite ⓘ at the end of the row, in the
-   canvas's own type and colour, not the mock's — an annotation, never product UI (docs/canvas.md → Notes) */
-.ui-note-mark {
+/* a callout (docs/diagrams.md §6c): a design annotation — what the item is for, why it is there — as a numbered pin
+   ON the element, entry or row, and a card with the same number beside the screen (styles.css .callout-card). In the
+   canvas's own type and colours, not the mock's: a 16 px graphite circle on paper, never louder than the product. */
+.ui-pin {
   flex: none;
+  box-sizing: border-box;
   display: inline-grid;
   place-items: center;
-  width: 12px;
-  height: 12px;
-  margin-left: 6px;
+  width: 16px;
+  height: 16px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   border-radius: 50%;
   border: 1px solid var(--ink-3);
-  color: var(--ink-3);
   background: var(--paper);
-  font: italic 500 9px/1 var(--font-ui);
+  color: var(--ink-2);
+  font: 500 10px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   text-transform: none;
+  text-align: center;
   vertical-align: middle;
-  opacity: 0.75;
-  cursor: help;
 }
-.ui-note-mark:hover {
-  opacity: 1;
+button.ui-pin {
+  cursor: pointer;
+}
+button.ui-pin:hover {
   color: var(--ink);
-  border-color: var(--ink);
+  border-color: var(--ink-2);
+  background: var(--paper);
 }
-.ui-note-mark.playing {
-  /* while the mock plays the marks are labels, not controls */
+button.ui-pin:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+/* its card is pointed at (or it is, and its card lights up): the pin is outlined */
+.ui-pin.lit {
+  color: var(--ink);
+  border-color: var(--ink-2);
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+/* while the mock plays the pins are labels, not controls */
+.ui-pin.playing {
   pointer-events: none;
 }
-.ui-table-el td > .ui-note-mark {
-  float: right;
-  margin-top: 4px;
+/* the element's own callout: centred on its top-right corner — half outside each edge, so only the corner itself is
+   under it, never the element's words — and no further into the gap to a neighbour than that gap (8 px) is wide */
+.ui-pin-corner {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 3;
 }
-.ui-option > .ui-note-mark {
+/* a lint mark holds that corner: the pin sits just left of it */
+.ui-pin-corner.beside-finding {
+  right: 12px;
+}
+.react-flow__node:has(> .item.ui-table, > .item.ui-list, > .item.ui-chart, > .item.ui-stat, > .item.ui-image) > .ui-pin-corner.beside-finding {
+  right: 24px;
+}
+/* what else marks the top-right corner moves aside for the pin: the "proposed" tag, the trace count. A selected
+   element's top-right resize handle stays under the pin (the pin keeps its click; the other handles resize) */
+.react-flow__node:has(> .ui-pin-corner) > .item > .node-tag {
+  right: 14px;
+}
+.react-flow__node.has-traces:has(> .ui-pin-corner)::after {
+  right: 14px;
+}
+/* an entry's or a row's pin: at the end of it, where the old ⓘ was */
+.ui-pin-entry {
+  margin-left: 6px;
+}
+.ui-table-el td > .ui-pin-entry,
+.ui-option > .ui-pin-entry {
   float: right;
-  margin-top: 4px;
+  margin-top: 2px;
+}
+/* a closed select: its options' pins after the chevron */
+.ui-pin-group {
+  flex: none;
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+}
+.ui-pin-group > .ui-pin-entry {
+  margin-left: 0;
+}
+/* Notes: none (BoardPage .canvas-wrap.notes-none) draws no pin, so Copy as image has none either */
+.canvas-wrap.notes-none .ui-pin {
+  display: none;
 }
 
 /* `data.ui.sample`: made-up words and numbers — a hatched stripe along the outside of the top edge with a tiny

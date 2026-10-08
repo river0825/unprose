@@ -8,6 +8,7 @@ import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
 import { planWires } from '../../../src/wireGeometry'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
 import type { CommentShown } from './notesView'
+import { uiCalloutOf } from '../../../src/diagrams/uiMock'
 
 /** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
 export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
@@ -214,7 +215,8 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
     // a reply renders inside its root; a thread the viewer hid (Notes: none) is not drawn, nor is its tether
     if (it.type === 'comment' && (!byRoot.has(it.id) || shownAs(it.id) === 'hidden')) continue
     push(it)
-    const about = it.type === 'comment' && it.target ? byId[it.target] : undefined
+    // a UI mock's callout card has no tether: its number is on what it explains (docs/diagrams.md §6c)
+    const about = it.type === 'comment' && it.target && uiCalloutOf(it) === undefined ? byId[it.target] : undefined
     if (about && about.type !== 'arrow' && about.type !== 'comment') {
       edges.push({
         id: `tether:${it.id}`,

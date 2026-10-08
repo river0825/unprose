@@ -124,10 +124,10 @@ test('comments: a drawn UI mock has none on its screens; a note moved onto the s
   const { items } = placeInFrame({}, { kind: 'ui-mock', key: 'home-ui' }, render('ui-mock', parsed, { now, scope: 'home-ui' }), now)
   const clean = board(items)
   assert.deepEqual([...of(clean, 'comment-covers'), ...of(clean, 'comment-outside')], [])
-  // the element note dragged onto the screen, over the heading
+  // the element note dragged onto the screen, over the heading and the button below it
   const screen = clean.items['home-ui.screen.home']
   const title = clean.items['home-ui.ui.home.title']
-  const moved = board(items.map((i) => (i.id === 'home-ui.note.home.title' ? { ...i, x: title.x + 20, y: title.y + 10 } : i)))
+  const moved = board(items.map((i) => (i.id === 'home-ui.note.home.title' ? { ...i, x: title.x + 20, y: title.y + 20 } : i)))
   const covers = of(moved, 'comment-covers')
   assert.equal(covers.length, 1)
   assert.equal(covers[0].id, 'home-ui.note.home.title')

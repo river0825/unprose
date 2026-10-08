@@ -461,7 +461,7 @@ screens:
             justify: between
             children:
               - { type: heading, id: title, text: Boards, level: 1 }
-              - { type: button, id: new-board, text: New board, icon: plus, goto: new-board, note: Or a + in the navbar? }
+              - { type: button, id: new-board, text: New board, icon: plus, goto: new-board, note: Starts an empty board by hand; most are drawn by the agent }
           - type: grid
             cols: 3
             children: [{ type: card, id: studio, text: Studio design, children: [{ type: badge, text: Freeform }] }]
@@ -471,7 +471,7 @@ screens:
             columns: [Board, When]
             rows:
               - [Studio design, 2 min ago]
-              - { cells: [Runner, 1 h ago], note: Relative times, or the date after a day? }   # a row note: a comment in the gutter
+              - { cells: [Runner, 1 h ago], note: Relative times, or the date after a day? }   # a row note: pin ② on the row
   - { id: new-board, name: New board, device: phone, theme: dark, body: [ … ] }
 flows: [{ from: boards/studio, to: new-board, label: open }]
 ```
@@ -489,21 +489,41 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   (`tone`), `progress` (`value` 0–100), `tabs`, `breadcrumb`, `pagination`, `spacer`, `empty`, `chart` (`variant:
   bar|line`, `rows: [[numbers]]`), `sidebar` (`items` with `icon` / `badge`, `active`). Icons are a small set of
   our own line glyphs (`plus search settings user users bell home menu filter …`; lint lists them).
-- **Notes are design talk, never product text.** A screen, an element, a list / navbar / sidebar / tabs entry
-  (`items: [{ text, note }]`) and a table row (`rows: [[cells], { cells: [...], note }]`) each take a `note` — the
-  question or remark you would otherwise be tempted to write into the UI ("TBD", "sample", "proposal"). The
-  product words stay in `text` / the cells; the note is drawn as a yellow comment (`role: note`) in the **gutter**,
-  a column right of the screen (`UI_GUTTER`: 24 px gap, 260 px wide), never on the screen: the screen's note at
-  the top, the others stacked below it in the order of what they are about (a row's note at that row's height
-  when the gutter is free there). Ids are stable — `<key>.note.<screen>`, `<key>.note.<screen>.<element>`,
-  `….<element>.item-<i>` / `.row-<i>` — with `target` the element and `data.item` / `data.row` the index.
-  Comments added later (`canvas_add_items` without x/y, a proposal) land in the same gutter, below what is
-  there; the frame is fitted to hold every screen's gutter. Lint warns (`ui-text-reads-like-a-note`) when a
-  product text — an element's text / label / placeholder / hint / value, an item's text / meta, a table cell, a
-  column name — contains a note word: `OPEN TBD TODO FIXME sample proposal proposed placeholder lorem` as a whole
-  word, case-insensitive ("Open" the button label is a hit — name it "Open board" or accept the warning; `reopen` is
-  not), or `待定 待確認 待決定 示例 範例 假資料 提案` anywhere: *reads like a design note, not product text: move it
-  to `note` (on the element, the item or the row), and keep the product words here*.
+- **Notes are design annotations, never product text.** A `note` says *what this item is for, why it is there* —
+  or what is still open about it — the remark you would otherwise be tempted to write into the UI ("TBD", "sample",
+  "proposal"). A screen, an element, a list / navbar / sidebar / tabs / breadcrumb / select entry (`items: [{ text,
+  note }]`) and a table row (`rows: [[cells], { cells: [...], note }]`) each take one; the product words stay in
+  `text` / the cells.
+  - **Drawn as callouts**, the way a design review marks a screen: a **numbered pin** on the item itself — a 16 px
+    graphite circle on paper with the number, on an element's top-right corner (half outside, so it keeps off the
+    element's words), at the end of a list entry, tab, navbar / sidebar / breadcrumb item or table row, after the
+    chevron of a closed select — and a **card with the same number** in the **gutter**, a column right of the screen
+    (`UI_GUTTER`: 24 px gap, 260 px wide), never on the screen. The card is quiet: the number, the note at 12 px,
+    a hairline border, no author line, no reply box, no tether (the number is the link). Point at a pin and its card
+    lights up; point at a card and its pin is outlined; click a pin to select its card and bring it into view.
+  - **Numbers** run 1…n per screen in reading order: by the top of what the note is about (a row's or an entry's own
+    line), tops within 16 px read as one line from left to right, the same spot (a list and its first entry, the tabs
+    of one bar) in the order of the file. The cards stack in that order, each at the height of what it explains
+    when the gutter is free there, else right below the one before; a card is as tall as its text (`uiCalloutSize`:
+    240 px wide, 12 px text on 17 px lines). **The screen's own note** is not a callout: it stays a comment thread,
+    first in the gutter, unnumbered.
+  - **Notes view** (the board's Notes switch): *all* shows pins and cards; *badges* shows the pins only — the note is
+    the pin's tooltip, a click shows that card for this viewer, a second click puts it away; *none* draws neither
+    (and Copy as image leaves them out too). While a mock plays, the pins are labels, not controls.
+  - **Data contract.** Every note is a `comment` with `role: note`, `color: yellow`, its stable id —
+    `<key>.note.<screen>`, `<key>.note.<screen>.<element>`, `….<element>.item-<i>` / `.row-<i>` — and `target` the
+    screen or element; an entry's carries `data.item`, a row's `data.row` (the index), and every callout
+    `data.callout: <number>`. The element's `data.ui` says where the pins go: `callout` (and `note`, the pin's
+    tooltip) for its own note, `items[i].callout`, and `rowCallouts: { "<row index>": <number> }` beside `rowNotes`.
+  - **Conversation is not numbered.** People's comments and agents' threads (`canvas_add_items` without x/y, a
+    proposal) land in the same gutter at the height of their target, below the screen's callouts and whatever else
+    is there; the frame is fitted to hold every screen's gutter.
+  - **Lint** warns (`ui-text-reads-like-a-note`) when a product text — an element's text / label / placeholder /
+    hint / value, an item's text / meta, a table cell, a column name — contains a note word: `OPEN TBD TODO FIXME
+    sample proposal proposed placeholder lorem` as a whole word, case-insensitive ("Open" the button label is a hit —
+    name it "Open board" or accept the warning; `reopen` is not), or `待定 待確認 待決定 示例 範例 假資料 提案`
+    anywhere: *reads like a design note, not product text: move it to `note` (on the element, the item or the row),
+    and keep the product words here*.
 - **`sample: true`** on a screen or an element says this content is sample data (made-up rows, a stand-in name);
   the board shows it as a hatched stripe on the frame, not as a badge inside the product, so nothing in the mock
   has to say "sample" in its own words.
@@ -515,9 +535,9 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   layout gives it (text is measured approximately). Ids: `<key>.screen.<screen>`, `<key>.ui.<screen>.<element>`;
   `data.element` carries the reference, `data.ui` the props (`items[i].note`, table `rows` always as cell arrays
   with their notes in `rowNotes: { "<row index>": note }` — only when there is one —, `sample: true` only when
-  set), the screen's look and the element's `path` in the file. `goto: <screen>` on an element and `flows` draw
-  `navigate` arrows to the target screen. `note` is a comment in the gutter beside the screen (above); `traces`
-  work as everywhere (a screen `shows` a story).
+  set, the callout numbers above), the screen's look and the element's `path` in the file. `goto: <screen>` on an
+  element and `flows` draw `navigate` arrows to the target screen. `note` is a numbered pin on the item and a card
+  in the gutter beside the screen (above); `traces` work as everywhere (a screen `shows` a story).
 - **Talking about it.** Select an element to comment on it or chat about it (the brief names the diagram and file).
   Moving or resizing elements is the person's layout on this board: kept on redraw, never written to the file.
   **Editing an element's words on the board is a proposal**: the item keeps the new words and `data.pending =

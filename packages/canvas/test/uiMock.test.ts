@@ -5,8 +5,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import YAML from 'yaml'
-import { checkUiMock, layoutScreen, normalizeUiMock, unknownContentFields, walkUi, uiGutterOf, UI_GUTTER, type UiMockContent } from '../src/diagrams/index.js'
+import { checkUiMock, layoutScreen, normalizeUiMock, unknownContentFields, walkUi, uiCalloutOf, uiCalloutSize, uiGutterOf, UI_CALLOUT, UI_GUTTER, type UiMockContent } from '../src/diagrams/index.js'
 import { contentSchemas, render, renderUiMock } from '../src/templates/index.js'
+import { readingOrder } from '../src/templates/ui-mock.js'
+import { autoPlaceComments } from '../src/place.js'
+import { wrap } from '../src/textMetrics.js'
 import { placeInFrame, resolveTraces } from '../src/templates/frame.js'
 import { applyOps, type Board, type Item } from '../src/model.js'
 import { isUiElement, uiPendingOf, uiTextOp, uiUndoOps } from '../web/src/diagrams/uiProposal.js'
@@ -207,11 +210,13 @@ test('gutter: every note is a comment right of its screen, on no ui item and on 
   assert.deepEqual([screenNote.target, screenNote.y], ['k.screen.home', home.y])
   // ids and what each note belongs to
   const item = notes.find((n) => n.id === 'k.note.home.boards.item-1')!
-  assert.deepEqual([item.target, item.data], ['k.ui.home.boards', { item: 1 }])
+  assert.deepEqual([item.target, item.data], ['k.ui.home.boards', { item: 1, callout: 1 }])
   const row = notes.find((n) => n.id === 'k.note.home.recent.row-1')!
-  assert.deepEqual([row.target, row.data], ['k.ui.home.recent', { row: 1 }])
+  assert.deepEqual([row.target, row.data], ['k.ui.home.recent', { row: 1, callout: 2 }])
   const el = notes.find((n) => n.id === 'k.note.home.new')!
-  assert.deepEqual([el.target, el.data], ['k.ui.home.new', undefined])
+  assert.deepEqual([el.target, el.data], ['k.ui.home.new', { callout: 3 }])
+  assert.equal(screenNote.data, undefined, 'the screen’s own note is not numbered')
+  assert.equal(notes.find((n) => n.id === 'k.note.phone.h')!.data?.callout, 1, 'every screen counts from 1')
   // the order follows the anchors: screen, list item, table row, button
   const homeNotes = notes.filter((n) => n.id.startsWith('k.note.home')).sort((a, b) => a.y - b.y).map((n) => n.id)
   assert.deepEqual(homeNotes, ['k.note.home', 'k.note.home.boards.item-1', 'k.note.home.recent.row-1', 'k.note.home.new'])
@@ -237,6 +242,12 @@ test('data contract: items[i].note, rowNotes keyed by row index, rows always cel
   assert.deepEqual(table.rows, [['Studio', 'now'], ['Runner', '2 h'], ['Mock', '1 d']])
   assert.deepEqual(table.rowNotes, { '1': 'Relative or absolute time?' })
   assert.equal(ui('k.ui.home.title').rowNotes, undefined)
+  // the callout numbers: the element's own (with its note, the pin's tooltip), an entry's, a row's
+  assert.deepEqual((list.items as Array<{ callout?: number }>).map((i) => i.callout), [undefined, 1, undefined])
+  assert.equal(list.callout, undefined)
+  assert.deepEqual(table.rowCallouts, { '1': 2 })
+  assert.deepEqual([ui('k.ui.home.new').callout, ui('k.ui.home.new').note], [3, 'Primary or secondary?'])
+  for (const id of ['k.ui.home.title', 'k.screen.home']) assert.deepEqual([ui(id).callout, ui(id).note, ui(id).rowCallouts], [undefined, undefined, undefined], id)
   assert.equal(ui('k.ui.home.new').sample, true)
   assert.equal(ui('k.ui.home.title').sample, undefined)
   assert.equal(ui('k.screen.phone').sample, true)
@@ -273,4 +284,95 @@ test('lint ui-text-reads-like-a-note: note words in product text, whole words fo
     { type: 'heading', id: 'h', text: '確認付款' },
   ])
   assert.deepEqual(clean, [])
+})
+
+// ── callouts: numbered pins on the items, their cards beside the screen (docs/diagrams.md §6c) ──────────────────
+
+test('callouts are numbered 1…n per screen in reading order: top first, a line read left to right, ties in file order', () => {
+  const mock: UiMockContent = {
+    screens: [
+      {
+        id: 's',
+        name: 'S',
+        note: 'what this screen is for',
+        body: [
+          {
+            type: 'row',
+            justify: 'between',
+            children: [
+              { type: 'heading', id: 'title', text: 'Boards', level: 1, note: 'left on the first line' },
+              { type: 'badge', id: 'count', text: '9', note: 'right on the first line, a few px lower (centred)' },
+            ],
+          },
+          { type: 'tabs', id: 'tabs', items: [{ text: 'All', note: 'first tab' }, 'Mine', { text: 'Shared', note: 'third tab' }], note: 'the tabs bar itself' },
+          { type: 'list', id: 'list', items: ['a', { text: 'b', note: 'second entry' }] },
+          { type: 'table', id: 't', columns: ['A'], rows: [{ cells: ['x'], note: 'first row' }, ['y'], { cells: ['z'], note: 'third row' }] },
+        ],
+      },
+    ],
+  }
+  const items = renderUiMock(mock, { now: NOW, scope: 'k' })
+  const cards = items.filter((i) => uiCalloutOf(i) !== undefined).sort((a, b) => uiCalloutOf(a)! - uiCalloutOf(b)!)
+  assert.deepEqual(
+    cards.map((c) => [uiCalloutOf(c), c.id]),
+    [
+      [1, 'k.note.s.title'],
+      [2, 'k.note.s.count'],
+      [3, 'k.note.s.tabs'],
+      [4, 'k.note.s.tabs.item-0'],
+      [5, 'k.note.s.tabs.item-2'],
+      [6, 'k.note.s.list.item-1'],
+      [7, 'k.note.s.t.row-0'],
+      [8, 'k.note.s.t.row-2'],
+    ],
+  )
+  // the comment keeps its id, role, target and data.item / data.row, and gains data.callout
+  const tab = cards.find((c) => c.id === 'k.note.s.tabs.item-2')!
+  assert.deepEqual([tab.type, tab.role, tab.target, tab.data], ['comment', 'note', 'k.ui.s.tabs', { item: 2, callout: 5 }])
+  const ui = (id: string) => items.find((i) => i.id === id)!.data!.ui as Record<string, unknown>
+  assert.deepEqual([ui('k.ui.s.tabs').callout, (ui('k.ui.s.tabs').items as Array<{ callout?: number }>).map((i) => i.callout)], [3, [4, undefined, 5]])
+  assert.deepEqual(ui('k.ui.s.t').rowCallouts, { '0': 7, '2': 8 })
+  // the screen's own note: first in the gutter, unnumbered, a thread's size
+  const screenNote = items.find((i) => i.id === 'k.note.s')!
+  assert.equal(uiCalloutOf(screenNote), undefined)
+  assert.equal(screenNote.h, UI_GUTTER.noteH)
+  // the cards stack in their order below it, each at the height of what it is about when that is free
+  const ordered = [screenNote, ...cards]
+  for (let i = 1; i < ordered.length; i++) assert.ok(ordered[i].y >= ordered[i - 1].y + ordered[i - 1].h + UI_GUTTER.calloutGap, `${ordered[i].id} is not below ${ordered[i - 1].id}`)
+  const table = items.find((i) => i.id === 'k.ui.s.t')!
+  assert.ok(cards.find((c) => c.id === 'k.note.s.t.row-2')!.y >= table.y, 'a row’s card is not above its table')
+  // the same file draws the same numbers
+  assert.deepEqual(renderUiMock(mock, { now: NOW, scope: 'k' }), items)
+})
+
+test('readingOrder: one line within 16 px, read left to right; the same spot in file order', () => {
+  const at = (id: string, x: number, y: number, seq: number) => ({ id, anchorX: x, anchorY: y, seq })
+  const order = readingOrder([at('below', 0, 100, 0), at('right', 300, 4, 1), at('left', 0, 0, 2), at('same-spot-later', 0, 100, 3), at('next-line', 500, 40, 4)])
+  assert.deepEqual(order.map((n) => n.id), ['left', 'right', 'next-line', 'below', 'same-spot-later'])
+})
+
+test('a callout card is the gutter’s width and as tall as its text: one line is small, a long note grows', () => {
+  const one = uiCalloutSize('Why a pin?')
+  assert.equal(one.w, UI_GUTTER.noteW)
+  assert.equal(one.h, UI_CALLOUT.lineHeight + UI_CALLOUT.padTop + UI_CALLOUT.padBottom + UI_CALLOUT.border * 2)
+  assert.ok(one.h < UI_GUTTER.noteH, 'smaller than a thread')
+  const three = uiCalloutSize('Does a rewire that is still open belong under Recent activity, or under a Waiting for you list?')
+  const inner = UI_GUTTER.noteW - UI_CALLOUT.padLeft - UI_CALLOUT.padRight - UI_CALLOUT.border * 2
+  const lines = wrap('Does a rewire that is still open belong under Recent activity, or under a Waiting for you list?', inner - 6, UI_CALLOUT.font).length
+  assert.ok(lines >= 2 && lines <= 4, `${lines} lines`)
+  assert.equal(three.h, lines * UI_CALLOUT.lineHeight + 14)
+  assert.ok(uiCalloutSize('一個很長的中文註解，'.repeat(8)).h > three.h, 'CJK wraps too')
+})
+
+test('a person’s comment or an agent’s thread in a UI mock goes to the gutter below the callouts, never numbered', () => {
+  const items = renderUiMock(noted, { now: NOW, scope: 'k' })
+  const b: Board = { id: 'b', title: 't', kind: 'freeform', seq: 0, createdAt: NOW, updatedAt: NOW, items: Object.fromEntries(items.map((i) => [i.id, i])) }
+  const content = autoPlaceComments(b, { items: [{ type: 'comment', target: 'k.ui.home.title', text: 'why so big?' }] }) as { items: Array<{ x: number; y: number; w: number; h: number; data?: unknown }> }
+  const c = content.items[0]
+  const home = b.items['k.screen.home']
+  const g = uiGutterOf(home)
+  const lastCallout = Math.max(...items.filter((i) => uiCalloutOf(i) !== undefined && i.target?.startsWith('k.ui.home.')).map((i) => i.y + i.h))
+  assert.equal(c.x, g.x)
+  assert.ok(c.y >= lastCallout + UI_GUTTER.noteGap, `the comment at ${c.y} is not below the callouts (${lastCallout})`)
+  assert.equal(c.data, undefined)
 })

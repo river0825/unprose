@@ -3,12 +3,15 @@
 // every comment folded into a marker, or none — and a proposal that was applied folds by itself into a ✓ marker.
 // Pure (no React), so the rules can be tested; the shape of flow/traceView.ts.
 import type { Board, Item } from '../../../src/model'
+import { uiCalloutOf } from '../../../src/diagrams/uiMock'
 import { threads } from './boardToFlow'
 
 /**
- * - `all`: every comment as the viewer left it (open or folded; a settled proposal folds into a ✓);
- * - `badges`: every comment folded into a small marker at its anchor, opened by a click for this viewer;
- * - `none`: no comment is drawn (the panel's Chats tab still lists them).
+ * - `all`: every comment as the viewer left it (open or folded; a settled proposal folds into a ✓); a UI mock's
+ *   callouts as numbered pins and their cards;
+ * - `badges`: every comment folded into a small marker at its anchor, opened by a click for this viewer; callouts as
+ *   pins only, the note in the pin's tooltip, a card drawn when its pin is clicked;
+ * - `none`: no comment is drawn (the panel's Chats tab still lists them), no pin either.
  */
 export type NotesMode = 'all' | 'badges' | 'none'
 export const NOTES_MODES: NotesMode[] = ['all', 'badges', 'none']
@@ -74,6 +77,12 @@ export function notesShown(board: Board, view: NotesView): Map<string, CommentSh
       out.set(id, 'open')
       continue
     }
+    // a UI mock's callout card (docs/diagrams.md §6c) is an explanation, not a thread: drawn in `all`; in `badges` its
+    // pin carries the text and the card is drawn only once its pin was clicked (`expanded`); in `none` never
+    if (uiCalloutOf(messages[0]) !== undefined) {
+      out.set(id, view.mode === 'all' || (view.mode === 'badges' && view.expanded.has(id)) ? 'open' : 'hidden')
+      continue
+    }
     if (view.mode === 'none') {
       // a thread opened in this session (one just written, a ✓ clicked before the switch) stays until it is folded
       out.set(id, view.expanded.has(id) ? 'open' : 'hidden')
@@ -93,24 +102,50 @@ export function hasComments(board: Board): boolean {
   return false
 }
 
-/** The ⓘ note on one entry of a list, tabs, sidebar, navbar or select (`data.ui.items[i].note`). */
+// ── callouts (docs/diagrams.md §6c): a UI mock's notes as numbered pins on the items and cards beside the screen ──
+
+export { uiCalloutOf }
+
+/** The note on one entry of a list, tabs, sidebar, navbar, breadcrumb or select (`data.ui.items[i].note`): its pin's tooltip. */
 export function itemNote(items: ReadonlyArray<{ note?: unknown }> | undefined, i: number): string | undefined {
   const n = items?.[i]?.note
   return typeof n === 'string' && n.trim() ? n : undefined
 }
 
-/** The ⓘ note on one row of a table (`data.ui.rowNotes`, keyed by the row index as a string). */
+/** The note on one row of a table (`data.ui.rowNotes`, keyed by the row index as a string): its pin's tooltip. */
 export function rowNote(ui: { rowNotes?: Record<string, unknown> } | undefined, i: number): string | undefined {
   const n = ui?.rowNotes?.[String(i)]
   return typeof n === 'string' && n.trim() ? n : undefined
 }
 
-/** The note comment about one entry or row of an element: `target` is the element, `data.item` / `data.row` its index. */
-export function noteCommentOf(board: Board, elementId: string, kind: 'item' | 'row', index: number): Item | undefined {
-  for (const it of Object.values(board.items)) {
-    if (it.type !== 'comment' || it.target !== elementId) continue
-    const at = it.data?.[kind]
-    if (typeof at === 'number' && at === index) return it
-  }
+const pinNumber = (n: unknown): number | undefined => (typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : undefined)
+
+/** The pin number of one entry (`data.ui.items[i].callout`). */
+export const itemCallout = (items: ReadonlyArray<{ callout?: unknown }> | undefined, i: number): number | undefined => pinNumber(items?.[i]?.callout)
+
+/** The pin number of one table row (`data.ui.rowCallouts`, keyed by the row index as a string). */
+export const rowCallout = (ui: { rowCallouts?: Record<string, unknown> } | undefined, i: number): number | undefined => pinNumber(ui?.rowCallouts?.[String(i)])
+
+/** The callout card with number `n` about the element `elementId` (its pin's card). */
+export function calloutCommentOf(board: Board, elementId: string, n: number): Item | undefined {
+  for (const it of Object.values(board.items)) if (it.target === elementId && uiCalloutOf(it) === n) return it
   return undefined
+}
+
+const NO_PINS: ReadonlyMap<string, number> = new Map()
+
+/**
+ * The pins to outline, by element id → number, for the callout cards among `ids` (the items lit through a pin or a
+ * panel link, and the card under the pointer). Looks only at `ids`, so a hover costs nothing on a big board; the same
+ * empty Map when there is nothing to light.
+ */
+export function litCallouts(board: Board | undefined, ids: readonly string[]): ReadonlyMap<string, number> {
+  if (!board || !ids.length) return NO_PINS
+  let out: Map<string, number> | undefined
+  for (const id of ids) {
+    const c = board.items[id]
+    const n = uiCalloutOf(c)
+    if (n !== undefined && c.target) (out ??= new Map()).set(c.target, n)
+  }
+  return out ?? NO_PINS
 }

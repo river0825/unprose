@@ -1,5 +1,6 @@
 # A UI mock of the canvas home page (packages/canvas/web/src/BoardList.tsx), as a proposal for its next look:
 # boards grouped by project with a filter, the "ask your agent" hints folded into one line, and an empty state.
+# Each `note` says what an item is for; the board draws it as a numbered pin on the item and a card beside the screen.
 # Draw it: node scripts/awd.mjs design draw design/unprose-board-list.ui.yaml --board "title:Unprose UI"
 title: Board list (mock)
 device: desktop
@@ -13,7 +14,12 @@ screens:
         items: [Boards, Docs]
         active: Boards
         children:
-          - { type: search, id: search, placeholder: 'Go to a board…  ⌘K', w: 260, size: sm }
+          - type: search
+            id: search
+            placeholder: 'Go to a board…  ⌘K'
+            w: 260
+            size: sm
+            note: Jumps to any board by its title, the same Go to… palette that ⌘K opens on a board.
           - { type: avatar, id: me, text: River Lin, size: sm }
       - type: section
         children:
@@ -28,7 +34,7 @@ screens:
             tone: info
             icon: comment
             text: 'Ask your agent: “Run an EventStorming of our refund process on the canvas” — or type /unprose:help in Claude Code.'
-            note: Should this hint go away once the first board exists?
+            note: For someone who opens the canvas for the first time, the one sentence to say to their agent. Should it go away once the first board exists?
           - { type: tabs, id: projects, items: [{ text: All projects, badge: '9' }, { text: agent-workflow-diagram, badge: '6' }, { text: Personal, badge: '3' }], active: 0 }
           - type: grid
             cols: 3
@@ -90,7 +96,7 @@ screens:
               - [Studio design, Commented on “publish flow”, '[You]', 2 min ago]
               - [Unprose UI, Drew 3 screens, '[Agent]', 5 min ago]
               - cells: [card-pipeline, Asked to rewire the pipeline, '[Review]', 1 h ago]
-                note: Does a rewire that is still open belong under Recent activity, or under a Waiting for you list?
+                note: A proposal still waiting for your answer, so its state reads Review. Rows like this are why Recent activity is on the home page.
 
   - id: new-board
     name: New board
@@ -136,7 +142,7 @@ screens:
           - type: list
             id: boards
             items:
-              - { text: Studio design, meta: Freeform · 3 min ago, icon: board, badge: '[2 new]' }
+              - { text: Studio design, meta: Freeform · 3 min ago, icon: board, badge: '[2 new]', note: 'The count: comments on this board since you last opened it.' }
               - { text: card-pipeline — workflow.yaml, meta: Workflow · 2 h ago, icon: chart }
               - { text: Unprose UI, meta: UI mock · just now, icon: edit }
               - { text: Refund process, meta: EventStorming · yesterday, icon: board }

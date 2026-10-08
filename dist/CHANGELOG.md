@@ -6,6 +6,20 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-10-08
+
+### Changed
+- **UI mock notes are callouts, not a column of sticky notes.** v0.21 moved every note of a mock into the gutter
+  beside its screen, where nothing said which note was about which item. Now a note on an element, a list / tabs /
+  navbar / sidebar / breadcrumb / select entry or a table row is drawn the way a design review marks a screen: a
+  small **numbered pin on the item itself** and a quiet **card with the same number** beside the screen, numbered
+  1…n per screen in reading order; cards are as tall as their text. Point at a pin and its card lights up, point at a
+  card and its pin is outlined, click a pin to select its card. *Notes: Badges* keeps the pins (the note as tooltip),
+  *None* hides pins and cards, also in Copy as image. The screen's own note stays an unnumbered thread; people's
+  comments and agents' threads go below the callouts. Data: `data.callout` on the note comment; `data.ui.callout`,
+  `data.ui.note`, `items[i].callout`, `rowCallouts` on the element. Redraw a mock to get the numbers. The sample
+  mock's notes now say what four of its items are for.
+
 ## [0.22.0] — 2026-10-08
 
 ### Added
@@ -861,7 +875,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/river0825/unprose/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/river0825/unprose/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/river0825/unprose/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/river0825/unprose/compare/v0.19.0...v0.20.0

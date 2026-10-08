@@ -4,6 +4,7 @@
 // and its place in the file (`path`) so a text edit on the board becomes a proposal with a diff.
 // Pure and builtin-free: the CLI, the server and the web share it.
 import { z } from 'zod'
+import { wrap } from '../textMetrics.js'
 import { slugify, traceSchema, type Trace } from './ids.js'
 import { unknownFields } from './unknownFields.js'
 
@@ -41,7 +42,7 @@ const listItem = z.union([
     icon: z.string().optional(),
     badge: z.string().optional(),
     active: z.boolean().optional(),
-    /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+    /** What this entry is for, why it is there: a numbered pin on the entry, the text on a card beside the screen. */
     note: z.string().optional(),
   }),
 ])
@@ -55,13 +56,39 @@ export type UiCell = string | number
 /**
  * The gutter: a column right of every screen where its notes and comment threads live, so nothing sits on the
  * product (docs/diagrams.md §6c). `place.ts` puts later comments there too, and the frame fits around it.
+ * `noteH` is the screen's own note (a thread); a callout card is as tall as its text (`uiCalloutSize`).
  */
-export const UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 } as const
+export const UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12, calloutGap: 8 } as const
 /** The gutter column of a drawn screen (a `ui` item with role `screen`), from its geometry. */
 export function uiGutterOf(screen: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } {
   return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h }
 }
 export const isUiScreen = (it: { type: string; role?: unknown } | undefined): boolean => !!it && it.type === 'ui' && it.role === 'screen'
+
+/**
+ * A callout card (docs/diagrams.md §6c): the explanation of a numbered pin, beside the screen. The web draws it with
+ * these numbers (web/src/flow/nodes/index.tsx, styles.css `.callout-card`): the 16 px pin in the left padding, the
+ * text at 12 px in the canvas's font, a hairline border.
+ */
+export const UI_CALLOUT = { font: 12, lineHeight: 17, padTop: 6, padRight: 8, padBottom: 6, padLeft: 30, border: 1, pin: 16 } as const
+/** The size of a callout card for a note: the gutter's note width, as tall as the note's wrapped lines (one at least). */
+export function uiCalloutSize(text: string): { w: number; h: number } {
+  const c = UI_CALLOUT
+  const inner = UI_GUTTER.noteW - c.padLeft - c.padRight - c.border * 2
+  // wrapped a little narrower than drawn: the page's font may run wider than the estimate, and a card that grows
+  // past its stored height would reach the next one
+  const lines = Math.max(1, wrap(text.trim(), inner - 6, c.font).length)
+  return { w: UI_GUTTER.noteW, h: Math.ceil(lines * c.lineHeight + c.padTop + c.padBottom + c.border * 2) }
+}
+/**
+ * The number of a callout — a UI mock note about an element, a list entry or a table row (`role: 'note'`,
+ * `data.callout`) — else undefined: the screen's own note, people's comments and agents' threads are not numbered.
+ */
+export function uiCalloutOf(it: { type: string; role?: unknown; data?: Record<string, unknown> } | undefined): number | undefined {
+  if (!it || it.type !== 'comment' || it.role !== 'note') return undefined
+  const n = it.data?.callout
+  return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : undefined
+}
 
 export interface UiNodeInput {
   type: UiType
@@ -143,7 +170,7 @@ export const uiNodeSchema: z.ZodType<UiNodeInput> = z.lazy(() =>
     ratio: z.string().optional(),
     /** stat: '+12%' / '-3' — the change, coloured by its sign. */
     delta: z.string().optional(),
-    /** An open question about this element (a comment in the gutter beside the screen, never on it). */
+    /** What this element is for, why it is there (a design annotation): a numbered pin on it, the text on a card beside the screen. */
     note: z.string().optional(),
     /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
     sample: z.boolean().optional(),
@@ -197,7 +224,8 @@ export type UiMockContent = z.input<typeof uiMockSchema>
 
 export type UiPath = Array<string | number>
 
-export interface UiItem { id: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean; note?: string }
+/** An entry of a list, tabs, navbar, sidebar, breadcrumb or select; `callout` is its note's number on the board (the drawing sets it). */
+export interface UiItem { id: string; text: string; meta?: string; icon?: string; badge?: string; active?: boolean; note?: string; callout?: number }
 
 export interface UiEl {
   /** id within the screen */
@@ -214,7 +242,8 @@ export interface UiEl {
   /**
    * What the board's `data.ui` carries: the props as written, with `items[i].note`, table `rows` always as
    * cell arrays and their notes in `rowNotes` (keyed by the row index as a string, present only when there is
-   * one), and `sample: true` only when set.
+   * one), and `sample: true` only when set. The drawing adds the callout numbers (templates/ui-mock.ts):
+   * `callout` and `note` for the element's own note, `items[i].callout`, `rowCallouts` keyed like `rowNotes`.
    */
   props: Omit<UiNodeInput, 'type' | 'id' | 'text' | 'label' | 'children' | 'note' | 'goto' | 'traces' | 'items' | 'rows' | 'sample'> & { items?: UiItem[]; rows?: UiCell[][]; rowNotes?: Record<string, string>; sample?: true }
   note?: string

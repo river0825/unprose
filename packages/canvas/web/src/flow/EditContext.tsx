@@ -34,8 +34,13 @@ export interface EditApi {
   commitOps?: (ops: Op[], label: string) => void
   /** UI mock items proposed for removal, and what they hold: drawn struck until the file changes */
   uiRemoved?: ReadonlySet<string>
-  /** the pointer is on (or off) the ⓘ of a list entry / table row of a UI element: light up the note comment about it */
-  hoverNote?: (elementId: string, kind: 'item' | 'row', index: number, on: boolean) => void
+  /**
+   * the pointer is on (or off) callout `n` of a UI element (docs/diagrams.md §6c): on its pin — light up its card —
+   * or on its card — outline its pin
+   */
+  hoverCallout?: (elementId: string, n: number, on: boolean, from: 'pin' | 'card') => void
+  /** a click on callout `n`'s pin: select its card and bring it into view (in Notes: badges, show or hide the card) */
+  showCallout?: (elementId: string, n: number) => void
 }
 
 export const EditContext = createContext<EditApi>({

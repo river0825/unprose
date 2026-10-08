@@ -43417,17 +43417,30 @@ var listItem = external_exports.union([
     icon: external_exports.string().optional(),
     badge: external_exports.string().optional(),
     active: external_exports.boolean().optional(),
-    /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+    /** What this entry is for, why it is there: a numbered pin on the entry, the text on a card beside the screen. */
     note: external_exports.string().optional()
   })
 ]);
 var cell = external_exports.union([external_exports.string(), external_exports.number()]);
 var tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
-var UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 };
+var UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12, calloutGap: 8 };
 function uiGutterOf(screen) {
   return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h };
 }
 var isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
+var UI_CALLOUT = { font: 12, lineHeight: 17, padTop: 6, padRight: 8, padBottom: 6, padLeft: 30, border: 1, pin: 16 };
+function uiCalloutSize(text3) {
+  const c = UI_CALLOUT;
+  const inner = UI_GUTTER.noteW - c.padLeft - c.padRight - c.border * 2;
+  const lines2 = Math.max(1, wrap(text3.trim(), inner - 6, c.font).length);
+  return { w: UI_GUTTER.noteW, h: Math.ceil(lines2 * c.lineHeight + c.padTop + c.padBottom + c.border * 2) };
+}
+function uiCalloutOf(it) {
+  if (!it || it.type !== "comment" || it.role !== "note")
+    return void 0;
+  const n4 = it.data?.callout;
+  return typeof n4 === "number" && Number.isInteger(n4) && n4 > 0 ? n4 : void 0;
+}
 var uiNodeSchema = external_exports.lazy(() => external_exports.object({
   type: external_exports.enum(UI_TYPES),
   /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
@@ -43471,7 +43484,7 @@ var uiNodeSchema = external_exports.lazy(() => external_exports.object({
   ratio: external_exports.string().optional(),
   /** stat: '+12%' / '-3' — the change, coloured by its sign. */
   delta: external_exports.string().optional(),
-  /** An open question about this element (a comment in the gutter beside the screen, never on it). */
+  /** What this element is for, why it is there (a design annotation): a numbered pin on it, the text on a card beside the screen. */
   note: external_exports.string().optional(),
   /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
   sample: external_exports.boolean().optional(),
@@ -43974,6 +43987,38 @@ function attachUiFindings(items, raw) {
 // packages/canvas/dist/templates/ui-mock.js
 var SCREEN_LABEL = 28;
 var SCREEN_GAP2 = 120;
+var LINE = 16;
+function readingOrder(notes) {
+  const byTop = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq);
+  const lines2 = [];
+  for (const n4 of byTop) {
+    const line = lines2[lines2.length - 1];
+    if (line && n4.anchorY - line[0].anchorY <= LINE)
+      line.push(n4);
+    else
+      lines2.push([n4]);
+  }
+  return lines2.flatMap((l) => l.sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq));
+}
+function entryTop(e, i) {
+  const title = e.text ? 1 : 0;
+  switch (e.type) {
+    case "list":
+      return title * 30 + i * (e.props.items.some((x2) => x2.meta) ? 60 : 44);
+    case "sidebar":
+      return 16 + title * 48 + i * 36;
+    case "tabs":
+    case "navbar":
+    case "breadcrumb":
+      return 0;
+    // side by side on one line: read in the file's order
+    case "select":
+      return title * 26;
+    // the options' pins sit in the field
+    default:
+      return title * 30 + i * 36;
+  }
+}
 function renderUiMock(raw, opts = {}) {
   const m2 = normalizeUiMock(raw);
   const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
@@ -44004,55 +44049,74 @@ function renderUiMock(raw, opts = {}) {
     }, now);
     items.push(screen);
     const notes = [];
-    if (s.note)
-      notes.push({ id: noteId(s.id), text: s.note, target: sid, anchorY: sy });
     lay.boxes.forEach((b2, bi) => items.push(...elementItems(b2, bi, sx, sy, sid, look, notes)));
-    items.push(...gutterItems(uiGutterOf(screen), notes));
+    const callouts = numberCallouts(notes);
+    const screenNote = s.note ? { id: noteId(s.id), text: s.note, target: sid } : void 0;
+    items.push(...gutterItems(uiGutterOf(screen), screenNote, callouts));
     sx += lay.w + UI_GUTTER.gap + UI_GUTTER.w + SCREEN_GAP2;
   });
   function elementItems(b2, order, sx2, sy, sid, look, notes) {
     const e = b2.el;
     const id = elId(e.ref);
     byRef.set(e.ref, id);
-    const top = sy + b2.y;
-    const out = [
-      make({
-        id,
-        type: "ui",
-        role: e.type,
-        x: sx2 + b2.x,
-        y: top,
-        w: b2.w,
-        h: b2.h,
-        text: e.text,
-        order,
-        parent: b2.parent ? elId(b2.parent) : sid,
-        data: { element: e.ref, ui: uiData(e, look), ...e.traces.length ? { traces: e.traces } : {} }
-      }, now)
-    ];
+    const [left, top] = [sx2 + b2.x, sy + b2.y];
+    const item = make({
+      id,
+      type: "ui",
+      role: e.type,
+      x: left,
+      y: top,
+      w: b2.w,
+      h: b2.h,
+      text: e.text,
+      order,
+      parent: b2.parent ? elId(b2.parent) : sid,
+      data: { element: e.ref, ui: uiData(e, look), ...e.traces.length ? { traces: e.traces } : {} }
+    }, now);
+    const note = (n4) => notes.push({ ...n4, target: id, anchorX: left, seq: notes.length });
     if (e.note)
-      notes.push({ id: noteId(e.ref), text: e.note, target: id, anchorY: top });
-    const title = e.text ? 1 : 0;
+      note({ id: noteId(e.ref), text: e.note, anchorY: top, on: { item, kind: "element" } });
     e.props.items?.forEach((it, i) => {
-      if (!it.note)
-        return;
-      const rowH = e.type === "list" ? e.props.items.some((x2) => x2.meta) ? 60 : 44 : 36;
-      notes.push({ id: `${noteId(e.ref)}.item-${i}`, text: it.note, target: id, anchorY: top + title * 30 + i * rowH, data: { item: i } });
+      if (it.note)
+        note({ id: `${noteId(e.ref)}.item-${i}`, text: it.note, anchorY: top + entryTop(e, i), on: { item, kind: "item", index: i }, data: { item: i } });
     });
-    for (const [k2, note] of Object.entries(e.props.rowNotes ?? {})) {
+    for (const [k2, text3] of Object.entries(e.props.rowNotes ?? {}).sort(([a], [b3]) => Number(a) - Number(b3))) {
       const i = Number(k2);
-      notes.push({ id: `${noteId(e.ref)}.row-${i}`, text: note, target: id, anchorY: top + title * 34 + 42 + i * 46, data: { row: i } });
+      note({ id: `${noteId(e.ref)}.row-${i}`, text: text3, anchorY: top + (e.text ? 34 : 0) + 42 + i * 46, on: { item, kind: "row", index: i }, data: { row: i } });
+    }
+    return [item];
+  }
+  function numberCallouts(notes) {
+    return readingOrder(notes).map((n4, i) => {
+      const callout = i + 1;
+      const on = n4.on;
+      const ui = { ...on.item.data.ui };
+      if (on.kind === "element")
+        Object.assign(ui, { callout, note: n4.text });
+      else if (on.kind === "item")
+        ui.items = ui.items.map((it, j2) => j2 === on.index ? { ...it, callout } : it);
+      else
+        ui.rowCallouts = { ...ui.rowCallouts, [String(on.index)]: callout };
+      on.item.data = { ...on.item.data, ui };
+      return { ...n4, callout };
+    });
+  }
+  function gutterItems(gutter, screenNote, callouts) {
+    const out = [];
+    let bottom = -Infinity;
+    let gap = UI_GUTTER.noteGap;
+    if (screenNote) {
+      out.push(make({ ...screenNote, type: "comment", x: gutter.x, y: gutter.y, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, role: "note", color: "yellow" }, now));
+      bottom = gutter.y + UI_GUTTER.noteH;
+    }
+    for (const n4 of callouts) {
+      const size2 = uiCalloutSize(n4.text);
+      const y2 = Math.max(n4.anchorY, gutter.y, bottom + gap);
+      out.push(make({ id: n4.id, type: "comment", x: gutter.x, y: y2, w: size2.w, h: size2.h, text: n4.text, role: "note", color: "yellow", target: n4.target, data: { ...n4.data, callout: n4.callout } }, now));
+      bottom = y2 + size2.h;
+      gap = UI_GUTTER.calloutGap;
     }
     return out;
-  }
-  function gutterItems(gutter, notes) {
-    const order = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.id.localeCompare(b2.id));
-    let bottom = -Infinity;
-    return order.map((n4) => {
-      const y2 = Math.max(n4.anchorY, gutter.y, bottom + UI_GUTTER.noteGap);
-      bottom = y2 + UI_GUTTER.noteH;
-      return make({ id: n4.id, type: "comment", x: gutter.x, y: y2, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, text: n4.text, role: "note", color: "yellow", target: n4.target, ...n4.data ? { data: n4.data } : {} }, now);
-    });
   }
   const flows = [
     ...m2.screens.flatMap((s) => walkUi(s.body).filter((e) => e.goto).map((e) => ({ from: e.ref, to: e.goto, label: void 0 }))),
@@ -46118,7 +46182,7 @@ function autoPlaceComments(board, content) {
     const screen = uiScreenOf(board, t);
     const w2 = typeof it.w === "number" ? it.w : W2;
     const h = typeof it.h === "number" ? it.h : H2;
-    const spot = screen ? gutterSpot(screen, t, w2, h, taken) : findSpot(t, w2, h, taken);
+    const spot = screen ? gutterSpot(screen, t, w2, h, taken, calloutsBottom(board, screen)) : findSpot(t, w2, h, taken);
     it.x = spot.x;
     it.y = spot.y;
     it.w = w2;
@@ -46138,10 +46202,21 @@ function uiScreenOf(board, it) {
   }
   return void 0;
 }
-function gutterSpot(screen, t, w2, h, taken) {
+function calloutsBottom(board, screen) {
+  const g2 = uiGutterOf(screen);
+  let bottom = -Infinity;
+  for (const c of Object.values(board.items)) {
+    if (uiCalloutOf(c) === void 0 || c.x < g2.x - 1 || c.x >= g2.x + g2.w)
+      continue;
+    if (uiScreenOf(board, c.target ? board.items[c.target] : void 0)?.id === screen.id)
+      bottom = Math.max(bottom, c.y + c.h);
+  }
+  return bottom;
+}
+function gutterSpot(screen, t, w2, h, taken, below = -Infinity) {
   const g2 = uiGutterOf(screen);
   const x2 = g2.x;
-  let y2 = Math.max(t.y, g2.y);
+  let y2 = Math.max(t.y, g2.y, below + UI_GUTTER.noteGap);
   for (let n4 = 0; n4 < taken.length + 1; n4++) {
     const rect2 = { x: x2, y: y2, w: w2, h };
     const hit2 = taken.filter((r2) => overlaps2(rect2, r2)).sort((a, b2) => a.y + a.h - (b2.y + b2.h));
@@ -51387,7 +51462,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.22.0";
+var VERSION = "0.23.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -52452,7 +52527,7 @@ ${CLOSE}`
     arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
     fallback: "the screen we are discussing \u2014 ask me which one",
     body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
-Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question (on the screen, an element, a list item or a table row \u2014 notes are drawn in a gutter beside the screen, never on it; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` that says what an item is for and why it is there, or what is still an open question (on the screen, an element, a list item or a table row \u2014 a design annotation, drawn as a numbered pin on that item and a card with the same number beside the screen, never on the product; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
 When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
   },
@@ -60870,7 +60945,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.22.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.23.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {

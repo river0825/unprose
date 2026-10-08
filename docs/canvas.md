@@ -1257,14 +1257,18 @@ ever — and a design annotation is easily read as product text. Three things ke
   at its anchor, in *All* too, however it was left. Click the ✓ to read the thread (the applied answer is its last
   message); the fold button puts the ✓ back. Nothing is removed and nothing is written: the thread is still
   there for the agent and the panel.
-- **Design notes on rows, and sample data, outside the product chrome.** A UI mock's `data.ui.items[i].note`
-  (a list entry, a tab, a sidebar or navbar item, a select option) and `data.ui.rowNotes` (`{ "<row index>":
-  note }` on a table) draw a small **ⓘ** at the end of that row — graphite, 12 px, in the canvas's own type, never
-  the mock's; the note is its tooltip, and pointing at it lights up the note comment about that row (a comment
-  with `target` = the element and `data.item` / `data.row` = the index). A closed select shows one ⓘ for all its
-  noted options. `data.ui.sample: true` on a screen or element draws a hatched stripe along the **outside** of
-  its top edge with a tiny *sample* — nothing inside the box changes, so nobody reads it as a badge of the
-  product. While the mock plays, these are labels only.
+- **A UI mock's notes are callouts** (docs/diagrams.md §6c). A file's `note` on an element, a list / tabs / navbar /
+  sidebar / breadcrumb / select entry or a table row is drawn as a design review marks a screen: a small **numbered
+  pin** on the item (16 px, graphite on paper — on an element's top-right corner, at the end of an entry or a row; a
+  closed select shows its options' pins after the chevron) and a quiet **card with the same number** in the gutter
+  beside the screen (no author line, no reply box), numbered 1…n per screen in reading order (`data.callout` on the
+  note comment; `data.ui.callout` / `items[i].callout` / `rowCallouts` on the element). Point at a pin and its card
+  lights up; point at a card and its pin is outlined; click a pin to select its card. *Badges* keeps the pins (the
+  note is the tooltip; a click shows that card), *None* hides pins and cards — also in Copy as image. The screen's own
+  note stays an unnumbered thread at the top of the gutter; people's comments and agents' threads go below the
+  callouts. A board drawn before 0.23 shows no pins until the mock is redrawn. `data.ui.sample: true` on a screen or
+  element draws a hatched stripe along the **outside** of its top edge with a tiny *sample* — nothing inside the box
+  changes, so nobody reads it as a badge of the product. While the mock plays, pins and stripes are labels only.
 
 ## Going to something
 

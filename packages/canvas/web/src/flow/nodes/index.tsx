@@ -9,7 +9,8 @@ import { PlayStoryButton } from '../../components/ReplayBar'
 import { PlayMockButton } from '../../components/PlayBar'
 import { SCALES_FONT, fontOf } from '../font'
 import { DsIconNode } from './DsIconNode'
-import { UiNode } from './UiNode'
+import { CalloutPin, UiNode } from './UiNode'
+import { uiCalloutOf } from '../notesView'
 import { WireBadges } from '../WireControls'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
@@ -335,9 +336,30 @@ export function WireframeNode({ data, selected }: NodeProps<ItemNode>) {
 /** Anchor for the line from a comment thread to the item it is about. */
 const Tether = () => <Handle id="tether" type="source" position={Position.Top} isConnectable={false} className="tether-handle" />
 
+/**
+ * A UI mock's callout card (docs/diagrams.md §6c): what pin `n` on an element is about — the same numbered circle,
+ * then the note. An explanation, not a thread: no author line, no reply box, nothing to edit in place (the file holds
+ * the note; a double-click does nothing). Pointing at it outlines its pin.
+ */
+function CalloutCard({ item, n, pulse, selected }: { item: Item; n: number; pulse: boolean; selected: boolean }) {
+  const edit = useEdit()
+  const target = item.target
+  const hover = target && edit.hoverCallout ? (on: boolean) => edit.hoverCallout!(target, n, on, 'card') : undefined
+  return (
+    <Shell item={item} pulse={pulse} selected={selected} className="callout-card" handles={false} style={{ minHeight: item.h }} onDouble={() => undefined}>
+      <div className="callout" onPointerEnter={hover ? () => hover(true) : undefined} onPointerLeave={hover ? () => hover(false) : undefined}>
+        <CalloutPin n={n} />
+        <p className="callout-text">{item.text}</p>
+      </div>
+    </Shell>
+  )
+}
+
 export function CommentNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse, open, done, replies } = data
   const edit = useEdit()
+  const callout = uiCalloutOf(item)
+  if (callout !== undefined) return <CalloutCard item={item} n={callout} pulse={pulse} selected={Boolean(selected)} />
   const messages = [item, ...replies]
   if (!open && !messages.some((m) => m.id === edit.editingId))
     return (

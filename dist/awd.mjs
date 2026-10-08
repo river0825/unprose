@@ -36524,7 +36524,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.22.0";
+    VERSION2 = "0.23.0";
   }
 });
 
@@ -58319,6 +58319,12 @@ var init_guidance = __esm({
   }
 });
 
+// packages/canvas/dist/textMetrics.js
+var init_textMetrics = __esm({
+  "packages/canvas/dist/textMetrics.js"() {
+  }
+});
+
 // packages/canvas/dist/diagrams/unknownFields.js
 function unwrap(s) {
   for (let i = 0; i < 20; i++) {
@@ -58586,6 +58592,7 @@ var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, 
 var init_uiMock = __esm({
   "packages/canvas/dist/diagrams/uiMock.js"() {
     init_zod();
+    init_textMetrics();
     init_ids2();
     init_unknownFields();
     UI_LAYOUT = ["stack", "row", "grid"];
@@ -58667,13 +58674,13 @@ var init_uiMock = __esm({
         icon: external_exports.string().optional(),
         badge: external_exports.string().optional(),
         active: external_exports.boolean().optional(),
-        /** A design note about this entry (a comment in the gutter beside the screen), never product text. */
+        /** What this entry is for, why it is there: a numbered pin on the entry, the text on a card beside the screen. */
         note: external_exports.string().optional()
       })
     ]);
     cell = external_exports.union([external_exports.string(), external_exports.number()]);
     tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
-    UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12 };
+    UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12, calloutGap: 8 };
     isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
     uiNodeSchema = external_exports.lazy(() => external_exports.object({
       type: external_exports.enum(UI_TYPES),
@@ -58718,7 +58725,7 @@ var init_uiMock = __esm({
       ratio: external_exports.string().optional(),
       /** stat: '+12%' / '-3' — the change, coloured by its sign. */
       delta: external_exports.string().optional(),
-      /** An open question about this element (a comment in the gutter beside the screen, never on it). */
+      /** What this element is for, why it is there (a design annotation): a numbered pin on it, the text on a card beside the screen. */
       note: external_exports.string().optional(),
       /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
       sample: external_exports.boolean().optional(),
@@ -59331,12 +59338,6 @@ var init_kanban = __esm({
     COLUMN_W = 280;
     CARD_W2 = 240;
     COLUMN_PAD = (COLUMN_W - CARD_W2) / 2;
-  }
-});
-
-// packages/canvas/dist/textMetrics.js
-var init_textMetrics = __esm({
-  "packages/canvas/dist/textMetrics.js"() {
   }
 });
 
@@ -68043,7 +68044,7 @@ ${CLOSE}`
         arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
         fallback: "the screen we are discussing \u2014 ask me which one",
         body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
-Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` on whatever is still an open question (on the screen, an element, a list item or a table row \u2014 notes are drawn in a gutter beside the screen, never on it; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` that says what an item is for and why it is there, or what is still an open question (on the screen, an element, a list item or a table row \u2014 a design annotation, drawn as a numbered pin on that item and a card with the same number beside the screen, never on the product; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
 When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
       },
@@ -77113,7 +77114,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.22.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.23.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {

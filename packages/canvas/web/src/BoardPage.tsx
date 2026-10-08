@@ -37,7 +37,7 @@ import { nodeTypes } from './flow/nodes'
 import { useStoredSet } from './flow/storedSet'
 import { NotesControls, TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useNotesMode, useTraceView, useWireView } from './flow/WireControls'
 import { applyTraceView, traceCounts, TRACE_MODES } from './flow/traceView'
-import { hasComments, noteCommentOf, notesShown, NOTES_MODE_NAMES, type CommentShown, type NotesMode } from './flow/notesView'
+import { calloutCommentOf, hasComments, litCallouts, notesShown, NOTES_MODE_NAMES, type CommentShown, type NotesMode } from './flow/notesView'
 import { sameWorkObject } from './diagrams/sameObject'
 import { applyWireMode, catchAllWires, type WireBadge } from './flow/catchAll'
 import { useBoard } from './store'
@@ -122,6 +122,8 @@ function BoardInner({ id }: { id: string }) {
   const flow = useReactFlow()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const selectWhenDrawn = useRef<string | null>(null)
+  // a callout card a pin click asked for (Notes: badges draws it only then): selected, alone, once it is drawn
+  const cardWhenDrawn = useRef<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [color, setColor] = useState<ColorToken>('yellow')
   const [tool, setTool] = useState<Tool>('select')
@@ -207,16 +209,22 @@ function BoardInner({ id }: { id: string }) {
   const hasCatchAll = useMemo(() => (board ? catchAllWires(board).size > 0 : false), [board])
   const anyComments = useMemo(() => (board ? hasComments(board) : false), [board])
   useEffect(() => {
+    const card = cardWhenDrawn.current && derived.nodes.some((n) => n.id === cardWhenDrawn.current) ? cardWhenDrawn.current : null
+    if (card) cardWhenDrawn.current = null
     // a node or wire that says the same as before stays the same object (flow/reuse.ts), so React Flow re-measures
     // and re-renders only what the change touched
     setNodes((prev) => {
-      const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
-      return reuse(prev, derived.nodes.map((n) => ({ ...n, selected: sel.has(n.id) })), sameNode)
+      const sel = card ? new Set([card]) : new Set(prev.filter((n) => n.selected).map((n) => n.id))
+      const next = reuse(prev, derived.nodes.map((n) => ({ ...n, selected: sel.has(n.id) })), sameNode)
+      // reuse keeps an earlier node whatever its `selected`: the card is selected alone
+      return card ? next.map((n) => (Boolean(n.selected) === sel.has(n.id) ? n : { ...n, selected: sel.has(n.id) })) : next
     })
     setEdges((prev) => {
-      const sel = new Set(prev.filter((e) => e.selected).map((e) => e.id))
-      return reuse(prev, derived.edges.map((e) => ({ ...e, selected: sel.has(e.id) || e.id === selectWhenDrawn.current })), sameEdge)
+      const sel = card ? new Set<string>() : new Set(prev.filter((e) => e.selected).map((e) => e.id))
+      const next = reuse(prev, derived.edges.map((e) => ({ ...e, selected: sel.has(e.id) || e.id === selectWhenDrawn.current })), sameEdge)
+      return card ? next.map((e) => (e.selected ? { ...e, selected: false } : e)) : next
     })
+    if (card) setSelectedIds([card])
     // a wire just drawn is selected once it exists, so the panel can ask which event it is
     const drawn = selectWhenDrawn.current
     if (drawn && derived.edges.some((e) => e.id === drawn)) {
@@ -228,6 +236,15 @@ function BoardInner({ id }: { id: string }) {
   // a link under the pointer in the side panel lights up the item(s) it points at on the board
   const [panelHover, setPanelHover] = useState<string[]>([])
   const onHoverItems = useCallback((ids: string[]) => setPanelHover((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids)), [])
+  // a UI mock's callouts (docs/diagrams.md §6c): a pin under the pointer lights its card through panelHover, a card
+  // under the pointer outlines its pin; only the element holding that pin gets a new node (`calloutLit`)
+  const [cardHover, setCardHover] = useState<string | null>(null)
+  const litPins = useMemo(() => litCallouts(board ?? undefined, cardHover ? [...panelHover, cardHover] : panelHover), [board, panelHover, cardHover])
+  // a pin or card that goes away under the pointer (Shift+N) never says it was left: nothing stays lit
+  useEffect(() => {
+    setCardHover(null)
+    onHoverItems([])
+  }, [notesMode, onHoverItems])
   // "show it on the board" from a panel link: the view moves there and the item flashes for a moment
   const [flashIds, setFlashIds] = useState<string[]>([])
   const hasTraces = useMemo(() => (board ? Object.values(board.items).some((it) => it.type === 'arrow' && it.role === 'trace') : false), [board])
@@ -261,17 +278,19 @@ function BoardInner({ id }: { id: string }) {
     return out
   }, [board, pulse])
   const shownNodes = useMemo(() => {
-    if (!panelHover.length && !flashIds.length && !traceBadges?.size && !sameObject.size && !pulsed.size) return nodes
+    if (!panelHover.length && !flashIds.length && !traceBadges?.size && !sameObject.size && !pulsed.size && !litPins.size) return nodes
     const on = new Set([...panelHover, ...flashIds])
     return nodes.map((n) => {
       const count = traceBadges?.get(n.id)
       if (pulsed.has(n.id)) n = { ...n, data: { ...n.data, pulse: true } }
+      const lit = litPins.get(n.id)
+      if (lit !== undefined) n = { ...n, data: { ...n.data, calloutLit: lit } as ItemNode['data'] }
       if (sameObject.has(n.id)) n = { ...n, className: `${n.className ?? ''} same-object` }
       if (!on.has(n.id) && !count) return n
       // the badge is drawn by CSS from the count (styles.css .has-traces), so every kind of node gets it
       return { ...n, className: `${n.className ?? ''}${on.has(n.id) ? ' panel-hover' : ''}${count ? ' has-traces' : ''}`, ...(count ? { style: { ...n.style, '--trace-badge': `"↗ ${count}"` } as CSSProperties } : {}) }
     })
-  }, [nodes, panelHover, flashIds, traceBadges, sameObject, pulsed])
+  }, [nodes, panelHover, flashIds, traceBadges, sameObject, pulsed, litPins])
 
   // owns / delegates wires are agent relations, not events: faint unless one of their ends is selected (docs/studio.md §7)
   const shownEdges = useMemo(() => {
@@ -887,10 +906,36 @@ function BoardInner({ id }: { id: string }) {
       setSourceRequest({ id: iid, mode, n: Date.now() })
     },
     commitOps: (ops: Op[], label: string) => void commit(ops, label),
-    // the pointer on a ⓘ of a list entry or table row lights up the note comment about it, like a panel link does
-    hoverNote: (elementId: string, kind: 'item' | 'row', index: number, on: boolean) => {
-      const c = on && board ? noteCommentOf(board, elementId, kind, index) : undefined
-      onHoverItems(c ? [c.id] : [])
+    // a callout pin under the pointer lights up its card, like a panel link does; its card under the pointer outlines the pin
+    hoverCallout: (elementId: string, n: number, on: boolean, from: 'pin' | 'card') => {
+      const c = on && board ? calloutCommentOf(board, elementId, n) : undefined
+      if (from === 'pin') onHoverItems(c ? [c.id] : [])
+      else setCardHover(c ? c.id : null)
+    },
+    // a click on a pin selects its card — nothing else — and brings it into view when it is off screen; in Notes: badges
+    // the card is drawn for this viewer only after that click, and a second click puts it away
+    showCallout: (elementId: string, n: number) => {
+      const c = board ? calloutCommentOf(board, elementId, n) : undefined
+      if (!c) return
+      if (notesMode === 'badges') {
+        if (expandedNotes.has(c.id)) {
+          setExpandedNotes((prev) => {
+            const next = new Set(prev)
+            next.delete(c.id)
+            return next
+          })
+          if (selectedRef.current.includes(c.id)) select([])
+          return
+        }
+        setExpandedNotes((prev) => new Set(prev).add(c.id))
+        cardWhenDrawn.current = c.id
+      } else select([c.id])
+      const r = wrapRef.current?.getBoundingClientRect()
+      if (!r) return
+      const [a, b] = [flow.flowToScreenPosition({ x: c.x, y: c.y }), flow.flowToScreenPosition({ x: c.x + c.w, y: c.y + c.h })]
+      if (a.x >= r.left && a.y >= r.top && b.x <= r.right && b.y <= r.bottom) return
+      views.mark()
+      flow.setCenter(c.x + c.w / 2, c.y + c.h / 2, { zoom: flow.getZoom(), duration: 300 })
     },
   }
   const latest = useRef(actions)
@@ -910,7 +955,8 @@ function BoardInner({ id }: { id: string }) {
       reply: (rootId, text) => latest.current.reply(rootId, text),
       openSource: (id, mode) => latest.current.openSource(id, mode),
       commitOps: (ops, label) => latest.current.commitOps(ops, label),
-      hoverNote: (elementId, kind, index, on) => latest.current.hoverNote(elementId, kind, index, on),
+      hoverCallout: (elementId, n, on, from) => latest.current.hoverCallout(elementId, n, on, from),
+      showCallout: (elementId, n) => latest.current.showCallout(elementId, n),
       uiRemoved,
     }),
     [editingId, tool, uiRemoved],
@@ -1126,7 +1172,8 @@ function BoardInner({ id }: { id: string }) {
         onHelp={() => setHelpOpen(true)}
       />
       <div
-        className="canvas-wrap"
+        // Notes: none hides the callout pins of UI mocks too (ui-mock.css), so Copy as image leaves them out as well
+        className={`canvas-wrap notes-${notesMode}`}
         ref={wrapRef}
         onDoubleClick={onWrapDoubleClick}
         // what a rubber band needs (flow/bandSelect.ts): the selection when the drag began, Shift, and where the pointer is
