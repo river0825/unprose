@@ -51,6 +51,8 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       [`${MOD} Z`, 'Undo'],
       [`${MOD} Shift Z`, 'Redo'],
       ['1', 'Fit the whole board'],
+      ['2', 'Bring the view to the selection (after a panel link moved it away)'],
+      ['⌥ ← / ⌥ →', 'Back to where the view was before a jump (a panel link, a locate, ⌘K, a focus) / forward again'],
       ['W', 'Wires: all → selected only → none (also in the settings in the bottom-right corner)'],
       ['Shift+W', 'Traces: all → faded → bundled → selected only → none'],
       ['?', 'This list'],

@@ -58,6 +58,7 @@ import { ReplayBar } from './components/ReplayBar'
 import { applyReplay, replay, replayFrameOf, useReplay } from './flow/replay'
 import { buildReplay } from './diagrams/replay'
 import { reuse, sameEdge, sameNode } from './flow/reuse'
+import { useViewHistory } from './flow/useViewHistory'
 import { PlayBar } from './components/PlayBar'
 import { applyPlay, play, playFrameOf, usePlay } from './flow/uiPlay'
 import { buildPlay, reconcilePlay } from './diagrams/uiPlay'
@@ -348,12 +349,15 @@ function BoardInner({ id }: { id: string }) {
     [],
   )
 
+  // every jump below marks where the view was, so ⌥← can bring it back (flow/viewHistory.ts)
+  const views = useViewHistory()
   const locate = useCallback(
     (ids: string[]) => {
       if (!ids.length) return
+      views.mark()
       flow.fitView({ nodes: ids.map((i) => ({ id: i })), padding: 0.4, duration: 300, maxZoom: 1.2 })
     },
-    [flow],
+    [flow, views],
   )
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reveal = useCallback(
@@ -374,6 +378,7 @@ function BoardInner({ id }: { id: string }) {
   const goTo = useCallback(
     (ids: string[]) => {
       const known = ids.filter((i) => board?.items[i])
+      views.mark()
       if (!known.length) {
         flow.fitView({ padding: 0.15, duration: 300 })
         return
@@ -381,7 +386,7 @@ function BoardInner({ id }: { id: string }) {
       select(known)
       flow.fitView({ nodes: known.map((i) => ({ id: i })), padding: 0.2, duration: 350, maxZoom: 1.2 })
     },
-    [board, flow, select],
+    [board, flow, select, views],
   )
   const goToRequest = useCallback(
     (r: FocusRequest) => {
@@ -904,6 +909,12 @@ function BoardInner({ id }: { id: string }) {
         duplicate(selectedIds)
         return
       }
+      if (e.altKey && !mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!(e.key === 'ArrowLeft' ? views.back() : views.forward())) store.toast(e.key === 'ArrowLeft' ? 'No earlier view' : 'No later view')
+        return
+      }
       if (e.key.startsWith('Arrow') && selectedIds.length) {
         e.preventDefault()
         e.stopPropagation()
@@ -941,6 +952,10 @@ function BoardInner({ id }: { id: string }) {
       else if (e.key === 'f') addItem('frame')
       else if (e.key === 'c') setTool((t) => (t === 'comment' ? 'select' : 'comment'))
       else if (e.key === '1') flow.fitView({ padding: 0.15, duration: 300 })
+      else if (e.key === '2') {
+        if (selectedIds.length) locate(selectedIds)
+        else store.toast('Nothing selected')
+      }
       else if (e.key === 'w') store.toast(`Wires: ${MODE_NAMES[cycleWires()].toLowerCase()}`)
       else if (e.key === 'W') {
         const next = TRACE_MODES[(TRACE_MODES.indexOf(traceView.mode) + 1) % TRACE_MODES.length]
@@ -950,7 +965,7 @@ function BoardInner({ id }: { id: string }) {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView, views, locate])
 
   // React Flow hands these to every node and wire (and writes the tracked ones into its store, waking every
   // subscriber), so a new function on each render re-rendered the whole board: the same functions are given every
@@ -1198,7 +1213,10 @@ function BoardInner({ id }: { id: string }) {
               const it = board.items[sid]
               // a wire has no place of its own on the board: show its two ends
               if (it?.type === 'arrow') locate([it.from, it.to].filter((x): x is string => !!x))
-              else if (it) flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
+              else if (it) {
+                views.mark()
+                flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
+              }
             }
           }}
         />

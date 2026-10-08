@@ -169,6 +169,14 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
         )}
       </div>
       <div className="panel-body">
+        {activeTab === 'item' && selectedIds.length ? (
+          // a link in the panel moves the view away while the selection stays here: this brings the view back (also 2)
+          <div className="panel-locate">
+            <button type="button" className="link" data-item-link={selectedIds.join(' ')} onClick={() => onLocate(selectedIds)} title="Bring the view to the selection (2); ⌥← goes back to where the view was">
+              ⌖ show on the board
+            </button>
+          </div>
+        ) : null}
         {activeTab === 'chats' ? (
           <AllChats board={board} onLocate={onLocate} onReply={onReply} />
         ) : activeTab === 'feed' ? (

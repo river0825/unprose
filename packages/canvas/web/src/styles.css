@@ -1960,6 +1960,16 @@ kbd {
   border: 0;
   padding: 0 4px;
 }
+/* the way back to the selected item after a panel link moved the view (BoardPage: 2, ⌥←) */
+.panel-locate {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 4px;
+}
+.panel-locate .link {
+  font-size: 12px;
+  color: var(--ink-3);
+}
 
 /* ---------- trace view (flow/traceView.ts; docs/canvas.md → Traces) ----------
    Quiet by design (docs/DESIGN-SYSTEM.md: one accent, used for focus and selection): traces and their aids are

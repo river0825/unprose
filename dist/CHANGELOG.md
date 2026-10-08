@@ -6,6 +6,15 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-10-08
+
+### Added
+- **The way back after a panel link moved the view.** A link in the panel (Traces, Connected, "Same work object,
+  also in") brings the view to that item while the selection stays where it was; now **2** brings the view back to
+  the selection (*⌖ show on the board* at the top of the Selected tab does the same), and **⌥←** / **⌥→** step back
+  and forward through the places the view jumped from — a panel link, a locate, ⌘K, an agent's focus, *Take me
+  there* — like a browser (flow/viewHistory.ts, 20 places; a wheel or a drag is not recorded). `?` lists them.
+
 ## [0.18.0] — 2026-10-08
 
 ### Added
@@ -770,7 +779,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/river0825/unprose/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/river0825/unprose/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/river0825/unprose/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/river0825/unprose/compare/v0.16.0...v0.16.1
