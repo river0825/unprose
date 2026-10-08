@@ -78,9 +78,9 @@ export function WireControls({ view, onChange, hasCatchAll, traces, children }: 
         {open && (
           <div className="view-pop" role="group" aria-label="Lines shown">
             {children}
-            <div className="wire-modes" role="radiogroup" aria-label="Wires shown (W)">
+            <div className="wire-modes" role="radiogroup" aria-label="Lines shown (W)">
               <span className="wire-modes-label" aria-hidden="true">
-                Wires
+                Lines
               </span>
               {WIRE_MODES.map((m) => (
                 <button key={m} type="button" role="radio" aria-checked={view.mode === m} className={view.mode === m ? 'on' : ''} title={`${MODE_TIPS[m]} (W cycles)`} onClick={() => onChange({ mode: m })}>
@@ -96,8 +96,8 @@ export function WireControls({ view, onChange, hasCatchAll, traces, children }: 
             )}
           </div>
         )}
-        <button type="button" className="view-toggle" aria-expanded={open} title="Which lines are drawn: traces between diagrams and wires (W and Shift+W cycle)" onClick={() => setOpen((v) => !v)}>
-          {traces ? `Traces: ${traces} · ` : ''}Wires: {MODE_NAMES[view.mode].toLowerCase()}
+        <button type="button" className="view-toggle" aria-expanded={open} title="Which lines are drawn: the lines inside diagrams (W cycles) and the traces between them (Shift+W)" onClick={() => setOpen((v) => !v)}>
+          {traces ? `Traces: ${traces} · ` : ''}Lines: {MODE_NAMES[view.mode].toLowerCase()}
         </button>
       </div>
     </Panel>

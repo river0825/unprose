@@ -1082,8 +1082,22 @@ pane and starts React Flow's selection box. The items inside are their own nodes
 
 ## Wires
 
-How the board draws wires (`web/src/flow/route.ts`, `ItemEdge.tsx`, `catchAll.ts`). All of it is a way of looking:
-nothing here is stored on the board, and a copied image shows what is shown.
+Every line on the board is one `arrow` item (`from`, `to`, `label`, `role`); what differs is where it comes from and
+what it means, and the panel names that difference in one section, **Links** (`web/src/inspector/links.ts`):
+
+| Word | What | Where it comes from |
+|---|---|---|
+| **wire** | a workflow's event line: who emits, who listens (docs/studio.md §7) | the workflow yaml's `listens` / `emits`; dragging one is a proposal |
+| **trace** | a line between two diagrams (來自 / 組成 / 畫面 / 相關), dotted, never flow (docs/diagrams.md §2) | the file's `traces:` |
+| **arrow** | a line inside a diagram — an activity, a command → system, a timeline | the diagram file |
+| **link** | a line a person drew on the board; no role, in no file | the board only — a note to discuss, not yet a trace |
+
+Links groups an item's lines as *In this <diagram>* (a workflow block's *Listens to* / *Emits* first), *Across
+diagrams* (the traces, with their relation and the other diagram's kind) and *Drawn on the board*; a selected line
+is headed by its word. The settings button says *Lines* (**W**) for everything but traces and *Traces* (**Shift+W**).
+
+How the board draws these lines (`web/src/flow/route.ts`, `ItemEdge.tsx`, `catchAll.ts`). All of it is a way of
+looking: nothing here is stored on the board, and a copied image shows what is shown.
 
 - **Sides and routes.** A side the person (or a template) chose is kept. Otherwise every pair of sides is tried —
   facing sides (right → left, bottom → top …), one side into a perpendicular one (one bend), and a loop under or
@@ -1109,11 +1123,11 @@ nothing here is stored on the board, and a copied image shows what is shown.
   reports a label that is cut, hidden as a dot or dragged onto a card (`[label]`), with how far to move a card or a
   `short` to give.
 - **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
-- **One button in the bottom-right corner** says what is drawn (`Traces: selected · Wires: all`) and opens the
+- **One button in the bottom-right corner** says what is drawn (`Traces: selected · Lines: all`) and opens the
   settings below; Escape or a click elsewhere closes them.
-- **Wires: All / Selected / None** (**W** cycles; remembered per viewer in this browser).
+- **Lines: All / Selected / None** (**W** cycles; remembered per viewer in this browser) — every line but a trace.
   *Selected* draws only the wires touching the selected blocks (others are hidden, not faded); *None* hides
-  every wire. A wire picked in the Inspector's Wiring list is drawn in any mode. Trace wires are not wires of the
+  every line. A wire picked under the Inspector's Links is drawn in any mode. Traces are not lines of the
   flow and have their own switch:
 - **Traces: All / Faded / Bundled / Selected / None** (in the same settings, shown when the board has traces;
   **Shift+W** cycles; remembered per viewer in this browser). Traces say how elements of different diagrams belong

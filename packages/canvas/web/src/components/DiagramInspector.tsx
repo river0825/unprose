@@ -8,7 +8,7 @@ import { checkLayout, type LayoutKind } from '../../../src/layoutCheck'
 import { KIND_NAMES, diagramOf, membersOf, type DiagramInfo } from '../diagrams/frame'
 import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/es'
 import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
-import { REL_NAMES, tracesOf } from '../diagrams/traces'
+import { tracesOf } from '../diagrams/traces'
 import { sameWorkObject } from '../diagrams/sameObject'
 import { pendingOf, type Pending } from '../inspector/pending'
 import { deletedOf, describeDeleted } from '../diagrams/deleteProposal'
@@ -199,12 +199,11 @@ export function DiagramElementPanel({
   const diagram = diagramOf(board, item)
   if (!diagram) return null
   const info = roleInfo(diagram.kind, item)
-  const traces = tracesOf(board, item)
   const nb = diagram.kind === 'event-storming' && diagram.frame ? neighboursOf(board, diagram.frame.id, item) : undefined
   const rule = diagram.kind === 'event-storming' ? grammarRule(item) : undefined
   const pending = pendingOf(item)
   const same = sameWorkObject(board, item)
-  if (!info && !traces.length && !pending) return null
+  if (!info && !pending && !same.length) return null
   return (
     <section className="dg-panel" aria-label="Diagram element">
       <div className="insp-head">
@@ -248,34 +247,6 @@ export function DiagramElementPanel({
               <span className="muted">After</span> {nb.after.map((it) => <ItemLink key={it.id} it={it} onSelect={onSelect} />)}
             </div>
           ) : null}
-        </section>
-      ) : null}
-      {traces.length ? (
-        <section className="insp-sec">
-          <h3>Traces</h3>
-          <ul className="wire-list">
-            {traces.map((t) => {
-              const rel = t.rel ? REL_NAMES[t.rel] : 'trace'
-              const where = t.other ? diagramOf(board, t.other) : undefined
-              return (
-                <li key={t.wire.id}>
-                  {t.dir === 'out' ? (
-                    <>
-                      <span className="muted">this</span> <span className="insp-chip">{rel}</span> <ItemLink it={t.other} onSelect={onSelect} />
-                    </>
-                  ) : (
-                    <>
-                      <ItemLink it={t.other} onSelect={onSelect} /> <span className="insp-chip">{rel}</span> <span className="muted">this</span>
-                    </>
-                  )}
-                  {where ? <span className="wire-note">{KIND_NAMES[where.kind] ?? where.kind}</span> : null}
-                  <PanelLink id={t.wire.id} name="the trace wire" className="link conn-wire" onSelect={onSelect}>
-                    wire
-                  </PanelLink>
-                </li>
-              )
-            })}
-          </ul>
         </section>
       ) : null}
     </section>

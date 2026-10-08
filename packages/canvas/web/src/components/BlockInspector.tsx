@@ -14,7 +14,7 @@ import '../inspector.css'
 
 // the large view with Edit mode (docs/studio.md §9), loaded the first time a script is opened
 const SourceDialog = lazy(() => import('./SourceDialog'))
-import { Connections } from './Connections'
+import { Links } from './Links'
 import { PanelLink } from '../inspector/panelNav'
 import { consumersOf, parseListen, producersOf, wireFor } from '../inspector/wiring'
 import type { DiscussArg } from '../inspector/diff'
@@ -93,38 +93,41 @@ export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onTo
         </Section>
       )}
 
-      {(detail.listens?.length || detail.emits?.length) && (
-        <Section title="Wiring">
-          <dl className="kv">
-            {detail.listens?.length ? (
-              <>
-                <dt>Listens to</dt>
-                <dd>
-                  <ul className="wire-list">
-                    {detail.listens.map((l) => (
-                      <ListenRow key={l} board={board} self={item.id} line={l} onSelect={onSelect} />
-                    ))}
-                  </ul>
-                </dd>
-              </>
-            ) : null}
-            {detail.emits?.length ? (
-              <>
-                <dt>Emits</dt>
-                <dd>
-                  <ul className="wire-list">
-                    {detail.emits.map((e) => (
-                      <EmitRow key={e} board={board} self={item.id} event={e} onSelect={onSelect} />
-                    ))}
-                  </ul>
-                </dd>
-              </>
-            ) : null}
-          </dl>
-        </Section>
-      )}
-
-      <Connections board={board} item={item} onSelect={onSelect} />
+      <Links
+        board={board}
+        item={item}
+        onSelect={onSelect}
+        wiring={
+          detail.listens?.length || detail.emits?.length ? (
+            <dl className="kv">
+              {detail.listens?.length ? (
+                <>
+                  <dt>Listens to</dt>
+                  <dd>
+                    <ul className="wire-list">
+                      {detail.listens.map((l) => (
+                        <ListenRow key={l} board={board} self={item.id} line={l} onSelect={onSelect} />
+                      ))}
+                    </ul>
+                  </dd>
+                </>
+              ) : null}
+              {detail.emits?.length ? (
+                <>
+                  <dt>Emits</dt>
+                  <dd>
+                    <ul className="wire-list">
+                      {detail.emits.map((e) => (
+                        <EmitRow key={e} board={board} self={item.id} event={e} onSelect={onSelect} />
+                      ))}
+                    </ul>
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+          ) : undefined
+        }
+      />
 
       <ChatLink board={board} item={item} onOpenChat={onOpenChat} />
 

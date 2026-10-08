@@ -956,7 +956,7 @@ function BoardInner({ id }: { id: string }) {
         if (selectedIds.length) locate(selectedIds)
         else store.toast('Nothing selected')
       }
-      else if (e.key === 'w') store.toast(`Wires: ${MODE_NAMES[cycleWires()].toLowerCase()}`)
+      else if (e.key === 'w') store.toast(`Lines: ${MODE_NAMES[cycleWires()].toLowerCase()}`)
       else if (e.key === 'W') {
         const next = TRACE_MODES[(TRACE_MODES.indexOf(traceView.mode) + 1) % TRACE_MODES.length]
         setTraceView({ mode: next })

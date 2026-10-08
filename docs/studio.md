@@ -309,14 +309,14 @@ On a workflow board every flow wire **is one event subscription**: "when A emits
   agent (or step) is selected.
 - Catch-all subscriptions (`*` patterns, `resume_on`, cron ticks, fan-outs / hubs of 4+ blocks) are drawn as
   badges on their blocks instead of long wires — click a badge or tick *Show catch-all wires* to draw them; the
-  Wiring section still lists them. The rule and the *Wires: All / Selected / None* view: [canvas.md → Wires](canvas.md#wires).
+  panel's Links still lists them. The rule and the *Lines: All / Selected / None* view: [canvas.md → Wires](canvas.md#wires).
 - **A redraw is complete**: `wf.*` items the new drawing no longer has are removed (a step deleted from the
   yaml disappears from the board) — except wires holding a pending edit (below). Comments and hand-drawn
   items are never removed. An updated item keeps its presentation data (`seenBy`, `agentState`,
   `fromSide`, `toSide`, `bend`) and, if the person ever moved it, its geometry (`planRedraw` in
   `packages/cli/src/graphCanvas.ts`).
 
-**Wiring ↔ wires.** Clicking an event in the Inspector's Wiring selects that wire (it comes to the front);
+**Wiring ↔ wires.** Clicking an event under the Inspector's Links (*Listens to* / *Emits*) selects that wire (it comes to the front);
 selecting a wire shows its event, condition, from → to, and a link to the `on:` line in the yaml.
 
 **Editing a wire = proposing a change.** On a workflow board flow wires stay fully editable — drag an end

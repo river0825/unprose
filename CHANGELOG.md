@@ -6,6 +6,18 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-10-08
+
+### Changed
+- **One word per kind of line, one panel section for all of them.** Every line on the board is an arrow; the
+  panel used to show them in three places with three vocabularies (*Wiring*, *Connected*, *Traces*) and listed a
+  trace twice. Now a selected item has one **Links** section (docs/canvas.md → Wires): *In this <diagram>* — a
+  workflow block's *Listens to* / *Emits* first, then the arrows inside the diagram —, *Across diagrams* — the
+  traces, with their relation and the other diagram's kind — and *Drawn on the board* — lines a person drew that
+  are in no file, said so. A selected line is headed by what it is: **wire** (a workflow's event line), **trace**
+  (between diagrams), **arrow** (inside a diagram) or **link** (hand-drawn). The settings button and **W** say
+  *Lines* for everything but traces; *wire* now means a workflow's event line only.
+
 ## [0.19.0] — 2026-10-08
 
 ### Added
@@ -779,7 +791,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/river0825/unprose/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/river0825/unprose/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/river0825/unprose/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/river0825/unprose/compare/v0.16.1...v0.17.0

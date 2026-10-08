@@ -755,13 +755,17 @@ button.insp-note {
   }
 }
 
-/* ── Connections: what a wire joins / what an item is wired to ─────────── */
+/* ── Links: what a line joins / what an item is joined to, by kind (inspector/links.ts) ── */
 .conn { margin: 14px 0; }
+.conn-note { font-size: 12px; margin: 4px 0 0; }
 .conn h4 { margin: 10px 0 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .conn-pair { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .conn-arrow { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); }
 .conn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .conn-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.conn-head { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.conn-tail { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding-left: 20px; }
+.conn-tail .conn-wire { color: var(--ink-3); }
 .conn-node {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
   padding: 3px 8px; border: 1px solid var(--rule); border-radius: 6px;

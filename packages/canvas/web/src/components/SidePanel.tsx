@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Author, Board, Change, Item, Op } from '../../../src/model'
 import { isContainer } from '../flow/boardToFlow'
 import { detailOf, type DiscussModel } from '../inspector/detail'
-import { Connections } from './Connections'
+import { Links } from './Links'
 import { WireProposal } from './WireProposal'
 import { isFlowWire, type Pending } from '../inspector/pending'
 import { BlockInspector } from './BlockInspector'
@@ -391,7 +391,7 @@ function ItemDetail({
         </button>
       </div>
       {diagramPanel}
-      {wirePanel ?? <Connections board={board} item={item} onSelect={onSelect} />}
+      {wirePanel ?? <Links board={board} item={item} onSelect={onSelect} />}
       <dl className="kv">
         <dt>Type</dt>
         <dd>
