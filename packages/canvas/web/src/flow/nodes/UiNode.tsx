@@ -6,9 +6,11 @@ import { createContext, useContext, useState, type CSSProperties, type ReactNode
 import type { Item } from '../../../../src/model'
 import { canEditValue, uiPendingOf, uiProposalOf, uiValueOp, type UiPath } from '../../diagrams/uiProposal'
 import { uiFindingsOf } from '../../diagrams/uiFindings'
+import { playGoto, playOpen, playPick, playTab, playToggle, playType } from '../../diagrams/uiPlay'
 import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
+import { play, usePlay } from '../uiPlay'
 import { Rims, Shell } from './index'
 import '../../ui-mock.css'
 
@@ -143,6 +145,50 @@ function Val({ sub, text, children }: { sub: UiPath; text: string; children?: Re
   )
 }
 
+// ── play (docs/diagrams.md §6c "Play"): the element on the screen on view takes clicks and typing ─────────
+interface Live {
+  /** a click leads to this screen */
+  goto?: string
+  typed?: string
+  picked?: string
+  checked?: boolean
+  tab?: number
+  open: boolean
+  type: (text: string) => void
+  pick: (option: string) => void
+  toggleOpen: () => void
+  toggle: (was: boolean) => void
+  setTab: (i: number) => void
+}
+const stopAll = { onPointerDown: stop, onMouseDown: stop, onClick: stop, onDoubleClick: stop, onKeyDown: stop }
+function stop(e: { stopPropagation: () => void }) {
+  e.stopPropagation()
+}
+
+/** A mocked field that takes typing while it plays. */
+function LiveField({ live, value, placeholder, multiline, className }: { live: Live; value: string; placeholder: string; multiline?: boolean; className?: string }) {
+  const props = { className: `ui-live-input nodrag nowheel ${className ?? ''}`, value, placeholder, onChange: (e: { target: { value: string } }) => live.type(e.target.value), ...stopAll }
+  return multiline ? <textarea {...props} rows={3} /> : <input {...props} type="text" />
+}
+
+/** A select's options, dropped under the field while it is open. */
+function Options({ live, items, value }: { live: Live; items: UiItem[]; value: string }) {
+  const rows = items.length ? items.map((i) => i.text) : value ? [value] : []
+  return (
+    <div className="ui-options nodrag nowheel" role="listbox" {...stopAll}>
+      {rows.length ? (
+        rows.map((t, i) => (
+          <div key={i} role="option" aria-selected={t === value} className={`ui-option ${t === value ? 'on' : ''}`} onClick={() => live.pick(t)}>
+            {t}
+          </div>
+        ))
+      ) : (
+        <div className="ui-option ui-option-none">no options — give the select `items:`</div>
+      )}
+    </div>
+  )
+}
+
 /** `[Done]` in a table cell or list badge reads as a status badge. */
 function Cell({ v }: { v: string | number | undefined }) {
   const s = v === undefined ? '' : String(v)
@@ -169,7 +215,7 @@ const initials = (s: string) =>
     .map((w) => [...w][0]?.toUpperCase() ?? '')
     .join('') || '?'
 
-function body(item: Item, u: UiData, editing: boolean): ReactNode {
+function body(item: Item, u: UiData, editing: boolean, live: Live | null): ReactNode {
   const items = u.items ?? []
   switch (u.type) {
     case 'screen':
@@ -236,7 +282,10 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
     case 'select':
     case 'search':
     case 'textarea': {
-      const val = u.value !== undefined ? String(u.value) : ''
+      const fromFile = u.value !== undefined ? String(u.value) : ''
+      const val = live ? (u.type === 'select' ? (live.picked ?? fromFile) : (live.typed ?? fromFile)) : fromFile
+      const placeholder = u.placeholder || (u.type === 'search' ? item.text || 'Search' : '')
+      const typing = live && u.type !== 'select'
       return (
         <>
           {u.type !== 'search' && (item.text || editing) ? (
@@ -244,32 +293,41 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
               <Words item={item} />
             </label>
           ) : null}
-          <div className="ui-field">
+          <div className={`ui-field ${live && u.type === 'select' ? 'ui-live-select' : ''} ${live?.open ? 'open' : ''}`} onClick={live && u.type === 'select' ? (e) => { e.stopPropagation(); live.toggleOpen() } : undefined}>
             {u.type === 'search' ? <UiIcon name="search" /> : u.icon ? <UiIcon name={u.icon} /> : null}
-            <span className={`ui-grow ${val ? '' : 'ui-ph'}`}>{val || u.placeholder || (u.type === 'search' ? item.text || 'Search' : '')}</span>
+            {typing ? (
+              <LiveField live={live} value={val} placeholder={placeholder} multiline={u.type === 'textarea'} className="ui-grow" />
+            ) : (
+              <span className={`ui-grow ${val ? '' : 'ui-ph'}`}>{val || placeholder}</span>
+            )}
             {u.type === 'select' ? <UiIcon name="chevron-down" /> : null}
           </div>
+          {live?.open && u.type === 'select' ? <Options live={live} items={items} value={val} /> : null}
           {u.hint ? <div className="ui-hint">{u.hint}</div> : null}
         </>
       )
     }
     case 'checkbox':
-    case 'radio':
+    case 'radio': {
+      const on = live?.checked ?? Boolean(u.checked)
       return (
         <>
-          <span className={`ui-check ${u.checked ? 'on' : ''}`} aria-hidden="true">
-            {u.checked && u.type === 'checkbox' ? <UiIcon name="check" size={12} /> : null}
+          <span className={`ui-check ${on ? 'on' : ''}`} aria-hidden="true">
+            {on && u.type === 'checkbox' ? <UiIcon name="check" size={12} /> : null}
           </span>
           <Words item={item} />
         </>
       )
-    case 'toggle':
+    }
+    case 'toggle': {
+      const on = live?.checked ?? Boolean(u.checked)
       return (
         <>
-          <span className={`ui-switch ${u.checked ? 'on' : ''}`} aria-hidden="true" />
+          <span className={`ui-switch ${on ? 'on' : ''}`} aria-hidden="true" />
           <Words item={item} />
         </>
       )
+    }
     case 'badge':
       return <Words item={item} fallback="Badge" />
     case 'avatar':
@@ -368,7 +426,13 @@ function body(item: Item, u: UiData, editing: boolean): ReactNode {
     }
     case 'tabs':
       return items.map((t, i) => (
-        <span key={i} className={`ui-tab ${t.active ? 'on' : ''}`}>
+        <span
+          key={i}
+          className={`ui-tab ${(live?.tab !== undefined ? live.tab === i : t.active) ? 'on' : ''} ${live ? 'ui-live-act' : ''}`}
+          role={live ? 'tab' : undefined}
+          aria-selected={live ? live.tab === i : undefined}
+          onClick={live ? (e) => { e.stopPropagation(); live.setTab(i) } : undefined}
+        >
           <Val sub={['items', i]} text={t.text} />
           {t.badge ? <span className="ui-count">{t.badge}</span> : null}
         </span>
@@ -437,11 +501,30 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   const edit = useEdit()
   const proposal = uiProposalOf(item)
   const gone = Boolean(edit.uiRemoved?.has(item.id))
-  const editable = UI_EDITABLE.has(u.type) && !gone
+  // while the mock plays (flow/uiPlay.ts), the screen on view is operated, nothing is edited
+  const ps = usePlay()
+  const playing = Boolean(data.play && ps)
+  const live: Live | null =
+    data.play?.live && ps
+      ? {
+          goto: data.play.goto,
+          typed: ps.typed[item.id],
+          picked: ps.picked[item.id],
+          checked: item.id in ps.checked ? ps.checked[item.id] : undefined,
+          tab: ps.tab[item.id],
+          open: ps.open === item.id,
+          type: (text) => play.step((s) => playType(s, item.id, text)),
+          pick: (option) => play.step((s) => playPick(s, item.id, option)),
+          toggleOpen: () => play.step((s) => playOpen(s, item.id)),
+          toggle: (was) => play.step((s) => playToggle(s, item.id, was)),
+          setTab: (i) => play.step((s) => playTab(s, item.id, i)),
+        }
+      : null
+  const editable = UI_EDITABLE.has(u.type) && !gone && !playing
   const findings = uiFindingsOf(item)
   const [editingValue, setEditingValue] = useState<UiPath | null>(null)
   const values: ValueEdit | null =
-    edit.commitOps && Array.isArray(u.path) && !gone && proposal?.kind !== 'add'
+    edit.commitOps && Array.isArray(u.path) && !gone && !playing && proposal?.kind !== 'add'
       ? {
           editing: editingValue,
           proposed: uiPendingOf(item)?.sub,
@@ -474,20 +557,24 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
     u.type === 'badge' && !u.tone ? `t-${toneOf(item.text ?? '')}` : '',
     gone ? 'ui-gone' : '',
     proposal?.kind === 'add' ? 'ui-new' : '',
+    live?.goto ? 'ui-live-act' : '',
   ]
+  const toggles = live && (u.type === 'checkbox' || u.type === 'radio' || u.type === 'toggle')
+  const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : undefined
   return (
     <Shell
       item={item}
       pulse={pulse}
       selected={selected}
-      resizable
-      handles={u.type === 'screen'}
+      resizable={!playing}
+      handles={u.type === 'screen' && !playing}
       className={classes.filter(Boolean).join(' ')}
       style={style}
       onDouble={editable ? undefined : () => undefined}
+      onClick={onClick}
     >
       {(u.type === 'screen' || u.type === 'section') && <Rims />}
-      <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id)}</ValueCtx.Provider>
+      <ValueCtx.Provider value={values}>{body(item, u, edit.editingId === item.id, live)}</ValueCtx.Provider>
       {findings.length ? (
         <span
           className={`ui-finding-mark ${findings.some((f) => f.severity === 'warning') ? 'warning' : 'info'}`}

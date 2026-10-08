@@ -1,7 +1,7 @@
 {
   "name": "unprose",
   "private": true,
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Unprose — a shared visual canvas where people and AI agents talk designs through (EventStorming, story maps, kanban, wireframes, workflows), plus a small event-driven workflow runtime. A plugin for Claude Code, Codex and other MCP agents.",
   "license": "Apache-2.0",
   "workspaces": [

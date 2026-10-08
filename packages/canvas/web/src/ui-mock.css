@@ -956,3 +956,79 @@
   top: 4px;
   right: 26px;
 }
+
+/* play (docs/diagrams.md §6c "Play"): the screen on view is operated, the other screens and the navigate arrows
+   wait faintly; nothing in the frame is edited meanwhile */
+.react-flow__node.play-other,
+.react-flow__edge.play-other {
+  opacity: 0.22;
+  pointer-events: none;
+}
+.ui-live-act,
+.react-flow__node.play-current > .item.ui-checkbox,
+.react-flow__node.play-current > .item.ui-radio,
+.react-flow__node.play-current > .item.ui-toggle,
+.ui-live-select {
+  cursor: pointer;
+}
+.react-flow__node.play-current > .item.ui-button.ui-live-act:hover,
+.react-flow__node.play-current > .item.ui-link.ui-live-act:hover,
+.react-flow__node.play-current > .item.ui-card.ui-live-act:hover {
+  box-shadow: inset 0 0 0 999px rgba(16, 24, 40, 0.06);
+}
+.ui-tab.ui-live-act:hover {
+  color: var(--u-ink);
+}
+.ui-live-input {
+  all: unset;
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+}
+.ui-live-input::placeholder {
+  color: var(--u-ink-3);
+}
+textarea.ui-live-input {
+  white-space: pre-wrap;
+  resize: none;
+  align-self: stretch;
+}
+.ui-field.open {
+  border-color: var(--u-accent);
+}
+.ui-options {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--u-surface);
+  border: 1px solid var(--u-line-2);
+  border-radius: var(--u-radius);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
+  z-index: 5;
+}
+.ui-option {
+  padding: 7px 10px;
+  border-radius: calc(var(--u-radius) - 3px);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ui-option:hover {
+  background: var(--u-muted);
+}
+.ui-option.on {
+  background: var(--u-accent-soft);
+  color: var(--u-accent);
+  font-weight: 500;
+}
+.ui-option-none {
+  color: var(--u-ink-3);
+  cursor: default;
+  font-size: 13px;
+}

@@ -1,12 +1,13 @@
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, getStraightPath, useInternalNode, useReactFlow, useStore, type EdgeProps, type ReactFlowState } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, getStraightPath, useInternalNode, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useMemo, useRef, useState } from 'react'
 import type { Item } from '../../../src/model'
 import { EditableText } from './EditableText'
 import { useEdit } from './EditContext'
 import { useWireFocus } from './wireFocus'
-import { bend, bestLoop, bestTurn, bestTurnY, isHorizontal, type Box, type Side } from './route'
-import { EDGE_LABEL, isLabelObstacle, labelControl, labelLines, placeEdgeLabel, pointAlong } from '../../../src/edgeLabel'
-import { isContainer, type DsWirePlan } from './boardToFlow'
+import { bend, bestLoop, bestTurn, bestTurnY, isHorizontal, type Side } from './route'
+import { EDGE_LABEL, labelControl, labelLines, placeEdgeLabel, pointAlong } from '../../../src/edgeLabel'
+import type { DsWirePlan } from './boardToFlow'
+import { useBoxesNear } from './obstacleBoxes'
 import './wires.css'
 
 type Point = { x: number; y: number }
@@ -32,26 +33,6 @@ function floatingEnd(a: { x: number; y: number; w: number; h: number }, b: { x: 
 type Port = { s?: number; t?: number; si?: number; ti?: number; sn?: number; tn?: number }
 const portOf = (data: unknown): Port => ((data as { port?: Port } | undefined)?.port ?? {})
 const shift = (x: number, y: number, side: string | undefined, d = 0): [number, number] => (side === 'left' || side === 'right' ? [x, y + d] : [x + d, y])
-
-const nodesOf = (s: ReactFlowState) => s.nodes
-const lookupOf = (s: ReactFlowState) => s.nodeLookup
-
-/** Every box a wire should not run through or put its label on: not containers, comments or thin markers. */
-function useBoxes(): Array<Box & { id: string }> {
-  const nodes = useStore(nodesOf) // re-route when any box moves
-  const lookup = useStore(lookupOf)
-  return useMemo(() => {
-    const out: Array<Box & { id: string }> = []
-    for (const n of lookup.values()) {
-      const it = (n.data as { item?: Item } | undefined)?.item
-      // not containers, comments, thin markers (a pivotal event's line, phase bars): edgeLabel.ts isLabelObstacle
-      if (n.hidden || !it || isContainer(it) || !isLabelObstacle(it)) continue
-      out.push({ id: n.id, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? it.w, h: n.measured?.height ?? n.height ?? it.h })
-    }
-    return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, lookup])
-}
 
 /** A polyline of axis-aligned runs with rounded corners. */
 function roundedPath(pts: Point[], r = 8): string {
@@ -114,17 +95,19 @@ export function ItemEdge(props: EdgeProps) {
   const forward = sourcePosition === 'right' && targetPosition === 'left'
   const late = !ds && forward && targetX - sourceX > 300
   const fromAbove = sourceY < targetY
-  const allBoxes = useBoxes()
+  // the boxes this wire can meet (flow/obstacleBoxes.ts): the same list again while none of them has moved
+  const allBoxes = useBoxesNear(sourceX, sourceY, targetX, targetY)
   const routeBoxes = useMemo(() => allBoxes.filter((b) => b.id !== source && b.id !== target), [allBoxes, source, target])
   const prefer = late ? targetX - 22 - 7 * (fromAbove ? (port.ti ?? 0) : (port.tn ?? 1) - 1 - (port.ti ?? 0)) : (sourceX + targetX) / 2
   const free = !ds && !bendOf(data)
   // among the turns that cross the fewest boxes, the one nearest the preferred turn (a backward
   // left → right wire, which planSides picks to stay clear of boxes, turns the same way mirrored)
   const backward = sourcePosition === 'left' && targetPosition === 'right'
-  const turnAt = free && ((forward && targetX - sourceX > 24) || (backward && sourceX - targetX > 24)) ? bestTurn(sourceX, sourceY, targetX, targetY, routeBoxes, prefer) : undefined
+  const turning = free && ((forward && targetX - sourceX > 24) || (backward && sourceX - targetX > 24))
+  const turnAt = useMemo(() => (turning ? bestTurn(sourceX, sourceY, targetX, targetY, routeBoxes, prefer) : undefined), [turning, sourceX, sourceY, targetX, targetY, routeBoxes, prefer])
   // a vertical wire (bottom → top, top → bottom) makes its horizontal run in the best gap too
-  const vertical = (sourcePosition === 'bottom' && targetPosition === 'top' && targetY - sourceY > 24) || (sourcePosition === 'top' && targetPosition === 'bottom' && sourceY - targetY > 24)
-  const turnY = free && vertical ? bestTurnY(sourceX, sourceY, targetX, targetY, routeBoxes, (sourceY + targetY) / 2) : undefined
+  const vertical = free && ((sourcePosition === 'bottom' && targetPosition === 'top' && targetY - sourceY > 24) || (sourcePosition === 'top' && targetPosition === 'bottom' && sourceY - targetY > 24))
+  const turnY = useMemo(() => (vertical ? bestTurnY(sourceX, sourceY, targetX, targetY, routeBoxes, (sourceY + targetY) / 2) : undefined), [vertical, sourceX, sourceY, targetX, targetY, routeBoxes])
   // one side into a perpendicular one (right → top …): a single bend
   const corner = free && isHorizontal(sourcePosition) !== isHorizontal(targetPosition) ? bend({ x: sourceX, y: sourceY }, sourcePosition as Side, { x: targetX, y: targetY }, targetPosition as Side) : undefined
   // A loop under (or over) both boxes (a fix round going back): the one going furthest back runs outermost,
@@ -132,7 +115,13 @@ export function ItemEdge(props: EdgeProps) {
   const loop = (sourcePosition === 'bottom' && targetPosition === 'bottom') || (sourcePosition === 'top' && targetPosition === 'top')
   const boxOfNode = (n: typeof srcNode) => (n ? { x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, w: n.measured?.width ?? n.width ?? 0, h: n.measured?.height ?? n.height ?? 0 } : undefined)
   const [srcBox, tgtBox] = [boxOfNode(srcNode), boxOfNode(tgtNode)]
-  const chosen = loop && !ds && !bendOf(data) && srcBox && tgtBox ? bestLoop(srcBox, tgtBox, routeBoxes, 22 + 9 * ((port.sn ?? 1) - 1 - (port.si ?? 0)), port.s, port.t) : undefined
+  const looping = loop && free && !!srcBox && !!tgtBox
+  const loopMin = 22 + 9 * ((port.sn ?? 1) - 1 - (port.si ?? 0))
+  const chosen = useMemo(
+    () => (looping ? bestLoop(srcBox!, tgtBox!, routeBoxes, loopMin, port.s, port.t) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [looping, srcBox?.x, srcBox?.y, srcBox?.w, srcBox?.h, tgtBox?.x, tgtBox?.y, tgtBox?.w, tgtBox?.h, routeBoxes, loopMin, port.s, port.t],
+  )
   if (chosen) [sourceX, sourceY, targetX, targetY] = [chosen.sx, chosen.sy, chosen.tx, chosen.ty]
   const loopY = chosen?.y
   // The wire's runs, as points: the path is drawn from them and the label is placed along them.

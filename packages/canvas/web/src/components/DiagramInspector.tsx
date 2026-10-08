@@ -20,6 +20,7 @@ import { PanelLink } from '../inspector/panelNav'
 import { holderOfItem } from '../../../src/routing'
 import { HolderLine } from './BoardAgents'
 import { PlayStoryButton } from './ReplayBar'
+import { PlayMockButton } from './PlayBar'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
@@ -68,6 +69,11 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
       {diagram.kind === 'domain-story' ? (
         <p className="dg-replay">
           <PlayStoryButton frameId={diagram.frame.id} /> <span className="muted">sentence by sentence, as in Egon.io</span>
+        </p>
+      ) : null}
+      {diagram.kind === 'ui-mock' ? (
+        <p className="dg-replay">
+          <PlayMockButton frameId={diagram.frame.id} /> <span className="muted">operate the screens: goto buttons, selects, tabs, fields</span>
         </p>
       ) : null}
       <FreezeToggle board={board} diagramKey={diagram.key} />

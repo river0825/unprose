@@ -110,7 +110,7 @@ screens:
                 gap: 16
                 children:
                   - { type: input, id: board-title, label: Title, placeholder: e.g. Refund process, hint: The agent finds the board by its title }
-                  - { type: select, id: project, label: Project, value: agent-workflow-diagram }
+                  - { type: select, id: project, label: Project, value: agent-workflow-diagram, items: [agent-workflow-diagram, Personal, No project] }
                   - { type: checkbox, id: start-hints, text: Show the agent prompts on the empty board, checked: true }
                   - type: row
                     justify: end

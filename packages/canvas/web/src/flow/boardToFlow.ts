@@ -14,7 +14,26 @@ export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box 
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
 
-export type ItemNode = Node<{ item: Item; pulse: boolean; open: boolean; replies: Item[]; childCount?: number; diagram?: DiagramBadge; wireBadges?: WireBadge[] }, Item['type'] | 'dsIcon'>
+/** What play tells an element: whether it is on the screen on view, and the screen a click on it goes to. */
+export interface PlayOn {
+  live: boolean
+  goto?: string
+}
+
+export type ItemNode = Node<
+  {
+    item: Item
+    pulse: boolean
+    open: boolean
+    replies: Item[]
+    childCount?: number
+    diagram?: DiagramBadge
+    wireBadges?: WireBadge[]
+    /** a UI mock being played (flow/uiPlay.ts): on the screen on view (`live`) or on another one, and where a click leads */
+    play?: PlayOn
+  },
+  Item['type'] | 'dsIcon'
+>
 
 /** Side of a folded comment's badge. */
 export const BADGE = 26
@@ -103,7 +122,7 @@ const DS_ICONS = new Set(['actor', 'object', 'legend-actor', 'legend-object', 'l
 /** How catch-all wires are shown (flow/catchAll.ts): as badges (the default) or drawn; `expanded` holds the wires of badges clicked open. */
 export interface CatchAllView { show: boolean; expanded: Set<string> }
 
-export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<string>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
+export function boardToFlow(board: Board, pulse: ReadonlySet<string>, openComments: Set<string>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
   const items = Object.values(board.items)
   const byId = board.items
   const nodes: ItemNode[] = []
@@ -113,6 +132,7 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
   const stacked = kanbanLayout(board)
   let obs: Array<Box & { id: string }> | undefined
   const boxes = () => (obs ??= obstacles(board, stacked))
+  const sides = sidesMemo(boxes)
   // catch-all listeners become badges on their blocks instead of long wires, unless the viewer shows them
   const catchAllIds = catchAll.show ? new Map() : catchAllWires(board)
   const badges = wireBadges(board, catchAllIds, catchAll.expanded)
@@ -157,7 +177,7 @@ export function boardToFlow(board: Board, pulse: Set<string>, openComments: Set<
           id: it.id,
           source: it.from,
           target: it.to,
-          ...wireSides(it, byId, stacked, boxes),
+          ...wireSides(it, byId, stacked, sides),
           label: it.label ?? it.text,
           type: 'item',
           ...(collapsed(it.id) ? { hidden: true } : {}),
@@ -234,11 +254,34 @@ function obstacles(board: Board, stacked: Map<string, { x: number; y: number }>)
  * route crosses the fewest boxes, then the shortest (route.ts planSides). A domain-story activity floats
  * between its pictograms, so it keeps the plain facing sides.
  */
-function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: number; y: number }>, boxes: () => Array<Box & { id: string }>): { sourceHandle: string; targetHandle: string } {
+function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: number; y: number }>, planned: PlannedSides): { sourceHandle: string; targetHandle: string } {
   const [a, b] = [boxOf(byId[it.from!], stacked), boxOf(byId[it.to!], stacked)]
   const chosen = typeof it.data?.fromSide === 'string' && typeof it.data?.toSide === 'string'
-  const auto = it.data?.ds || chosen ? autoSides(a, b) : planSides(a, b, boxes().filter((c) => c.id !== it.from && c.id !== it.to))
+  const auto = it.data?.ds || chosen ? autoSides(a, b) : planned(it, a, b)
   return { sourceHandle: side(it.data?.fromSide, auto.fromSide), targetHandle: side(it.data?.toSide, auto.toSide) }
+}
+
+type PlannedSides = (it: Item, a: Box, b: Box) => { fromSide: string; toSide: string }
+
+// planSides for the last board geometry: a wire's sides depend only on its two end boxes and the other boxes on
+// the board, so while none of those moved (a text edit, a comment, a wash) the last answer is given again instead
+// of trying every pair of sides for every wire against every box. One board is shown at a time, so one memo.
+let lastPlan: { geometry: string; sides: Map<string, { fromSide: string; toSide: string }> } | undefined
+
+/** planSides over `boxes()`, answered from the memo while the geometry is the one it was built on. */
+function sidesMemo(boxes: () => Array<Box & { id: string }>): PlannedSides {
+  let plan: NonNullable<typeof lastPlan> | undefined
+  return (it, a, b) => {
+    if (!plan) {
+      const all = boxes()
+      const geometry = all.map((c) => `${c.id}:${c.x},${c.y},${c.w},${c.h}`).join(';')
+      plan = lastPlan?.geometry === geometry ? lastPlan : (lastPlan = { geometry, sides: new Map() })
+    }
+    const key = `${it.from}>${it.to}|${a.x},${a.y},${a.w},${a.h}|${b.x},${b.y},${b.w},${b.h}`
+    let out = plan.sides.get(key)
+    if (!out) plan.sides.set(key, (out = planSides(a, b, boxes().filter((c) => c.id !== it.from && c.id !== it.to))))
+    return out
+  }
 }
 
 /** Spacing between wires that share a side of a box, in px. */

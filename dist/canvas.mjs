@@ -51053,7 +51053,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.17.0";
+var VERSION = "0.18.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -60502,7 +60502,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.17.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.18.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {

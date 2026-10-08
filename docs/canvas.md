@@ -302,6 +302,7 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG via resvg: the npm package in a checkout, a pinned, sha512-checked native download for the plugin; else SVG with the reason; the result names the renderer) | `canvas_snapshot` (same) |
 | **Layout check** (overlaps, cut-off text, oversized, drawn elsewhere) | frame panel → *Layout* | `GET /api/boards/:id/layout` | `canvas_check_layout` | `canvas_check_layout` |
 | Replay a board's history | Replay bar | – (`awd replay` replays a *workflow's* event log) | – | – |
+| Play a domain story sentence by sentence / operate a UI mock's screens (docs/diagrams.md §6b "Replay", §6c "Play") | *Play story* / *Play* on the frame header, the frame panel, the context menu; this viewer's view only | – | – | – |
 | Approve a pairing code / OAuth client | Connected agents → *Enter a code*, the notification | – | `canvas_approve` (the agent on the canvas machine only, a code the person read out; logged) | – (never) |
 | Request manage rights for a remote page | Connected agents → *Request manage rights* (a code a managing page approves) | – | – | – |
 | Manage tokens / OAuth clients (create, revoke, rename, change access and scope) | Connected agents (canvas machine or a managing page) | – | – | – |
@@ -942,7 +943,11 @@ and docs/diagrams.md §6c. A text edit on the board sets `data.pending = { kind:
 sets `{ kind: 'remove', before: { type, text }, path }` and keeps the item; the panel's Add element adds an item
 `<key>.ui.<screen>.new-<type>` with `{ kind: 'add', node: { type, id, text }, parent | after: { element, path }, path }`.
 A redraw clears each once the file explains it (new text, element gone, element with that id drawn). The drawing
-puts `awd design lint`'s findings on the elements as `data.ui.findings: [{ severity, message }]`.
+puts `awd design lint`'s findings on the elements as `data.ui.findings: [{ severity, message }]`. **Play** (the
+frame header, the frame panel, the context menu; docs/diagrams.md §6c "Play") lets the viewer operate the screens —
+a click on an element with a `goto` (or a `flows` arrow from it) moves the view to that screen, a select opens its
+`items`, tabs switch, fields take typing, checkboxes toggle — in this browser only: no op, no change, no file edit;
+agents never see it.
 
 ### `workflow`
 

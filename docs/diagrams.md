@@ -523,6 +523,33 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
 - *Not (yet):* real images, overlays (a modal is a card in the flow), responsive reflow when the person resizes a
   screen, moving an element to another place in the file by dragging it, adding a table row or column, Figma import.
 
+### Play
+
+A mock is drawn to be pointed at; sometimes the question is "and what happens when I press this?". **Play** lets
+the person operate the screens the way a Figma prototype runs: start it with **Play** on a UI-mock frame's
+header, in the frame's side panel, or from the right-click menu of the frame or anything in it.
+
+- **One screen at a time.** Play starts on the first screen; the others wait faintly where they are, with the
+  navigate arrows. A click on an element whose `goto` names a screen — or that a `flows` entry starts from —
+  moves the view to that screen; a card (section, navbar) that leads somewhere takes the click anywhere on it,
+  except on a field, select, toggle or tabs inside it, which keep their own job. A `goto` to a screen that does
+  not exist leads nowhere (lint reports it).
+- **The elements work**, as far as the file describes them: a `select` opens and lists its `items` (its `value`
+  alone when it has none; pick one and it closes), `tabs` switch, an `input` / `textarea` / `search` takes
+  typing, a `checkbox` / `radio` / `toggle` flips. What the person typed, picked and toggled stays while they move
+  between screens; Restart forgets it.
+- **Controls** (a floating bar at the top of the canvas, the Replay bar's shape): the screen on view by name,
+  "2 / 3", ⏮ restart, ◀ back to the screen before, ✕ exit. Keys: ← or Backspace back, Home restart, Esc exit —
+  none of them while typing into a mocked field.
+- **The view follows**: each screen is shown whole, below the bar, never zoomed in past 100 %.
+- **Purely a way of looking**: nothing is stored on the board, the file does not change, other viewers are not
+  affected. While it plays, nothing in the frame is dragged, resized, wired or edited — a double-click edits no
+  words, Delete proposes nothing, the right-click menu stays closed — and the board's edit keys wait. A redraw
+  while it plays keeps the screen on view when it still exists, else goes back to one that does.
+- *Not (yet):* buttons without a `goto` (they do nothing), a navbar or sidebar item that leads to a screen,
+  typed text that changes what another screen shows, a radio group where one choice clears the others,
+  presenting to everyone on the board at once.
+
 ## 7. Board triggers point at a frame key
 
 `triggers.<id>: { on: board, board: "title:…" | <id>, frame?: <diagram key>, … }`. The trigger only turns

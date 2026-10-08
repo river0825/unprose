@@ -29,13 +29,15 @@ interface Props {
   askEnabled: boolean
   /** a domain-story frame (or an item in one): replay its story sentence by sentence (docs/diagrams.md §6b) */
   onPlayStory?: () => void
+  /** a UI-mock frame (or an element in one): operate its screens — goto buttons, selects, tabs, fields (docs/diagrams.md §6c "Play") */
+  onPlayMock?: () => void
   /** the layout lock (docs/diagrams.md "What a redraw keeps"): absent for comments and wires */
   lock?: { locked: boolean; frame: boolean; byFrame: boolean }
   onToggleLock?: (id: string) => void
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory, lock, onToggleLock }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory, onPlayMock, lock, onToggleLock }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -141,6 +143,14 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
       {onPlayStory && (
         <button role="menuitem" onClick={act(onPlayStory)}>
           Play story
+          <span aria-hidden="true" className="sub-arrow">
+            ▶
+          </span>
+        </button>
+      )}
+      {onPlayMock && (
+        <button role="menuitem" onClick={act(onPlayMock)}>
+          Play
           <span aria-hidden="true" className="sub-arrow">
             ▶
           </span>

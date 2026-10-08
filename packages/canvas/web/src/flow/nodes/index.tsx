@@ -6,6 +6,7 @@ import { CommentBadge, ThreadBody } from '../CommentThread'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { PlayStoryButton } from '../../components/ReplayBar'
+import { PlayMockButton } from '../../components/PlayBar'
 import { SCALES_FONT, fontOf } from '../font'
 import { DsIconNode } from './DsIconNode'
 import { UiNode } from './UiNode'
@@ -38,6 +39,7 @@ export function Shell({
   selected = false,
   style,
   onDouble,
+  onClick,
 }: {
   item: Item
   pulse: boolean
@@ -49,6 +51,8 @@ export function Shell({
   style?: React.CSSProperties
   /** what a double-click does instead of editing the text */
   onDouble?: () => void
+  /** what a click does (a UI mock element being played, flow/uiPlay.ts); the comment tool's attach comes first */
+  onClick?: () => void
 }) {
   const edit = useEdit()
   // a locked item (docs/diagrams.md "What a redraw keeps") is not dragged or resized until it is unlocked
@@ -96,6 +100,9 @@ export function Shell({
         if (edit.attachTarget) {
           e.stopPropagation()
           edit.attachTarget(item.id)
+        } else if (onClick) {
+          e.stopPropagation()
+          onClick()
         }
       }}
     >
@@ -225,6 +232,7 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
           </span>
         ) : null}
         {data.diagram?.kind === 'domain-story' ? <PlayStoryButton frameId={item.id} compact /> : null}
+        {data.diagram?.kind === 'ui-mock' ? <PlayMockButton frameId={item.id} compact /> : null}
       </div>
     </Shell>
   )

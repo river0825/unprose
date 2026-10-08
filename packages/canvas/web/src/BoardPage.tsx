@@ -57,6 +57,10 @@ import type { FocusRequest } from './store'
 import { ReplayBar } from './components/ReplayBar'
 import { applyReplay, replay, replayFrameOf, useReplay } from './flow/replay'
 import { buildReplay } from './diagrams/replay'
+import { reuse, sameEdge, sameNode } from './flow/reuse'
+import { PlayBar } from './components/PlayBar'
+import { applyPlay, play, playFrameOf, usePlay } from './flow/uiPlay'
+import { buildPlay, reconcilePlay } from './diagrams/uiPlay'
 
 const GRID: [number, number] = [10, 10]
 const MULTI_SELECT_KEYS = ['Meta', 'Control', 'Shift']
@@ -91,6 +95,10 @@ function isInside(board: Board, id: string, container: string): boolean {
 }
 
 const snap = (n: number) => Math.round(n / 10) * 10
+const NO_PULSE: ReadonlySet<string> = new Set()
+const PRO_OPTIONS = { hideAttribution: true }
+const CROSSHAIR: CSSProperties = { cursor: 'crosshair' }
+const miniMapColor = (n: Node) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`
 
 export function BoardPage({ id }: { id: string }) {
   return (
@@ -162,16 +170,20 @@ function BoardInner({ id }: { id: string }) {
   const shown = useMemo(() => (board && draftComment ? { ...board, items: { ...board.items, [draftComment.id]: draftComment } } : board), [board, draftComment])
   // kanban columns line up and grow to hold their cards, as shown (flow/kanbanAlign.ts); geometry for drags and resizes is read from this too
   const laid = useMemo(() => (shown ? alignKanban(shown) : shown), [shown])
-  const derived = useMemo(() => (laid ? boardToFlow(laid, pulse, openComments, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, pulse, openComments, wireView.catchAll, expandedWires])
+  // the agent-change wash (pulse) is laid over the nodes below (shownNodes), so its coming and going (1.2 s later)
+  // does not rebuild the whole flow graph — only the washed nodes change
+  const derived = useMemo(() => (laid ? boardToFlow(laid, NO_PULSE, openComments, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, openComments, wireView.catchAll, expandedWires])
   const hasCatchAll = useMemo(() => (board ? catchAllWires(board).size > 0 : false), [board])
   useEffect(() => {
+    // a node or wire that says the same as before stays the same object (flow/reuse.ts), so React Flow re-measures
+    // and re-renders only what the change touched
     setNodes((prev) => {
       const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
-      return derived.nodes.map((n) => ({ ...n, selected: sel.has(n.id) }))
+      return reuse(prev, derived.nodes.map((n) => ({ ...n, selected: sel.has(n.id) })), sameNode)
     })
     setEdges((prev) => {
       const sel = new Set(prev.filter((e) => e.selected).map((e) => e.id))
-      return derived.edges.map((e) => ({ ...e, selected: sel.has(e.id) || e.id === selectWhenDrawn.current }))
+      return reuse(prev, derived.edges.map((e) => ({ ...e, selected: sel.has(e.id) || e.id === selectWhenDrawn.current })), sameEdge)
     })
     // a wire just drawn is selected once it exists, so the panel can ask which event it is
     const drawn = selectWhenDrawn.current
@@ -188,23 +200,46 @@ function BoardInner({ id }: { id: string }) {
   const [flashIds, setFlashIds] = useState<string[]>([])
   const hasTraces = useMemo(() => (board ? Object.values(board.items).some((it) => it.type === 'arrow' && it.role === 'trace') : false), [board])
   const traceBadges = useMemo(() => (board && hasTraces && traceView.badges ? traceCounts(board, traceView) : undefined), [board, hasTraces, traceView])
+  // the elements pointing at which changes what is drawn: an end of a trace while the trace view follows the
+  // selection (faded / selected / bundled), and a domain story's work objects; a hover anywhere else is not tracked,
+  // so it does not re-render the board (the view would come out the same)
+  const hoverable = useMemo(() => {
+    const out = new Set<string>()
+    if (!board) return out
+    const traces = hasTraces && traceView.mode !== 'all' && traceView.mode !== 'none'
+    for (const it of Object.values(board.items)) {
+      if (it.data?.ds === 'object') out.add(it.id)
+      else if (traces && it.type === 'arrow' && it.role === 'trace') {
+        if (it.from) out.add(it.from)
+        if (it.to) out.add(it.to)
+      }
+    }
+    return out
+  }, [board, hasTraces, traceView.mode])
   // a domain story draws one work object once per sentence: selecting or pointing at one lights up the others
   const sameObject = useMemo(() => {
     const out = new Set<string>()
     if (board) for (const id of hoverId ? [...selectedIds, hoverId] : selectedIds) for (const o of sameWorkObject(board, board.items[id])) out.add(o.id)
     return out
   }, [board, selectedIds, hoverId])
+  // nodes the agent touched a moment ago get the wash: an item itself, or a thread's root for any message in it
+  const pulsed = useMemo(() => {
+    const out = new Set<string>()
+    if (board) for (const id of pulse) out.add(board.items[id]?.type === 'comment' ? (threadRoot(board, id)?.id ?? id) : id)
+    return out
+  }, [board, pulse])
   const shownNodes = useMemo(() => {
-    if (!panelHover.length && !flashIds.length && !traceBadges?.size && !sameObject.size) return nodes
+    if (!panelHover.length && !flashIds.length && !traceBadges?.size && !sameObject.size && !pulsed.size) return nodes
     const on = new Set([...panelHover, ...flashIds])
     return nodes.map((n) => {
       const count = traceBadges?.get(n.id)
+      if (pulsed.has(n.id)) n = { ...n, data: { ...n.data, pulse: true } }
       if (sameObject.has(n.id)) n = { ...n, className: `${n.className ?? ''} same-object` }
       if (!on.has(n.id) && !count) return n
       // the badge is drawn by CSS from the count (styles.css .has-traces), so every kind of node gets it
       return { ...n, className: `${n.className ?? ''}${on.has(n.id) ? ' panel-hover' : ''}${count ? ' has-traces' : ''}`, ...(count ? { style: { ...n.style, '--trace-badge': `"↗ ${count}"` } as CSSProperties } : {}) }
     })
-  }, [nodes, panelHover, flashIds, traceBadges, sameObject])
+  }, [nodes, panelHover, flashIds, traceBadges, sameObject, pulsed])
 
   // owns / delegates wires are agent relations, not events: faint unless one of their ends is selected (docs/studio.md §7)
   const shownEdges = useMemo(() => {
@@ -235,6 +270,27 @@ function BoardInner({ id }: { id: string }) {
     else if (replayView && replayModel && replayView.step > replayModel.steps.length) replay.update({ step: replayModel.steps.length })
   }, [replayView, replayModel])
   useEffect(() => () => replay.stop(), [id])
+
+  // a UI mock being played (flow/uiPlay.ts): the same — this viewer's view only; a replay and a play never run together
+  const playState = usePlay()
+  const playModel = useMemo(() => (playState && laid ? buildPlay(laid, playState.frameId) : undefined), [laid, playState?.frameId])
+  const playedUi = useMemo(() => applyPlay(played.nodes, played.edges, playModel, playState), [played, playModel, playState])
+  const playOn = useRef(false)
+  playOn.current = Boolean(playState && playModel?.screens.length)
+  useEffect(() => {
+    // the first screen when play starts; a redraw that lost the screen on view goes back to one that exists, or stops
+    if (!playState || !playModel) return
+    const next = reconcilePlay(playModel, playState)
+    if (!next) play.stop()
+    else if (next !== playState) play.set(next)
+  }, [playState, playModel])
+  useEffect(() => {
+    if (playState) replay.stop()
+  }, [playState?.frameId])
+  useEffect(() => {
+    if (replayView) play.stop()
+  }, [replayView?.frameId])
+  useEffect(() => () => play.stop(), [id])
 
   // ---- rubber band (flow/bandSelect.ts): a band drawn inside a frame selects the items in it, not the frame; Shift adds
   const rf = useStoreApi()
@@ -687,12 +743,14 @@ function BoardInner({ id }: { id: string }) {
     [board, commit],
   )
 
+  // depends on the two fields it reads, not on the store object: it feeds the edit context every node and wire reads
+  const { agentWatching, handoff: sendHandoff } = store
   const handoff = useCallback(async () => {
-    if (!store.agentWatching) return
-    await store.handoff()
+    if (!agentWatching) return
+    await sendHandoff()
     setHanded(true)
     setTimeout(() => setHanded(false), 2000)
-  }, [store])
+  }, [agentWatching, sendHandoff])
 
   /** "Ask agent": comment on the item, then hand the board over so the agent wakes now. */
   const askAgent = useCallback(
@@ -721,65 +779,91 @@ function BoardInner({ id }: { id: string }) {
     [select],
   )
 
-  const uiRemoved = useMemo(() => (board ? uiRemovedIds(board) : new Set<string>()), [board])
+  // the same Set while the same ids are in it, so the edit context below holds across board changes
+  const uiRemovedRef = useRef(new Set<string>())
+  const uiRemoved = useMemo(() => {
+    const next = board ? uiRemovedIds(board) : new Set<string>()
+    const prev = uiRemovedRef.current
+    if (prev.size === next.size && [...next].every((id) => prev.has(id))) return prev
+    return (uiRemovedRef.current = next)
+  }, [board])
+  // The edit API every node and wire reads. Its actions close over the current board, so they are rebuilt on every
+  // change — but the context value hands out stable wrappers that call the latest ones, and changes only with its
+  // state (what is being edited, the comment tool, the struck UI elements): a board change alone re-renders no node.
+  const actions = {
+    startEdit,
+    commitLabel,
+    resize,
+    bend,
+    setCommentOpen,
+    cancelEdit: () => {
+      pendingAsk.current = null
+      setEditingId(null)
+    },
+    commitText: (iid: string, text: string, andContinue?: boolean) => {
+      setEditingId(null)
+      const draft = draftComment?.id === iid ? draftComment : undefined
+      const it = board?.items[iid] ?? draft
+      if (!it) return
+      const changed = (it.text ?? '') !== text && (!draft || Boolean(text.trim()))
+      const patch: Partial<Item> = it.type === 'comment' && it.createdBy === 'user' ? { text, data: { ...it.data, seenBy: [] } } : { text }
+      const saved = !changed
+        ? Promise.resolve(undefined)
+        : draft
+          ? commit([{ kind: 'add', item: { ...draft, text } }], `commented '${text.slice(0, 40)}'`)
+          : isUiElement(it)
+            ? // a UI mock element's words: a proposal until the AI applies it to the file (docs/diagrams.md §6c)
+              commit([uiTextOp(it, text, new Date().toISOString())], `proposed '${text.slice(0, 40)}'`)
+            : commit([{ kind: 'update', id: iid, patch }], `edited '${text.slice(0, 40)}'`)
+      if (pendingAsk.current === iid) {
+        pendingAsk.current = null
+        if (text.trim()) void saved.then(() => handoff())
+      }
+      if (andContinue && (it.type === 'sticky' || it.type === 'card')) {
+        const sib = makeItem({ ...it, id: newId(it.type[0]), y: it.y + it.h + 12, text: '', createdBy: 'user', updatedBy: 'user' })
+        void commit([{ kind: 'add', item: sib }], 'added a sticky below')
+        select([sib.id])
+        setEditingId(sib.id)
+      }
+    },
+    attachTarget:
+      tool === 'comment'
+        ? (iid: string) => {
+            const r = addComment(iid, '')
+            setTool('select')
+            if (r) setEditingId(r.id)
+          }
+        : null,
+    openMenu,
+    reply: (rootId: string, text: string) => {
+      if (text.trim()) addComment(rootId, text.trim())
+    },
+    openSource: (iid: string, mode: 'view' | 'edit') => {
+      select([iid])
+      setSourceRequest({ id: iid, mode, n: Date.now() })
+    },
+    commitOps: (ops: Op[], label: string) => void commit(ops, label),
+  }
+  const latest = useRef(actions)
+  latest.current = actions
   const editApi = useMemo<EditApi>(
     () => ({
       editingId,
-      startEdit,
-      commitLabel,
-      resize,
-      bend,
-      setCommentOpen,
-      cancelEdit: () => {
-        pendingAsk.current = null
-        setEditingId(null)
-      },
-      commitText: (iid, text, andContinue) => {
-        setEditingId(null)
-        const draft = draftComment?.id === iid ? draftComment : undefined
-        const it = board?.items[iid] ?? draft
-        if (!it) return
-        const changed = (it.text ?? '') !== text && (!draft || Boolean(text.trim()))
-        const patch: Partial<Item> = it.type === 'comment' && it.createdBy === 'user' ? { text, data: { ...it.data, seenBy: [] } } : { text }
-        const saved = !changed
-          ? Promise.resolve(undefined)
-          : draft
-            ? commit([{ kind: 'add', item: { ...draft, text } }], `commented '${text.slice(0, 40)}'`)
-            : isUiElement(it)
-              ? // a UI mock element's words: a proposal until the AI applies it to the file (docs/diagrams.md §6c)
-                commit([uiTextOp(it, text, new Date().toISOString())], `proposed '${text.slice(0, 40)}'`)
-              : commit([{ kind: 'update', id: iid, patch }], `edited '${text.slice(0, 40)}'`)
-        if (pendingAsk.current === iid) {
-          pendingAsk.current = null
-          if (text.trim()) void saved.then(() => handoff())
-        }
-        if (andContinue && (it.type === 'sticky' || it.type === 'card')) {
-          const sib = makeItem({ ...it, id: newId(it.type[0]), y: it.y + it.h + 12, text: '', createdBy: 'user', updatedBy: 'user' })
-          void commit([{ kind: 'add', item: sib }], 'added a sticky below')
-          select([sib.id])
-          setEditingId(sib.id)
-        }
-      },
-      attachTarget:
-        tool === 'comment'
-          ? (iid) => {
-              const r = addComment(iid, '')
-              setTool('select')
-              if (r) setEditingId(r.id)
-            }
-          : null,
-      openMenu,
-      reply: (rootId, text) => {
-        if (text.trim()) addComment(rootId, text.trim())
-      },
-      openSource: (iid, mode) => {
-        select([iid])
-        setSourceRequest({ id: iid, mode, n: Date.now() })
-      },
-      commitOps: (ops, label) => void commit(ops, label),
+      startEdit: (id) => latest.current.startEdit(id),
+      commitLabel: (id, label) => latest.current.commitLabel(id, label),
+      resize: (id, rect) => latest.current.resize(id, rect),
+      bend: (id, point) => latest.current.bend(id, point),
+      setCommentOpen: (id, open) => latest.current.setCommentOpen(id, open),
+      cancelEdit: () => latest.current.cancelEdit(),
+      commitText: (id, text, andContinue) => latest.current.commitText(id, text, andContinue),
+      attachTarget: tool === 'comment' ? (id) => latest.current.attachTarget?.(id) : null,
+      openMenu: (id, x, y) => latest.current.openMenu(id, x, y),
+      reply: (rootId, text) => latest.current.reply(rootId, text),
+      openSource: (id, mode) => latest.current.openSource(id, mode),
+      commitOps: (ops, label) => latest.current.commitOps(ops, label),
       uiRemoved,
     }),
-    [editingId, board, draftComment, commit, tool, addComment, openMenu, handoff, select, startEdit, commitLabel, resize, bend, setCommentOpen, uiRemoved],
+    [editingId, tool, uiRemoved],
   )
 
   // ---- keyboard (capture phase so arrow keys reach us before React Flow's own handler)
@@ -789,7 +873,7 @@ function BoardInner({ id }: { id: string }) {
       const typing = target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.isContentEditable)
       if (menu || helpOpen) return
       // a replay has its own keys (components/ReplayBar.tsx); the board's edit keys wait until it stops
-      if (replayOn.current && !(e.metaKey || e.ctrlKey)) return
+      if ((replayOn.current || playOn.current) && !(e.metaKey || e.ctrlKey)) return
       // A text view or the source dialog handles its own keys (arrows move lines, not items; ⌘Z is the editor's).
       if (target?.closest?.('[data-no-board-keys]')) return
       if (e.key === 'Escape') {
@@ -867,6 +951,46 @@ function BoardInner({ id }: { id: string }) {
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView])
+
+  // React Flow hands these to every node and wire (and writes the tracked ones into its store, waking every
+  // subscriber), so a new function on each render re-rendered the whole board: the same functions are given every
+  // time and read what they need from `live`, which holds this render's values.
+  const live = useRef({ hoverable, hoverId, tool, startEdit, openMenu, onNodesChange, onNodeDragStop, onConnect, onReconnect })
+  live.current = { hoverable, hoverId, tool, startEdit, openMenu, onNodesChange, onNodeDragStop, onConnect, onReconnect }
+  const handlers = useMemo(
+    () => ({
+      onNodesChange: (changes: NodeChange<ItemNode>[]) => live.current.onNodesChange(changes),
+      onNodeDragStop: (e: unknown, node: Node, dragged: Node[]) => live.current.onNodeDragStop(e, node, dragged),
+      onConnect: (c: Connection) => live.current.onConnect(c),
+      onReconnect: (old: Edge, c: Connection) => live.current.onReconnect(old, c),
+      onEdgeDoubleClick: (e: React.MouseEvent, edge: Edge) => {
+        e.stopPropagation()
+        live.current.startEdit(edge.id)
+      },
+      onNodeMouseEnter: (_: React.MouseEvent, n: Node) => live.current.hoverable.has(n.id) && setHoverId(n.id),
+      onNodeMouseLeave: () => live.current.hoverId !== null && setHoverId(null),
+      onEdgeClick: (_: React.MouseEvent, edge: Edge) => {
+        // a bundle stands for all the traces between two diagrams: a click draws them, another folds them back
+        const key = (edge.data as { bundle?: { key: string } } | undefined)?.bundle?.key
+        if (key) setOpenBundles((prev) => { const next = new Set(prev); if (!next.delete(key)) next.add(key); return next })
+      },
+      onNodeContextMenu: (e: React.MouseEvent, n: Node) => {
+        e.preventDefault()
+        // a mock being played is operated, not edited: no menu on its screens
+        if ((n.data as { play?: unknown }).play) return
+        live.current.openMenu(n.id, e.clientX, e.clientY)
+      },
+      onSelectionContextMenu: (e: React.MouseEvent, sel: Node[]) => {
+        e.preventDefault()
+        if (sel[0]) live.current.openMenu(sel[0].id, e.clientX, e.clientY)
+      },
+      onPaneClick: () => {
+        setEditingId(null)
+        if (live.current.tool === 'comment') setTool('select')
+      },
+    }),
+    [],
+  )
 
   // first load → fit, or centre the deep-linked item (?focus=<id>)
   const fitted = useRef(false)
@@ -957,42 +1081,26 @@ function BoardInner({ id }: { id: string }) {
         <EditContext.Provider value={editApi}>
         <WireBadgeContext.Provider value={toggleBadge}>
           <ReactFlow
-            nodes={played.nodes}
-            edges={played.edges}
+            nodes={playedUi.nodes}
+            edges={playedUi.edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
+            onNodesChange={handlers.onNodesChange}
             onEdgesChange={onEdgesChange}
-            onReconnect={onReconnect}
+            onReconnect={handlers.onReconnect}
             connectionMode={ConnectionMode.Loose}
-            onEdgeDoubleClick={(e, edge) => {
-              e.stopPropagation()
-              startEdit(edge.id)
-            }}
+            onEdgeDoubleClick={handlers.onEdgeDoubleClick}
             onSelectionChange={onSelectionChange}
-            onNodeMouseEnter={(_, n) => (hasTraces || (n.data as { item?: Item }).item?.data?.ds === 'object') && setHoverId(n.id)}
-            onNodeMouseLeave={() => setHoverId(null)}
-            onEdgeClick={(_, edge) => {
-              // a bundle stands for all the traces between two diagrams: a click draws them, another folds them back
-              const key = (edge.data as { bundle?: { key: string } } | undefined)?.bundle?.key
-              if (key) setOpenBundles((prev) => { const next = new Set(prev); if (!next.delete(key)) next.add(key); return next })
-            }}
+            onNodeMouseEnter={handlers.onNodeMouseEnter}
+            onNodeMouseLeave={handlers.onNodeMouseLeave}
+            onEdgeClick={handlers.onEdgeClick}
             onSelectionStart={onSelectionStart}
             onSelectionEnd={onSelectionEnd}
-            onNodeDragStop={onNodeDragStop}
-            onConnect={onConnect}
-            onNodeContextMenu={(e, n) => {
-              e.preventDefault()
-              openMenu(n.id, e.clientX, e.clientY)
-            }}
-            onSelectionContextMenu={(e, sel) => {
-              e.preventDefault()
-              if (sel[0]) openMenu(sel[0].id, e.clientX, e.clientY)
-            }}
-            onPaneClick={() => {
-              setEditingId(null)
-              if (tool === 'comment') setTool('select')
-            }}
+            onNodeDragStop={handlers.onNodeDragStop}
+            onConnect={handlers.onConnect}
+            onNodeContextMenu={handlers.onNodeContextMenu}
+            onSelectionContextMenu={handlers.onSelectionContextMenu}
+            onPaneClick={handlers.onPaneClick}
             elevateEdgesOnSelect
             snapToGrid
             snapGrid={GRID}
@@ -1005,8 +1113,8 @@ function BoardInner({ id }: { id: string }) {
             multiSelectionKeyCode={MULTI_SELECT_KEYS}
             panOnScroll
             zoomOnDoubleClick={false}
-            proOptions={{ hideAttribution: true }}
-            style={{ cursor: tool === 'comment' ? 'crosshair' : undefined }}
+            proOptions={PRO_OPTIONS}
+            style={tool === 'comment' ? CROSSHAIR : undefined}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--paper-dot)" />
             <Controls showInteractive={false} position="bottom-right" />
@@ -1014,7 +1122,7 @@ function BoardInner({ id }: { id: string }) {
               {hasTraces ? <TraceControls view={traceView} onChange={setTraceView} /> : null}
             </WireControls>
             <FrozenHeaders board={laid ?? board} />
-            <MiniMap pannable zoomable position="bottom-left" nodeColor={(n) => `var(--c-${(n.data as { item?: Item })?.item?.color ?? 'grey'})`} />
+            <MiniMap pannable zoomable position="bottom-left" nodeColor={miniMapColor} />
           </ReactFlow>
         </WireBadgeContext.Provider>
         </EditContext.Provider>
@@ -1032,6 +1140,7 @@ function BoardInner({ id }: { id: string }) {
           onDismiss={store.clearFocus}
         />
         {replayView && replayModel?.steps.length ? <ReplayBar model={replayModel} view={replayView} title={board.items[replayView.frameId]?.text ?? 'Domain story'} /> : null}
+        {playState && playState.screen && playModel?.screens.length ? <PlayBar model={playModel} state={playState} title={board.items[playState.frameId]?.text ?? 'UI mock'} /> : null}
         <GoToPalette board={board} open={gotoOpen} onClose={() => setGotoOpen(false)} onGo={(t) => goTo([t.id])} />
         {tool === 'comment' && <div className="hint">Click an item to comment on it. Esc cancels.</div>}
         {store.storageError && (
@@ -1112,6 +1221,7 @@ function BoardInner({ id }: { id: string }) {
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
           onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
+          onPlayMock={playFrameOf(board, menuItem) ? () => play.start(playFrameOf(board, menuItem)!) : undefined}
           lock={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : { locked: ownLock(menuItem), frame: menuItem.type === 'frame', byFrame: !ownLock(menuItem) && layoutLock(board.items, menuItem.id) === 'frame' }}
           onToggleLock={(iid) => {
             const it = board.items[iid]

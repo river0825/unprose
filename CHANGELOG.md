@@ -6,6 +6,28 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-10-08
+
+### Added
+- **Play a UI mock** (docs/diagrams.md §6c "Play"): *Play* on a UI-mock frame's header, in its panel or in the
+  right-click menu lets the person operate the screens — a click on a button (or a card) whose `goto` or `flows`
+  entry names a screen moves the view there, a select opens its `items`, tabs switch, fields take typing,
+  checkboxes and toggles flip — with a bar like the domain story's Replay (the screen on view, back, restart,
+  exit; ← Backspace Home Esc). Only this viewer's view changes: nothing is stored on the board, the file is not
+  touched, and nothing in the frame can be edited while it plays. The sample mock's Project select got `items`.
+
+### Fixed
+- **A big board no longer re-draws itself on every hover, click or change.** On a 329-item board every wire
+  subscribed to the whole node list, so pointing at a sticky, selecting one, dragging one or one incoming change
+  re-routed and re-labelled all 120 wires (hovering 30 nodes: 777 ms of main-thread work, a 10-step drag: 484 ms,
+  five incoming changes: 675 ms); the edit context and React Flow's handlers were new functions on every render, so
+  every node and wire re-rendered with the page; a change rebuilt every node, so React Flow re-measured all of them.
+  Now a wire reads only the boxes it can meet and only when one moved (flow/obstacleBoxes.ts), the context and the
+  handlers stay put (reading the latest state from a ref), unchanged nodes and wires keep their objects across a
+  change (flow/reuse.ts), the agent-change wash no longer rebuilds the graph, a wire's planned sides are kept while
+  nothing moved, and a hover is tracked only on an element it can light up. Same board: 289 ms, 166 ms, 245 ms;
+  every wire path and label comes out the same.
+
 ## [0.17.0] — 2026-10-06
 
 ### Added
@@ -748,7 +770,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/river0825/unprose/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/river0825/unprose/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/river0825/unprose/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/river0825/unprose/compare/v0.15.0...v0.16.0

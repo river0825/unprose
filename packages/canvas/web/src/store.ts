@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Board, Change, Item, Op, WsMessage } from '../../src/model'
 import { applyOps, isBookkeeping } from '../../src/model'
 import { api, asArray, connectBoard } from './api'
@@ -287,28 +287,14 @@ export function useBoard(id: string): BoardStore {
     [id, toast],
   )
 
-  return {
-    board,
-    error,
-    connected,
-    agentWatching,
-    agentNames,
-    agentSeen,
-    storageError,
-    focusRequest,
-    clearFocus: () => setFocusRequest(null),
-    changes,
-    toasts,
-    pulse,
-    commit,
-    undo,
-    redo,
-    canUndo: undoStack.length > 0,
-    canRedo: redoStack.length > 0,
-    handoff,
-    setTitle,
-    toast,
-  }
+  const clearFocus = useCallback(() => setFocusRequest(null), [])
+  const canUndo = undoStack.length > 0
+  const canRedo = redoStack.length > 0
+  // the same object until something in it changes, so callbacks (and the edit context every node and wire reads) that depend on it stay put
+  return useMemo(
+    () => ({ board, error, connected, agentWatching, agentNames, agentSeen, storageError, focusRequest, clearFocus, changes, toasts, pulse, commit, undo, redo, canUndo, canRedo, handoff, setTitle, toast }),
+    [board, error, connected, agentWatching, agentNames, agentSeen, storageError, focusRequest, clearFocus, changes, toasts, pulse, commit, undo, redo, canUndo, canRedo, handoff, setTitle, toast],
+  )
 }
 
 export function itemsOf(board: Board | null): Item[] {
