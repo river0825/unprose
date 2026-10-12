@@ -20,7 +20,9 @@ export interface GraphAgent {
   /** true when the entry comes from a `role:` prompt file, not an `agents:` definition. */
   legacy?: boolean
 }
-export interface Graph { name: string; nodes: GraphNode[]; edges: GraphEdge[]; agents: GraphAgent[] }
+/** What a block is for (the file's top-level `annotations:`, docs/diagrams.md "Annotations"): the runner ignores it, the board draws it. */
+export interface GraphAnnotation { id?: string; on: string; text: string }
+export interface Graph { name: string; nodes: GraphNode[]; edges: GraphEdge[]; agents: GraphAgent[]; annotations?: GraphAnnotation[] }
 
 export function toGraph(def: WorkflowDefinition): Graph {
   const nodes: GraphNode[] = []
@@ -69,7 +71,18 @@ export function toGraph(def: WorkflowDefinition): Graph {
       if (p) edges.push({ from: p.node, to: s.id, label: `resume: ${p.label}`, event: e, resume: true })
     }
   }
-  return { name: def.name, nodes, edges, agents: graphAgents(def) }
+  const annotations = graphAnnotations(def.extra?.annotations)
+  return { name: def.name, nodes, edges, agents: graphAgents(def), ...(annotations.length ? { annotations } : {}) }
+}
+
+/** The file's `annotations:` entries that say something about something (`on` and `text`), as written. */
+function graphAnnotations(raw: unknown): GraphAnnotation[] {
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap((a) => {
+    const o = a as Partial<GraphAnnotation> | null
+    if (!o || typeof o !== 'object' || typeof o.on !== 'string' || typeof o.text !== 'string') return []
+    return [{ ...(typeof o.id === 'string' ? { id: o.id } : {}), on: o.on, text: o.text }]
+  })
 }
 
 function graphAgents(def: WorkflowDefinition): GraphAgent[] {

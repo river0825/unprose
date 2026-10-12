@@ -1,0 +1,442 @@
+/* ---------- annotations and TODOs (docs/canvas.md → "Notes"; flow/annotationsView.ts, flow/todoView.ts) ----------
+   An annotation is the canvas's own graphite, numbered (ui-mock.css .ui-pin, styles.css .callout-card); a draft is the
+   same family, dashed; a TODO is amber and square — never a speech bubble, so none of them reads as a comment. */
+:root {
+  --todo: #9a5b00;
+  --todo-soft: #fbf0dc;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --todo: #e3a43f;
+    --todo-soft: #3a2f1c;
+  }
+}
+:root[data-theme='dark'] {
+  --todo: #e3a43f;
+  --todo-soft: #3a2f1c;
+}
+
+/* the markers on an item: right to left from its top-right corner, half outside it — a sibling of the box, so a box
+   that clips its content does not cut them */
+.item-marks {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+.item-marks > * {
+  pointer-events: auto;
+}
+.ds-icon > .item-marks {
+  top: -4px;
+  right: -4px;
+}
+/* what else marks the top-right corner moves aside: the "proposed" tag, the trace count */
+.react-flow__node:has(> .item-marks) > .item > .node-tag {
+  right: auto;
+  left: 6px;
+}
+.react-flow__node.has-traces:has(> .item-marks)::after {
+  right: auto;
+  left: 0;
+}
+
+/* a draft's pin: the same circle, dashed, a pen instead of a number */
+.ui-pin.draft {
+  border-style: dashed;
+  border-color: var(--ink-3);
+  color: var(--ink-2);
+}
+.ui-pin svg {
+  display: block;
+}
+
+/* a TODO's marker: a small amber square, no number; ticked and muted once done */
+.todo-mark {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 1px;
+  padding: 0;
+  border: 1.5px solid var(--todo);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--todo);
+  cursor: pointer;
+}
+.todo-mark.done {
+  border-color: var(--ink-3);
+  color: var(--ink-3);
+  background: var(--chrome);
+}
+.todo-mark:hover {
+  background: var(--todo-soft);
+}
+.todo-mark:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+.todo-mark.lit {
+  outline: 2px solid var(--marker);
+  outline-offset: 1px;
+}
+.todo-mark.playing {
+  pointer-events: none;
+}
+
+/* an annotation written on the board only: its text is edited in place */
+.callout-card .callout > .text {
+  height: auto;
+  overflow: visible;
+}
+/* the person's draft: the annotation card, dashed, with where the discussion stands */
+.callout-card.draft-card {
+  border-style: dashed;
+  border-color: var(--rule-2);
+  cursor: pointer;
+}
+.callout-card.draft-card:hover {
+  border-color: var(--ink-3);
+}
+.callout-card .draft-status {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--ink-3);
+}
+.react-flow__node.selected > .callout-card,
+.react-flow__node.selected > .todo-card {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+/* a TODO being checked off, a draft opened to its thread: above the cards around it */
+.react-flow__node:has(.checkoff),
+.react-flow__node:has(> .draft-thread) {
+  z-index: 1001 !important;
+}
+/* a draft opened to its thread: what it is above the discussion */
+.draft-thread {
+  height: auto;
+  border-left-style: dashed;
+}
+.draft-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.draft-note {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* a TODO on the board: paper, an amber rule, a box to tick */
+.todo-card {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--todo);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.todo-card.done {
+  border-left-color: var(--rule-2);
+  color: var(--ink-3);
+}
+.todo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.todo-check {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  min-width: 0;
+  min-height: 0;
+  margin: 1px 0 0;
+  padding: 0;
+  border: 1.5px solid var(--todo);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.todo-check:hover {
+  background: var(--todo-soft);
+}
+.todo-check:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+.todo-check[aria-checked='true'] {
+  border-color: var(--ink-3);
+  background: var(--chrome);
+}
+.todo-main {
+  flex: 1;
+  min-width: 0;
+}
+.todo-card .text {
+  height: auto;
+  overflow: visible;
+}
+.todo-card.done .todo-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-3);
+}
+.todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.todo-tag {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--todo);
+}
+.todo-card.done .todo-tag {
+  color: var(--ink-3);
+}
+.todo-replies {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.todo-replies:hover {
+  color: var(--ink);
+}
+.todo-answer {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* its thread, opened under it: the comment's reply styles, not its box */
+.todo-card .todo-thread.comment {
+  height: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-top: 4px;
+}
+
+/* checking a TODO off: what was found out (optional) */
+.checkoff {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+}
+.checkoff-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--ink-2);
+}
+.checkoff textarea,
+.mark-fields textarea,
+.mark-fields input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 4px 6px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.checkoff textarea:focus-visible,
+.mark-fields textarea:focus-visible,
+.mark-fields input:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: -1px;
+}
+.checkoff-actions,
+.mark-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* "Annotate…" / "Add TODO…" from the item menu: a small field at the pointer */
+.mark-input {
+  position: fixed;
+  z-index: 60;
+  width: 300px;
+  padding: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  font-size: 13px;
+}
+.mark-title {
+  margin-bottom: 6px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mark-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mark-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* the panel: an item's annotations and TODOs, and the board's TODO list */
+.marks-sec h3 + p {
+  margin-top: 2px;
+}
+.marks-ul,
+.todo-ul {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.marks-li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  width: 100%;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.marks-li > .ui-pin {
+  margin-top: 2px;
+}
+.marks-li:hover .marks-li-text {
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+}
+.marks-li-status {
+  margin: 0 0 0 23px;
+  font-size: 11.5px;
+}
+.marks-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.todo-li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.todo-li .todo-check {
+  margin-top: 3px;
+}
+.todo-li-body {
+  flex: 1;
+  min-width: 0;
+}
+.todo-li-text {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.todo-li-text:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+}
+.todo-li.done .todo-li-text {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+.todo-li-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.todo-done > summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin: 6px 0 2px;
+}
+.todo-add,
+.todo-add-btn {
+  margin-top: 10px;
+}
+/* the board's TODOs at the top of the panel, under its context: folded to a count, a list when opened */
+.board-todos .tab-badge.todo-count {
+  margin-left: 0;
+}
+.board-todos-body {
+  max-height: 45vh;
+  overflow: auto;
+  margin-top: 4px;
+  font-size: 13px;
+}
+.tab-badge.todo-count {
+  background: var(--todo);
+  color: var(--paper);
+}

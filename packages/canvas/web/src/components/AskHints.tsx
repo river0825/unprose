@@ -4,33 +4,8 @@
 // takes pointer events, so panning and zooming the empty board still work around it.
 import { useEffect, useRef, useState } from 'react'
 import { ASK_HINTS, HELP_HINT, promptParts, type AskHint } from '../askHints'
+import { copyText } from '../clipboard'
 import './ask-hints.css'
-
-/** Write text to the clipboard; falls back to a hidden textarea where the async API is missing (plain http). */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  } catch {
-    /* fall through */
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    ta.remove()
-    return ok
-  } catch {
-    return false
-  }
-}
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')

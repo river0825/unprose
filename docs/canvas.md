@@ -19,6 +19,8 @@ packages/canvas/
   src/access*.ts · accessRoutes.ts    remote agents: tokens, OAuth 2.1, pairing codes, scopes (Remote agents below)
   src/proposals.ts · patch.ts         agents' edit proposals: the files snapshot, unified diffs checked against it (Proposals and saving)
   src/routing.ts                      several agents on one board: responder, @mentions, loop guard, context, file holders
+  src/annotations.ts · todos.ts       annotations (numbered cards, the person's drafts) and TODOs: the marks web, server and CLI share
+  src/templates/annotations.ts        drawing a file's annotations beside any diagram: resolving `on`, numbering, the gutter
   src/ports/feedbackStore.ts · adapters/feedback   what agents tell the owner about Unprose (unprose_feedback)
   src/cli.ts              awd-canvas serve | mcp | render | demo | outline | diff | card add|move|moves
   web/                    the React UI (built separately); web/src/run/ is the live run overlay
@@ -65,7 +67,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `unprose_help` | – | what Unprose can do — the diagrams, the tools, the comment loop, the ways to start — for the agent to pass on in the person's language; also the canvas URL and version |
 | `canvas_list_boards` | – | id, kind, seq, item count, title, url per board |
 | `canvas_create_board` | `title, kind, content, meta?` | render the template and create the board → id, url, seq |
-| `canvas_read_board` | `id, format: outline\|json\|summary, frame?, types?, ids?, text?, fields?, limit?, cursor?, maxChars?` | `outline` (default): text grouped by diagram frame → lane / column / screen / group → items, with threads, proposals and wires; `summary`: counts per frame; `json`: items with ids and geometry, one per line. Filters, pages and a size cap (40 000 characters by default) — [Reading big boards](#reading-big-boards) |
+| `canvas_read_board` | `id, format: outline\|json\|summary, frame?, types?, ids?, text?, fields?, limit?, cursor?, maxChars?` | `outline` (default): text grouped by diagram frame → lane / column / screen / group → items, with threads, proposals, each diagram's [annotations](#annotations) and wires, then the [TODOs](#todos); `summary`: counts per frame; `json`: items with ids and geometry, one per line. Filters, pages and a size cap (40 000 characters by default) — [Reading big boards](#reading-big-boards) |
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}`; and the layout lock: `lock {id}` / `lock {frame: '<diagram key>'}` / `unlock …` set or clear `data.lock: 'layout'` (redraws and the kanban auto-layout never move a locked item; a locked frame keeps everything in it — docs/diagrams.md "What a redraw keeps"). An agent may unlock only what an agent locked |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
@@ -76,9 +78,10 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
 | `canvas_propose_edit` | `id, file, base, diff \| newText, note, about?, wires?` | propose a change to one of those files: checked against the snapshot whose sha-1 is `base`, then posted as a proposal signed with your name, threaded on the block / frame the first changed line belongs to (or `about`). `wires` (workflow boards): dashed hints for the wires the edit adds or removes. Nothing is written to disk |
-| `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) **suggests** the responder for the person to confirm — both logged |
+| `canvas_context` | `id, text?, answeredBy?` | the board's context note (what it is about, links to notes), who answers it, who holds which files, the agents here, how many [TODOs](#todos) are open and [draft annotations](#annotations) wait; `text` writes the note, `answeredBy` (`me` \| a name \| `studio` \| `any`) **suggests** the responder for the person to confirm — both logged |
 | `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board (`agent`: its @handle or its name): posts an `@handle` thread (on `about[0]`, else loose) and blocks until it answers in the thread; the result says exactly who it was delivered to (*Delivered to @codex-b — watching this board now*, or that it is not watching / never seen); on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
 | `canvas_handover` | `board, ready? + keys?, accept? + repo?, remote?, cancel? + reason?` | the files behind diagrams changing hands, once **the person** started it (an agent cannot start one): `ready: true` — you hand them over, they are ready to be taken as the board has them (optionally only `keys`); `accept: true` — you receive them (once every one is ready): you become their holder, and the result lists the files to read with `canvas_files`, write into your repo and redraw once from; `cancel: true` — decline (either side). Without any: the open handover, who must do what next, who holds which files ([Handing over the files](#handing-over-the-files)) |
+| `canvas_todo` | `board, text? + on?, ask? \| done? + answer? \| reopen?` | [TODOs](#todos): `text` opens one (about the item `on`, to confirm with `ask`) — it wakes nobody; `done: <id>` checks one off, with `answer` posted as a *Confirmed: …* reply that reaches the board's *Answered by* agent; `reopen: <id>`; only `board`: the open TODOs and the last ones done. A read-only token lists only |
 | `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
 | `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
@@ -211,7 +214,8 @@ server what the page draws (`src/snapshot.ts`): frames with their kind badge and
 their header and the cards where they stack (`src/shown.ts`, the same code the page uses), stickies in the theme
 colours with wrapped text (`src/textMetrics.ts`, the stylesheet's sizes and paddings) and role labels, cards, text,
 wireframe primitives, UI mock elements, Domain Storytelling pictograms with numbered activities, wires with arrowheads
-and labels (traces dotted, proposals dashed), comment badges with their message count. The region is the frame's box,
+and labels (traces dotted, proposals dashed), comment badges with their message count, [annotation](#annotations) cards
+with their number and the same number pinned on the item, [TODOs](#todos) as check boxes (ticked when done). The region is the frame's box,
 the union of `ids` (a container brings its contents), or the whole board; it is scaled down to fit `maxPx` (at most
 4000) with a note saying so. Colours are literal (no CSS variables), so any SVG rasterizer can draw it.
 
@@ -303,6 +307,8 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | Board settings: context, *Answered by* | header menu (sets it), context panel | – | `canvas_context` (context; *Answered by* only as a suggestion) | same |
 | **Hand the files over** to another agent ([Handing over the files](#handing-over-the-files)) | board panel → *Hand over files* (starts it), *Hand over anyway* | – | `canvas_handover` (ready / accept / cancel — never start) | same |
 | Ask another agent | `@name` in a comment | – | `canvas_ask` | `canvas_ask` |
+| **Annotate** an item ([Annotations](#annotations)) | write a draft on the item (a proposal to the holder) | `annotations:` in the file, then `awd design draw` | edit the file, `design_draw`; apply a draft with `design_draw { applied }` | `canvas_propose_edit` with the `annotations:` entry |
+| **TODOs** ([TODOs](#todos)) | write, check off (with an answer), reopen | – | `canvas_todo` | `canvas_todo` (a read-only token lists only) |
 | **Image of a board** | **Copy as image** (context menu) | `GET /api/boards/:id/snapshot` | `canvas_snapshot` (PNG via resvg: the npm package in a checkout, a pinned, sha512-checked native download for the plugin; else SVG with the reason; the result names the renderer) | `canvas_snapshot` (same) |
 | **Layout check** (overlaps, cut-off text, oversized, drawn elsewhere) | frame panel → *Layout* | `GET /api/boards/:id/layout` | `canvas_check_layout` | `canvas_check_layout` |
 | Replay a board's history | Replay bar | – (`awd replay` replays a *workflow's* event log) | – | – |
@@ -589,6 +595,62 @@ the holder redraws the diagram; another agent that should hold the files asks th
 
 A later option, not built: proposals as a git branch / pull request.
 
+## Annotations
+
+An annotation says **what an item is for** — not a question, not a conversation. It lives in the design file (files
+are the truth): a top-level list in every kind, `annotations: [{ id?, on, text }]` (docs/diagrams.md "Annotations"),
+plus `note:` on a wireframe or UI mock element. The drawing shows each as a **numbered card** beside the drawing — a
+band below an EventStorming, story map, journey, kanban or workflow; a gutter right of a wireframe or UI mock screen —
+and a pin with the same number on the item. A card is a comment with role `note`, `data.callout` (its number, 1…n per
+frame in the reading order of what the cards are about; a UI mock per screen) and `data.annotation = { on, file }`;
+it has no reply box and is not a thread. A domain story keeps Egon.io's notes (text and a dashed line).
+
+**The person's draft.** On the canvas the person writes an annotation on an item; it cannot go into the file by
+itself, so it is a **proposal** to the agent holding the files: a comment on the item with `data.annotation = { draft:
+true, on, file }` and `data.discuss = { about: [<item>], edit: { file, base, diff } }` — the diff adds one entry to
+`annotations:` (`addAnnotationToFile` in `src/annotations.ts` keeps every other line as it was). When the board does not
+have the file (or has it cut short) the draft comes without `edit`, and the holder writes the entry by hand. A board
+item with no file behind it (a freeform board) gets its annotation written on the board itself (`data.annotation.board`).
+
+**What the holder does** (studio's session, or your own agent — the draft wakes the holder like any proposal, also with
+`untilMention`):
+
+1. The draft is the person's own words. **Judge it first** — is it true to the design? does it contradict the file or
+   another annotation? does it say what the item is for? — and reply in its thread with your judgement in a sentence
+   or two.
+2. If it is sound, **apply it right away**: the person wrote it, so that counts as consent. Check the file still has
+   `base` (`shasum -a 1 <file>`), apply the edit, lint, and redraw with `--applied <thread id>` — the reply *Applied to
+   <file>* settles the thread and the card appears with its number.
+3. If you have doubts, say why in the thread and wait for the person.
+
+An agent that does not hold the files proposes an annotation like any other edit (`canvas_files` → `canvas_propose_edit`
+with the `annotations:` entry). `canvas_read_board` lists each diagram's cards under *annotations* (`① event "Order
+paid": …`), marks the annotated items, and words an open draft as *the person's draft annotation on … — waiting for
+<holder>*; `canvas_wait` says *drafted an annotation on … — a proposal to <holder>*; `canvas_context` counts the drafts
+waiting. A redraw keeps a card where the person moved it and drops the card of an annotation the file no longer has.
+
+## TODOs
+
+A TODO marks something **still to be confirmed with someone else** — the PM, legal, the backend team: *"Confirm the
+refund limit with finance."* It is a note, not a question to an agent, so **no agent answers it**. It lives on the
+board only (not in a file): a comment carrying `data.todo = { state: 'open' | 'done', ask?, answer?, doneBy?, doneAt? }`,
+on an item (`target`) or loose, the root of its own thread.
+
+- **Writing one wakes nobody** (`route: 'todo'`, `to: []` — also when its text is edited or it is checked off). The
+  person writes them on the canvas; an agent opens one with `canvas_todo({ board, text, on?, ask? })` when something
+  needs a person outside the board.
+- **Checking it off** — the person on the canvas, or an agent with `canvas_todo({ board, done: <id>, answer? })` — sets
+  `state: 'done'`; the canvas signs who did it and when (`doneBy`: the caller's name, or `person`; `doneAt`), whatever
+  the caller sent. **With an answer** the answer is also posted in its thread as *Confirmed: <answer>*
+  (`data.todoAnswer`): a reply routes like any reply, so it reaches the board's *Answered by* agent (and an agent that
+  opened the TODO). That agent decides whether the design changes, and proposes that as usual. **Without an answer**
+  nobody is notified.
+- **Reopening** (`reopen: <id>`) sets it open again and forgets who checked it off.
+
+`canvas_read_board` ends with the TODOs — the open ones with whom to ask, what they are about and who opened them, the
+last ones done with their answers — and does not list them as threads; `canvas_wait` / `canvas_diff` say *added a TODO*,
+*answered the TODO …*, *checked off by … — answer: …*, *reopened*; `canvas_context` counts the open ones.
+
 ## Several agents on one board
 
 One board, several agents: Claude on the canvas machine (studio, or a local session), Codex on a laptop with the
@@ -654,7 +716,8 @@ hand:
 1. **Loop guard** — an agent's message past *N* agent messages in a row in its thread, with no message from the
    person, wakes nobody (`route: 'paused'`, `data.paused: true`). The thread shows *"Agents paused — reply to let them
    continue"*; the person's next message resets the count. *N* = the board's `agentTurns` (settings), else
-   `UNPROSE_AGENT_TURNS` on the canvas, else **6**.
+   `UNPROSE_AGENT_TURNS` on the canvas, else **6**. A [TODO](#todos) itself (the root carrying `data.todo`) wakes
+   nobody either, written, edited or checked off — `route: 'todo'`, `to: []`; replies in its thread go on below.
 2. **Handover** — a thread whose first comment is a handover's (`data.handover`, [Handing over the
    files](#handing-over-the-files)) goes to both sides: every agent handing files over and the agent receiving them —
    before any @mention (its first message mentions them all). `route: 'handover'`.
@@ -663,9 +726,10 @@ hand:
    person asking `@claude-a` wakes only claude-a, and claude-a's answer wakes no other agent; an agent asking another
    gets the answer back. A later mention in the thread takes it over. `route: 'mention'`.
 4. **Proposal** — a thread whose first comment proposes an edit (`data.discuss.edit`: `canvas_propose_edit`, the
-   source dialog, a UI mock's text edit chat) or a wire change (`data.discuss.proposal`) goes to the **holder** of the
-   file / of the diagram it is on, and back to the agent that proposed it — whoever answers the board.
-   `route: 'proposal'`.
+   source dialog, a UI mock's text edit chat), a wire change (`data.discuss.proposal`) or is the person's [draft
+   annotation](#annotations) (`data.annotation.draft`, with or without the edit) goes to the **holder** of the file
+   (the edit's, else the draft's `data.annotation.file`) / of the diagram it is on, and back to the agent that proposed
+   it — whoever answers the board. `route: 'proposal'`.
 5. **Responder** — otherwise the board's *Answered by* agent (and, if an agent started the thread, that agent too).
    No responder (or *any agent*) → `to` is absent: anyone, exactly as before.
 
@@ -700,8 +764,9 @@ the canvas then sends the context only the first time this agent waits on the bo
 
 ### Settings: Answered by, context, loop guard
 
-`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, handover, suggestion?, suggestionBy?,
-suggestionWhy?: 'asked' | 'holder', agents: [{ name, label, handle, watching, seen?, holder }], you? }` (`holders` without
+`GET /api/boards/:id/settings` → `{ responder, answeredBy, context, agentTurns, holders, handover, todos: { open, done },
+drafts, suggestion?, suggestionBy?, suggestionWhy?: 'asked' | 'holder', agents: [{ name, label, handle, watching, seen?,
+holder }], you? }` (`drafts`: the person's draft annotations no holder has answered *Applied to …* or declined yet) (`holders` without
 machine and root for a caller elsewhere; an agent token gets only the names active on that board). `PUT` the same
 path with any of `{ answeredBy: 'any' | 'studio' | 'me' | <name> | null, context: <markdown> | null, agentTurns:
 1–100 | null }` — needs write access (a read-only token gets `403`). `answeredBy` from **the person** sets *Answered
@@ -918,6 +983,8 @@ A board can hold several diagrams. A **diagram frame** is a `frame` item (id `di
 
 All ids are deterministic (`<scope>.<role>.<element id>` for event-storming and story maps, `<scope>.<role>.<slug>-<hash>` elsewhere), so re-rendering the same content produces update ops, not duplicates. Pass `scope` to keep two renders of the same kind apart, `at: {x, y}` to place a render next to existing items.
 
+Every kind but freeform also takes `annotations: [{ id?, on, text }]` — what an item is for, drawn as numbered cards beside the drawing ([Annotations](#annotations), docs/diagrams.md "Annotations"); a domain story's are Egon.io notes.
+
 ### `event-storming` (docs/diagrams.md §3 — *Introducing EventStorming*)
 
 ```json
@@ -984,7 +1051,7 @@ Stages as columns; rows Actions, Touchpoints, an Emotion lane (−2…2 drawn as
     { "role": "button", "text": "Emit event", "x": 9, "y": 1, "w": 3 } ] }] }
 ```
 
-12-column grid, 40 px rows; `x` 0–11, `w` 1–12, `y`/`h` in rows. Roles: `box button input heading paragraph image nav list table label`. A `note` becomes a comment bubble on that element. Screens are laid out side by side.
+12-column grid, 40 px rows; `x` 0–11, `w` 1–12, `y`/`h` in rows. Roles: `box button input heading paragraph image nav list table label`. A `note` is an [annotation](#annotations): a numbered card right of its screen, the same number on the element. Screens are laid out side by side; a screen with annotations keeps a gutter for them.
 
 ### `ui-mock` (docs/diagrams.md §6c — real-looking screens)
 
@@ -1104,6 +1171,11 @@ Semantics the trigger can rely on: one change = at most one move per card; `from
 [9 user] removed external "Trello"
 [9 user] connected event "Build claimed" → event "PR marked ready" ("then")
 [9 user] added policy "Retry policy" in Build
+[10 user] drafted an annotation on event "Order paid" [shop-es.event.paid]: "Refunds start here" — a proposal to codex-b: judge it, then apply it or say why not [thread c_x]
+[11 user] added a TODO on event "Order paid" [shop-es.event.paid]: "Confirm the refund limit" (ask finance) — to confirm with someone else, not a question to you [todo todo.x]
+[12 user] TODO "Confirm the refund limit" [todo.x]: checked off by the person — answer: "3 a month"
+[12 user] answered the TODO "Confirm the refund limit": "Confirmed: 3 a month" — decide whether the design changes [thread todo.x]
+[13 codex-b] drew annotation ② on event "Order paid" [shop-es.event.paid]: "Refunds start here"
 ```
 
 ## CLI
@@ -1240,42 +1312,68 @@ looking: nothing here is stored on the board, and a copied image shows what is s
 
 ## Notes
 
-Comments pile up on a UI mock's screens — the file's `note:`s, the threads, finished proposals that stay open for
-ever — and a design annotation is easily read as product text. Three things keep them apart from the mock
-(`web/src/flow/notesView.ts`; all of it a way of looking, nothing stored on the board):
+Besides the drawing, a board holds three things that are easily mixed up: **comments** (a conversation), **annotations**
+(what an item is for, kept in the design file) and **TODOs** (what still has to be confirmed with someone else, kept on
+the board). Each looks different and has its own switch (`web/src/flow/notesView.ts`, `annotationsView.ts`,
+`todoView.ts`; all of it a way of looking, nothing stored on the board):
 
-- **Notes: All / Badges / None** (in the same settings as Lines and Traces, shown when the board has a comment;
-  **Shift+N** cycles; remembered per viewer in this browser, `awd.canvas.notes`; the button says
-  `Lines: all · Notes: badges`). *All* draws every comment as you left it — open or folded. *Badges* folds every
-  comment — a note, a thread, a loose comment about the board — into a small marker at what it is about; click
-  one to read it, fold it to put it back (what you open this way is forgotten when the mode changes). *None*
-  draws no comment at all; the panel's **Chats** tab still lists them. A comment being written, or one you opened
-  in this session, is drawn in every mode until you fold it.
-- **A finished proposal folds by itself.** A proposal thread (a root from `canvas_propose_edit` — id `prop_…` — or
-  one carrying `data.discuss.edit`) that the holder answered with *Applied to <file>* (`--applied`; the reply's id
-  starts `applied.`) — or that the person declined with the Decline button — is drawn as a quiet graphite **✓**
-  at its anchor, in *All* too, however it was left. Click the ✓ to read the thread (the applied answer is its last
-  message); the fold button puts the ✓ back. Nothing is removed and nothing is written: the thread is still
-  there for the agent and the panel.
-- **A UI mock's notes are callouts** (docs/diagrams.md §6c). A file's `note` on an element, a list / tabs / navbar /
-  sidebar / breadcrumb / select entry or a table row is drawn as a design review marks a screen: a small **numbered
-  pin** on the item (16 px, graphite on paper — on an element's top-right corner, at the end of an entry or a row; a
-  closed select shows its options' pins after the chevron) and a quiet **card with the same number** in the gutter
-  beside the screen (no author line, no reply box), numbered 1…n per screen in reading order (`data.callout` on the
-  note comment; `data.ui.callout` / `items[i].callout` / `rowCallouts` on the element). Point at a pin and its card
-  lights up; point at a card and its pin is outlined; click a pin to select its card. *Badges* keeps the pins (the
-  note is the tooltip; a click shows that card), *None* hides pins and cards — also in Copy as image. The screen's own
-  note stays an unnumbered thread at the top of the gutter; people's comments and agents' threads go below the
-  callouts. A board drawn before 0.23 shows no pins until the mock is redrawn. `data.ui.sample: true` on a screen or
-  element draws a hatched stripe along the **outside** of its top edge with a tiny *sample* — nothing inside the box
-  changes, so nobody reads it as a badge of the product. While the mock plays, pins and stripes are labels only.
+- **The switches** sit in the settings in the bottom-right corner, with Lines and Traces. Each is shown only when the
+  board has something of its sort and is remembered per viewer in this browser; the button says
+  `Lines: all · Comments: badges · Annotations: pins · TODOs: open`. Copy as image draws what they draw.
+  - **Comments: All / Badges / None** (**Shift+N**, `awd.canvas.notes`) — threads only. *All* draws every comment as
+    you left it, open or folded. *Badges* folds every thread into a small marker at what it is about; click one to read
+    it, fold it to put it back. *None* draws no thread; the panel's **Chats** tab still lists them. A comment being
+    written, or one you opened in this session, is drawn in every mode until you fold it.
+  - **Annotations: All / Pins / None** (**Shift+A**, `awd.canvas.annotations`). *All* draws the numbered pins and their
+    cards, your drafts dashed. *Pins* keeps the pins only — point at one to read it, click it to show its card, click
+    again to put it away. *None* draws neither; the item's panel still lists them. A UI mock's callouts follow it too.
+  - **TODOs: Open / All / None** (**Shift+T**, `awd.canvas.todos`). *Open* draws the open TODOs, *All* the done ones too
+    (muted, with their answer), *None* no TODO; the panel still lists them.
+  What you open this way is forgotten when a mode changes.
+- **A finished proposal folds by itself.** A proposal thread (a root from `canvas_propose_edit` — id `prop_…` — one
+  carrying `data.discuss.edit`, or your draft annotation) that the holder answered with *Applied to <file>*
+  (`--applied`; the reply's id starts `applied.`) — or that you declined with the Decline button — is drawn as a quiet
+  graphite **✓** at its anchor, however it was left (a draft is not drawn at all: the card from the file replaces it).
+  Click the ✓ to read the thread; the fold button puts it back. Nothing is removed and nothing is written.
+- **Annotations** live in the design file — a top-level `annotations:` list of `{ on, text }`, in every kind
+  (`src/annotations.ts`) — and are drawn as a design review marks a page: a small **numbered pin** on the item's
+  top-right corner (several side by side) and a quiet **card with the same number** beside the drawing, numbered per
+  diagram frame — no author line, no reply box, no line to the item. Point at a pin and its card lights up; point at a
+  card and its pin is outlined; click a pin to select its card (brought into view when it is off screen; ⌥← goes back).
+  An annotation card nobody replied to is not a chat.
+- **Writing one:** right-click an item → **Annotate…** (or *Annotate…* in the item's panel). On an item drawn from a
+  file it becomes a **draft** for the agent holding the files: a dashed card with a ✎ pin and where it stands —
+  *Draft · waiting for codex-b*, *codex-b replied · 1 reply* — carrying the diff that adds the entry to the file
+  (`data.discuss.edit`; without it when the board has no whole copy of the file, and the holder writes it in by hand).
+  Click the card to open its thread: the holder answers there, applies it once you agree and redraws, and the card drawn
+  from the file takes the draft's place. On an item with no file behind it — a freeform board, a loose sticky — the
+  annotation is written on the board itself (`data.annotation.board`): a numbered card, the next number in its frame or
+  on the board, edited in place.
+- **A UI mock's notes are annotations too** (docs/diagrams.md §6c). A file's `note` on an element, a list / tabs /
+  navbar / sidebar / breadcrumb / select entry or a table row gets its pin where it belongs — the element's top-right
+  corner (several: `data.ui.callouts`), the end of the entry or row, after a closed select's chevron; a screen's own at
+  the end of its name line — and its card in the gutter beside the screen (`data.callout` on the card;
+  `data.ui.callout` / `items[i].callout` / `rowCallouts` on the element). People's comments and agents' threads go
+  below the cards. A board drawn before 0.23 shows no pins until the mock is redrawn. `data.ui.sample: true` on a
+  screen or element draws a hatched stripe along the **outside** of its top edge with a tiny *sample* — nothing inside
+  the box changes, so nobody reads it as a badge of the product. While the mock plays, pins and stripes are labels only.
+- **TODOs** are on the board only. Right-click an item → **Add TODO…** (what to confirm, and whom to ask), or
+  **+ TODO about the board** in the panel. Writing one wakes no agent; agents write them too (*by codex-b*). A TODO is
+  a small amber **square** on its item and a card beside it — box, text, *ask: PM*, who opened it, replies. Tick the box
+  and say what you found out: the TODO is checked off and the answer is posted in its thread (*Confirmed: …*), which
+  goes to the board's *Answered by* agent; ticked without an answer, nobody is told. Tick a done one to reopen it. The
+  **TODOs** section at the top of the panel counts the open ones; opened, it lists them (open first, the done ones
+  folded underneath) — click one to go to it, tick it off from there. An item's panel lists its own annotations and
+  TODOs.
 
 ## Going to something
 
 - **Go to…** (`⌘K` / `Ctrl+K`, or the header button): type a few letters of a frame's title or key, or an item's
   text; diagram frames are listed first. Enter fits the view to it and selects it.
 - **Links:** `/b/<board>?frame=<diagram key>` opens the board fitted to that diagram frame (the frame panel's
-  *Copy link*); `?focus=<item id>` opens it centred on an item (an item's *Copy link*).
+  *Copy link*); `?focus=<item id>` opens it centred on an item (an item's *Copy link*). **Copy link** is also in the
+  right-click menu of every item, comments and annotation cards included: a diagram frame by its key, anything else by
+  its id; a `?focus=` link to a comment, a card or a TODO opens it even when the view switches would hide it.
 - **Agent → you:** `canvas_focus` / `POST /api/boards/:id/focus` shows "Agent wants to show you …" with **Go** and
   **Dismiss**; *Follow agent* (remembered per viewer) makes the page jump without asking. Only the latest request
   is shown.

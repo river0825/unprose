@@ -2,6 +2,7 @@
 // curve of small stickies (row height maps -2..2).
 import { z } from 'zod'
 import type { Item } from '../model.js'
+import { annotationsSchema, idAllocator, slugify } from '../diagrams/ids.js'
 import { GAP, LANE_HEADER, PAD, STICKY_H, STICKY_W, arrow, make, offsetAll, stableId, type RenderOpts } from './util.js'
 
 export const userJourneySchema = z.object({
@@ -18,6 +19,8 @@ export const userJourneySchema = z.object({
       }),
     )
     .min(1),
+  /** What a stage or a sticky is for (docs/diagrams.md "Annotations"): numbered cards below the journey. */
+  annotations: annotationsSchema.optional(),
 })
 export type UserJourneyContent = z.input<typeof userJourneySchema>
 
@@ -33,6 +36,9 @@ export function renderUserJourney(raw: UserJourneyContent, opts: RenderOpts = {}
   const items: Item[] = []
   const labelW = 130
   const x0 = PAD + labelW + GAP
+  // what an annotation names (`data.element`): a stage by the slug of its text, a sticky as `<stage>/<slug of its text>`
+  const alloc = idAllocator()
+  const stageEl = c.stages.map((s) => alloc(undefined, s.text, 'stage'))
 
   items.push(make({ id: id('persona', c.persona), type: 'text', x: PAD, y: PAD, w: labelW + c.stages.length * COL, h: 40, text: `Persona: ${c.persona}`, role: 'persona', color: 'white' }, now))
 
@@ -48,7 +54,7 @@ export function renderUserJourney(raw: UserJourneyContent, opts: RenderOpts = {}
 
   // Stage header row
   c.stages.forEach((s, i) => {
-    items.push(make({ id: id('stage', s.text), type: 'sticky', x: x0 + i * COL, y, w: STICKY_W, h: 70, text: s.text, color: 'yellow', role: 'stage', order: i }, now))
+    items.push(make({ id: id('stage', s.text), type: 'sticky', x: x0 + i * COL, y, w: STICKY_W, h: 70, text: s.text, color: 'yellow', role: 'stage', order: i, data: { element: stageEl[i] } }, now))
   })
   y += 70 + GAP
 
@@ -61,7 +67,7 @@ export function renderUserJourney(raw: UserJourneyContent, opts: RenderOpts = {}
       s[f.key].forEach((t, k) => {
         items.push(
           make(
-            { id: id(f.key.replace(/s$/, ''), `${s.text}/${t}`), type: 'sticky', x: x0 + i * COL, y: y + k * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ''), data: { stage: s.text } },
+            { id: id(f.key.replace(/s$/, ''), `${s.text}/${t}`), type: 'sticky', x: x0 + i * COL, y: y + k * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ''), data: { stage: s.text, element: alloc(`${stageEl[i]}/${slugify(t) || f.key.replace(/s$/, '')}`, t) } },
             now,
           ),
         )
@@ -81,7 +87,7 @@ export function renderUserJourney(raw: UserJourneyContent, opts: RenderOpts = {}
     const level = s.emotion // -2..2
     const ey = y + (2 - level) * 40
     const e = make(
-      { id: id('emotion', s.text), type: 'sticky', x: x0 + i * COL + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? 'green' : level < 0 ? 'red' : 'yellow', role: 'emotion', parent: laneId, data: { stage: s.text, emotion: level } },
+      { id: id('emotion', s.text), type: 'sticky', x: x0 + i * COL + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? 'green' : level < 0 ? 'red' : 'yellow', role: 'emotion', parent: laneId, data: { stage: s.text, emotion: level, element: alloc(`${stageEl[i]}/emotion`, 'emotion') } },
       now,
     )
     items.push(e)

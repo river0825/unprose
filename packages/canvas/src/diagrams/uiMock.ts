@@ -5,7 +5,7 @@
 // Pure and builtin-free: the CLI, the server and the web share it.
 import { z } from 'zod'
 import { wrap } from '../textMetrics.js'
-import { slugify, traceSchema, type Trace } from './ids.js'
+import { annotationsSchema, slugify, traceSchema, type Trace } from './ids.js'
 import { unknownFields } from './unknownFields.js'
 
 /** Layout containers: never drawn themselves, they place their children. */
@@ -217,6 +217,11 @@ export const uiMockSchema = z.object({
     .min(1),
   /** Arrows between screens: from a screen or '<screen>/<element>' to a screen. */
   flows: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).default([]),
+  /**
+   * What a screen or an element is for, kept apart from the tree (docs/diagrams.md "Annotations"): `on: '<screen>/<element>'`
+   * reads like that element's own `note` — numbered with its screen's callouts.
+   */
+  annotations: annotationsSchema.optional(),
 })
 export type UiMockContent = z.input<typeof uiMockSchema>
 

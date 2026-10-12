@@ -15,6 +15,9 @@ export interface BoardSettings {
   holders: Array<{ key: string; source?: string; holder: FileHolder }>
   /** the open handover of the files (docs/canvas.md "Handing over the files") */
   handover?: Handover | null
+  /** TODOs open and done, and the person's draft annotations waiting for the holder (docs/canvas.md "TODOs", "Annotations") */
+  todos?: { open: number; done: number }
+  drafts?: number
   /** a responder the person may confirm: one an agent asked for ('asked', by suggestionBy), or the sole file holder ('holder') */
   suggestion?: string
   suggestionBy?: string | null

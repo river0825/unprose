@@ -2,6 +2,8 @@
 // is, its lint findings, and the pure parts of drawing it (the frame, growing it, story proposals). Shared by
 // the CLI (`awd design …`, which reads files) and the canvas server's remote design tools (which get the
 // file's text from a remote agent — docs/canvas.md "Remote agents"). No YAML here: callers parse.
+import type { DiagramKind } from '../model.js'
+import { annotationsIn, diagramKinds, render, unresolvedAnnotations } from '../templates/index.js'
 import { contentSchemaFor, unknownContentFields } from './check.js'
 import { checkDomainStory } from './domainStory.js'
 import { attachUiFindings, isUiScreen, lintUiMock, uiGutterOf } from './uiMock.js'
@@ -113,10 +115,27 @@ export function lintDesignContent(d: DesignFile): DesignFinding[] {
   const parsed = schema.safeParse(d.content)
   if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
   if (d.kind === 'domain-story') return [...unknown, ...checkDomainStory(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
+  const notes = annotationFindings(d.kind, parsed.data, d.key)
   // the board shows the same findings on the frame (lintUiMock includes the unknown fields)
-  if (d.kind === 'ui-mock') return lintUiMock(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element }))
-  if (d.kind !== 'event-storming') return unknown
-  return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
+  if (d.kind === 'ui-mock') return [...lintUiMock(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes]
+  if (d.kind !== 'event-storming') return [...unknown, ...notes]
+  return [...unknown, ...checkEventStorming(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page })), ...notes]
+}
+
+/**
+ * An annotation whose `on` names nothing in the drawing is an error (docs/diagrams.md "Annotations"): the draw leaves
+ * its card out. `content` is drawn with the diagram key as the scope, so `on` written as an id inside the diagram resolves
+ * as it does on the board. A workflow's content is its graph (`awd graph --json`, with the file's `annotations`).
+ */
+export function annotationFindings(kind: string, content: unknown, key: string): DesignFinding[] {
+  if (!annotationsIn(content).length || !(diagramKinds as string[]).includes(kind)) return []
+  let items: ReturnType<typeof render>
+  try {
+    items = render(kind as DiagramKind, content, { scope: key, now: '1970-01-01T00:00:00.000Z' })
+  } catch {
+    return [] // it does not draw: the schema findings say why
+  }
+  return unresolvedAnnotations(kind as DiagramKind, content, items, key)
 }
 
 /** One finding as a line: `✖ element: message  (page)`. */

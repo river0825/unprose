@@ -6,42 +6,30 @@
 // element, list entry or table row (the web draws it from `data.ui.callout`, `items[i].callout`, `rowCallouts`) and a
 // card with the same number in the gutter, a column right of the screen (UI_GUTTER), never on the product. The
 // screen's own note goes first, unnumbered; the callouts follow in reading order, 1…n per screen.
+// The file's top-level `annotations:` (docs/diagrams.md "Annotations") read like notes: `on: '<screen>/<element>'` is
+// numbered with that element's callouts (an element with several gets `data.ui.callouts`, every number, beside
+// `callout`, the first); `on: '<screen>'` is a callout on the screen itself.
 import type { Item } from '../model.js'
 import { attachUiFindings, layoutScreen, normalizeUiMock, walkUi, isDrawnContainer, uiCalloutSize, uiGutterOf, UI_GUTTER, type UiBox, type UiEl, type UiItem, type UiMockContent } from '../diagrams/uiMock.js'
+import { annotationIds, annotationsIn, readingOrder, resolveOn } from './annotations.js'
 import { PAD, arrow, make, offsetAll, type RenderOpts } from './util.js'
 
 export { uiMockSchema, type UiMockContent } from '../diagrams/uiMock.js'
+export { readingOrder } from './annotations.js'
 
 /** Space above a screen for its name (drawn above the device, as Figma does). */
 export const SCREEN_LABEL = 28
 /** Between a screen's gutter and the next screen. */
 const SCREEN_GAP = 120
-/** Anchors whose tops are this close read as one line: left to right, then the file's order. */
-const LINE = 16
 
-/** What a callout is about: the element's own note, or one entry / row of it (the item drawn for the element). */
-type CalloutOn = { item: Item; kind: 'element' } | { item: Item; kind: 'item' | 'row'; index: number }
+/** What a callout is about: the screen or an element (a file annotation, the element's own note), or one entry / row of it (the item drawn for the element). */
+type CalloutOn = { item: Item; kind: 'element' | 'screen' } | { item: Item; kind: 'item' | 'row'; index: number }
 
 /**
  * A note to draw in the gutter: its id and text, what it is about (`target`, and `on` for a callout), where that is
- * (its top-left in board coordinates) and its place in the file (`seq`) for ties.
+ * (its top-left in board coordinates), its place in the file (`seq`) for ties, and `ref` as the file names it.
  */
-interface GutterNote { id: string; text: string; target: string; anchorX: number; anchorY: number; seq: number; on?: CalloutOn; data?: Record<string, unknown> }
-
-/**
- * Callouts in reading order: by the top of what they are about — tops within LINE px are one line, read left to
- * right — and, for the same spot (a list and its first entry, the tabs of one bar), in the order of the file.
- */
-export function readingOrder<T extends { anchorX: number; anchorY: number; seq: number }>(notes: readonly T[]): T[] {
-  const byTop = [...notes].sort((a, b) => a.anchorY - b.anchorY || a.seq - b.seq)
-  const lines: T[][] = []
-  for (const n of byTop) {
-    const line = lines[lines.length - 1]
-    if (line && n.anchorY - line[0].anchorY <= LINE) line.push(n)
-    else lines.push([n])
-  }
-  return lines.flatMap((l) => l.sort((a, b) => a.anchorX - b.anchorX || a.seq - b.seq))
-}
+interface GutterNote { id: string; text: string; target: string; anchorX: number; anchorY: number; seq: number; ref: string; on?: CalloutOn; data?: Record<string, unknown> }
 
 /** Where entry `i` of an element is drawn, below the element's top (the list / sidebar geometry of measure()). */
 function entryTop(e: UiEl, i: number): number {
@@ -72,6 +60,7 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
   const items: Item[] = []
   const byRef = new Map<string, string>()
   let sx = PAD
+  const screens: Array<{ screen: Item; drawn: Item[]; notes: GutterNote[]; screenNote?: { id: string; text: string; target: string } }> = []
 
   m.screens.forEach((s, si) => {
     const lay = layoutScreen(s)
@@ -86,14 +75,26 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
       },
       now,
     )
-    items.push(screen)
     const notes: GutterNote[] = []
-    lay.boxes.forEach((b, bi) => items.push(...elementItems(b, bi, sx, sy, sid, look, notes)))
-    const callouts = numberCallouts(notes)
-    const screenNote = s.note ? { id: noteId(s.id), text: s.note, target: sid } : undefined
-    items.push(...gutterItems(uiGutterOf(screen), screenNote, callouts))
+    const drawn = lay.boxes.flatMap((b, bi) => elementItems(b, bi, sx, sy, sid, look, notes))
+    items.push(screen, ...drawn)
+    screens.push({ screen, drawn, notes, ...(s.note ? { screenNote: { id: noteId(s.id), text: s.note, target: sid } } : {}) })
     sx += lay.w + UI_GUTTER.gap + UI_GUTTER.w + SCREEN_GAP
   })
+
+  // the file's annotations join the callouts of the screen they are about, after its own notes for the same spot
+  const list = annotationsIn(raw)
+  const annotationId = annotationIds(list, scope)
+  const everything = screens.flatMap((x) => [x.screen, ...x.drawn])
+  list.forEach((a, i) => {
+    const t = resolveOn(everything, a.on, scope)
+    const home = t && screens.find((x) => x.screen === t || x.drawn.includes(t))
+    if (!t || !home) return // awd design lint names it
+    // one about the whole screen reads before what is at its top; one about an element after the element's own notes
+    const screen = t === home.screen
+    home.notes.push({ id: annotationId[i], text: a.text, ref: a.on, target: t.id, anchorX: t.x, anchorY: t.y, seq: (screen ? -10_000 : 10_000) + i, on: { item: t, kind: screen ? 'screen' : 'element' } })
+  })
+  for (const x of screens) items.push(...gutterItems(uiGutterOf(x.screen), x.screenNote, numberCallouts(x.notes)))
 
   function elementItems(b: UiBox, order: number, sx: number, sy: number, sid: string, look: Record<string, unknown>, notes: GutterNote[]): Item[] {
     const e = b.el
@@ -108,7 +109,7 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
       },
       now,
     )
-    const note = (n: Omit<GutterNote, 'target' | 'anchorX' | 'seq'>) => notes.push({ ...n, target: id, anchorX: left, seq: notes.length })
+    const note = (n: Omit<GutterNote, 'target' | 'anchorX' | 'seq' | 'ref'>) => notes.push({ ...n, ref: e.ref, target: id, anchorX: left, seq: notes.length })
     if (e.note) note({ id: noteId(e.ref), text: e.note, anchorY: top, on: { item, kind: 'element' } })
     // an entry's or a row's note is anchored where that entry is drawn (the list / table geometry of measure())
     e.props.items?.forEach((it, i) => {
@@ -123,16 +124,19 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
 
   /**
    * Number a screen's callouts 1…n in reading order and tell each item drawn for an element its numbers: `callout`
-   * (and the note, for the pin's tooltip) for its own note, `items[i].callout`, `rowCallouts[<row>]`.
+   * (and the note, for the pin's tooltip) for its own note — the first one, with `callouts` listing every number when
+   * the file says more than one thing about it — `items[i].callout`, `rowCallouts[<row>]`.
    */
   function numberCallouts(notes: GutterNote[]): Array<GutterNote & { callout: number }> {
     return readingOrder(notes).map((n, i) => {
       const callout = i + 1
       const on = n.on!
       const ui = { ...(on.item.data!.ui as Record<string, unknown>) }
-      if (on.kind === 'element') Object.assign(ui, { callout, note: n.text })
-      else if (on.kind === 'item') ui.items = (ui.items as UiItem[]).map((it, j) => (j === on.index ? { ...it, callout } : it))
-      else ui.rowCallouts = { ...(ui.rowCallouts as Record<string, number> | undefined), [String(on.index)]: callout }
+      if (on.kind === 'element' || on.kind === 'screen') {
+        if (typeof ui.callout === 'number') ui.callouts = [...(Array.isArray(ui.callouts) ? (ui.callouts as number[]) : [ui.callout]), callout]
+        else Object.assign(ui, { callout, note: n.text })
+      } else if (on.kind === 'item') ui.items = (ui.items as UiItem[]).map((it, j) => (j === on.index ? { ...it, callout } : it))
+      else if (on.kind === 'row') ui.rowCallouts = { ...(ui.rowCallouts as Record<string, number> | undefined), [String(on.index)]: callout }
       on.item.data = { ...on.item.data, ui }
       return { ...n, callout }
     })
@@ -153,7 +157,7 @@ export function renderUiMock(raw: UiMockContent, opts: RenderOpts = {}): Item[] 
     for (const n of callouts) {
       const size = uiCalloutSize(n.text)
       const y = Math.max(n.anchorY, gutter.y, bottom + gap)
-      out.push(make({ id: n.id, type: 'comment', x: gutter.x, y, w: size.w, h: size.h, text: n.text, role: 'note', color: 'yellow', target: n.target, data: { ...n.data, callout: n.callout } }, now))
+      out.push(make({ id: n.id, type: 'comment', x: gutter.x, y, w: size.w, h: size.h, text: n.text, role: 'note', color: 'yellow', target: n.target, data: { ...n.data, callout: n.callout, annotation: { on: n.ref, ...(opts.source ? { file: opts.source } : {}) } } }, now))
       bottom = y + size.h
       gap = UI_GUTTER.calloutGap
     }

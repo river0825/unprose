@@ -13,6 +13,7 @@ import { diagramKinds } from './templates/index.js'
 import { LAYOUT_LOCK, ownLock, WAIT_DEFAULT_SEC, WAIT_MAX_SEC, type Author, type Board, type DiagramKind, type Item, type Op } from './model.js'
 import { agentLabel, agentOf, displayName, handleOf, handoverFroms, handoverLines, handoverWaiting, resolveAgent, sameAgent, threadRoot, type BoardContext } from './routing.js'
 import { adoptToken, saveToken, savedToken } from './credentials.js'
+import { aboutText, isTodo, newTodo, TodoError, todoDoneOps, todoLines, todoReopenOp } from './todos.js'
 import { userAgent } from './version.js'
 
 const kindEnum = z.enum(diagramKinds as [DiagramKind, ...DiagramKind[]])
@@ -32,7 +33,12 @@ Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on 
 
 const LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at — and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long — timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react — answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`
 
-const READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame → lane / column / screen / group → items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed …], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`
+/** Annotations and TODOs, for agents (docs/canvas.md "Annotations", "TODOs"): what each is and what to do about it. */
+export const ANNOTATIONS_HELP = `Annotations say what an item is for; they live in the design file (a top-level \`annotations: [{ on, text }]\` in every kind) and are drawn as numbered cards beside the drawing with a pin on the item — not threads. The person writes one on the canvas as a draft: a proposal to the agent holding the files. A draft annotation is the person's own words: judge it first — true to the design? does it contradict the file or another annotation? does it say what the item is for? — and reply in its thread with your judgement in a sentence or two. If it is sound, apply it at once (the person wrote it, so that counts as consent): the edit adds one \`annotations:\` entry — check \`base\`, apply, lint, redraw with --applied <thread>. If you have doubts, say why and wait for the person. An agent without the files proposes an annotation with canvas_propose_edit like any edit.`
+
+const TODO_HELP = `A TODO marks something still to be confirmed with someone outside the board (the PM, legal, the backend team) — a note, not a question to you: never answer one yourself. It lives on the board only and wakes no agent when written. Whoever finds out checks it off (the person, or an agent); checked off with an answer, the answer is posted as a reply in its thread and goes to the board's "Answered by" agent, which decides whether the design changes and proposes that as usual; checked off without an answer it notifies nobody.`
+
+const READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame → lane / column / screen / group → items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed …], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
@@ -100,6 +106,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board — workflow yaml, agents, scripts, design files — with their base sha-1), canvas_propose_edit (a unified diff or the whole new text → a proposal the person discusses in a thread on the block; ${o.remote ? 'this canvas is not on your machine, so this is how you change a file' : 'for files you cannot write yourself'}). Whoever has the files applies it after the person agrees`,
     'Several agents on one board: canvas_context (read / write the board\'s context note — what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board\'s responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files — and only that agent redraws them; canvas_wait wakes you only for what is yours',
+    'Annotations and TODOs: an annotation (what an item is for) lives in the design file, drawn as a numbered card beside the drawing; the person\'s draft annotation is a proposal to the agent holding the files — judge it in its thread and apply it when it is sound. canvas_todo lists, opens, checks off and reopens TODOs: things to confirm with someone outside the board, not questions to you',
     'Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself — use it whenever something gets in your way)',
     ...(o.designTools && o.remote ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals) — this canvas is not on your machine, so pass each file\'s text as `content` and its name as `name`'] : o.designTools ? ['Diagram files: design_lint (schema + grammar), design_draw (file → frame, keeps the person\'s layout), design_propose_stories (EventStorming / domain story → story proposals), design_egon (Egon.io import / export)'] : []),
   ]
@@ -130,6 +137,8 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
+    `Annotations: ${ANNOTATIONS_HELP}`,
+    `TODOs: ${TODO_HELP}`,
     'Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files → canvas_propose_edit); the person discusses it in the thread; the agent that has the files — studio\'s session on the canvas machine, or the person\'s own Claude Code — applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }). A diagram whose files another agent holds cannot be redrawn by you (design_draw refuses it): propose instead, or ask the person to hand the files over to you — they start it (board panel → Hand over files), the holder marks them ready (canvas_handover({ ready: true })), you accept (canvas_handover({ accept: true })), keep the files in your repo and redraw once from your copy.',
     'Remote agents: another machine or a cloud agent connects to <canvas>/mcp — with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent\'s name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python\'s default one with a 403.',
     'Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person — drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) — the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent\'s reply is never the person\'s consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits. Only the holder redraws a diagram; the files change hands only when the person hands them over (canvas_handover: the holder marks them ready, the new holder accepts and becomes the holder — and "Answered by" when the person asked for it).',
@@ -172,8 +181,8 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.23.0' },
-    { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` },
+    { name: 'unprose', version: '0.24.0' },
+    { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound — they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
   /** The context note each board had when this agent last saw it: shown in full the first time (and after a change). */
@@ -252,7 +261,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         id: z.string(),
         format: z.enum(['outline', 'json', 'summary']).default('outline').describe("'outline' (default): text grouped by diagram frame → lane / column → items, with threads and wires; 'summary': counts per frame (start here on a big board); 'json': the items with ids and geometry, one per line"),
         frame: z.string().optional().describe('only this diagram (its key, e.g. "studio-es") or this frame / lane / column item id'),
-        types: z.array(z.string()).optional().describe('only these item types or roles, e.g. ["comment"], ["event","hotspot"], ["card"], ["arrow"]'),
+        types: z.array(z.string()).optional().describe('only these item types or roles, e.g. ["comment"], ["event","hotspot"], ["card"], ["arrow"], ["annotation"] (the numbered cards), ["todo"]'),
         ids: z.array(z.string()).optional().describe('only these items (a container brings what it holds; threads come along)'),
         text: z.string().optional().describe('only items whose text, label or id contains this (case-insensitive)'),
         fields: z.array(z.string()).optional().describe('json: the item fields to return, e.g. ["id","role","text","x","y","w","h","parent"] or "data.ui"; default all, with bulky data summarised'),
@@ -352,7 +361,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     'canvas_wait',
     {
       title: 'Wait for the user to change the board',
-      description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) — the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' — also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally — @mentioned (or answered in a thread where you were), or a proposal to files you hold — not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next — just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.`,
+      description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) — or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) — the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' — also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window — they ride along collapsed into one "moved N items: …" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally — @mentioned (or answered in a thread where you were), or a proposal to files you hold — not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next — just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing. The person's draft annotation on files you hold wakes you like any proposal; a TODO wakes nobody — its answer, a reply in its thread, comes to whoever answers the board.`,
       inputSchema: {
         id: z.string(),
         since: z.number().int().min(0),
@@ -516,6 +525,8 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
           `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${displayName(s.suggestion)}${s.suggestionWhy === 'asked' ? `${s.suggestionBy ? ` by ${displayName(s.suggestionBy)}` : ''} — waiting for the person to confirm it in the board header` : ", who holds every diagram's files — the person can confirm it"})` : ''}`,
           ...(holders.length ? ['Files behind the diagrams (only the holder redraws one; the others propose):', ...holders] : []),
           ...(s.handover ? handoverLines(s.handover) : []),
+          ...(s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done — things to confirm with someone else, not questions to you (canvas_todo lists them)`] : []),
+          ...(s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} — the person's own words: the holder judges each in its thread, then applies it or says why not`] : []),
           `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
           `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
         ].join('\n'),
@@ -627,6 +638,61 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
           ...(holders.length ? ['Files behind the diagrams (only the holder redraws one; the others propose):', ...holders] : ['No diagram on this board has files held by an agent.']),
         ].join('\n'),
       )
+    },
+  )
+
+  server.registerTool(
+    'canvas_todo',
+    {
+      title: 'TODOs: what still has to be confirmed with someone else',
+      description: `${TODO_HELP} Open one yourself when something needs a person outside the board: { board, text, on?: <item id>, ask?: <who to confirm it with> }. Check one off: { board, done: <todo id>, answer? } — the answer only when you really got one. Reopen: { board, reopen: <todo id> }. Only { board }: the open TODOs and the last ones checked off.`,
+      inputSchema: {
+        board: z.string().describe('board id'),
+        text: z.string().min(1).max(2000).optional().describe('open a TODO: what still has to be confirmed, in a sentence'),
+        on: z.string().optional().describe('open: the item it is about (an item id); the TODO sits beside it'),
+        ask: z.string().max(200).optional().describe('open: who to confirm it with, e.g. "PM", "legal", "the backend team"'),
+        done: z.string().optional().describe('check off this TODO (its id)'),
+        answer: z.string().max(4000).optional().describe('done: what was confirmed — posted in its thread, it goes to the board\'s "Answered by" agent'),
+        reopen: z.string().optional().describe('reopen this TODO (its id)'),
+      },
+    },
+    async ({ board, text: t, on, ask, done, answer, reopen }) => {
+      const asked = [t !== undefined && 'text', done !== undefined && 'done', reopen !== undefined && 'reopen'].filter(Boolean)
+      if (asked.length > 1) return { ...text(`give one of text (open a TODO), done or reopen (not ${asked.join(' and ')})`), isError: true }
+      const b = await client.getBoard(board)
+      const rand = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+      try {
+        if (t !== undefined) {
+          const target = on ? b.items[on] : undefined
+          if (on && (!target || target.type === 'comment' || target.type === 'arrow')) return { ...text(`on: ${!target ? `no item "${on}" on this board` : `"${on}" is a ${target.type} — name the item the TODO is about`}`), isError: true }
+          const id = `todo.${rand()}`
+          // beside its item (the canvas places it), or loose above what is drawn, one over the other
+          const all = Object.values(b.items)
+          const loose = all.filter((i) => isTodo(i) && !i.target).length
+          const at = target ? {} : { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - 110 * (loose + 1), w: 260, h: 90 }
+          const { ops } = await client.template(board, 'freeform', { items: [{ ...newTodo(id, t, { on, ask }), ...at }] })
+          const r = await client.apply(board, ops, 'agent', `TODO: ${t.trim().slice(0, 80)}`)
+          return text(`Opened TODO ${id}${target ? ` on ${aboutText(target)}` : ''}: "${t.trim()}"${ask?.trim() ? ` — ask ${ask.trim()}` : ''} (board seq ${r.seq}). It wakes nobody; when someone checks it off with an answer, the answer comes to the board's "Answered by" agent as a reply in its thread.`)
+        }
+        if (done !== undefined) {
+          const { update, reply } = todoDoneOps(b, done, answer)
+          const ops: Op[] = [update, ...(reply ? (await client.template(board, 'freeform', { items: [{ ...reply, id: `${done}.answer.${rand()}` }] })).ops : [])]
+          const r = await client.apply(board, ops, 'agent', `checked off TODO ${done}`)
+          const posted = r.change?.ops.find((o) => o.kind === 'add' && o.item.type === 'comment')
+          const to = posted && posted.kind === 'add' && Array.isArray(posted.item.data?.to) ? (posted.item.data!.to as string[]) : undefined
+          const who = to === undefined ? 'every agent watching (nobody answers this board yet)' : to.length ? to.map(displayName).join(', ') : 'nobody else (you answer this board)'
+          return text(`Checked off TODO ${done} "${b.items[done].text ?? ''}"${reply ? ` with the answer "${answer!.trim()}" — posted in its thread; it goes to ${who}, which decides whether the design changes` : ' without an answer: nobody is notified'} (board seq ${r.seq}).`)
+        }
+        if (reopen !== undefined) {
+          const r = await client.apply(board, [todoReopenOp(b, reopen)], 'agent', `reopened TODO ${reopen}`)
+          return text(`Reopened TODO ${reopen} "${b.items[reopen].text ?? ''}" (board seq ${r.seq}).`)
+        }
+      } catch (e) {
+        if (e instanceof TodoError) return { ...text(e.message), isError: true }
+        throw e
+      }
+      const lines = todoLines(b, { done: 5 })
+      return text(lines.length ? [...lines, `(board seq ${b.seq})`].join('\n') : `No TODOs on board ${board} (seq ${b.seq}). Open one with canvas_todo({ board, text, on?, ask? }) when something needs a person outside the board.`)
     },
   )
 

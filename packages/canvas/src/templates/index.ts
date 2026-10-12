@@ -9,8 +9,10 @@ import { kanbanSchema, renderKanban } from './kanban.js'
 import { domainStorySchema, renderDomainStory } from './domain-story.js'
 import { uiMockSchema, renderUiMock } from './ui-mock.js'
 import { make, offsetAll, stableId, type RenderOpts } from './util.js'
+import { withAnnotationBand } from './annotations.js'
 
 export * from './util.js'
+export { annotationsIn, annotationIds, resolveOn, unresolvedAnnotations, readingOrder, timelineOrder, withAnnotationBand, type AnnotationIn, type AnnotationNote } from './annotations.js'
 export { eventStormingSchema, renderEventStorming } from './event-storming.js'
 export { userStoryMapSchema, renderUserStoryMap } from './user-story-map.js'
 export { userJourneySchema, renderUserJourney } from './user-journey.js'
@@ -93,8 +95,33 @@ export const contentSchemas = {
 
 export type ContentOf<K extends DiagramKind> = z.input<(typeof contentSchemas)[K]>
 
-/** Render any diagram kind from its structured content. Pure. */
+/** The id prefix each kind draws with when no scope (diagram key) is given. */
+export const DEFAULT_SCOPE: Record<DiagramKind, string> = {
+  'event-storming': 'es',
+  'user-story-map': 'usm',
+  'user-journey': 'uj',
+  wireframe: 'wf',
+  workflow: 'wf',
+  kanban: 'kb',
+  'domain-story': 'ds',
+  'ui-mock': 'ui',
+  freeform: 'ff',
+}
+
+/** The kinds whose annotations go in a band below the drawing (a wireframe and a UI mock draw theirs beside each screen). */
+const BAND_KINDS = new Set<DiagramKind>(['event-storming', 'user-story-map', 'user-journey', 'kanban', 'workflow'])
+
+/**
+ * Render any diagram kind from its structured content, with its annotations (docs/diagrams.md "Annotations": numbered
+ * cards beside the drawing). Pure.
+ */
 export function render(kind: DiagramKind, content: unknown, opts: RenderOpts = {}): Item[] {
+  const now = opts.now ?? new Date().toISOString()
+  const items = renderKind(kind, content, { ...opts, now })
+  return BAND_KINDS.has(kind) ? withAnnotationBand(items, content, { scope: opts.scope ?? DEFAULT_SCOPE[kind], now, ...(opts.source ? { file: opts.source } : {}) }) : items
+}
+
+function renderKind(kind: DiagramKind, content: unknown, opts: RenderOpts): Item[] {
   switch (kind) {
     case 'event-storming':
       return renderEventStorming(content as never, opts)

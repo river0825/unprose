@@ -210,11 +210,11 @@ test('gutter: every note is a comment right of its screen, on no ui item and on 
   assert.deepEqual([screenNote.target, screenNote.y], ['k.screen.home', home.y])
   // ids and what each note belongs to
   const item = notes.find((n) => n.id === 'k.note.home.boards.item-1')!
-  assert.deepEqual([item.target, item.data], ['k.ui.home.boards', { item: 1, callout: 1 }])
+  assert.deepEqual([item.target, item.data], ['k.ui.home.boards', { item: 1, callout: 1, annotation: { on: 'home/boards' } }])
   const row = notes.find((n) => n.id === 'k.note.home.recent.row-1')!
-  assert.deepEqual([row.target, row.data], ['k.ui.home.recent', { row: 1, callout: 2 }])
+  assert.deepEqual([row.target, row.data], ['k.ui.home.recent', { row: 1, callout: 2, annotation: { on: 'home/recent' } }])
   const el = notes.find((n) => n.id === 'k.note.home.new')!
-  assert.deepEqual([el.target, el.data], ['k.ui.home.new', { callout: 3 }])
+  assert.deepEqual([el.target, el.data], ['k.ui.home.new', { callout: 3, annotation: { on: 'home/new' } }])
   assert.equal(screenNote.data, undefined, 'the screen’s own note is not numbered')
   assert.equal(notes.find((n) => n.id === 'k.note.phone.h')!.data?.callout, 1, 'every screen counts from 1')
   // the order follows the anchors: screen, list item, table row, button
@@ -326,9 +326,9 @@ test('callouts are numbered 1…n per screen in reading order: top first, a line
       [8, 'k.note.s.t.row-2'],
     ],
   )
-  // the comment keeps its id, role, target and data.item / data.row, and gains data.callout
+  // the comment keeps its id, role, target and data.item / data.row, and gains data.callout and data.annotation (an annotation card)
   const tab = cards.find((c) => c.id === 'k.note.s.tabs.item-2')!
-  assert.deepEqual([tab.type, tab.role, tab.target, tab.data], ['comment', 'note', 'k.ui.s.tabs', { item: 2, callout: 5 }])
+  assert.deepEqual([tab.type, tab.role, tab.target, tab.data], ['comment', 'note', 'k.ui.s.tabs', { item: 2, callout: 5, annotation: { on: 's/tabs' } }])
   const ui = (id: string) => items.find((i) => i.id === id)!.data!.ui as Record<string, unknown>
   assert.deepEqual([ui('k.ui.s.tabs').callout, (ui('k.ui.s.tabs').items as Array<{ callout?: number }>).map((i) => i.callout)], [3, [4, undefined, 5]])
   assert.deepEqual(ui('k.ui.s.t').rowCallouts, { '0': 7, '2': 8 })

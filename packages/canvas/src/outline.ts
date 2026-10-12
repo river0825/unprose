@@ -1,8 +1,12 @@
 // The board as text an agent can read (docs/canvas.md "Reading big boards"): a containment tree — diagram frame →
-// lane / column / screen / group → items — in reading order, with each item's comment threads, pending proposals
-// and the wires of each diagram. Pure; `read.ts` filters, paginates and caps it.
+// lane / column / screen / group → items — in reading order, with each item's comment threads, pending proposals,
+// each diagram's annotations (numbered cards, not threads) and wires, and the board's TODOs. Pure; `read.ts` filters,
+// paginates and caps it.
+import { annotationOf, calloutOf, isAnnotationCard, isAnnotationDraft } from './annotations.js'
+import { circled } from './diagrams/domainStory.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
-import { displayName, holdersOf, settingsLines } from './routing.js'
+import { displayName, holdersOf, isSettledThread, proposalHolderOf, settingsLines, threadOf } from './routing.js'
+import { aboutText, isTodo, todoLines } from './todos.js'
 
 export const short = (s: string | undefined, n = 60) => {
   const t = (s ?? '').replace(/\s+/g, ' ').trim()
@@ -220,11 +224,12 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   }
   const shown = (id: string) => !only || visible.has(id)
 
-  // threads: root → replies (in posting order)
+  // threads: root → replies (in posting order); annotation cards and TODOs are not conversations (listed apart)
   const replies = new Map<string, Item[]>()
   const roots: Item[] = []
   for (const c of items.filter((i) => i.type === 'comment')) {
     const root = rootOf(board, c)
+    if (isAnnotationCard(root) || isTodo(root)) continue
     if (root.id === c.id) roots.push(c)
     else replies.set(root.id, [...(replies.get(root.id) ?? []), c])
   }
@@ -253,7 +258,8 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
     const last = rs[rs.length - 1] ?? c
     const edit = (c.data?.discuss as { edit?: { file?: unknown } } | undefined)?.edit
     const tags = [edit ? `proposal: edit to ${typeof edit.file === 'string' ? edit.file : 'a text'}` : '', rs.length ? `${rs.length + 1} messages` : '', last.createdBy === 'user' ? 'waiting for an answer' : ''].filter(Boolean)
-    out.push(`${indent}💬 ${said(c)} ${short(c.text, 200)}${tags.length ? ` [${tags.join(' · ')}]` : ''}  #${c.id}`)
+    if (isAnnotationDraft(c)) out.push(`${indent}📝 ${draftLine(c)}${rs.length ? ` [${rs.length + 1} messages]` : ''}  #${c.id}`)
+    else out.push(`${indent}💬 ${said(c)} ${short(c.text, 200)}${tags.length ? ` [${tags.join(' · ')}]` : ''}  #${c.id}`)
     const hidden = Math.max(0, rs.length - maxReplies)
     if (hidden) out.push(`${indent}  ↳ … ${hidden} earlier repl${hidden === 1 ? 'y' : 'ies'} (ids: [${c.id}] with format json for all)`)
     for (const r of rs.slice(hidden)) {
@@ -262,8 +268,25 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
     }
     for (const r of rs) printed.add(r.id)
   }
+  /** "the person's draft annotation on event "Paid": '…' — waiting for codex-b (thread <id>)" — or how it ended. */
+  const draftLine = (c: Item): string => {
+    const t = c.target ? board.items[c.target] : undefined
+    const whose = c.createdBy === 'user' ? "the person's" : `${displayName(who(c))}'s`
+    const file = annotationOf(c)?.file
+    const thread = threadOf(board, c)
+    const state = isSettledThread(thread)
+      ? thread.some((m) => m.id.startsWith('applied.') || (m.text ?? '').trimStart().startsWith('Applied to ')) ? 'applied to the file' : 'declined'
+      : `waiting for ${displayName(proposalHolderOf(board, c) ?? 'the holder of the files')}${file ? ` to add it to ${file}` : ''}${(c.data?.discuss as { edit?: unknown } | undefined)?.edit ? '' : ' (no edit attached: write the annotations entry by hand)'}`
+    return `${whose} draft annotation${t ? ` on ${aboutText(t)}` : ''}: '${short(c.text, 200)}' — ${state} (thread ${c.id})`
+  }
+  // the numbered annotation cards, by what they are about
+  const cardsOn = new Map<string, Item[]>()
+  for (const c of items) if (isAnnotationCard(c) && c.target) cardsOn.set(c.target, [...(cardsOn.get(c.target) ?? []), c])
+  const num = (c: Item) => (calloutOf(c) !== undefined ? circled(calloutOf(c)!) : '•')
   const meta = (i: Item): string[] => {
     const f: string[] = []
+    const notes = cardsOn.get(i.id)
+    if (notes?.length) f.push(`annotation ${notes.map(num).join('')}`)
     if (i.data?.pivotal) f.push('pivotal')
     const pend = pendingTag(i)
     if (pend) f.push(pend)
@@ -310,6 +333,22 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
     if (fa && fa === fb) frameOfArrow.set(a.id, fa)
   }
   const arrowsIn = (frameId: string) => items.filter((a) => frameOfArrow.get(a.id) === frameId && keep(a.id))
+  /** A diagram's annotation cards (`'(board)'`: those about items in no frame), in number order — a UI mock screen by screen. */
+  const annotationsIn = (frameId: string) => {
+    const screenOf = (c: Item) => {
+      for (let cur = c.target, g = 0; cur && g < 200; g++, cur = tree.parent.get(cur)) if (board.items[cur]?.type === 'ui' && board.items[cur]?.role === 'screen') return board.items[cur].x
+      return 0
+    }
+    return items
+      .filter((c) => isAnnotationCard(c) && keep(c.id) && (topFrameOf(c.target) ?? '(board)') === frameId)
+      .sort((a, b) => screenOf(a) - screenOf(b) || (calloutOf(a) ?? 0) - (calloutOf(b) ?? 0) || byPos(a, b))
+  }
+  const annotationLine = (n: Item) => {
+    printed.add(n.id)
+    const t = n.target ? board.items[n.target] : undefined
+    const where = annotationOf(n)?.board ? ' [on the board only — no file behind it]' : ''
+    return `${num(n)} ${t ? aboutText(t) : '(nothing)'}: ${short(n.text, 200)}${where}  #${n.id}`
+  }
 
   const walk = (c: Item, indent: string) => {
     if (!shown(c.id)) return
@@ -326,6 +365,8 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
       if (c.data?.ds === 'group' && Array.isArray(c.data?.members)) f.push(`members: ${(c.data.members as unknown[]).join(', ')}`)
       const pend = pendingTag(c)
       if (pend) f.push(pend)
+      const notes = cardsOn.get(c.id)
+      if (notes?.length) f.push(`annotation ${notes.map(num).join('')}`)
       out.push(`${indent}## ${role}: ${short(c.text, 80) || '(untitled)'}${f.length ? ` [${f.join('; ')}]` : ''}  #${c.id}`)
     }
     for (const t of threadsOn.get(c.id) ?? []) thread(t, `${indent}    `)
@@ -343,6 +384,11 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
       }
     }
     if (spec) {
+      const notes = annotationsIn(c.id)
+      if (notes.length) {
+        out.push(`${indent}  ## annotations (${notes.length}) — what each item is for, from the file (not threads)`)
+        for (const n of notes) out.push(`${indent}    ${annotationLine(n)}`)
+      }
       const ds = spec.kind === 'domain-story'
       const wires = arrowsIn(c.id).filter((a) => !(ds && (a.role === 'activity' || a.role === 'activity-to')))
       if (wires.length) {
@@ -367,10 +413,16 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
     out.push(frameOfArrow.size || tops.some((t) => diagramSpecOf(t)) ? '## arrows between diagrams and loose items' : '## arrows')
     for (const a of rest.sort((p, q) => (p.from ?? '').localeCompare(q.from ?? ''))) out.push(`  ${arrowLine(a)}`)
   }
+  const looseNotes = annotationsIn('(board)')
+  if (looseNotes.length) {
+    out.push(`## annotations (${looseNotes.length})${tops.some((t) => diagramSpecOf(t)) ? ' — about items in no diagram frame' : ''}`)
+    for (const n of looseNotes) out.push(`  ${annotationLine(n)}`)
+  }
   const orphan = roots.filter((c) => !printed.has(c.id) && keep(c.id))
   if (orphan.length) {
     out.push('## comments (general)')
     for (const c of orphan.sort(byPos)) thread(c, '  ')
   }
+  out.push(...todoLines(board, { ...(only ? { only } : {}), replies: maxReplies }))
   return out.join('\n')
 }

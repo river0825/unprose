@@ -25,6 +25,8 @@ interface Props {
   onCopyImage: (id: string) => void
   /** how many items "Copy as image" will take (the selection size when the item is in it) */
   copyCount: number
+  /** copy the item's link (itemLink: a frame by its key, anything else — a comment, an annotation card — by its id) */
+  onCopyLink: (id: string) => void
   canColor: boolean
   askEnabled: boolean
   /** a domain-story frame (or an item in one): replay its story sentence by sentence (docs/diagrams.md §6b) */
@@ -34,10 +36,13 @@ interface Props {
   /** the layout lock (docs/diagrams.md "What a redraw keeps"): absent for comments and wires */
   lock?: { locked: boolean; frame: boolean; byFrame: boolean }
   onToggleLock?: (id: string) => void
+  /** write an annotation (what the item is for) or a TODO (still to be confirmed) on it: absent for comments and wires */
+  onAnnotate?: (id: string) => void
+  onTodo?: (id: string) => void
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, canColor, askEnabled, onPlayStory, onPlayMock, lock, onToggleLock }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, onCopyLink, canColor, askEnabled, onPlayStory, onPlayMock, lock, onToggleLock, onAnnotate, onTodo }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -116,6 +121,16 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
       <button role="menuitem" disabled={!askEnabled} title={askEnabled ? undefined : 'Agent is not watching'} onClick={act(() => onAsk(menu.itemId))}>
         Ask agent
       </button>
+      {onAnnotate && (
+        <button role="menuitem" title="What this item is for: a numbered note beside it (a draft for the holder of the files when it is drawn from one)" onClick={act(() => onAnnotate(menu.itemId))}>
+          Annotate…
+        </button>
+      )}
+      {onTodo && (
+        <button role="menuitem" title="Something still to be confirmed with someone else — on the board only, it wakes no agent" onClick={act(() => onTodo(menu.itemId))}>
+          Add TODO…
+        </button>
+      )}
       {canColor && (
         <>
           <button role="menuitem" data-sub aria-expanded={colorsOpen} aria-haspopup="true" onClick={() => setColorsOpen((o) => !o)}>
@@ -173,6 +188,9 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
       )}
       <button role="menuitem" onClick={act(() => onDuplicate(menu.itemId))}>
         Duplicate
+      </button>
+      <button role="menuitem" title="A link that opens this board on it (a frame by its key, so it survives redraws)" onClick={act(() => onCopyLink(menu.itemId))}>
+        Copy link
       </button>
       <button role="menuitem" onClick={act(() => onCopyImage(menu.itemId))}>
         {copyCount > 1 ? `Copy ${copyCount} items as image` : 'Copy as image'}

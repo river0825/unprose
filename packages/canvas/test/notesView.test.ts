@@ -1,9 +1,12 @@
-// The notes view (web/src/flow/notesView.ts): which comments are drawn, and how, under all / badges / none; a
-// proposal thread that was applied (or declined) folds into a ✓ by itself; a UI mock's callouts (numbered pins and their cards).
+// The notes view (web/src/flow/notesView.ts): which comments are drawn, and how — the Comments switch (all / badges /
+// none) for threads, the Annotations switch (all / pins / none) for annotation cards and drafts, the TODOs switch (open
+// / all / none) for TODOs; a proposal thread that was applied (or declined) folds into a ✓ by itself; a UI mock's
+// callouts (numbered pins and their cards).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Board, Item } from '../src/model.js'
-import { DECLINE_TEXT, calloutCommentOf, hasComments, isApplied, isDeclined, isProposal, isSettled, itemCallout, itemNote, litCallouts, notesShown, rowCallout, rowNote, uiCalloutOf, NOTES_MODES } from '../web/src/flow/notesView.js'
+import { DECLINE_TEXT, calloutCommentOf, cornerCallouts, hasComments, isApplied, isDeclined, isProposal, isSettled, itemCallout, itemNote, notesShown, rowCallout, rowNote, uiCalloutOf, NOTES_MODES } from '../web/src/flow/notesView.js'
+import { ANNOTATIONS_MODES, litMarks } from '../web/src/flow/annotationsView.js'
 import { boardToFlow } from '../web/src/flow/boardToFlow.js'
 
 const now = '2026-10-08T00:00:00.000Z'
@@ -112,9 +115,15 @@ test('boardToFlow: a hidden thread has no node and no tether; done rides on the 
   assert.equal(legacy.nodes.find((n) => n.id === 'prop_a')?.data.done, undefined, 'the older form folds nothing by itself')
 })
 
-test('hasComments: the switch is worth showing only when there is a comment', () => {
+test('hasComments: the switch is worth showing only when there is a conversation — not for annotation cards, drafts or TODOs alone', () => {
   assert.ok(hasComments(all))
   assert.ok(!hasComments(board(sticky)))
+  const card = item('n1', { role: 'note', target: 's1', data: { callout: 1, annotation: { on: 's1' } } })
+  const draft = item('c_d', { target: 's1', createdBy: 'user', data: { annotation: { draft: true, on: 's1' } } })
+  const todo = item('c_t', { target: 's1', createdBy: 'user', data: { todo: { state: 'open' } } })
+  const answer = item('c_a', { target: 'c_t', data: { todoAnswer: true } })
+  assert.ok(!hasComments(board(sticky, card, draft, todo, answer)), 'a reply to a TODO is not a conversation of its own')
+  assert.ok(hasComments(board(sticky, card, item('c_x', { target: 's1', createdBy: 'user' }))))
 })
 
 test('itemNote / rowNote: a non-empty string note, keyed by index (rows by the index as a string)', () => {
@@ -138,6 +147,14 @@ test('itemCallout / rowCallout: a positive whole number, keyed by index (rows by
   assert.equal(rowCallout({ rowCallouts: { '1': 4 } }, 1), 4)
   assert.equal(rowCallout({ rowCallouts: { '1': 4 } }, 0), undefined)
   assert.equal(rowCallout({}, 0), undefined)
+})
+
+test('cornerCallouts: data.ui.callouts when there are several (positive whole numbers, once each), else data.ui.callout — a screen’s too', () => {
+  assert.deepEqual(cornerCallouts({ callout: 2 }), [2])
+  assert.deepEqual(cornerCallouts({ callout: 2, callouts: [2, 5, 5, 0, 'x'] }), [2, 5])
+  assert.deepEqual(cornerCallouts({ callouts: [] , callout: 3 }), [3])
+  assert.deepEqual(cornerCallouts({ callout: 0 }), [])
+  assert.deepEqual(cornerCallouts(undefined), [])
 })
 
 // a UI mock's callouts: a card about an element, one about an entry, one about a row; the screen's own note is a thread
@@ -165,23 +182,30 @@ test('calloutCommentOf: the card with that number about that element', () => {
   assert.equal(calloutCommentOf(mock, 'screen', 1), undefined)
 })
 
-test('litCallouts: the pins of the callout cards among the ids, by element; nothing else, the same empty map', () => {
-  assert.deepEqual([...litCallouts(mock, ['n2', 'c_q', 'ui1', 'gone'])], [['ui1', 2]])
-  assert.deepEqual([...litCallouts(mock, ['n3', 'n1'])].sort(), [['ui1', 1], ['ui2', 1]])
-  assert.equal(litCallouts(mock, []), litCallouts(undefined, ['n1']))
-  assert.equal(litCallouts(mock, ['c_q']), litCallouts(mock, []), 'no new map for a plain comment')
+test('litMarks: the markers of the cards among the ids, by element, with the number; nothing else, the same empty map', () => {
+  assert.deepEqual([...litMarks(mock, ['n2', 'c_q', 'ui1', 'gone'])], [['ui1', { card: 'n2', n: 2 }]])
+  assert.deepEqual([...litMarks(mock, ['n3', 'n1'])].sort(), [['ui1', { card: 'n1', n: 1 }], ['ui2', { card: 'n3', n: 1 }]])
+  assert.equal(litMarks(mock, []), litMarks(undefined, ['n1']))
+  assert.equal(litMarks(mock, ['c_q']), litMarks(mock, []), 'no new map for a plain comment')
 })
 
-test('notesShown: a callout card is drawn in all, in badges only once its pin opened it, never in none; threads as before', () => {
-  const view = (mode: (typeof NOTES_MODES)[number], expanded: string[] = [], open: string[] = []) => notesShown(mock, { mode, open: new Set(open), expanded: new Set(expanded) })
+test('notesShown: a callout card follows the Annotations switch — all, pins only once its pin opened it, never in none', () => {
+  const view = (annotations: (typeof ANNOTATIONS_MODES)[number], expanded: string[] = [], open: string[] = []) => notesShown(mock, { mode: 'all', annotations, open: new Set(open), expanded: new Set(expanded) })
   assert.deepEqual(['n1', 'n2', 'n3'].map((id) => view('all').get(id)), ['open', 'open', 'open'])
   assert.equal(view('all').get('n0'), 'badge', 'the screen note is a thread, folded until opened')
   assert.equal(view('all').get('c_q'), 'badge')
-  assert.deepEqual(['n1', 'n2'].map((id) => view('badges').get(id)), ['hidden', 'hidden'])
-  assert.equal(view('badges', ['n2']).get('n2'), 'open')
-  assert.equal(view('badges').get('c_q'), 'badge')
+  assert.deepEqual(['n1', 'n2'].map((id) => view('pins').get(id)), ['hidden', 'hidden'])
+  assert.equal(view('pins', ['n2']).get('n2'), 'open')
+  assert.equal(view('pins').get('c_q'), 'badge', 'a thread does not follow the Annotations switch')
   assert.deepEqual(['n1', 'n2', 'n3'].map((id) => view('none', ['n1']).get(id)), ['hidden', 'hidden', 'hidden'])
   assert.equal(view('all', [], ['n0']).get('n0'), 'open')
+  assert.equal(notesShown(mock, { mode: 'all', open: new Set(), expanded: new Set() }).get('n1'), 'open', 'no annotations mode: all')
+})
+
+test('the Comments switch leaves annotation cards alone, the Annotations switch leaves threads alone', () => {
+  for (const mode of NOTES_MODES) assert.equal(notesShown(mock, { mode, annotations: 'all', open: new Set(), expanded: new Set() }).get('n1'), 'open', mode)
+  assert.equal(notesShown(mock, { mode: 'none', annotations: 'all', open: new Set(), expanded: new Set() }).get('c_q'), 'hidden')
+  assert.equal(notesShown(mock, { mode: 'all', annotations: 'none', open: new Set(), expanded: new Set() }).get('c_q'), 'badge')
 })
 
 test('boardToFlow: a callout card has no tether (its number is on what it explains); other notes keep theirs', () => {

@@ -1,5 +1,8 @@
 // Human-readable diffs and outlines — what the agent reads instead of raw JSON.
+import { calloutOf, isAnnotationCard, isAnnotationDraft, todoOf } from './annotations.js'
+import { circled } from './diagrams/domainStory.js'
 import { diffStat } from './patch.js'
+import { displayName } from './routing.js'
 import { diagramSpecOf, isBookkeeping, isLayoutOnly, isSeenOnly, markSeen, meaningOf, type Author, type Board, type Change, type Item, type Op } from './model.js'
 import { containmentTree, frameKeys, itemsInFrame, resolveFrame } from './outline.js'
 
@@ -16,7 +19,7 @@ function nameOf(item: Item | null | undefined, board?: Board): string {
     return `arrow ${short(from?.text, 30) || item.from} → ${short(to?.text, 30) || item.to}`
   }
   const threaded = item.type === 'comment' && board?.items[item.target ?? '']?.type !== 'comment' && Object.values(board?.items ?? {}).some((o) => o.type === 'comment' && o.target === item.id)
-  const role = threaded ? 'comment thread' : (item.role ?? item.type)
+  const role = todoOf(item) ? 'TODO' : isAnnotationDraft(item) ? 'draft annotation' : isAnnotationCard(item) ? 'annotation' : threaded ? 'comment thread' : (item.role ?? item.type)
   const text = short(item.text)
   // The id rides along so the agent can target the item precisely when it replies.
   return text ? `${role} "${text}" [${item.id}]` : `${role} [${item.id}]`
@@ -102,8 +105,20 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
           const root = rootOf(it, find)
           const on = find(root.target)
           const text = short(it.text, 200)
-          if (root.id !== it.id) lines.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text}" [thread ${root.id}]`)
-          else {
+          const to = Array.isArray(it.data?.to) ? (it.data.to as unknown[]).filter((x): x is string => typeof x === 'string') : []
+          if (root.id !== it.id) {
+            // the answer to a TODO (docs/canvas.md "TODOs"): what was confirmed — decide whether the design changes
+            if (todoOf(root) && it.data?.todoAnswer === true) lines.push(`${prefix} answered the TODO "${short(root.text, 120)}": "${text}" — decide whether the design changes [thread ${root.id}]`)
+            else lines.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text}" [thread ${root.id}]`)
+          } else if (todoOf(it)) {
+            const ask = todoOf(it)!.ask
+            lines.push(`${prefix} added a TODO${on ? ` on ${nameOf(on, board)}` : ''}: "${text}"${ask ? ` (ask ${ask})` : ''} — to confirm with someone else, not a question to you [todo ${it.id}]`)
+          } else if (isAnnotationDraft(it)) {
+            // the person's annotation, a proposal to the holder of the files (docs/canvas.md "Annotations")
+            lines.push(`${prefix} drafted an annotation${on ? ` on ${nameOf(on, board)}` : ''}: "${text}" — a proposal to ${to.length ? to.map(displayName).join(', ') : 'the holder of the files'}: judge it, then apply it or say why not [thread ${it.id}]`)
+          } else if (isAnnotationCard(it)) {
+            lines.push(`${prefix} drew annotation ${calloutOf(it) !== undefined ? `${circled(calloutOf(it)!)} ` : ''}${on ? `on ${nameOf(on, board)}` : ''}: "${text}"`)
+          } else {
             // an edit proposal (a person's source-dialog edit, or another agent's canvas_propose_edit)
             const edit = (it.data?.discuss as { edit?: { file?: unknown; diff?: unknown } } | undefined)?.edit
             const what = edit && typeof edit.diff === 'string' ? `proposed an edit to ${typeof edit.file === 'string' ? edit.file : 'a text'} (${diffCount(edit.diff)})` : 'added comment'
@@ -163,7 +178,12 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
         parts.push(`reconnected to ${end(patch.from ?? was?.from)} → ${end(patch.to ?? was?.to)}`)
       }
       if (patch.data !== undefined && JSON.stringify(patch.data.bend) !== JSON.stringify(was?.data?.bend)) parts.push('rerouted')
-      if (patch.data !== undefined && JSON.stringify(meaningOf(patch.data)) !== JSON.stringify(meaningOf(was?.data))) parts.push(`data changed: ${short(JSON.stringify(meaningOf(patch.data)), 120)}`)
+      // a TODO checked off or reopened says so, instead of its data
+      const [tWas, tNow] = [todoOf(was ?? undefined), patch.data !== undefined ? todoOf({ ...(was ?? now)!, data: patch.data }) : undefined]
+      const todoMoved = !!tWas && !!tNow && tWas.state !== tNow.state
+      if (todoMoved) parts.push(tNow!.state === 'done' ? `checked off${tNow!.doneBy ? ` by ${tNow!.doneBy === 'person' ? 'the person' : displayName(tNow!.doneBy)}` : ''}${tNow!.answer ? ` — answer: "${short(tNow!.answer, 160)}"` : ' without an answer (nobody is notified)'}` : 'reopened')
+      const meaning = (d: Record<string, unknown> | undefined) => JSON.stringify(todoMoved ? { ...meaningOf(d), todo: undefined } : meaningOf(d))
+      if (patch.data !== undefined && meaning(patch.data) !== meaning(was?.data)) parts.push(`data changed: ${short(JSON.stringify(meaningOf(patch.data)), 120)}`)
       if (opts.collapseMoves && isLayoutOnly(op, was) && !parts.some((p) => p.startsWith('moved from'))) {
         folded.set(op.id, { seq: ch.seq, author: who, resized: resized || (folded.get(op.id)?.resized ?? false) })
         continue

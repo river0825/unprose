@@ -35,6 +35,8 @@ interface Props {
   onReply: (rootId: string, text: string) => void
   /** "open the source" from the script block on the canvas (a new \`n\` each time) */
   sourceRequest?: { mode: 'view' | 'edit'; n: number }
+  /** its annotations and TODOs (components/ItemMarks.tsx) */
+  marks?: ReactNode
 }
 
 /** What every commentable text in the Inspector needs. */
@@ -49,7 +51,7 @@ interface TextCtx {
 
 const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 
-export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onToast, onOpenFile, onAnchoredComment, onReply, sourceRequest }: Props) {
+export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onToast, onOpenFile, onAnchoredComment, onReply, sourceRequest, marks }: Props) {
   const files = filesOf(board)
   const ctx: TextCtx = { board, item, files, onOpenFile, onAnchoredComment, onReply }
   const range = yamlRange(item)
@@ -128,6 +130,8 @@ export function BlockInspector({ board, item, detail, onSelect, onOpenChat, onTo
           ) : undefined
         }
       />
+
+      {marks}
 
       <ChatLink board={board} item={item} onOpenChat={onOpenChat} />
 

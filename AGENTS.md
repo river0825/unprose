@@ -17,6 +17,14 @@ Unprose to discuss designs with a person on a shared canvas.
   Proposals and saving). Without the files yourself: read them with `canvas_files` and propose the same way.
 - **Edits on the canvas are proposals** (a dragged wire, text edited in the source dialog, a proposed
   story). Discuss them in the comment thread first, then apply them to the file and redraw.
+- **Annotations say what an item is for** (`annotations: [{ on, text }]` in every kind's file, numbered cards on the
+  board — docs/diagrams.md §2b). The person's *draft annotation* is their own words, a proposal to the holder: judge it
+  (true to the design? contradicts the file or another annotation? says what the item is for?) and reply in its
+  thread; if sound, apply it at once (base check, lint, redraw `--applied <thread>`) — they wrote it, that is consent;
+  if not, say why and wait (docs/canvas.md → Annotations).
+- **A TODO is a note to confirm something with someone else**, not a question to you: don't answer it. Its answer
+  reaches you as a reply — decide whether the design changes and propose that as usual. Open one with `canvas_todo`
+  when something needs a person outside the board (docs/canvas.md → TODOs).
 - **Several agents on one board** (docs/canvas.md → Several agents on one board). Read the board's context first
   (`canvas_context`, or the top of `canvas_read_board`); write one when you draw a board from a discussion. Watching ≠
   answering ≠ being mentioned ≠ allowed to apply: only the person sets *Answered by* (a board you draw, or

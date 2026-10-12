@@ -480,6 +480,14 @@ agent's name. Studio, which runs where the files are, is the default way such a 
 'others' })` shows `[n <agent>] proposed an edit to <file> …`; read the diff from the comment (`canvas_read_board`,
 `format: json`), discuss, and after the person agrees check the base, apply, lint, test, redraw and reply.
 
+**The person's draft annotation** (docs/canvas.md → *Annotations*: `data.annotation.draft`, what an item is for, in
+their words) is a proposal too, routed to studio when studio holds the file. Its brief has *The person's draft
+annotation* instead of *Proposed edit*: the edit that adds one `annotations:` entry (or, when the board did not have the
+file, which entry to write), and the rule — judge it first (true to the design? contradicts the file or another
+annotation? says what the item is for?) and say so in the thread; if it is sound, apply it at once, since the person
+wrote it (base check, lint, redraw with `--applied`); if not, say why and wait. A **TODO** (`data.todo`) never reaches
+studio: it is routed to nobody; the answer posted when it is checked off is a reply like any other.
+
 
 ## 11. Several agents on one board
 

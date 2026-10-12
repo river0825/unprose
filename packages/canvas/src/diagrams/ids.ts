@@ -42,6 +42,15 @@ export const traceSchema = z.object({ from: z.string().min(1), rel: z.enum(TRACE
 
 export const TRACE_LABEL: Record<TraceRel, string> = { 'derived-from': '來自', groups: '組成', shows: '畫面', relates: '相關' }
 
+/**
+ * An annotation in a diagram file (docs/diagrams.md "Annotations"), the top-level `annotations:` list of every kind:
+ * what an item is for, `on` naming the item (its element id, its id inside the diagram, or its text). Drawn as a
+ * numbered card beside the drawing and a pin with the same number on the item.
+ */
+export const annotationSchema = z.object({ id: z.string().optional(), on: z.string().min(1), text: z.string().min(1) })
+export const annotationsSchema = z.array(annotationSchema)
+export type AnnotationEntry = z.input<typeof annotationSchema>
+
 /** '<key>/<element>' → both; '<key>' → the whole diagram (element undefined). */
 export function parseTraceRef(ref: string): { key: string; element?: string } | undefined {
   const i = ref.indexOf('/')

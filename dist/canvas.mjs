@@ -3811,14 +3811,14 @@ var require_content_type = __commonJS({
       return header;
     }
     function qstring(val) {
-      var str2 = String(val);
-      if (TOKEN_REGEXP.test(str2)) {
-        return str2;
+      var str3 = String(val);
+      if (TOKEN_REGEXP.test(str3)) {
+        return str3;
       }
-      if (str2.length > 0 && !TEXT_REGEXP.test(str2)) {
+      if (str3.length > 0 && !TEXT_REGEXP.test(str3)) {
         throw new TypeError("invalid parameter value");
       }
-      return '"' + str2.replace(QUOTE_REGEXP, "\\$1") + '"';
+      return '"' + str3.replace(QUOTE_REGEXP, "\\$1") + '"';
     }
     function ContentType(type) {
       this.parameters = /* @__PURE__ */ Object.create(null);
@@ -4774,13 +4774,13 @@ var require_Collection = __commonJS({
 var require_stringifyComment = __commonJS({
   "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
-    var stringifyComment = (str2) => str2.replace(/^(?!$)(?: $)?/gm, "#");
+    var stringifyComment = (str3) => str3.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
       if (/^\n+$/.test(comment))
         return comment.substring(1);
       return indent ? comment.replace(/^(?! *$)/gm, indent) : comment;
     }
-    var lineComment = (str2, indent, comment) => str2.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str2.endsWith(" ") ? "" : " ") + comment;
+    var lineComment = (str3, indent, comment) => str3.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str3.endsWith(" ") ? "" : " ") + comment;
     exports.indentComment = indentComment;
     exports.lineComment = lineComment;
     exports.stringifyComment = stringifyComment;
@@ -4934,16 +4934,16 @@ var require_stringifyString = __commonJS({
       lineWidth: ctx.options.lineWidth,
       minContentWidth: ctx.options.minContentWidth
     });
-    var containsDocumentMarker = (str2) => /^(%|---|\.\.\.)/m.test(str2);
-    function lineLengthOverLimit(str2, lineWidth, indentLength) {
+    var containsDocumentMarker = (str3) => /^(%|---|\.\.\.)/m.test(str3);
+    function lineLengthOverLimit(str3, lineWidth, indentLength) {
       if (!lineWidth || lineWidth < 0)
         return false;
       const limit = lineWidth - indentLength;
-      const strLen = str2.length;
+      const strLen = str3.length;
       if (strLen <= limit)
         return false;
       for (let i = 0, start = 0; i < strLen; ++i) {
-        if (str2[i] === "\n") {
+        if (str3[i] === "\n") {
           if (i - start > limit)
             return true;
           start = i + 1;
@@ -4960,11 +4960,11 @@ var require_stringifyString = __commonJS({
       const { implicitKey } = ctx;
       const minMultiLineLength = ctx.options.doubleQuotedMinMultiLineLength;
       const indent = ctx.indent || (containsDocumentMarker(value) ? "  " : "");
-      let str2 = "";
+      let str3 = "";
       let start = 0;
       for (let i = 0, ch = json4[i]; ch; ch = json4[++i]) {
         if (ch === " " && json4[i + 1] === "\\" && json4[i + 2] === "n") {
-          str2 += json4.slice(start, i) + "\\ ";
+          str3 += json4.slice(start, i) + "\\ ";
           i += 1;
           start = i;
           ch = "\\";
@@ -4973,38 +4973,38 @@ var require_stringifyString = __commonJS({
           switch (json4[i + 1]) {
             case "u":
               {
-                str2 += json4.slice(start, i);
+                str3 += json4.slice(start, i);
                 const code = json4.substr(i + 2, 4);
                 switch (code) {
                   case "0000":
-                    str2 += "\\0";
+                    str3 += "\\0";
                     break;
                   case "0007":
-                    str2 += "\\a";
+                    str3 += "\\a";
                     break;
                   case "000b":
-                    str2 += "\\v";
+                    str3 += "\\v";
                     break;
                   case "001b":
-                    str2 += "\\e";
+                    str3 += "\\e";
                     break;
                   case "0085":
-                    str2 += "\\N";
+                    str3 += "\\N";
                     break;
                   case "00a0":
-                    str2 += "\\_";
+                    str3 += "\\_";
                     break;
                   case "2028":
-                    str2 += "\\L";
+                    str3 += "\\L";
                     break;
                   case "2029":
-                    str2 += "\\P";
+                    str3 += "\\P";
                     break;
                   default:
                     if (code.substr(0, 2) === "00")
-                      str2 += "\\x" + code.substr(2);
+                      str3 += "\\x" + code.substr(2);
                     else
-                      str2 += json4.substr(i, 6);
+                      str3 += json4.substr(i, 6);
                 }
                 i += 5;
                 start = i + 1;
@@ -5014,14 +5014,14 @@ var require_stringifyString = __commonJS({
               if (implicitKey || json4[i + 2] === '"' || json4.length < minMultiLineLength) {
                 i += 1;
               } else {
-                str2 += json4.slice(start, i) + "\n\n";
+                str3 += json4.slice(start, i) + "\n\n";
                 while (json4[i + 2] === "\\" && json4[i + 3] === "n" && json4[i + 4] !== '"') {
-                  str2 += "\n";
+                  str3 += "\n";
                   i += 2;
                 }
-                str2 += indent;
+                str3 += indent;
                 if (json4[i + 2] === " ")
-                  str2 += "\\";
+                  str3 += "\\";
                 i += 1;
                 start = i + 1;
               }
@@ -5030,8 +5030,8 @@ var require_stringifyString = __commonJS({
               i += 1;
           }
       }
-      str2 = start ? str2 + json4.slice(start) : json4;
-      return implicitKey ? str2 : foldFlowLines.foldFlowLines(str2, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
+      str3 = start ? str3 + json4.slice(start) : json4;
+      return implicitKey ? str3 : foldFlowLines.foldFlowLines(str3, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
     }
     function singleQuotedString(value, ctx) {
       if (ctx.options.singleQuote === false || ctx.implicitKey && value.includes("\n") || /[ \t]\n|\n[ \t]/.test(value))
@@ -5159,15 +5159,15 @@ ${indent}${start}${value}${end}`;
           return quotedString(value, ctx);
         }
       }
-      const str2 = value.replace(/\n+/g, `$&
+      const str3 = value.replace(/\n+/g, `$&
 ${indent}`);
       if (actualString) {
-        const test = (tag) => tag.default && tag.tag !== "tag:yaml.org,2002:str" && tag.test?.test(str2);
+        const test = (tag) => tag.default && tag.tag !== "tag:yaml.org,2002:str" && tag.test?.test(str3);
         const { compat, tags } = ctx.doc.schema;
         if (tags.some(test) || compat?.some(test))
           return quotedString(value, ctx);
       }
-      return implicitKey ? str2 : foldFlowLines.foldFlowLines(str2, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
+      return implicitKey ? str3 : foldFlowLines.foldFlowLines(str3, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
     }
     function stringifyString(item, ctx, onComment, onChompKeep) {
       const { implicitKey, inFlow } = ctx;
@@ -5319,11 +5319,11 @@ var require_stringify = __commonJS({
       const props = stringifyProps(node4, tagObj, ctx);
       if (props.length > 0)
         ctx.indentAtStart = (ctx.indentAtStart ?? 0) + props.length + 1;
-      const str2 = typeof tagObj.stringify === "function" ? tagObj.stringify(node4, ctx, onComment, onChompKeep) : identity.isScalar(node4) ? stringifyString.stringifyString(node4, ctx, onComment, onChompKeep) : node4.toString(ctx, onComment, onChompKeep);
+      const str3 = typeof tagObj.stringify === "function" ? tagObj.stringify(node4, ctx, onComment, onChompKeep) : identity.isScalar(node4) ? stringifyString.stringifyString(node4, ctx, onComment, onChompKeep) : node4.toString(ctx, onComment, onChompKeep);
       if (!props)
-        return str2;
-      return identity.isScalar(node4) || str2[0] === "{" || str2[0] === "[" ? `${props} ${str2}` : `${props}
-${ctx.indent}${str2}`;
+        return str3;
+      return identity.isScalar(node4) || str3[0] === "{" || str3[0] === "[" ? `${props} ${str3}` : `${props}
+${ctx.indent}${str3}`;
     }
     exports.createStringifyContext = createStringifyContext;
     exports.stringify = stringify;
@@ -5358,8 +5358,8 @@ var require_stringifyPair = __commonJS({
       });
       let keyCommentDone = false;
       let chompKeep = false;
-      let str2 = stringify.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
-      if (!explicitKey && !ctx.inFlow && str2.length > 1024) {
+      let str3 = stringify.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+      if (!explicitKey && !ctx.inFlow && str3.length > 1024) {
         if (simpleKeys)
           throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
         explicitKey = true;
@@ -5368,27 +5368,27 @@ var require_stringifyPair = __commonJS({
         if (allNullValues || value == null) {
           if (keyCommentDone && onComment)
             onComment();
-          return str2 === "" ? "?" : explicitKey ? `? ${str2}` : str2;
+          return str3 === "" ? "?" : explicitKey ? `? ${str3}` : str3;
         }
       } else if (allNullValues && !simpleKeys || value == null && explicitKey) {
-        str2 = `? ${str2}`;
+        str3 = `? ${str3}`;
         if (keyComment && !keyCommentDone) {
-          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
+          str3 += stringifyComment.lineComment(str3, ctx.indent, commentString(keyComment));
         } else if (chompKeep && onChompKeep)
           onChompKeep();
-        return str2;
+        return str3;
       }
       if (keyCommentDone)
         keyComment = null;
       if (explicitKey) {
         if (keyComment)
-          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
-        str2 = `? ${str2}
+          str3 += stringifyComment.lineComment(str3, ctx.indent, commentString(keyComment));
+        str3 = `? ${str3}
 ${indent}:`;
       } else {
-        str2 = `${str2}:`;
+        str3 = `${str3}:`;
         if (keyComment)
-          str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(keyComment));
+          str3 += stringifyComment.lineComment(str3, ctx.indent, commentString(keyComment));
       }
       let vsb, vcb, valueComment;
       if (identity.isNode(value)) {
@@ -5404,7 +5404,7 @@ ${indent}:`;
       }
       ctx.implicitKey = false;
       if (!explicitKey && !keyComment && identity.isScalar(value))
-        ctx.indentAtStart = str2.length + 1;
+        ctx.indentAtStart = str3.length + 1;
       chompKeep = false;
       if (!indentSeq && indentStep.length >= 2 && !ctx.inFlow && !explicitKey && identity.isSeq(value) && !value.flow && !value.tag && !value.anchor) {
         ctx.indent = ctx.indent.substring(2);
@@ -5448,16 +5448,16 @@ ${ctx.indent}`;
       } else if (valueStr === "" || valueStr[0] === "\n") {
         ws = "";
       }
-      str2 += ws + valueStr;
+      str3 += ws + valueStr;
       if (ctx.inFlow) {
         if (valueCommentDone && onComment)
           onComment();
       } else if (valueComment && !valueCommentDone) {
-        str2 += stringifyComment.lineComment(str2, ctx.indent, commentString(valueComment));
+        str3 += stringifyComment.lineComment(str3, ctx.indent, commentString(valueComment));
       } else if (chompKeep && onChompKeep) {
         onChompKeep();
       }
-      return str2;
+      return str3;
     }
     exports.stringifyPair = stringifyPair;
   }
@@ -5684,31 +5684,31 @@ var require_stringifyCollection = __commonJS({
           }
         }
         chompKeep = false;
-        let str3 = stringify.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+        let str4 = stringify.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
         if (comment2)
-          str3 += stringifyComment.lineComment(str3, itemIndent, commentString(comment2));
+          str4 += stringifyComment.lineComment(str4, itemIndent, commentString(comment2));
         if (chompKeep && comment2)
           chompKeep = false;
-        lines2.push(blockItemPrefix + str3);
+        lines2.push(blockItemPrefix + str4);
       }
-      let str2;
+      let str3;
       if (lines2.length === 0) {
-        str2 = flowChars.start + flowChars.end;
+        str3 = flowChars.start + flowChars.end;
       } else {
-        str2 = lines2[0];
+        str3 = lines2[0];
         for (let i = 1; i < lines2.length; ++i) {
           const line = lines2[i];
-          str2 += line ? `
+          str3 += line ? `
 ${indent}${line}` : "\n";
         }
       }
       if (comment) {
-        str2 += "\n" + stringifyComment.indentComment(commentString(comment), indent);
+        str3 += "\n" + stringifyComment.indentComment(commentString(comment), indent);
         if (onComment)
           onComment();
       } else if (chompKeep && onChompKeep)
         onChompKeep();
-      return str2;
+      return str3;
     }
     function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
       const { indent, indentStep, flowCollectionPadding: fcPadding, options: { commentString } } = ctx;
@@ -5751,21 +5751,21 @@ ${indent}${line}` : "\n";
         }
         if (comment)
           reqNewline = true;
-        let str2 = stringify.stringify(item, itemCtx, () => comment = null);
-        reqNewline || (reqNewline = lines2.length > linesAtValue || str2.includes("\n"));
+        let str3 = stringify.stringify(item, itemCtx, () => comment = null);
+        reqNewline || (reqNewline = lines2.length > linesAtValue || str3.includes("\n"));
         if (i < items.length - 1) {
-          str2 += ",";
+          str3 += ",";
         } else if (ctx.options.trailingComma) {
           if (ctx.options.lineWidth > 0) {
-            reqNewline || (reqNewline = lines2.reduce((sum, line) => sum + line.length + 2, 2) + (str2.length + 2) > ctx.options.lineWidth);
+            reqNewline || (reqNewline = lines2.reduce((sum, line) => sum + line.length + 2, 2) + (str3.length + 2) > ctx.options.lineWidth);
           }
           if (reqNewline) {
-            str2 += ",";
+            str3 += ",";
           }
         }
         if (comment)
-          str2 += stringifyComment.lineComment(str2, itemIndent, commentString(comment));
-        lines2.push(str2);
+          str3 += stringifyComment.lineComment(str3, itemIndent, commentString(comment));
+        lines2.push(str3);
         linesAtValue = lines2.length;
       }
       const { start, end } = flowChars;
@@ -5777,11 +5777,11 @@ ${indent}${line}` : "\n";
           reqNewline = ctx.options.lineWidth > 0 && len > ctx.options.lineWidth;
         }
         if (reqNewline) {
-          let str2 = start;
+          let str3 = start;
           for (const line of lines2)
-            str2 += line ? `
+            str3 += line ? `
 ${indentStep}${indent}${line}` : "\n";
-          return `${str2}
+          return `${str3}
 ${indent}${end}`;
         } else {
           return `${start}${fcPadding}${lines2.join(" ")}${fcPadding}${end}`;
@@ -6113,7 +6113,7 @@ var require_string = __commonJS({
       identify: (value) => typeof value === "string",
       default: true,
       tag: "tag:yaml.org,2002:str",
-      resolve: (str2) => str2,
+      resolve: (str3) => str3,
       stringify(item, ctx, onComment, onChompKeep) {
         ctx = Object.assign({ actualString: true }, ctx);
         return stringifyString.stringifyString(item, ctx, onComment, onChompKeep);
@@ -6151,7 +6151,7 @@ var require_bool = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:bool",
       test: /^(?:[Tt]rue|TRUE|[Ff]alse|FALSE)$/,
-      resolve: (str2) => new Scalar.Scalar(str2[0] === "t" || str2[0] === "T"),
+      resolve: (str3) => new Scalar.Scalar(str3[0] === "t" || str3[0] === "T"),
       stringify({ source, value }, ctx) {
         if (source && boolTag.test.test(source)) {
           const sv = source[0] === "t" || source[0] === "T";
@@ -6203,7 +6203,7 @@ var require_float = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
-      resolve: (str2) => str2.slice(-3).toLowerCase() === "nan" ? NaN : str2[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
+      resolve: (str3) => str3.slice(-3).toLowerCase() === "nan" ? NaN : str3[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
       stringify: stringifyNumber.stringifyNumber
     };
     var floatExp = {
@@ -6212,7 +6212,7 @@ var require_float = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "EXP",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
-      resolve: (str2) => parseFloat(str2),
+      resolve: (str3) => parseFloat(str3),
       stringify(node4) {
         const num2 = Number(node4.value);
         return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node4);
@@ -6223,11 +6223,11 @@ var require_float = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:\.[0-9]+|[0-9]+\.[0-9]*)$/,
-      resolve(str2) {
-        const node4 = new Scalar.Scalar(parseFloat(str2));
-        const dot = str2.indexOf(".");
-        if (dot !== -1 && str2[str2.length - 1] === "0")
-          node4.minFractionDigits = str2.length - dot - 1;
+      resolve(str3) {
+        const node4 = new Scalar.Scalar(parseFloat(str3));
+        const dot = str3.indexOf(".");
+        if (dot !== -1 && str3[str3.length - 1] === "0")
+          node4.minFractionDigits = str3.length - dot - 1;
         return node4;
       },
       stringify: stringifyNumber.stringifyNumber
@@ -6244,7 +6244,7 @@ var require_int = __commonJS({
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
-    var intResolve = (str2, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str2) : parseInt(str2.substring(offset), radix);
+    var intResolve = (str3, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str3) : parseInt(str3.substring(offset), radix);
     function intStringify(node4, radix, prefix) {
       const { value } = node4;
       if (intIdentify(value) && value >= 0)
@@ -6257,7 +6257,7 @@ var require_int = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "OCT",
       test: /^0o[0-7]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 2, 8, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 2, 8, opt),
       stringify: (node4) => intStringify(node4, 8, "0o")
     };
     var int2 = {
@@ -6265,7 +6265,7 @@ var require_int = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:int",
       test: /^[-+]?[0-9]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 0, 10, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 0, 10, opt),
       stringify: stringifyNumber.stringifyNumber
     };
     var intHex = {
@@ -6274,7 +6274,7 @@ var require_int = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "HEX",
       test: /^0x[0-9a-fA-F]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 2, 16, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 2, 16, opt),
       stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
@@ -6327,7 +6327,7 @@ var require_schema2 = __commonJS({
         identify: (value) => typeof value === "string",
         default: true,
         tag: "tag:yaml.org,2002:str",
-        resolve: (str2) => str2,
+        resolve: (str3) => str3,
         stringify: stringifyJSON
       },
       {
@@ -6344,7 +6344,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:bool",
         test: /^true$|^false$/,
-        resolve: (str2) => str2 === "true",
+        resolve: (str3) => str3 === "true",
         stringify: stringifyJSON
       },
       {
@@ -6352,7 +6352,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:int",
         test: /^-?(?:0|[1-9][0-9]*)$/,
-        resolve: (str2, _onError, { intAsBigInt }) => intAsBigInt ? BigInt(str2) : parseInt(str2, 10),
+        resolve: (str3, _onError, { intAsBigInt }) => intAsBigInt ? BigInt(str3) : parseInt(str3, 10),
         stringify: ({ value }) => intIdentify(value) ? value.toString() : JSON.stringify(value)
       },
       {
@@ -6360,7 +6360,7 @@ var require_schema2 = __commonJS({
         default: true,
         tag: "tag:yaml.org,2002:float",
         test: /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$/,
-        resolve: (str2) => parseFloat(str2),
+        resolve: (str3) => parseFloat(str3),
         stringify: stringifyJSON
       }
     ];
@@ -6368,9 +6368,9 @@ var require_schema2 = __commonJS({
       default: true,
       tag: "",
       test: /^/,
-      resolve(str2, onError) {
-        onError(`Unresolved plain scalar ${JSON.stringify(str2)}`);
-        return str2;
+      resolve(str3, onError) {
+        onError(`Unresolved plain scalar ${JSON.stringify(str3)}`);
+        return str3;
       }
     };
     var schema = [map2.map, seq.seq].concat(jsonScalars, jsonError);
@@ -6402,10 +6402,10 @@ var require_binary = __commonJS({
         if (typeof node_buffer.Buffer === "function") {
           return node_buffer.Buffer.from(src, "base64");
         } else if (typeof atob === "function") {
-          const str2 = atob(src.replace(/[\n\r]/g, ""));
-          const buffer = new Uint8Array(str2.length);
-          for (let i = 0; i < str2.length; ++i)
-            buffer[i] = str2.charCodeAt(i);
+          const str3 = atob(src.replace(/[\n\r]/g, ""));
+          const buffer = new Uint8Array(str3.length);
+          for (let i = 0; i < str3.length; ++i)
+            buffer[i] = str3.charCodeAt(i);
           return buffer;
         } else {
           onError("This environment does not support reading binary tags; either Buffer or atob is required");
@@ -6416,28 +6416,28 @@ var require_binary = __commonJS({
         if (!value)
           return "";
         const buf = value;
-        let str2;
+        let str3;
         if (typeof node_buffer.Buffer === "function") {
-          str2 = buf instanceof node_buffer.Buffer ? buf.toString("base64") : node_buffer.Buffer.from(buf.buffer).toString("base64");
+          str3 = buf instanceof node_buffer.Buffer ? buf.toString("base64") : node_buffer.Buffer.from(buf.buffer).toString("base64");
         } else if (typeof btoa === "function") {
           let s = "";
           for (let i = 0; i < buf.length; ++i)
             s += String.fromCharCode(buf[i]);
-          str2 = btoa(s);
+          str3 = btoa(s);
         } else {
           throw new Error("This environment does not support writing binary tags; either Buffer or btoa is required");
         }
         type ?? (type = Scalar.Scalar.BLOCK_LITERAL);
         if (type !== Scalar.Scalar.QUOTE_DOUBLE) {
           const lineWidth = Math.max(ctx.options.lineWidth - ctx.indent.length, ctx.options.minContentWidth);
-          const n4 = Math.ceil(str2.length / lineWidth);
+          const n4 = Math.ceil(str3.length / lineWidth);
           const lines2 = new Array(n4);
           for (let i = 0, o = 0; i < n4; ++i, o += lineWidth) {
-            lines2[i] = str2.substr(o, lineWidth);
+            lines2[i] = str3.substr(o, lineWidth);
           }
-          str2 = lines2.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
+          str3 = lines2.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
         }
-        return stringifyString.stringifyString({ comment, type, value: str2 }, ctx, onComment, onChompKeep);
+        return stringifyString.stringifyString({ comment, type, value: str3 }, ctx, onComment, onChompKeep);
       }
     };
     exports.binary = binary;
@@ -6643,7 +6643,7 @@ var require_float2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
-      resolve: (str2) => str2.slice(-3).toLowerCase() === "nan" ? NaN : str2[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
+      resolve: (str3) => str3.slice(-3).toLowerCase() === "nan" ? NaN : str3[0] === "-" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY,
       stringify: stringifyNumber.stringifyNumber
     };
     var floatExp = {
@@ -6652,7 +6652,7 @@ var require_float2 = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "EXP",
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
-      resolve: (str2) => parseFloat(str2.replace(/_/g, "")),
+      resolve: (str3) => parseFloat(str3.replace(/_/g, "")),
       stringify(node4) {
         const num2 = Number(node4.value);
         return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node4);
@@ -6663,11 +6663,11 @@ var require_float2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:float",
       test: /^[-+]?(?:[0-9][0-9_]*)?\.[0-9_]*$/,
-      resolve(str2) {
-        const node4 = new Scalar.Scalar(parseFloat(str2.replace(/_/g, "")));
-        const dot = str2.indexOf(".");
+      resolve(str3) {
+        const node4 = new Scalar.Scalar(parseFloat(str3.replace(/_/g, "")));
+        const dot = str3.indexOf(".");
         if (dot !== -1) {
-          const f = str2.substring(dot + 1).replace(/_/g, "");
+          const f = str3.substring(dot + 1).replace(/_/g, "");
           if (f[f.length - 1] === "0")
             node4.minFractionDigits = f.length;
         }
@@ -6687,34 +6687,34 @@ var require_int2 = __commonJS({
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
-    function intResolve(str2, offset, radix, { intAsBigInt }) {
-      const sign = str2[0];
+    function intResolve(str3, offset, radix, { intAsBigInt }) {
+      const sign = str3[0];
       if (sign === "-" || sign === "+")
         offset += 1;
-      str2 = str2.substring(offset).replace(/_/g, "");
+      str3 = str3.substring(offset).replace(/_/g, "");
       if (intAsBigInt) {
         switch (radix) {
           case 2:
-            str2 = `0b${str2}`;
+            str3 = `0b${str3}`;
             break;
           case 8:
-            str2 = `0o${str2}`;
+            str3 = `0o${str3}`;
             break;
           case 16:
-            str2 = `0x${str2}`;
+            str3 = `0x${str3}`;
             break;
         }
-        const n5 = BigInt(str2);
+        const n5 = BigInt(str3);
         return sign === "-" ? BigInt(-1) * n5 : n5;
       }
-      const n4 = parseInt(str2, radix);
+      const n4 = parseInt(str3, radix);
       return sign === "-" ? -1 * n4 : n4;
     }
     function intStringify(node4, radix, prefix) {
       const { value } = node4;
       if (intIdentify(value)) {
-        const str2 = value.toString(radix);
-        return value < 0 ? "-" + prefix + str2.substr(1) : prefix + str2;
+        const str3 = value.toString(radix);
+        return value < 0 ? "-" + prefix + str3.substr(1) : prefix + str3;
       }
       return stringifyNumber.stringifyNumber(node4);
     }
@@ -6724,7 +6724,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "BIN",
       test: /^[-+]?0b[0-1_]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 2, 2, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 2, 2, opt),
       stringify: (node4) => intStringify(node4, 2, "0b")
     };
     var intOct = {
@@ -6733,7 +6733,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "OCT",
       test: /^[-+]?0[0-7_]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 1, 8, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 1, 8, opt),
       stringify: (node4) => intStringify(node4, 8, "0")
     };
     var int2 = {
@@ -6741,7 +6741,7 @@ var require_int2 = __commonJS({
       default: true,
       tag: "tag:yaml.org,2002:int",
       test: /^[-+]?[0-9][0-9_]*$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 0, 10, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 0, 10, opt),
       stringify: stringifyNumber.stringifyNumber
     };
     var intHex = {
@@ -6750,7 +6750,7 @@ var require_int2 = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "HEX",
       test: /^[-+]?0x[0-9a-fA-F_]+$/,
-      resolve: (str2, _onError, opt) => intResolve(str2, 2, 16, opt),
+      resolve: (str3, _onError, opt) => intResolve(str3, 2, 16, opt),
       stringify: (node4) => intStringify(node4, 16, "0x")
     };
     exports.int = int2;
@@ -6854,9 +6854,9 @@ var require_timestamp = __commonJS({
   "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
-    function parseSexagesimal(str2, asBigInt) {
-      const sign = str2[0];
-      const parts2 = sign === "-" || sign === "+" ? str2.substring(1) : str2;
+    function parseSexagesimal(str3, asBigInt) {
+      const sign = str3[0];
+      const parts2 = sign === "-" || sign === "+" ? str3.substring(1) : str3;
       const num2 = (n4) => asBigInt ? BigInt(n4) : Number(n4);
       const res = parts2.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num2(60) + num2(p), num2(0));
       return sign === "-" ? num2(-1) * res : res;
@@ -6893,7 +6893,7 @@ var require_timestamp = __commonJS({
       tag: "tag:yaml.org,2002:int",
       format: "TIME",
       test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+$/,
-      resolve: (str2, _onError, { intAsBigInt }) => parseSexagesimal(str2, intAsBigInt),
+      resolve: (str3, _onError, { intAsBigInt }) => parseSexagesimal(str3, intAsBigInt),
       stringify: stringifySexagesimal
     };
     var floatTime = {
@@ -6902,7 +6902,7 @@ var require_timestamp = __commonJS({
       tag: "tag:yaml.org,2002:float",
       format: "TIME",
       test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*$/,
-      resolve: (str2) => parseSexagesimal(str2, false),
+      resolve: (str3) => parseSexagesimal(str3, false),
       stringify: stringifySexagesimal
     };
     var timestamp = {
@@ -6913,8 +6913,8 @@ var require_timestamp = __commonJS({
       // may be omitted altogether, resulting in a date format. In such a case, the time part is
       // assumed to be 00:00:00Z (start of day, UTC).
       test: RegExp("^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})(?:(?:t|T|[ \\t]+)([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}(\\.[0-9]+)?)(?:[ \\t]*(Z|[-+][012]?[0-9](?::[0-9]{2})?))?)?$"),
-      resolve(str2) {
-        const match = str2.match(timestamp.test);
+      resolve(str3) {
+        const match = str3.match(timestamp.test);
         if (!match)
           throw new Error("!!timestamp expects a date, starting with yyyy-mm-dd");
         const [, year, month, day, hour, minute, second] = match.map(Number);
@@ -11225,7 +11225,7 @@ var require_code = __commonJS({
     }
     exports._ = _2;
     var plus = new _Code("+");
-    function str2(strs, ...args) {
+    function str3(strs, ...args) {
       const expr = [safeStringify(strs[0])];
       let i = 0;
       while (i < args.length) {
@@ -11236,7 +11236,7 @@ var require_code = __commonJS({
       optimize(expr);
       return new _Code(expr);
     }
-    exports.str = str2;
+    exports.str = str3;
     function addCodeArg(code, arg) {
       if (arg instanceof _Code)
         code.push(...arg._items);
@@ -11279,7 +11279,7 @@ var require_code = __commonJS({
       return;
     }
     function strConcat(c1, c2) {
-      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str2`${c1}${c2}`;
+      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str3`${c1}${c2}`;
     }
     exports.strConcat = strConcat;
     function interpolate(x2) {
@@ -12241,22 +12241,22 @@ var require_util = __commonJS({
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
     exports.schemaRefOrVal = schemaRefOrVal;
-    function unescapeFragment(str2) {
-      return unescapeJsonPointer(decodeURIComponent(str2));
+    function unescapeFragment(str3) {
+      return unescapeJsonPointer(decodeURIComponent(str3));
     }
     exports.unescapeFragment = unescapeFragment;
-    function escapeFragment(str2) {
-      return encodeURIComponent(escapeJsonPointer(str2));
+    function escapeFragment(str3) {
+      return encodeURIComponent(escapeJsonPointer(str3));
     }
     exports.escapeFragment = escapeFragment;
-    function escapeJsonPointer(str2) {
-      if (typeof str2 == "number")
-        return `${str2}`;
-      return str2.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPointer(str3) {
+      if (typeof str3 == "number")
+        return `${str3}`;
+      return str3.replace(/~/g, "~0").replace(/\//g, "~1");
     }
     exports.escapeJsonPointer = escapeJsonPointer;
-    function unescapeJsonPointer(str2) {
-      return str2.replace(/~1/g, "/").replace(/~0/g, "~");
+    function unescapeJsonPointer(str3) {
+      return str3.replace(/~1/g, "/").replace(/~0/g, "~");
     }
     exports.unescapeJsonPointer = unescapeJsonPointer;
     function eachItem(xs, f) {
@@ -13281,8 +13281,8 @@ var require_json_schema_traverse = __commonJS({
         post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
-    function escapeJsonPtr(str2) {
-      return str2.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPtr(str3) {
+      return str3.replace(/~/g, "~0").replace(/\//g, "~1");
     }
   }
 });
@@ -14379,10 +14379,10 @@ var require_utils = __commonJS({
         isIPV6: true
       };
     }
-    function findToken(str2, token) {
+    function findToken(str3, token) {
       let ind = 0;
-      for (let i = 0; i < str2.length; i++) {
-        if (str2[i] === token) ind++;
+      for (let i = 0; i < str3.length; i++) {
+        if (str3[i] === token) ind++;
       }
       return ind;
     }
@@ -15396,7 +15396,7 @@ var require_core = __commonJS({
     var util_1 = require_util();
     var $dataRefSchema = require_data();
     var uri_1 = require_uri();
-    var defaultRegExp = (str2, flags2) => new RegExp(str2, flags2);
+    var defaultRegExp = (str3, flags2) => new RegExp(str3, flags2);
     defaultRegExp.code = "new RegExp";
     var META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
     var EXT_SCOPE_NAMES = /* @__PURE__ */ new Set([
@@ -16191,16 +16191,16 @@ var require_ucs2length = __commonJS({
   "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function ucs2length(str2) {
-      const len = str2.length;
+    function ucs2length(str3) {
+      const len = str3.length;
       let length = 0;
       let pos = 0;
       let value;
       while (pos < len) {
         length++;
-        value = str2.charCodeAt(pos++);
+        value = str3.charCodeAt(pos++);
         if (value >= 55296 && value <= 56319 && pos < len) {
-          value = str2.charCodeAt(pos);
+          value = str3.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
         }
@@ -18083,8 +18083,8 @@ var require_formats = __commonJS({
     }
     var DATE2 = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    function date5(str2) {
-      const matches = DATE2.exec(str2);
+    function date5(str3) {
+      const matches = DATE2.exec(str3);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -18103,8 +18103,8 @@ var require_formats = __commonJS({
     }
     var TIME = /^(\d\d):(\d\d):(\d\d(?:\.\d+)?)(z|([+-])(\d\d)(?::?(\d\d))?)?$/i;
     function getTime(strictTimeZone) {
-      return function time3(str2) {
-        const matches = TIME.exec(str2);
+      return function time3(str3) {
+        const matches = TIME.exec(str3);
         if (!matches)
           return false;
         const hr = +matches[1];
@@ -18150,8 +18150,8 @@ var require_formats = __commonJS({
     var DATE_TIME_SEPARATOR = /t|\s/i;
     function getDateTime(strictTimeZone) {
       const time3 = getTime(strictTimeZone);
-      return function date_time(str2) {
-        const dateTime = str2.split(DATE_TIME_SEPARATOR);
+      return function date_time(str3) {
+        const dateTime = str3.split(DATE_TIME_SEPARATOR);
         return dateTime.length === 2 && date5(dateTime[0]) && time3(dateTime[1]);
       };
     }
@@ -18176,13 +18176,13 @@ var require_formats = __commonJS({
     }
     var NOT_URI_FRAGMENT = /\/|:/;
     var URI = /^(?:[a-z][a-z0-9+\-.]*:)(?:\/?\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:]|%[0-9a-f]{2})*@)?(?:\[(?:(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|[Vv][0-9a-f]+\.[a-z0-9\-._~!$&'()*+,;=:]+)\]|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[a-z0-9\-._~!$&'()*+,;=]|%[0-9a-f]{2})*)(?::\d*)?(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*|\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)?|(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)(?:\?(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?(?:#(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?$/i;
-    function uri(str2) {
-      return NOT_URI_FRAGMENT.test(str2) && URI.test(str2);
+    function uri(str3) {
+      return NOT_URI_FRAGMENT.test(str3) && URI.test(str3);
     }
     var BYTE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gm;
-    function byte(str2) {
+    function byte(str3) {
       BYTE.lastIndex = 0;
-      return BYTE.test(str2);
+      return BYTE.test(str3);
     }
     var MIN_INT32 = -(2 ** 31);
     var MAX_INT32 = 2 ** 31 - 1;
@@ -18196,11 +18196,11 @@ var require_formats = __commonJS({
       return true;
     }
     var Z_ANCHOR = /[^\\]\\Z/;
-    function regex(str2) {
-      if (Z_ANCHOR.test(str2))
+    function regex(str3) {
+      if (Z_ANCHOR.test(str3))
         return false;
       try {
-        new RegExp(str2);
+        new RegExp(str3);
         return true;
       } catch (e) {
         return false;
@@ -19241,1721 +19241,52 @@ function redactPaths(value) {
   return walk(value);
 }
 
-// packages/canvas/dist/patch.js
-function lineOps(a, b2) {
-  let start = 0;
-  while (start < a.length && start < b2.length && a[start] === b2[start])
-    start++;
-  let endA = a.length;
-  let endB = b2.length;
-  while (endA > start && endB > start && a[endA - 1] === b2[endB - 1]) {
-    endA--;
-    endB--;
-  }
-  const n4 = endA - start;
-  const m2 = endB - start;
-  const lcs = new Int32Array((n4 + 1) * (m2 + 1));
-  const at3 = (i2, j3) => i2 * (m2 + 1) + j3;
-  for (let i2 = n4 - 1; i2 >= 0; i2--)
-    for (let j3 = m2 - 1; j3 >= 0; j3--)
-      lcs[at3(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at3(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at3(i2 + 1, j3)], lcs[at3(i2, j3 + 1)]);
-  const ops = [];
-  for (let k2 = 0; k2 < start; k2++)
-    ops.push({ kind: " ", text: a[k2], a: k2, b: k2 });
-  let i = 0;
-  let j2 = 0;
-  while (i < n4 || j2 < m2) {
-    if (i < n4 && j2 < m2 && a[start + i] === b2[start + j2]) {
-      ops.push({ kind: " ", text: a[start + i], a: start + i, b: start + j2 });
-      i++;
-      j2++;
-    } else if (i < n4 && (j2 === m2 || lcs[at3(i + 1, j2)] >= lcs[at3(i, j2 + 1)])) {
-      ops.push({ kind: "-", text: a[start + i], a: start + i, b: start + j2 });
-      i++;
-    } else {
-      ops.push({ kind: "+", text: b2[start + j2], a: start + i, b: start + j2 });
-      j2++;
-    }
-  }
-  for (let k2 = 0; k2 < a.length - endA; k2++)
-    ops.push({ kind: " ", text: a[endA + k2], a: endA + k2, b: endB + k2 });
-  return ops;
-}
-var NO_EOL = "\0";
-function splitLines(text3) {
-  if (text3 === "")
-    return [];
-  const lines2 = text3.split("\n");
-  if (lines2[lines2.length - 1] === "")
-    lines2.pop();
-  else
-    lines2[lines2.length - 1] += NO_EOL;
-  return lines2;
-}
-function joinLines(lines2) {
-  return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
-`).join("");
-}
-function unifiedDiff(before, after, path15 = "file", context = 3) {
-  if (before === after)
-    return "";
-  const ops = lineOps(splitLines(before), splitLines(after));
-  const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
-  const out = [`--- a/${path15}`, `+++ b/${path15}`];
-  let k2 = 0;
-  while (k2 < changed.length) {
-    const lo = Math.max(0, changed[k2] - context);
-    let hiChange = changed[k2];
-    while (k2 + 1 < changed.length && changed[k2 + 1] - hiChange <= context * 2)
-      hiChange = changed[++k2];
-    const hi = Math.min(ops.length - 1, hiChange + context);
-    const slice = ops.slice(lo, hi + 1);
-    const aStart = slice[0].a + 1;
-    const bStart = slice[0].b + 1;
-    const aLen = slice.filter((o) => o.kind !== "+").length;
-    const bLen = slice.filter((o) => o.kind !== "-").length;
-    out.push(`@@ -${aLen ? aStart : aStart - 1},${aLen} +${bLen ? bStart : bStart - 1},${bLen} @@`);
-    for (const o of slice) {
-      if (o.text.endsWith(NO_EOL))
-        out.push(`${o.kind}${o.text.slice(0, -1)}`, "\\ No newline at end of file");
-      else
-        out.push(`${o.kind}${o.text}`);
-    }
-    k2++;
-  }
-  return out.join("\n") + "\n";
-}
-function firstChange(before, after) {
-  if (before === after)
-    return void 0;
-  const a = splitLines(before);
-  const ops = lineOps(a, splitLines(after));
-  const k2 = ops.findIndex((o) => o.kind !== " ");
-  if (k2 < 0)
-    return void 0;
-  let end = k2;
-  while (end + 1 < ops.length && ops[end + 1].kind !== " ")
-    end++;
-  const removed = ops.slice(k2, end + 1).filter((o) => o.kind === "-");
-  const line = Math.max(1, Math.min(a.length, ops[k2].a + 1));
-  return { line, endLine: removed.length ? removed[removed.length - 1].a + 1 : line };
-}
-function diffStat(diff) {
-  let added = 0;
-  let removed = 0;
-  for (const l of diff.split("\n")) {
-    if (l.startsWith("+++") || l.startsWith("---"))
-      continue;
-    if (l.startsWith("+"))
-      added++;
-    else if (l.startsWith("-"))
-      removed++;
-  }
-  return { added, removed };
-}
-var strip = (p) => p.replace(/^[ab]\//, "").replace(/\t.*$/, "").trim();
-function diffPath(diff) {
-  const plus = diff.split("\n").find((l) => l.startsWith("+++ "));
-  const minus = diff.split("\n").find((l) => l.startsWith("--- "));
-  const p = plus ? strip(plus.slice(4)) : minus ? strip(minus.slice(4)) : void 0;
-  return p && p !== "/dev/null" ? p : void 0;
-}
-function parseHunks(diff) {
-  const lines2 = diff.replace(/\r\n/g, "\n").split("\n");
-  if (lines2[lines2.length - 1] === "")
-    lines2.pop();
-  const hunks = [];
-  let files = 0;
-  let cur;
-  let last;
-  for (let i = 0; i < lines2.length; i++) {
-    const l = lines2[i];
-    const m2 = l.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
-    if (m2) {
-      cur = { header: m2[0], aStart: Number(m2[1]), aLen: m2[2] === void 0 ? 1 : Number(m2[2]), bStart: Number(m2[3]), bLen: m2[4] === void 0 ? 1 : Number(m2[4]), old: [], new: [] };
-      hunks.push(cur);
-      last = void 0;
-      continue;
-    }
-    const inBody = cur && (cur.old.length < cur.aLen || cur.new.length < cur.bLen);
-    if (!inBody) {
-      if (l.startsWith("--- ")) {
-        files++;
-        if (files > 1)
-          return "the diff touches more than one file: propose one file at a time";
-      }
-      if (l.startsWith("\\") && cur && last) {
-        if (last !== "+")
-          cur.old[cur.old.length - 1] += NO_EOL;
-        if (last !== "-")
-          cur.new[cur.new.length - 1] += NO_EOL;
-      }
-      continue;
-    }
-    if (l.startsWith("\\")) {
-      if (last && last !== "+")
-        cur.old[cur.old.length - 1] += NO_EOL;
-      if (last && last !== "-")
-        cur.new[cur.new.length - 1] += NO_EOL;
-      continue;
-    }
-    const kind = l === "" ? " " : l[0];
-    const body = l.slice(1);
-    if (kind === " ") {
-      cur.old.push(body);
-      cur.new.push(body);
-    } else if (kind === "-")
-      cur.old.push(body);
-    else if (kind === "+")
-      cur.new.push(body);
-    else
-      return `line ${i + 1} of the diff is not part of a hunk (it should start with " ", "-" or "+"): ${JSON.stringify(l.slice(0, 80))}`;
-    last = kind;
-  }
-  if (!hunks.length)
-    return "no hunks (@@ -a,b +c,d @@) in the diff";
-  for (const [k2, h] of hunks.entries()) {
-    if (h.old.length !== h.aLen || h.new.length !== h.bLen)
-      return `hunk ${k2 + 1} (${h.header}) says ${h.aLen} old / ${h.bLen} new lines but has ${h.old.length} / ${h.new.length}`;
-  }
-  return hunks;
-}
-function applyUnifiedDiff(text3, diff) {
-  const parsed = parseHunks(diff);
-  if (typeof parsed === "string")
-    return { ok: false, error: parsed };
-  const lines2 = splitLines(text3);
-  const out = [];
-  let cursor = 0;
-  let delta = 0;
-  const offsets = [];
-  for (const [k2, h] of parsed.entries()) {
-    const want = (h.aLen === 0 ? h.aStart : h.aStart - 1) + delta;
-    const fits = (at4) => at4 >= cursor && at4 + h.old.length <= lines2.length && h.old.every((l, i) => lines2[at4 + i] === l);
-    let at3 = -1;
-    if (h.old.length === 0)
-      at3 = Math.min(Math.max(want, cursor), lines2.length);
-    else
-      for (let d = 0; d <= lines2.length; d++) {
-        if (fits(want - d)) {
-          at3 = want - d;
-          break;
-        }
-        if (d && fits(want + d)) {
-          at3 = want + d;
-          break;
-        }
-      }
-    if (at3 < 0) {
-      const near = lines2.slice(Math.max(0, want - 1), want + Math.max(3, h.old.length + 1)).map((l) => l.replace(NO_EOL, ""));
-      return { ok: false, hunk: k2 + 1, error: `hunk ${k2 + 1} (${h.header}) does not apply: its context and removed lines are not in the file${near.length ? ` (around line ${Math.max(1, want)} the file says: ${JSON.stringify(near.join("\n").slice(0, 200))})` : ""}` };
-    }
-    delta = at3 - (h.aLen === 0 ? h.aStart : h.aStart - 1);
-    offsets.push(delta);
-    out.push(...lines2.slice(cursor, at3), ...h.new);
-    cursor = at3 + h.old.length;
-  }
-  out.push(...lines2.slice(cursor));
-  const fixed = out.map((l, i) => i < out.length - 1 && l.endsWith(NO_EOL) ? l.slice(0, -1) : l);
-  return { ok: true, text: joinLines(fixed), offsets };
-}
-
-// packages/canvas/dist/routing.js
-var LOCAL_AGENT = "agent";
-var CONTEXT_MAX = 4e3;
+// packages/canvas/dist/annotations.js
 var str = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
-function responderOf(meta3) {
-  const r2 = meta3?.responder;
-  if (!r2 || typeof r2 !== "object")
+function calloutOf(it) {
+  if (!it || it.type !== "comment" || it.role !== "note")
     return void 0;
-  if (r2.mode === "agent")
-    return str(r2.agent) ? r2 : void 0;
-  return r2.mode === "any" || r2.mode === "studio" ? r2 : void 0;
+  const n4 = it.data?.callout;
+  return typeof n4 === "number" && Number.isInteger(n4) && n4 > 0 ? n4 : void 0;
 }
-function suggestionOf(meta3) {
-  return responderOf({ responder: meta3?.responderSuggestion });
-}
-function responderValue(r2) {
-  return r2.mode === "agent" ? r2.agent : r2.mode;
-}
-function responderName(r2) {
-  if (!r2 || r2.mode === "any")
+function annotationOf(it) {
+  if (!it || it.type !== "comment")
     return void 0;
-  return r2.mode === "studio" ? LOCAL_AGENT : r2.agent;
-}
-function responderLabel(r2) {
-  const n4 = responderName(r2);
-  return n4 ? displayName(n4) : "any agent";
-}
-function displayName(name) {
-  return name === LOCAL_AGENT ? "studio" : name;
-}
-function contextOf(meta3) {
-  const c = meta3?.context;
-  return c && typeof c === "object" && str(c.text) ? c : void 0;
-}
-function handleOf(name) {
-  const raw = name.trim().replace(/^@+/, "");
-  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === "studio")
-    return "studio";
-  const h = raw.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}_.-]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 60).replace(/[-.]+$/, "");
-  return h || "agent";
-}
-function sameAgent(a, b2) {
-  if (!a || !b2)
-    return false;
-  return handleOf(a) === handleOf(b2);
-}
-function resolveAgent(raw, known) {
-  if (!raw || !raw.trim())
+  const a = it.data?.annotation;
+  if (!a || typeof a !== "object" || Array.isArray(a))
     return void 0;
-  const want = raw.trim().replace(/^@+/, "");
-  if (sameAgent(want, LOCAL_AGENT))
-    return LOCAL_AGENT;
-  return known.find((n4) => n4 === want) ?? known.find((n4) => n4.toLowerCase() === want.toLowerCase()) ?? known.find((n4) => sameAgent(n4, want));
-}
-function agentLabel(name) {
-  const h = handleOf(name);
-  const d = displayName(name);
-  return h === d ? `@${h}` : `@${h} (${d})`;
-}
-function parseResponder(raw, caller, by, at3) {
-  if (raw === null || raw === "" || raw === "default")
-    return null;
-  if (typeof raw === "object" && raw) {
-    const r2 = raw;
-    return parseResponder(r2.mode === "agent" ? r2.agent : r2.mode, caller, by, at3);
-  }
-  if (typeof raw !== "string")
-    return void 0;
-  const v2 = raw.trim();
-  if (v2 === "any")
-    return { mode: "any", by, at: at3 };
-  if (v2 === "studio" || v2 === LOCAL_AGENT)
-    return { mode: "studio", by, at: at3 };
-  const name = v2 === "me" ? caller : v2;
-  if (!name)
-    return void 0;
-  if (sameAgent(name, LOCAL_AGENT))
-    return { mode: "studio", by, at: at3 };
-  return { mode: "agent", agent: name.slice(0, 60), by, at: at3 };
-}
-var holderIn = (v2) => {
-  const h = v2?.holder;
-  return h && typeof h === "object" && str(h.agent) ? h : void 0;
-};
-function holdersOf(meta3) {
-  const out = [];
-  const diagrams = meta3?.diagrams;
-  for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
-    const holder = holderIn(d);
-    if (holder)
-      out.push({ key, ...str(d?.source) ? { source: d.source } : {}, holder });
-  }
-  const wf = meta3?.workflow;
-  const h = holderIn(wf);
-  if (h)
-    out.push({ key: "workflow", ...str(wf?.file) ? { source: wf.file } : {}, holder: h });
-  return out;
-}
-function holderOfFile(meta3, file2) {
-  if (!file2)
-    return void 0;
-  const diagrams = meta3?.diagrams;
-  for (const d of Object.values(diagrams && typeof diagrams === "object" ? diagrams : {})) {
-    const files = d?.files && typeof d.files === "object" ? Object.keys(d.files) : [];
-    if (d?.source === file2 || files.includes(file2)) {
-      const h = holderIn(d);
-      if (h)
-        return h;
-    }
-  }
-  const wf = meta3?.workflow;
-  const wfFiles = wf?.files && typeof wf.files === "object" ? Object.keys(wf.files) : [];
-  return wfFiles.includes(file2) ? holderIn(wf) : void 0;
-}
-function holderOfItem(board, item) {
-  if (!item)
-    return void 0;
-  const d = diagramOf(board, item);
-  if (!d)
-    return void 0;
-  const diagrams = board.meta?.diagrams;
-  if (d.frameId)
-    return holderIn(diagrams?.[d.key]);
-  return holderIn(diagrams?.[d.key]) ?? (d.kind === "workflow" ? holderIn(board.meta?.workflow) : void 0);
-}
-function soleHolder(meta3) {
-  const names = [...new Set(holdersOf(meta3).map((h) => h.holder.agent))];
-  return names.length === 1 ? names[0] : void 0;
-}
-function stampHolders(current, next, caller, now) {
-  const out = { ...next };
-  const stamp = (cur, sent) => {
-    if (!sent || typeof sent !== "object")
-      return void 0;
-    const s = sent;
-    if (cur && s.at && s.at === cur.at && s.agent === cur.agent)
-      return cur;
-    const h = { agent: caller, at: now };
-    for (const k2 of ["machine", "root", "repo", "remote"])
-      if (str(s[k2]))
-        h[k2] = s[k2].slice(0, 300);
-    if (h.remote)
-      h.remote = withoutCredentials(h.remote);
-    if (str(s.applied)) {
-      h.applied = s.applied.slice(0, 80);
-      h.appliedAt = cur?.applied === h.applied && cur.appliedAt ? cur.appliedAt : now;
-    } else if (cur && sameAgent(cur.agent, caller) && cur.applied) {
-      h.applied = cur.applied;
-      h.appliedAt = cur.appliedAt;
-    }
-    if (cur && sameAgent(cur.agent, caller)) {
-      if (str(cur.from))
-        h.from = cur.from;
-      if (str(cur.handover))
-        h.handover = cur.handover;
-      if (!h.repo && !h.remote && !h.root) {
-        if (str(cur.repo))
-          h.repo = cur.repo;
-        if (str(cur.remote))
-          h.remote = cur.remote;
-      }
-    }
-    return h;
-  };
-  const diagrams = next.diagrams;
-  if (diagrams && typeof diagrams === "object") {
-    const curD = current?.diagrams ?? {};
-    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([key, d]) => {
-      if (!d || typeof d !== "object")
-        return [key, d];
-      const { holder: sent, ...rest } = d;
-      const h = stamp(holderIn(curD[key]), sent);
-      return [key, h ? { ...rest, holder: h } : rest];
-    }));
-  }
-  const wf = next.workflow;
-  if (wf && typeof wf === "object") {
-    const { holder: sent, ...rest } = wf;
-    const h = stamp(holderIn(current?.workflow), sent);
-    out.workflow = h ? { ...rest, holder: h } : rest;
-  }
-  return out;
-}
-function mergeBoardMeta(meta3, patch) {
-  const out = { ...meta3 ?? {} };
-  for (const [k2, v2] of Object.entries(patch)) {
-    if (k2 === "diagrams" && v2 && typeof v2 === "object" && !Array.isArray(v2)) {
-      const cur = out.diagrams && typeof out.diagrams === "object" ? { ...out.diagrams } : {};
-      for (const [key, d] of Object.entries(v2)) {
-        if (d === null || d === void 0)
-          delete cur[key];
-        else
-          cur[key] = d;
-      }
-      out.diagrams = cur;
-    } else if (v2 === null || v2 === void 0)
-      delete out[k2];
-    else
-      out[k2] = v2;
-  }
-  return out;
-}
-function heldElsewhereText(key, source, holder) {
-  return `the files of "${key}"${source ? ` (${source})` : ""} are held by ${displayName(holder)}: you cannot redraw them. Propose instead (canvas_files \u2192 canvas_propose_edit), or ask the person to hand them over to you (board panel \u2192 Hand over files).`;
-}
-var stable = (v2) => JSON.stringify(v2, (_k, x2) => x2 && typeof x2 === "object" && !Array.isArray(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k2) => [k2, x2[k2]])) : x2) ?? "";
-function keepHeldEntries(current, sent, caller) {
-  const out = { ...sent };
-  const curD = current?.diagrams ?? {};
-  const held = Object.entries(curD).filter(([, d]) => {
-    const h = holderIn(d);
-    return h && !sameAgent(h.agent, caller);
-  });
-  if (held.length) {
-    const sentD = sent.diagrams && typeof sent.diagrams === "object" && !Array.isArray(sent.diagrams) ? { ...sent.diagrams } : {};
-    for (const [key, d] of held)
-      if (!(key in sentD))
-        sentD[key] = d;
-    out.diagrams = sentD;
-  }
-  const wh = holderIn(current?.workflow);
-  if (wh && !sameAgent(wh.agent, caller) && !("workflow" in sent))
-    out.workflow = current.workflow;
-  return out;
-}
-function heldRefusal(current, next, caller) {
-  const curD = current?.diagrams ?? {};
-  const nextD = next.diagrams && typeof next.diagrams === "object" ? next.diagrams : {};
-  for (const [key, d] of Object.entries(curD)) {
-    const h = holderIn(d);
-    if (!h || sameAgent(h.agent, caller))
-      continue;
-    if (stable(d) !== stable(nextD[key]))
-      return heldElsewhereText(key, str(d?.source), h.agent);
-  }
-  const wf = current?.workflow;
-  const wh = holderIn(wf);
-  if (wh && !sameAgent(wh.agent, caller) && stable(wf) !== stable(next.workflow))
-    return heldElsewhereText("workflow", str(wf?.file), wh.agent);
-  return void 0;
-}
-function diagramRoots(meta3) {
-  return [...new Set(holdersOf(meta3).map((h) => h.holder.root).filter((r2) => typeof r2 === "string" && r2.length > 0))];
-}
-function withoutCredentials(url2) {
-  return url2.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1");
-}
-function redactHolders(meta3) {
-  if (!meta3)
-    return meta3;
-  const strip2 = (v2) => {
-    const h = holderIn(v2);
-    if (!h)
-      return v2;
-    const { machine: _m, root: _r, ...rest } = h;
-    return { ...v2, holder: rest };
-  };
-  const out = { ...meta3 };
-  const diagrams = meta3.diagrams;
-  if (diagrams && typeof diagrams === "object")
-    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, strip2(d)]));
-  if (meta3.workflow)
-    out.workflow = strip2(meta3.workflow);
-  return out;
-}
-function renameInMeta(meta3, from, to) {
-  if (!meta3)
-    return void 0;
-  let changed = false;
-  const out = { ...meta3 };
-  const r2 = responderOf(meta3);
-  if (r2?.mode === "agent" && sameAgent(r2.agent, from)) {
-    out.responder = { ...r2, agent: to };
-    changed = true;
-  }
-  const s = suggestionOf(meta3);
-  if (s?.mode === "agent" && sameAgent(s.agent, from)) {
-    out.responderSuggestion = { ...s, agent: to };
-    changed = true;
-  }
-  const fix = (v2) => {
-    const h = holderIn(v2);
-    if (!h || !sameAgent(h.agent, from) && !sameAgent(h.from, from))
-      return v2;
-    changed = true;
-    return { ...v2, holder: { ...h, ...sameAgent(h.agent, from) ? { agent: to } : {}, ...sameAgent(h.from, from) ? { from: to } : {} } };
-  };
-  const diagrams = meta3.diagrams;
-  if (diagrams && typeof diagrams === "object")
-    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, fix(d)]));
-  if (meta3.workflow)
-    out.workflow = fix(meta3.workflow);
-  const ho = handoverOf(meta3);
-  if (ho && (sameAgent(ho.to, from) || sameAgent(ho.by, from) || ho.keys.some((k2) => sameAgent(k2.from, from) || sameAgent(k2.ready?.by, from)))) {
-    const swap = (n4) => sameAgent(n4, from) ? to : n4;
-    out.handover = { ...ho, to: swap(ho.to), by: swap(ho.by), keys: ho.keys.map((k2) => ({ ...k2, from: swap(k2.from), ...k2.ready ? { ready: { ...k2.ready, by: swap(k2.ready.by) } } : {} })) };
-    changed = true;
-  }
-  return changed ? out : void 0;
-}
-function handoverOf(meta3) {
-  const h = meta3?.handover;
-  if (!h || typeof h !== "object" || Array.isArray(h))
-    return void 0;
-  if (!str(h.id) || !str(h.to) || !str(h.thread) || !str(h.by) || !str(h.at) || typeof h.answeredBy !== "boolean" || !Array.isArray(h.keys) || !h.keys.length)
-    return void 0;
-  const keys = [];
-  for (const raw of h.keys) {
-    const k2 = raw;
-    if (!k2 || typeof k2 !== "object" || !str(k2.key) || !str(k2.from))
-      return void 0;
-    const r2 = k2.ready;
-    const files = r2 && typeof r2 === "object" && r2.files && typeof r2.files === "object" && !Array.isArray(r2.files) ? Object.fromEntries(Object.entries(r2.files).filter(([, v2]) => typeof v2 === "string")) : void 0;
-    const ready = r2 && typeof r2 === "object" && str(r2.by) && str(r2.at) && files ? { by: r2.by, at: r2.at, files, ...r2.forced === true ? { forced: true } : {} } : void 0;
-    keys.push({ key: k2.key, from: k2.from, ...str(k2.source) ? { source: k2.source } : {}, ...str(k2.title) ? { title: k2.title } : {}, ...ready ? { ready } : {} });
-  }
-  return { id: h.id, to: h.to, answeredBy: h.answeredBy, thread: h.thread, by: h.by, at: h.at, keys };
-}
-function handoverFroms(h) {
-  const out = [];
-  for (const k2 of h.keys)
-    if (!out.some((o) => sameAgent(o, k2.from)))
-      out.push(k2.from);
-  return out;
-}
-function handoverThreadOf(root) {
-  const h = root?.type === "comment" ? root.data?.handover : void 0;
-  if (!h || typeof h !== "object" || !str(h.id))
-    return void 0;
-  return { id: h.id, ...str(h.state) ? { state: h.state } : {}, ...str(h.to) ? { to: h.to } : {}, ...Array.isArray(h.from) ? { from: h.from.filter((x2) => typeof x2 === "string") } : {} };
-}
-var at = (name) => `@${handleOf(name)}`;
-var named = (k2) => `\xAB${k2.title ?? k2.key}\xBB`;
-var list = (names) => names.join(", ");
-var whenText = (iso) => iso && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? `${iso.slice(0, 16).replace("T", " ")} UTC` : "its last draw";
-function handoverStartText(h) {
-  const froms = handoverFroms(h);
-  const one = froms.length === 1;
-  const files = list(h.keys.map((k2) => `${named(k2)}${k2.source ? ` (${k2.source})` : ""}${one ? "" : ` from ${at(k2.from)}`}`));
-  return [
-    `Handing over the files of ${files}${one ? ` from ${at(froms[0])}` : ""} to ${at(h.to)}.`,
-    `${list(froms.map(at))}: settle the open proposals on them, redraw any of them whose file changed since your last draw, then canvas_handover({ ready: true }).`,
-    `${at(h.to)}: when they are ready, canvas_handover({ accept: true }), keep the files in your repo (canvas_files), and redraw once from your copy. From then on proposals on them go to you.`
-  ].join("\n");
-}
-function handoverReadyText(h, marked, o = {}) {
-  const lines2 = [];
-  if (o.forced) {
-    for (const from of handoverFroms({ keys: marked })) {
-      const mine = marked.filter((k2) => sameAgent(k2.from, from));
-      lines2.push(`Handed over without ${at(from)}'s confirmation: ${list(mine.map((k2) => `${named(k2)} as of its last draw, ${whenText(o.lastDraw?.[k2.key])}`))}`);
-    }
-  } else {
-    const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
-    lines2.push(`Ready: ${list(marked.map(named))} \u2014 the files as of my last draw (${files.length ? list(files) : "no files on the board"})`);
-  }
-  if (h.keys.every((k2) => k2.ready))
-    lines2.push(`Every file is ready \u2014 ${at(h.to)}: canvas_handover({ accept: true }).`);
-  return lines2.join("\n");
-}
-function handoverAcceptText(h) {
-  const keys = list(h.keys.map(named));
-  return [`Accepted \u2014 ${at(h.to)} holds the files of ${keys} now; proposals on them go to ${at(h.to)}. ${list(handoverFroms(h).filter((f) => !sameAgent(f, h.to)).map(at))}: propose from now on (canvas_files \u2192 canvas_propose_edit).`, ...h.answeredBy ? [`"Answered by" is ${at(h.to)} now, as the person asked when handing over.`] : []].join("\n");
-}
-function handoverCancelText(by, reason) {
-  return `Cancelled by ${by ? at(by) : "the person"}${reason?.trim() ? `: ${reason.trim()}` : ""}`;
-}
-function handoverLines(h) {
-  const keys = list(h.keys.map((k2) => `${named(k2)}${k2.source ? ` (${k2.source})` : ""}${k2.ready ? ` [ready${k2.ready.forced ? ", handed over by the person" : ""}]` : ""}`));
-  const out = [`Handover open (thread ${h.thread}, started by ${h.by === "user" ? "the person" : displayName(h.by)}): the files of ${keys} go from ${list(handoverFroms(h).map(displayName))} to ${displayName(h.to)}${h.answeredBy ? '; "Answered by" becomes it on accept' : ""}`];
-  const waiting = handoverFroms({ keys: h.keys.filter((k2) => !k2.ready) });
-  for (const from of waiting) {
-    const mine = h.keys.filter((k2) => !k2.ready && sameAgent(k2.from, from));
-    out.push(`  waiting for ${displayName(from)}: settle the open proposals on ${list(mine.map(named))}, redraw any whose file changed, then canvas_handover({ ready: true })`);
-  }
-  out.push(waiting.length ? `  then ${displayName(h.to)} accepts: canvas_handover({ accept: true })` : `  every file is ready \u2014 waiting for ${displayName(h.to)} to accept: canvas_handover({ accept: true })`);
-  out.push("  either side may decline it (canvas_handover({ cancel: true, reason })); only the person starts or forces a handover");
-  return out;
-}
-function handoverWaiting(h) {
-  return list(h.keys.filter((k2) => !k2.ready).map((k2) => `${named(k2)} waits for ${at(k2.from)}`));
-}
-var DECLINE_TEXT = "No, leave the file as it is.";
-function isSettledThread(thread) {
-  return thread.some((m2, i) => i > 0 && (m2.id.startsWith("applied.") || (m2.text ?? "").trimStart().startsWith("Applied to ") || m2.createdBy === "user" && (m2.text ?? "").trim() === DECLINE_TEXT));
-}
-function proposalKeyOf(board, root) {
-  const edit = editOf(root);
-  if (edit && typeof edit.file === "string") {
-    const diagrams = board.meta?.diagrams;
-    for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
-      if (d?.source === edit.file || d?.files && typeof d.files === "object" && edit.file in d.files)
-        return key;
-    }
-    const wf = board.meta?.workflow;
-    if (wf?.files && typeof wf.files === "object" && edit.file in wf.files)
-      return "workflow";
-  }
-  const ids = [...Array.isArray(wireProposalOf(root)?.about) ? wireProposalOf(root).about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
-  for (const id of ids) {
-    const d = diagramOf(board, board.items[id]);
-    if (d)
-      return d.frameId ? d.key : d.kind === "workflow" ? "workflow" : d.key;
-  }
-  return void 0;
-}
-function openProposals(board, keys) {
-  const roots = Object.values(board.items).filter((i) => i.type === "comment" && isProposal(i) && threadRoot(board, i).id === i.id);
-  return roots.filter((r2) => {
-    const key = proposalKeyOf(board, r2);
-    return key !== void 0 && keys.includes(key) && !isSettledThread(threadOf(board, r2));
-  }).sort((a, b2) => String(a.data?.postedAt ?? a.updatedAt).localeCompare(String(b2.data?.postedAt ?? b2.updatedAt))).map((r2) => r2.id);
-}
-function keepHandoverMarks(board, ops) {
-  return ops.map((op) => {
-    if (op.kind === "add" && op.item.type === "comment" && op.item.data && "handover" in op.item.data) {
-      const was = board.items[op.item.id]?.data?.handover;
-      const data = { ...op.item.data };
-      if (was !== void 0)
-        data.handover = was;
-      else
-        delete data.handover;
-      return { ...op, item: { ...op.item, data } };
-    }
-    if (op.kind === "update" && op.patch.data && typeof op.patch.data === "object" && board.items[op.id]?.type === "comment") {
-      const was = board.items[op.id].data?.handover;
-      const data = { ...op.patch.data };
-      if (was !== void 0)
-        data.handover = was;
-      else
-        delete data.handover;
-      return { ...op, patch: { ...op.patch, data } };
-    }
-    return op;
-  });
-}
-function mentionIn(text3, known) {
-  if (!text3 || !text3.includes("@"))
-    return void 0;
-  const tokens = [];
-  for (const n4 of /* @__PURE__ */ new Set([...known, "studio"])) {
-    if (!n4 || n4.length > 60)
-      continue;
-    const name = sameAgent(n4, LOCAL_AGENT) ? LOCAL_AGENT : n4;
-    for (const t of /* @__PURE__ */ new Set([n4, handleOf(n4)]))
-      tokens.push({ token: t.toLowerCase(), name });
-  }
-  tokens.sort((a, b2) => b2.token.length - a.token.length);
-  const re2 = /(^|[^\p{L}\p{N}_.@-])@/gu;
-  let m2;
-  while (m2 = re2.exec(text3)) {
-    const at3 = m2.index + m2[0].length;
-    const rest = text3.slice(at3).toLowerCase();
-    for (const { token, name } of tokens) {
-      if (!rest.startsWith(token))
-        continue;
-      const next = rest.charAt(token.length);
-      if (next && /[\p{L}\p{N}_-]/u.test(next))
-        continue;
-      return name;
-    }
-  }
-  return void 0;
-}
-function threadRoot(board, it) {
-  let cur = it;
-  const seen = /* @__PURE__ */ new Set();
-  while (!seen.has(cur.id)) {
-    seen.add(cur.id);
-    const next = cur.target ? board.items[cur.target] : void 0;
-    if (next?.type !== "comment")
-      return cur;
-    cur = next;
-  }
-  return it;
-}
-var editOf = (it) => it.data?.discuss?.edit;
-var wireProposalOf = (it) => it.data?.discuss;
-function proposalHolder(board, root) {
-  const edit = editOf(root);
-  if (edit && typeof edit.file === "string")
-    return holderOfFile(board.meta, edit.file) ?? holderOfItem(board, board.items[root.target ?? ""]);
-  const d = wireProposalOf(root);
-  if (d?.proposal) {
-    const ids = [...Array.isArray(d.about) ? d.about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
-    for (const id of ids) {
-      const h = holderOfItem(board, board.items[id]);
-      if (h)
-        return h;
-    }
-  }
-  return void 0;
-}
-var isProposal = (it) => Boolean(editOf(it) || wireProposalOf(it)?.proposal);
-var agentOf = (it) => it.createdBy === "agent" ? str(it.data?.by) ?? LOCAL_AGENT : void 0;
-var DEFAULT_AGENT_TURNS = 6;
-function threadOf(board, root) {
-  const when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
-  return Object.values(board.items).filter((i) => i.type === "comment" && (i.id === root.id || threadRoot(board, i).id === root.id)).sort((a, b2) => a.id === root.id ? -1 : b2.id === root.id ? 1 : when(a).localeCompare(when(b2)));
-}
-function trailingAgentTurns(thread) {
-  let n4 = 0;
-  for (let i = thread.length - 1; i >= 0 && thread[i].createdBy === "agent"; i--)
-    n4++;
-  return n4;
-}
-function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
-  const root = threadRoot(board, comment);
-  const thread = threadOf(board, root);
-  const author = agentOf(comment);
-  const out = [];
-  const add = (n4) => {
-    if (n4 && !sameAgent(n4, author) && !out.some((o) => sameAgent(o, n4)))
-      out.push(n4);
-  };
-  if (author) {
-    const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length);
-    if (trailingAgentTurns(upTo) > maxTurns)
-      return { to: [], route: "paused" };
-  }
-  const ho = handoverThreadOf(root);
-  if (ho) {
-    const open2 = handoverOf(board.meta);
-    const parties = ho.to ? { to: ho.to, from: ho.from ?? [] } : open2 && open2.thread === root.id ? { to: open2.to, from: handoverFroms(open2) } : void 0;
-    if (parties) {
-      for (const f of parties.from)
-        add(f);
-      add(parties.to);
-      return { to: out, route: "handover" };
-    }
-  }
-  const asked = str(comment.data?.mention) ? comment : thread.filter((i) => str(i.data?.mention)).sort((a, b2) => String(b2.data?.mentionAt ?? "").localeCompare(String(a.data?.mentionAt ?? "")))[0];
-  const proposal = isProposal(root);
-  const holder = proposal ? proposalHolder(board, root) : void 0;
-  const proposer = proposal ? agentOf(root) : void 0;
-  if (asked) {
-    add(str(asked.data?.mention));
-    add(agentOf(asked));
-    add(holder?.agent);
-    add(proposer);
-    return { to: out, route: "mention" };
-  }
-  if (holder) {
-    add(holder.agent);
-    add(proposer);
-    return { to: out, route: "proposal" };
-  }
-  const r2 = responderName(responderOf(board.meta));
-  if (!r2)
-    return {};
-  add(r2);
-  add(agentOf(root));
-  return { to: out, route: "responder" };
-}
-var ROUTING_KEYS = ["to", "route", "mention", "mentionAt", "paused", "postedAt"];
-function stampRouting(board, ops, known, now, apply, maxTurns = DEFAULT_AGENT_TURNS) {
-  const touched = /* @__PURE__ */ new Set();
-  const pre = ops.map((op) => {
-    if (op.kind === "add" && op.item.type === "comment") {
-      touched.add(op.item.id);
-      const was = board.items[op.item.id]?.data;
-      const data = withMention(clean(op.item.data), op.item.text, known, was, now, op.item.data?.ask);
-      data.postedAt = typeof was?.postedAt === "string" ? was.postedAt : now;
-      return { ...op, item: { ...op.item, data } };
-    }
-    if (op.kind === "update") {
-      const cur = board.items[op.id];
-      if (cur?.type !== "comment")
-        return op;
-      const textChanged = op.patch.text !== void 0 && op.patch.text !== cur.text;
-      if (!textChanged && !op.patch.data)
-        return op;
-      const base = { ...cur.data ?? {}, ...op.patch.data ?? {} };
-      for (const k2 of ROUTING_KEYS) {
-        if (cur.data?.[k2] !== void 0)
-          base[k2] = cur.data[k2];
-        else
-          delete base[k2];
-      }
-      if (!textChanged)
-        return { ...op, patch: { ...op.patch, data: base } };
-      touched.add(op.id);
-      return { ...op, patch: { ...op.patch, data: withMention(base, op.patch.text, known, cur.data, now, cur.data?.ask) } };
-    }
-    return op;
-  });
-  if (!touched.size)
-    return pre;
-  const next = apply(board, pre);
-  return pre.map((op) => {
-    const id = op.kind === "add" ? op.item.id : op.kind === "update" ? op.id : void 0;
-    if (!id || !touched.has(id))
-      return op;
-    const it = next.items[id];
-    if (!it)
-      return op;
-    const r2 = routeOf(next, it, maxTurns);
-    const set2 = (data) => {
-      const d = { ...data };
-      delete d.to;
-      delete d.route;
-      delete d.paused;
-      if (r2.to)
-        d.to = r2.to;
-      if (r2.route)
-        d.route = r2.route;
-      if (r2.route === "paused")
-        d.paused = true;
-      return d;
-    };
-    if (op.kind === "add")
-      return { ...op, item: { ...op.item, data: set2(op.item.data ?? {}) } };
-    if (op.kind === "update")
-      return { ...op, patch: { ...op.patch, data: set2(op.patch.data ?? { ...board.items[id]?.data ?? {} }) } };
-    return op;
-  });
-}
-var clean = (data) => {
-  const d = { ...data ?? {} };
-  for (const k2 of ROUTING_KEYS)
-    delete d[k2];
-  return d;
-};
-function withMention(data, text3, known, was, now, ask) {
-  const d = { ...data };
-  const m2 = mentionIn(text3, known) ?? (str(ask) ? resolveAgent(ask, known) ?? ask.replace(/^@+/, "").slice(0, 60) : void 0);
-  if (m2) {
-    d.mention = m2;
-    d.mentionAt = was && sameAgent(str(was.mention), m2) && str(was.mentionAt) ? was.mentionAt : now;
-  } else {
-    delete d.mention;
-    delete d.mentionAt;
-  }
-  delete d.to;
-  return d;
-}
-function asksMe(board, change, me) {
-  return change.author === "agent" && mentionsMe(board, change, me);
-}
-function mentionsMe(board, change, me) {
-  if (change.author === "agent" && sameAgent(change.by ?? LOCAL_AGENT, me))
-    return false;
-  return change.ops.some((op) => {
-    const id = op.kind === "add" ? op.item.id : op.id;
-    const it = board.items[id] ?? (op.kind === "add" ? op.item : void 0);
-    if (it?.type !== "comment")
-      return false;
-    const route = it.data?.route;
-    const to = it.data?.to;
-    return (route === "mention" || route === "proposal" || route === "handover") && Array.isArray(to) && to.some((n4) => typeof n4 === "string" && sameAgent(n4, me));
-  });
-}
-var hasPendingNow = (op, before) => {
-  if (op.kind === "add")
-    return Boolean(op.item.data?.pending);
-  if (op.kind !== "update" || !op.patch.data)
-    return false;
-  const p = op.patch.data.pending;
-  return p !== void 0 && JSON.stringify(p) !== JSON.stringify(before?.data?.pending);
-};
-function addressedTo(board, change, me) {
-  const responder = responderName(responderOf(board.meta));
-  const toResponder = () => !responder || sameAgent(responder, me);
-  if (change.ops.length === 0)
-    return toResponder();
-  for (const op of change.ops) {
-    const id = op.kind === "add" ? op.item.id : op.id;
-    const item = board.items[id] ?? (op.kind === "add" ? op.item : void 0) ?? change.before[id] ?? void 0;
-    if (item?.type === "comment") {
-      const to = item.data?.to;
-      if (!Array.isArray(to) || to.some((n4) => typeof n4 === "string" && sameAgent(n4, me)))
-        return true;
-      continue;
-    }
-    if (item && hasPendingNow(op, change.before[id])) {
-      const h = holderOfItem(board, item);
-      if (h) {
-        if (sameAgent(h.agent, me))
-          return true;
-        continue;
-      }
-    }
-    if (toResponder())
-      return true;
-  }
-  return false;
-}
-function settingsLines(meta3) {
-  const out = [];
-  const c = contextOf(meta3);
-  if (c)
-    out.push(`Board context${c.by ? ` (from ${displayName(c.by)})` : ""}:`, ...c.text.split("\n").map((l) => `  ${l}`));
-  const r2 = responderOf(meta3);
-  if (r2 && r2.mode !== "any")
-    out.push(`Answered by: ${responderLabel(r2)} \u2014 the person's comments here go to it; an @mention sends a thread to another agent`);
-  const s = suggestionOf(meta3);
-  if (!r2 && s)
-    out.push(`Answered by: not set \u2014 ${s.by ? displayName(s.by) : "an agent"} suggested ${responderLabel(s)}; only the person can confirm it`);
-  for (const { key, source, holder } of holdersOf(meta3)) {
-    out.push(`Files of ${key}${source ? ` (${source})` : ""}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ""}${holder.remote ? ` \xB7 ${holder.remote}` : ""}${holder.from ? ` (handed over from ${displayName(holder.from)})` : ""} \u2014 proposals on it go to that agent; only it redraws it`);
-  }
-  const h = handoverOf(meta3);
-  if (h)
-    out.push(...handoverLines(h));
-  return out;
-}
-
-// packages/canvas/dist/outline.js
-var short = (s, n4 = 60) => {
-  const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
-};
-var KIND_LABEL = {
-  "event-storming": "EventStorming",
-  "user-story-map": "story map",
-  "user-journey": "journey",
-  wireframe: "wireframe",
-  workflow: "workflow",
-  kanban: "kanban",
-  "domain-story": "domain story",
-  "ui-mock": "UI mock"
-};
-function isContainer(it) {
-  if (it.type === "frame" || it.type === "lane")
-    return true;
-  if (it.type === "wireframe")
-    return it.role === "screen";
-  if (it.type === "ui")
-    return Boolean(it.data?.ui?.container);
-  return false;
-}
-var inside = (it, c) => {
-  const cx = it.x + it.w / 2;
-  const cy = it.y + it.h / 2;
-  return cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h;
-};
-function containmentTree(board) {
-  const items = Object.values(board.items).filter((i) => i.type !== "comment" && i.type !== "arrow");
-  const containers = items.filter(isContainer);
-  const parent = /* @__PURE__ */ new Map();
-  for (const it of items) {
-    const p = it.parent ? board.items[it.parent] : void 0;
-    if (!p || p.id === it.id || p.type === "comment" || p.type === "arrow")
-      continue;
-    let cur = p.id;
-    let cycle = false;
-    for (let guard = 0; cur && guard < 200; guard++) {
-      if (cur === it.id) {
-        cycle = true;
-        break;
-      }
-      cur = parent.get(cur) ?? board.items[cur]?.parent;
-    }
-    if (!cycle)
-      parent.set(it.id, p.id);
-  }
-  const isUnder = (cand, ancestor) => {
-    for (let cur = cand, guard = 0; cur && guard < 200; guard++, cur = parent.get(cur))
-      if (cur === ancestor)
-        return true;
-    return false;
-  };
-  for (const it of items) {
-    if (parent.has(it.id))
-      continue;
-    if (diagramSpecOf(it))
-      continue;
-    let best;
-    for (const c of containers) {
-      if (c.id === it.id || !inside(it, c))
-        continue;
-      if (isContainer(it) && c.w * c.h <= it.w * it.h)
-        continue;
-      if (isUnder(c.id, it.id))
-        continue;
-      if (!best || c.w * c.h < best.w * best.h)
-        best = c;
-    }
-    if (best)
-      parent.set(it.id, best.id);
-  }
-  const children = /* @__PURE__ */ new Map();
-  const roots = [];
-  for (const it of items) {
-    const p = parent.get(it.id);
-    if (p)
-      children.set(p, [...children.get(p) ?? [], it]);
-    else
-      roots.push(it);
-  }
-  return { parent, children, roots };
-}
-function descendants(tree, rootId) {
-  const out = /* @__PURE__ */ new Set();
-  const stack = [rootId];
-  while (stack.length) {
-    const id = stack.pop();
-    for (const c of tree.children.get(id) ?? []) {
-      if (out.has(c.id))
-        continue;
-      out.add(c.id);
-      stack.push(c.id);
-    }
-  }
-  return out;
-}
-function resolveFrame(board, frame) {
-  const byKey = board.items[`diagram.${frame}`];
-  if (byKey)
-    return byKey;
-  const byId = board.items[frame];
-  if (byId && (isContainer(byId) || byId.type === "frame"))
-    return byId;
-  if (board.kind !== "freeform" && frame === board.kind)
-    return "board";
-  return void 0;
-}
-function frameKeys(board) {
-  const keys = Object.values(board.items).flatMap((i) => diagramSpecOf(i) ? [diagramSpecOf(i).key] : []);
-  return keys.length ? keys : board.kind !== "freeform" ? [board.kind] : [];
-}
-function itemsInFrame(board, frame, tree = containmentTree(board)) {
-  if (frame === "board")
-    return new Set(Object.keys(board.items));
-  const set2 = descendants(tree, frame.id);
-  set2.add(frame.id);
-  for (const it of Object.values(board.items))
-    if (it.type === "arrow" && (it.from && set2.has(it.from) || it.to && set2.has(it.to)))
-      set2.add(it.id);
-  return withThreads(board, set2);
-}
-function withThreads(board, ids) {
-  const out = new Set(ids);
-  for (const it of Object.values(board.items)) {
-    if (it.type !== "comment")
-      continue;
-    const root = rootOf(board, it);
-    if (out.has(it.id) || out.has(root.id) || root.target && ids.has(root.target)) {
-      out.add(it.id);
-      out.add(root.id);
-    }
-  }
-  return out;
-}
-function rootOf(board, it) {
-  const seen = /* @__PURE__ */ new Set();
-  let cur = it;
-  while (!seen.has(cur.id)) {
-    seen.add(cur.id);
-    const next = cur.target ? board.items[cur.target] : void 0;
-    if (next?.type !== "comment")
-      return cur;
-    cur = next;
-  }
-  return it;
-}
-function byPos(a, b2) {
-  const rowA = Math.round(a.y / 60);
-  const rowB = Math.round(b2.y / 60);
-  return rowA !== rowB ? rowA - rowB : a.x - b2.x;
-}
-function pendingTag(it) {
-  const p = it.data?.pending;
-  if (!p || typeof p !== "object")
-    return void 0;
-  const kind = typeof p.kind === "string" ? p.kind : "change";
-  if (kind === "remove" && p.deleted)
-    return "deleted by the person \u2014 the file still has it: proposed remove from the file";
-  return `proposed ${kind}${typeof p.by === "string" ? ` by ${displayName(p.by)}` : ""}`;
-}
-var who = (c) => c.createdBy === "agent" && typeof c.data?.by === "string" ? c.data.by : c.createdBy;
-function outline(board, opts = {}) {
-  const items = Object.values(board.items);
-  const tree = containmentTree(board);
-  const only = opts.only;
-  const keep = (id) => !only || only.has(id);
-  const visible = /* @__PURE__ */ new Set();
-  const context = /* @__PURE__ */ new Set();
-  if (only) {
-    for (const id of only) {
-      const it = board.items[id];
-      if (it?.type === "comment") {
-        const t = rootOf(board, it).target;
-        if (t && board.items[t] && board.items[t].type !== "comment" && board.items[t].type !== "arrow" && !only.has(t))
-          context.add(t);
-      }
-    }
-    for (const id of [...only, ...context]) {
-      const it = board.items[id];
-      if (!it || it.type === "comment" || it.type === "arrow")
-        continue;
-      for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur))
-        visible.add(cur);
-    }
-  }
-  const shown = (id) => !only || visible.has(id);
-  const replies = /* @__PURE__ */ new Map();
-  const roots = [];
-  for (const c of items.filter((i) => i.type === "comment")) {
-    const root = rootOf(board, c);
-    if (root.id === c.id)
-      roots.push(c);
-    else
-      replies.set(root.id, [...replies.get(root.id) ?? [], c]);
-  }
-  const when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
-  for (const list3 of replies.values())
-    list3.sort((a, b2) => when(a).localeCompare(when(b2)));
-  const threadsOn = /* @__PURE__ */ new Map();
-  for (const r2 of roots)
-    if (r2.target && board.items[r2.target])
-      threadsOn.set(r2.target, [...threadsOn.get(r2.target) ?? [], r2]);
-  const out = [];
-  if (!opts.bare) {
-    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`);
-    const settings = settingsLines(board.meta);
-    if (settings.length)
-      out.push(...settings, "");
-  }
-  const printed = /* @__PURE__ */ new Set();
-  const maxReplies = opts.replies ?? 3;
-  const said = (c) => {
-    const to = Array.isArray(c.data?.to) && (c.data.route === "mention" || c.data.route === "handover") && c.data.to.length ? ` \u2192 ${c.data.to.join(", ")}` : "";
-    return `(${who(c)}${to})${c.data?.paused ? " [agents paused here \u2014 waits for the person]" : ""}`;
-  };
-  const thread = (c, indent) => {
-    if (printed.has(c.id) || !keep(c.id))
-      return;
-    printed.add(c.id);
-    const rs = replies.get(c.id) ?? [];
-    const last = rs[rs.length - 1] ?? c;
-    const edit = c.data?.discuss?.edit;
-    const tags = [edit ? `proposal: edit to ${typeof edit.file === "string" ? edit.file : "a text"}` : "", rs.length ? `${rs.length + 1} messages` : "", last.createdBy === "user" ? "waiting for an answer" : ""].filter(Boolean);
-    out.push(`${indent}\u{1F4AC} ${said(c)} ${short(c.text, 200)}${tags.length ? ` [${tags.join(" \xB7 ")}]` : ""}  #${c.id}`);
-    const hidden = Math.max(0, rs.length - maxReplies);
-    if (hidden)
-      out.push(`${indent}  \u21B3 \u2026 ${hidden} earlier repl${hidden === 1 ? "y" : "ies"} (ids: [${c.id}] with format json for all)`);
-    for (const r2 of rs.slice(hidden)) {
-      out.push(`${indent}  \u21B3 ${said(r2)} ${short(r2.text, 200)}  #${r2.id}`);
-      printed.add(r2.id);
-    }
-    for (const r2 of rs)
-      printed.add(r2.id);
-  };
-  const meta3 = (i) => {
-    const f = [];
-    if (i.data?.pivotal)
-      f.push("pivotal");
-    const pend = pendingTag(i);
-    if (pend)
-      f.push(pend);
-    if (i.type === "card" && i.role === "card") {
-      const labels = Array.isArray(i.data?.labels) ? i.data.labels.filter((l) => typeof l === "string") : [];
-      if (labels.length)
-        f.push(labels.join(", "));
-      if (typeof i.data?.size === "string")
-        f.push(`size ${i.data.size}`);
-      if (typeof i.data?.assignee === "string")
-        f.push(`@${i.data.assignee}`);
-    }
-    if (i.updatedBy === "user")
-      f.push("edited by user");
-    const n4 = threadsOn.get(i.id)?.length;
-    if (n4 && only)
-      f.push(`${n4} thread${n4 === 1 ? "" : "s"}`);
-    return f;
-  };
-  const line = (i, indent) => {
-    printed.add(i.id);
-    if (i.role === "pivotal")
-      return;
-    if (!keep(i.id) && !context.has(i.id))
-      return;
-    const role = i.type === "ui" ? String(i.data?.ui?.type ?? i.role ?? "ui") : i.role ?? i.type;
-    const f = meta3(i);
-    out.push(`${indent}- ${role}: ${short(i.text, 80) || "(untitled)"}${f.length ? ` [${f.join(", ")}]` : ""}  #${i.id}`);
-    for (const c of threadsOn.get(i.id) ?? [])
-      thread(c, `${indent}    `);
-  };
-  const sortKids = (parent, kids) => {
-    if (parent?.role === "column")
-      return [...kids].sort((a, b2) => a.y - b2.y || (a.order ?? 0) - (b2.order ?? 0));
-    return [...kids].sort(byPos);
-  };
-  const arrowLine = (a) => {
-    const f = board.items[a.from ?? ""];
-    const t = board.items[a.to ?? ""];
-    const pend = pendingTag(a);
-    return `- ${short(f?.text, 40) || a.from} \u2192 ${short(t?.text, 40) || a.to}${a.label ? ` (${short(a.label, 40)})` : ""}${a.role && !["flow", "arrow"].includes(a.role) ? ` [${a.role}${pend ? `, ${pend}` : ""}]` : pend ? ` [${pend}]` : ""}`;
-  };
-  const frameOfArrow = /* @__PURE__ */ new Map();
-  const topFrameOf = (id) => {
-    let top;
-    for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur))
-      if (diagramSpecOf(board.items[cur]))
-        top = cur;
-    return top;
-  };
-  for (const a of items.filter((i) => i.type === "arrow")) {
-    const fa = topFrameOf(a.from);
-    const fb = topFrameOf(a.to);
-    if (fa && fa === fb)
-      frameOfArrow.set(a.id, fa);
-  }
-  const arrowsIn = (frameId) => items.filter((a) => frameOfArrow.get(a.id) === frameId && keep(a.id));
-  const walk = (c, indent) => {
-    if (!shown(c.id))
-      return;
-    printed.add(c.id);
-    const spec = diagramSpecOf(c);
-    if (spec) {
-      const n4 = descendants(tree, c.id).size;
-      const holder = holdersOf(board.meta).find((h) => h.key === spec.key);
-      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n4} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
-      out.push(`${indent}## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short(c.text, 60)}" \u2014 ${bits.join(" \xB7 ")}  #${c.id}`);
-    } else {
-      const role = c.type === "ui" ? String(c.data?.ui?.type ?? "ui") : c.role ?? c.type;
-      const f = c.type === "lane" && c.role === "column" ? [`${(tree.children.get(c.id) ?? []).filter((k2) => k2.type === "card").length} cards${typeof c.data?.wip === "number" ? `, WIP ${c.data.wip}` : ""}`] : [];
-      if (c.data?.ds === "group" && Array.isArray(c.data?.members))
-        f.push(`members: ${c.data.members.join(", ")}`);
-      const pend = pendingTag(c);
-      if (pend)
-        f.push(pend);
-      out.push(`${indent}## ${role}: ${short(c.text, 80) || "(untitled)"}${f.length ? ` [${f.join("; ")}]` : ""}  #${c.id}`);
-    }
-    for (const t of threadsOn.get(c.id) ?? [])
-      thread(t, `${indent}    `);
-    for (const k2 of sortKids(c, tree.children.get(c.id) ?? [])) {
-      if (printed.has(k2.id))
-        continue;
-      if (isContainer(k2))
-        walk(k2, indent + "  ");
-      else
-        line(k2, indent + "  ");
-    }
-    if (spec?.kind === "domain-story") {
-      const sentences = [...new Map(Array.from(descendants(tree, c.id)).map((id) => board.items[id]).filter((i) => typeof i?.data?.sentence === "string" && keep(i.id)).sort((a, b2) => Number(a.data?.seq ?? 0) - Number(b2.data?.seq ?? 0)).map((i) => [String(i.data.sentence), i.id])).entries()];
-      if (sentences.length) {
-        out.push(`${indent}  sentences:`);
-        for (const [s, id] of sentences)
-          out.push(`${indent}    ${s}  #${id}`);
-      }
-    }
-    if (spec) {
-      const ds = spec.kind === "domain-story";
-      const wires = arrowsIn(c.id).filter((a) => !(ds && (a.role === "activity" || a.role === "activity-to")));
-      if (wires.length) {
-        out.push(`${indent}  ## arrows (${wires.length})`);
-        for (const a of wires.sort((p, q2) => (p.from ?? "").localeCompare(q2.from ?? ""))) {
-          out.push(`${indent}    ${arrowLine(a)}`);
-          printed.add(a.id);
-        }
-      }
-      if (ds)
-        for (const a of arrowsIn(c.id))
-          printed.add(a.id);
-    }
-  };
-  const tops = tree.roots.filter(isContainer).sort((a, b2) => (diagramSpecOf(b2) ? 1 : 0) - (diagramSpecOf(a) ? 1 : 0) || byPos(a, b2));
-  for (const c of tops)
-    walk(c, "");
-  const loose = tree.roots.filter((s) => !isContainer(s) && !printed.has(s.id) && keep(s.id)).sort(byPos);
-  if (loose.length) {
-    out.push(tops.length ? "## outside any frame or lane" : "## items");
-    for (const s of loose)
-      line(s, "  ");
-  }
-  const rest = items.filter((a) => a.type === "arrow" && !printed.has(a.id) && keep(a.id));
-  if (rest.length) {
-    out.push(frameOfArrow.size || tops.some((t) => diagramSpecOf(t)) ? "## arrows between diagrams and loose items" : "## arrows");
-    for (const a of rest.sort((p, q2) => (p.from ?? "").localeCompare(q2.from ?? "")))
-      out.push(`  ${arrowLine(a)}`);
-  }
-  const orphan = roots.filter((c) => !printed.has(c.id) && keep(c.id));
-  if (orphan.length) {
-    out.push("## comments (general)");
-    for (const c of orphan.sort(byPos))
-      thread(c, "  ");
-  }
-  return out.join("\n");
-}
-
-// packages/canvas/dist/diff.js
-var short2 = (s, n4 = 60) => {
-  const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
-};
-function nameOf(item, board) {
-  if (!item)
-    return "(unknown)";
-  if (item.type === "arrow") {
-    const from = board?.items[item.from ?? ""];
-    const to = board?.items[item.to ?? ""];
-    return `arrow ${short2(from?.text, 30) || item.from} \u2192 ${short2(to?.text, 30) || item.to}`;
-  }
-  const threaded = item.type === "comment" && board?.items[item.target ?? ""]?.type !== "comment" && Object.values(board?.items ?? {}).some((o) => o.type === "comment" && o.target === item.id);
-  const role = threaded ? "comment thread" : item.role ?? item.type;
-  const text3 = short2(item.text);
-  return text3 ? `${role} "${text3}" [${item.id}]` : `${role} [${item.id}]`;
-}
-function rootOf2(it, find) {
-  const seen = /* @__PURE__ */ new Set();
-  let cur = it;
-  while (!seen.has(cur.id)) {
-    seen.add(cur.id);
-    const next = find(cur.target);
-    if (next?.type !== "comment")
-      return cur;
-    cur = next;
-  }
-  return it;
-}
-function finder(board, changes) {
-  return (id) => {
-    if (!id)
-      return void 0;
-    if (board.items[id])
-      return board.items[id];
-    for (const c of changes)
-      if (c.before[id])
-        return c.before[id];
-    return void 0;
+  const o = a;
+  return {
+    ...str(o.on) ? { on: o.on } : {},
+    ...o.draft === true ? { draft: true } : {},
+    ...str(o.file) ? { file: o.file } : {},
+    ...o.board === true ? { board: true } : {}
   };
 }
-function containerName(id, board, changes) {
-  if (!id)
+var isAnnotationDraft = (it) => annotationOf(it)?.draft === true;
+var isAnnotationCard = (it) => calloutOf(it) !== void 0 || !!annotationOf(it) && !isAnnotationDraft(it) && it?.role === "note";
+function annotationRefOf(item, key) {
+  const el = str(item.data?.element);
+  if (el)
+    return el;
+  return key && item.id.startsWith(`${key}.`) ? item.id.slice(key.length + 1) : item.id;
+}
+function todoOf(it) {
+  if (!it || it.type !== "comment")
     return void 0;
-  const cur = board.items[id];
-  if (cur)
-    return short2(cur.text, 40) || id;
-  for (const c of changes) {
-    const b2 = c.before[id];
-    if (b2)
-      return short2(b2.text, 40) || id;
-  }
-  return id;
-}
-var isUiBox = (i) => i.type === "ui" && Boolean(i.data?.ui?.container);
-function containerOf(board, item) {
-  if (item.parent && board.items[item.parent])
-    return board.items[item.parent];
-  const cx = item.x + item.w / 2;
-  const cy = item.y + item.h / 2;
-  let best;
-  for (const c of Object.values(board.items)) {
-    if (c.id === item.id || c.type !== "lane" && c.type !== "frame" && c.type !== "wireframe" && !isUiBox(c))
-      continue;
-    if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
-      if (!best || c.w * c.h < best.w * best.h)
-        best = c;
-    }
-  }
-  return best;
-}
-function summarize(board, changes, opts = {}) {
-  const lines2 = [];
-  const folded = /* @__PURE__ */ new Map();
-  const find = finder(board, changes);
-  for (const ch of changes) {
-    if (isBookkeeping(ch))
-      continue;
-    const who3 = ch.by ?? ch.author;
-    const prefix = `[${ch.seq} ${who3}]`;
-    const removed = new Set(ch.ops.flatMap((op) => op.kind === "remove" ? [op.id] : []));
-    const removedRoot = (it) => {
-      const root = it?.type === "comment" ? rootOf2(it, find) : void 0;
-      return root && root.id !== it?.id && removed.has(root.id) ? root.id : void 0;
-    };
-    for (const op of ch.ops) {
-      if (op.kind === "add") {
-        const it = op.item;
-        if (it.type === "comment") {
-          const root = rootOf2(it, find);
-          const on = find(root.target);
-          const text3 = short2(it.text, 200);
-          if (root.id !== it.id)
-            lines2.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text3}" [thread ${root.id}]`);
-          else {
-            const edit = it.data?.discuss?.edit;
-            const what = edit && typeof edit.diff === "string" ? `proposed an edit to ${typeof edit.file === "string" ? edit.file : "a text"} (${diffCount(edit.diff)})` : "added comment";
-            lines2.push(`${prefix} ${what}${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}" [thread ${it.id}]`);
-          }
-        } else if (it.type === "arrow") {
-          lines2.push(`${prefix} connected ${nameOf(board.items[it.from ?? ""] ?? ch.before[it.from ?? ""], board)} \u2192 ${nameOf(board.items[it.to ?? ""] ?? ch.before[it.to ?? ""], board)}${it.label ? ` ("${short2(it.label)}")` : ""}`);
-        } else {
-          const parent = containerName(it.parent, board, changes);
-          lines2.push(`${prefix} added ${nameOf(it, board)}${parent ? ` in ${parent}` : ""}`);
-        }
-        continue;
-      }
-      if (op.kind === "remove") {
-        const was2 = ch.before[op.id];
-        if (removedRoot(was2))
-          continue;
-        const replies = ch.ops.filter((o) => o.kind === "remove" && removedRoot(ch.before[o.id]) === op.id).length;
-        lines2.push(`${prefix} removed ${nameOf(was2, board)}${replies ? ` and its ${replies} repl${replies === 1 ? "y" : "ies"}` : ""}`);
-        continue;
-      }
-      const was = ch.before[op.id];
-      if (isSeenOnly(op, was))
-        continue;
-      if (!was && !board.items[op.id])
-        continue;
-      const now = board.items[op.id] ?? (was ? { ...was, ...op.patch } : void 0);
-      const patch = op.patch;
-      const name = nameOf(was ?? now, board);
-      const parts2 = [];
-      if (patch.text !== void 0 && patch.text !== was?.text) {
-        if (was?.type === "comment")
-          parts2.push(`edited comment to "${short2(patch.text, 200)}"`);
-        else
-          parts2.push(`renamed "${short2(was?.text)}" \u2192 "${short2(patch.text)}"`);
-      }
-      const parentChanged = patch.parent !== void 0 && patch.parent !== was?.parent;
-      const moved = patch.x !== void 0 && patch.x !== was?.x || patch.y !== void 0 && patch.y !== was?.y;
-      const resized = patch.w !== void 0 && patch.w !== was?.w || patch.h !== void 0 && patch.h !== was?.h;
-      if (parentChanged) {
-        parts2.push(`moved from ${containerName(was?.parent, board, changes) ?? "nowhere"} \u2192 ${containerName(patch.parent, board, changes) ?? "nowhere"}`);
-      } else if (moved && was) {
-        const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was);
-        const afterC = now ? containerOf(board, now) : void 0;
-        if (beforeC?.id !== afterC?.id && (beforeC || afterC)) {
-          parts2.push(`moved from ${beforeC ? short2(beforeC.text, 40) : "nowhere"} \u2192 ${afterC ? short2(afterC.text, 40) : "nowhere"}`);
-        } else if (!resized) {
-          const dx = (patch.x ?? was.x) - was.x;
-          const dy = (patch.y ?? was.y) - was.y;
-          const sib = neighbourBefore(board, now);
-          parts2.push(`moved by (${dx >= 0 ? "+" : ""}${Math.round(dx)}, ${dy >= 0 ? "+" : ""}${Math.round(dy)})${sib ? `, now before ${nameOf(sib, board)}` : ""}`);
-        }
-      }
-      if (patch.color !== void 0 && patch.color !== was?.color)
-        parts2.push(`recoloured ${was?.color ?? "?"} \u2192 ${patch.color}`);
-      if (patch.role !== void 0 && patch.role !== was?.role)
-        parts2.push(`role ${was?.role ?? "?"} \u2192 ${patch.role}`);
-      if (resized)
-        parts2.push(`resized ${was?.w}\xD7${was?.h} \u2192 ${patch.w ?? was?.w}\xD7${patch.h ?? was?.h}`);
-      if (patch.label !== void 0 && patch.label !== was?.label)
-        parts2.push(`relabelled "${short2(was?.label)}" \u2192 "${short2(patch.label)}"`);
-      if (patch.from !== void 0 && patch.from !== was?.from || patch.to !== void 0 && patch.to !== was?.to) {
-        const end = (id) => nameOf(board.items[id ?? ""] ?? ch.before[id ?? ""], board);
-        parts2.push(`reconnected to ${end(patch.from ?? was?.from)} \u2192 ${end(patch.to ?? was?.to)}`);
-      }
-      if (patch.data !== void 0 && JSON.stringify(patch.data.bend) !== JSON.stringify(was?.data?.bend))
-        parts2.push("rerouted");
-      if (patch.data !== void 0 && JSON.stringify(meaningOf(patch.data)) !== JSON.stringify(meaningOf(was?.data)))
-        parts2.push(`data changed: ${short2(JSON.stringify(meaningOf(patch.data)), 120)}`);
-      if (opts.collapseMoves && isLayoutOnly(op, was) && !parts2.some((p) => p.startsWith("moved from"))) {
-        folded.set(op.id, { seq: ch.seq, author: who3, resized: resized || (folded.get(op.id)?.resized ?? false) });
-        continue;
-      }
-      if (parts2.length)
-        lines2.push(`${prefix} ${name}: ${parts2.join("; ")}`);
-    }
-    if (ch.note && ch.ops.length === 0)
-      lines2.push(`${prefix} ${ch.note}`);
-  }
-  if (folded.size)
-    lines2.push(foldedLine(board, changes, folded));
-  return lines2;
-}
-function foldedLine(board, changes, folded) {
-  const all = [...folded.values()];
-  const seqs = all.map((f) => f.seq);
-  const lo = Math.min(...seqs);
-  const hi = Math.max(...seqs);
-  const authors = [...new Set(all.map((f) => f.author))].join("/");
-  const names = [...folded.keys()].map((id) => {
-    const it = board.items[id] ?? changes.find((c) => c.before[id])?.before[id];
-    return short2(it?.type === "arrow" ? nameOf(it, board) : it?.text, 30) || id;
-  });
-  const shown = names.slice(0, 6).join(", ") + (names.length > 6 ? ", \u2026" : "");
-  const verb = all.some((f) => f.resized) ? "moved or resized" : "moved";
-  return `[${lo === hi ? lo : `${lo}\u2013${hi}`} ${authors}] ${verb} ${names.length} item${names.length === 1 ? "" : "s"}: ${shown}`;
-}
-function cardMoves(board, changes) {
-  const out = [];
-  const find = finder(board, changes);
-  const columnName = (id) => {
-    const c = find(id);
-    return c && c.type === "lane" && c.role === "column" ? c.text ?? c.id : void 0;
-  };
-  for (const ch of changes) {
-    if (isBookkeeping(ch))
-      continue;
-    for (const op of ch.ops) {
-      if (op.kind !== "update")
-        continue;
-      const was = ch.before[op.id];
-      if (!was || was.type !== "card")
-        continue;
-      const now = board.items[op.id] ?? { ...was, ...op.patch };
-      let from;
-      let to;
-      if (op.patch.parent !== void 0 && op.patch.parent !== was.parent) {
-        from = columnName(was.parent);
-        to = columnName(op.patch.parent);
-      } else if (op.patch.x !== void 0 && op.patch.x !== was.x || op.patch.y !== void 0 && op.patch.y !== was.y) {
-        const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was);
-        const afterC = containerOf(board, now);
-        if (beforeC?.id === afterC?.id)
-          continue;
-        from = beforeC?.role === "column" ? beforeC.text : void 0;
-        to = afterC?.role === "column" ? afterC.text : void 0;
-      } else
-        continue;
-      if (from === to)
-        continue;
-      out.push({ cardId: op.id, title: now.text ?? was.text ?? op.id, from, to, seq: ch.seq, author: ch.author, ts: ch.ts });
-    }
-  }
-  return out;
-}
-function agentSeenOps(board, changes, agent) {
-  const ids = /* @__PURE__ */ new Set();
-  for (const ch of changes) {
-    if (ch.author !== "user" || isBookkeeping(ch))
-      continue;
-    for (const op of ch.ops)
-      ids.add(op.kind === "add" ? op.item.id : op.id);
-  }
-  const ops = [];
-  for (const id of ids) {
-    const it = board.items[id];
-    const op = it?.type === "comment" && it.createdBy === "user" && it.text?.trim() ? markSeen(it, "agent", agent) : void 0;
-    if (op)
-      ops.push(op);
-  }
-  return ops;
-}
-function neighbourBefore(board, item) {
-  if (!item)
+  const t = it.data?.todo;
+  if (!t || typeof t !== "object" || Array.isArray(t))
     return void 0;
-  const container = containerOf(board, item);
-  let best;
-  for (const o of Object.values(board.items)) {
-    if (o.id === item.id || o.type === "arrow" || o.type === "lane" || o.type === "frame" || o.type === "comment")
-      continue;
-    if (containerOf(board, o)?.id !== container?.id)
-      continue;
-    if (Math.abs(o.y - item.y) > item.h / 2)
-      continue;
-    if (o.x <= item.x)
-      continue;
-    if (!best || o.x < best.x)
-      best = o;
-  }
-  return best;
-}
-function diffCount(diff) {
-  const { added, removed } = diffStat(diff);
-  return `+${added} \u2212${removed} lines`;
-}
-var CHANGE_KINDS = ["add", "update", "remove", "comment", "move"];
-function opKind(op, before) {
-  const it = op.kind === "add" ? op.item : before;
-  if (it?.type === "comment")
-    return "comment";
-  if (op.kind === "add")
-    return "add";
-  if (op.kind === "remove")
-    return "remove";
-  return isLayoutOnly(op, before) ? "move" : "update";
-}
-var changeWho = (c) => c.by ?? (c.author === "user" ? "person" : "agent");
-function fromMatches(c, from) {
-  const who3 = changeWho(c).toLowerCase();
-  return from.some((f) => {
-    const n4 = f.trim().toLowerCase();
-    if (n4 === "person" || n4 === "user")
-      return c.author === "user";
-    if (n4 === "studio" || n4 === "agent")
-      return c.author === "agent" && !c.by;
-    return who3 === n4;
-  });
-}
-function filterChanges(board, changes, f) {
-  const kinds = f.kinds?.length ? new Set(f.kinds) : void 0;
-  let inFrame;
-  if (f.frame) {
-    const fr = resolveFrame(board, f.frame);
-    if (!fr)
-      throw Object.assign(new Error(`no frame "${f.frame}" on this board \u2014 diagram keys: ${frameKeys(board).join(", ") || "(none)"}`), { status: 404 });
-    if (fr !== "board") {
-      const set2 = itemsInFrame(board, fr);
-      const key = fr.data?.diagram?.key;
-      const was = (id, before) => {
-        if (set2.has(id))
-          return true;
-        if (key && id.startsWith(`${key}.`))
-          return true;
-        if (!before)
-          return false;
-        for (const ref2 of [before.parent, before.target, before.from])
-          if (ref2 && (ref2 === fr.id || set2.has(ref2)))
-            return true;
-        return false;
-      };
-      inFrame = was;
-    }
-  }
-  const out = [];
-  for (const c of changes) {
-    if (f.from?.length && !fromMatches(c, f.from))
-      continue;
-    if (!c.ops.length) {
-      if (!inFrame && (!kinds || kinds.has("update")))
-        out.push(c);
-      continue;
-    }
-    const ops = c.ops.filter((op) => {
-      const id = op.kind === "add" ? op.item.id : op.id;
-      const before = c.before[id] ?? (op.kind === "add" ? op.item : void 0);
-      if (kinds && !kinds.has(opKind(op, c.before[id])))
-        return false;
-      if (inFrame && !inFrame(id, before ?? board.items[id]))
-        return false;
-      return true;
-    });
-    if (ops.length)
-      out.push(ops.length === c.ops.length ? c : { ...c, ops });
-  }
-  return out;
-}
-function diffSummary(board, changes, lines2, o = { since: 0 }) {
-  const byWho = /* @__PURE__ */ new Map();
-  const byFrame = /* @__PURE__ */ new Map();
-  let ops = 0;
-  const tree = containmentTree(board);
-  const frameOf2 = (id, before) => {
-    for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur) ?? board.items[cur]?.parent) {
-      const spec = diagramSpecOf(board.items[cur]);
-      if (spec)
-        return spec.key;
-    }
-    const it = before ?? board.items[id];
-    const ref2 = it?.target ?? it?.from ?? it?.parent;
-    if (ref2 && ref2 !== id && board.items[ref2])
-      return frameOf2(ref2, void 0);
-    const key = /^([a-z0-9-]+)\./.exec(id)?.[1];
-    return key && board.items[`diagram.${key}`] ? key : board.kind !== "freeform" ? board.kind : "(no frame)";
+  const o = t;
+  return {
+    state: o.state === "done" ? "done" : "open",
+    ...str(o.ask) ? { ask: o.ask } : {},
+    ...str(o.answer) ? { answer: o.answer } : {},
+    ...str(o.doneBy) ? { doneBy: o.doneBy } : {},
+    ...str(o.doneAt) ? { doneAt: o.doneAt } : {}
   };
-  for (const c of changes) {
-    if (isBookkeeping(c))
-      continue;
-    const who3 = changeWho(c);
-    const m2 = byWho.get(who3) ?? /* @__PURE__ */ new Map();
-    byWho.set(who3, m2);
-    if (!c.ops.length) {
-      m2.set("update", (m2.get("update") ?? 0) + 1);
-      continue;
-    }
-    for (const op of c.ops) {
-      const id = op.kind === "add" ? op.item.id : op.id;
-      if (op.kind === "update" && isSeenOnly(op, c.before[id]))
-        continue;
-      ops++;
-      const k2 = opKind(op, c.before[id]);
-      m2.set(k2, (m2.get(k2) ?? 0) + 1);
-      const fr = frameOf2(id, c.before[id] ?? (op.kind === "add" ? op.item : void 0));
-      byFrame.set(fr, (byFrame.get(fr) ?? 0) + 1);
-    }
-  }
-  const last = o.last ?? 20;
-  const fmt = (m2) => [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `${n4} ${k2}`).join(", ");
-  const out = [`${changes.length} change(s) since seq ${o.since} (board seq ${board.seq}), ${ops} op(s), ${lines2.length} line(s)`];
-  if (byWho.size)
-    out.push("by who \xD7 kind:", ...[...byWho.entries()].map(([w2, m2]) => `  ${w2}: ${fmt(m2) || "\u2014"}`));
-  if (byFrame.size)
-    out.push("by frame (ops):", ...[...byFrame.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `  ${k2}: ${n4}`));
-  if (lines2.length)
-    out.push(`last ${Math.min(last, lines2.length)} line(s):`, ...lines2.slice(-last).map((l) => `  ${l}`));
-  return out.join("\n");
 }
-function pageLines(lines2, o) {
-  let from = 0;
-  if (o.cursor) {
-    const m2 = /^(?:[a-z]+:)?(\d+):(\d+)$/.exec(o.cursor.trim());
-    if (!m2)
-      throw Object.assign(new Error(`cursor "${o.cursor}" is not one this canvas gave out (it looks like "56:120")`), { status: 400 });
-    from = Number(m2[2]);
-  }
-  const max = Math.min(2e5, Math.max(2e3, o.maxChars ?? 4e4));
-  const limit = o.limit && o.limit > 0 ? o.limit : Infinity;
-  const page3 = [];
-  let size2 = 0;
-  let i = from;
-  for (; i < lines2.length && page3.length < limit; i++) {
-    const s = lines2[i].length + 1;
-    if (page3.length && size2 + s > max)
-      break;
-    page3.push(lines2[i]);
-    size2 += s;
-  }
-  const left = lines2.length - i;
-  return { lines: page3, left, from, ...left > 0 ? { nextCursor: `${o.seq}:${i}` } : {} };
-}
+var todoAnswerText = (answer) => `Confirmed: ${answer.trim()}`;
 
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -21791,14 +20122,14 @@ function promiseAllObject(promisesObj) {
 }
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
-  let str2 = "";
+  let str3 = "";
   for (let i = 0; i < length; i++) {
-    str2 += chars[Math.floor(Math.random() * chars.length)];
+    str3 += chars[Math.floor(Math.random() * chars.length)];
   }
-  return str2;
+  return str3;
 }
-function esc(str2) {
-  return JSON.stringify(str2);
+function esc(str3) {
+  return JSON.stringify(str3);
 }
 function slugify(input2) {
   return input2.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
@@ -21912,8 +20243,8 @@ var primitiveTypes = /* @__PURE__ */ new Set([
   "symbol",
   "undefined"
 ]);
-function escapeRegex(str2) {
-  return str2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(str3) {
+  return str3.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def2, params) {
   const cl = new inst._zod.constr(def2 ?? inst._zod.def);
@@ -22167,13 +20498,13 @@ function getSizableOrigin(input2) {
   return "unknown";
 }
 var highSurrogate = /[\uD800-\uDBFF]/;
-function codePointLength(str2) {
-  const units = str2.length;
-  if (!highSurrogate.test(str2))
+function codePointLength(str3) {
+  const units = str3.length;
+  if (!highSurrogate.test(str3))
     return units;
   let count = units;
   for (let i = 0; i < units - 1; i++) {
-    if ((str2.charCodeAt(i) & 64512) === 55296 && (str2.charCodeAt(i + 1) & 64512) === 56320) {
+    if ((str3.charCodeAt(i) & 64512) === 55296 && (str3.charCodeAt(i + 1) & 64512) === 56320) {
       count--;
       i++;
     }
@@ -40644,6 +38975,8 @@ var DIAGRAM_KEY = /^[a-z0-9][a-z0-9-]{0,39}$/;
 var TRACE_RELS = ["derived-from", "groups", "shows", "relates"];
 var traceSchema = external_exports.object({ from: external_exports.string().min(1), rel: external_exports.enum(TRACE_RELS) });
 var TRACE_LABEL = { "derived-from": "\u4F86\u81EA", groups: "\u7D44\u6210", shows: "\u756B\u9762", relates: "\u76F8\u95DC" };
+var annotationSchema = external_exports.object({ id: external_exports.string().optional(), on: external_exports.string().min(1), text: external_exports.string().min(1) });
+var annotationsSchema = external_exports.array(annotationSchema);
 function parseTraceRef(ref2) {
   const i = ref2.indexOf("/");
   if (i < 0)
@@ -40651,6 +38984,2231 @@ function parseTraceRef(ref2) {
   if (i === 0 || i === ref2.length - 1)
     return void 0;
   return { key: ref2.slice(0, i), element: ref2.slice(i + 1) };
+}
+
+// packages/canvas/dist/diagrams/dsIcons.js
+var DS_ICON_MAX_CHARS = 4e3;
+var DS_ICON_MAX_SHAPES = 40;
+var NUM = /^-?(\d+\.?\d*|\.\d+)$/;
+var PATH = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,+\-eE]+$/;
+var POINTS = /^[\s\d.,+\-eE]+$/;
+var SHAPES = {
+  path: { d: PATH },
+  circle: { cx: NUM, cy: NUM, r: NUM },
+  ellipse: { cx: NUM, cy: NUM, rx: NUM, ry: NUM },
+  rect: { x: NUM, y: NUM, width: NUM, height: NUM, rx: NUM, ry: NUM },
+  line: { x1: NUM, y1: NUM, x2: NUM, y2: NUM },
+  polyline: { points: POINTS },
+  polygon: { points: POINTS }
+};
+var REQUIRED = { path: ["d"], circle: ["r"], ellipse: ["rx", "ry"], rect: ["width", "height"], line: ["x2"], polyline: ["points"], polygon: ["points"] };
+var attrsOf = (text3) => {
+  const out = {};
+  for (const m2 of text3.matchAll(/([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
+    out[m2[1]] = (m2[2] ?? m2[3] ?? "").trim();
+  return out;
+};
+function parseDsIcon(svg) {
+  if (typeof svg !== "string" || !svg.trim() || svg.length > DS_ICON_MAX_CHARS)
+    return void 0;
+  const box = /<svg\b[^>]*>/i.exec(svg)?.[0];
+  const vb = box ? (attrsOf(box).viewBox ?? "").split(/[\s,]+/).map(Number) : [];
+  const viewBox = vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0 ? [vb[0], vb[1], vb[2], vb[3]] : [0, 0, 24, 24];
+  const shapes = [];
+  for (const m2 of svg.matchAll(/<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>/gi)) {
+    const tag = m2[1].toLowerCase();
+    const given = attrsOf(m2[2]);
+    const attrs = {};
+    for (const [name, ok] of Object.entries(SHAPES[tag]))
+      if (given[name] !== void 0 && ok.test(given[name]))
+        attrs[name] = given[name];
+    if (!REQUIRED[tag].every((name) => attrs[name] !== void 0))
+      continue;
+    shapes.push({ tag, attrs });
+    if (shapes.length >= DS_ICON_MAX_SHAPES)
+      break;
+  }
+  return shapes.length ? { viewBox, shapes } : void 0;
+}
+function dsGlyphTransform(g2) {
+  const [x2, y2, w2, h] = g2.viewBox;
+  if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
+    return void 0;
+  const s = 24 / Math.max(w2, h);
+  const r2 = (v2) => Math.round(v2 * 1e3) / 1e3;
+  return `translate(${r2((24 - w2 * s) / 2)} ${r2((24 - h * s) / 2)}) scale(${r2(s)}) translate(${r2(-x2)} ${r2(-y2)})`;
+}
+function dsGlyphMarkup(g2) {
+  const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
+  const t = dsGlyphTransform(g2);
+  return t ? `<g transform="${t}">${body}</g>` : body;
+}
+
+// packages/canvas/dist/diagrams/domainStoryReview.js
+var QUICK_START = "domainstorytelling.org/quick-start-guide";
+var EGON_HOWTO = "egon.io/howto";
+var BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"';
+var BUILT_IN_OBJECT_ICONS = /* @__PURE__ */ new Set(["document", "thing", "digital", "folder", "call", "email", "conversation", "info", "message", "information"]);
+var parts = (text3) => text3.split(/\s*[/／·|｜\n]\s*/).map((p) => p.trim()).filter(Boolean);
+var OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|completed|confirmed|done)$/i;
+var OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
+var CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
+var CONDITIONAL_CJK = /如果|否則|或者|還是/;
+var NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
+var DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
+var num = (n4) => `#${n4}`;
+function reviewDomainStory(m2) {
+  const out = [];
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const unsaid = [!m2.scope.granularity && "granularity (coarse-, medium- or fine-grained)", !m2.scope.time && "time (as-is or to-be)", !m2.scope.purity && "purity (pure or digitalized)"].filter(Boolean);
+  if (unsaid.length)
+    out.push({ rule: "scope-missing", severity: "info", message: `the scope does not say its ${unsaid.join(", ")} \u2014 readers judge every sentence by it (how much detail, today or the future, with or without software), so decide it before telling the story`, page: QUICK_START });
+  const inStory = (id) => m2.sentences.some((s) => s.actor === id || s.to.includes(id));
+  const systems = m2.actors.filter((a) => a.kind === "system" && inStory(a.id));
+  if (m2.scope.purity === "pure" && systems.length)
+    out.push({ rule: "scope-purity", severity: "warning", element: systems[0].id, message: `the scope says pure, but ${systems.map((a) => `"${a.text}"`).join(", ")} ${systems.length > 1 ? "are software systems" : "is a software system"} \u2014 a story with software systems is digitalized; change the scope, or tell who does this work`, page: QUICK_START });
+  if (m2.scope.purity === "digitalized" && !systems.length)
+    out.push({ rule: "scope-purity", severity: "info", message: "the scope says digitalized, but no actor is a software system (kind: system) \u2014 a story without software systems is pure", page: QUICK_START });
+  const acting = m2.actors.filter((a) => inStory(a.id));
+  const [first, second] = acting;
+  if (m2.sentences.length >= 4 && acting.length === 2 && first.kind === "system" !== (second.kind === "system") && acting.every((a) => m2.sentences.some((s) => s.actor === a.id)))
+    out.push({ rule: "request-response", severity: "info", message: `every sentence is between "${first.text}" and "${second.text}" \u2014 a user and a system answering each other reads like a screen flow, which a mock-up shows better; a domain story models intent: what is the user after, who else is involved, and how does the system help? Each activity should push the story forward`, page: BOOK_STYLE });
+  const told = m2.sentences.filter((s) => s.objectText);
+  for (const s of m2.sentences) {
+    const words = [s.verb, s.objectText ?? "", s.toLabel ?? ""];
+    if (words.some((w2) => CONDITIONAL_EN.test(w2) || CONDITIONAL_CJK.test(w2)))
+      out.push({ rule: "conditional", severity: "info", element: s.id, message: `${num(s.seq)} "${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}" reads like a choice \u2014 a domain story is one concrete example: tell the usual case here, put the variation in a note, and give an alternative that matters a story of its own`, page: QUICK_START });
+    if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
+      out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
+  }
+  const negative = m2.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ""} ${s.note ?? ""}`));
+  if (m2.sentences.length >= 3 && negative.length * 2 >= m2.sentences.length)
+    out.push({ rule: "negative-story", severity: "info", element: negative[0].id, message: `${negative.length} of ${m2.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(" ")}) \u2014 a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE });
+  for (const s of m2.sentences) {
+    if (DATE.test(s.verb))
+      out.push({ rule: "date-in-verb", severity: "info", element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date \u2014 the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START });
+  }
+  const variants = /* @__PURE__ */ new Map();
+  for (const s of told) {
+    const first2 = (s.objectText ?? "").trim().split(/[\s／/·|]+/)[0]?.toLowerCase();
+    if (first2 && first2.length >= 2)
+      variants.set(first2, /* @__PURE__ */ new Set([...variants.get(first2) ?? [], s.objectText.trim()]));
+  }
+  for (const [first2, names2] of variants)
+    if (names2.size >= 3)
+      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n4) => `"${n4}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
+  const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
+  if (told.length >= 4 && names.size === told.length)
+    out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
+  const kinds = new Set(told.map((s) => s.objectKind));
+  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
+    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
+  const icons = m2.icons ?? {};
+  for (const [icon, svg] of Object.entries(icons)) {
+    if (!parseDsIcon(svg))
+      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
+  }
+  for (const o of m2.workObjects) {
+    if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
+      out.push({ rule: "icon-unknown", severity: "info", element: o.id, message: `"${o.text}": no icon named "${o.kind}" \u2014 it is drawn as a document; use a built-in kind or draw "${o.kind}" under \`icons:\``, page: EGON_HOWTO });
+  }
+  return out;
+}
+
+// packages/canvas/dist/diagrams/domainStory.js
+var DS_ACTOR_KINDS = ["person", "group", "system"];
+var DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
+var named = () => external_exports.union([
+  external_exports.string(),
+  external_exports.object({
+    id: external_exports.string().optional(),
+    text: external_exports.string().min(1),
+    /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
+    kind: external_exports.string().optional()
+  })
+]);
+var domainStorySchema = external_exports.object({
+  scope: external_exports.object({
+    granularity: external_exports.enum(DS_GRANULARITY).optional(),
+    time: external_exports.enum(["as-is", "to-be"]).optional(),
+    purity: external_exports.enum(["pure", "digitalized"]).optional()
+  }).optional(),
+  actors: external_exports.array(named()).min(1),
+  workObjects: external_exports.array(named()).default([]),
+  sentences: external_exports.array(external_exports.object({
+    id: external_exports.string().optional(),
+    /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
+    seq: external_exports.number().int().positive().optional(),
+    /** The actor who acts (id or text). */
+    actor: external_exports.string().min(1),
+    /** The activity, a verb from the domain language. */
+    verb: external_exports.string().min(1),
+    /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
+    object: external_exports.string().optional(),
+    /** The actor(s) the work object goes to. */
+    to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
+    /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
+    toLabel: external_exports.string().optional(),
+    note: external_exports.string().optional(),
+    traces: external_exports.array(traceSchema).optional()
+  })).min(1),
+  groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
+  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+  /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
+  icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
+  /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
+  layout: external_exports.object({
+    spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
+    /** horizontal pitch of the actor grid in px (overrides the spacing's) */
+    gapX: external_exports.number().min(240).max(2e3).optional(),
+    /** vertical pitch of the actor grid in px */
+    gapY: external_exports.number().min(180).max(2e3).optional()
+  }).optional()
+});
+function normalizeDomainStory(raw) {
+  const c = domainStorySchema.parse(raw);
+  const alloc = idAllocator();
+  const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
+  const actors = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const workObjects = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
+  const unresolved = [];
+  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
+  const actorRef = (ref2, element, field) => {
+    const hit2 = find(actors, ref2);
+    if (hit2)
+      return hit2.id;
+    unresolved.push({ element, field, ref: ref2 });
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    actors.push(added);
+    return added.id;
+  };
+  let next = 1;
+  const sentences = c.sentences.map((s) => {
+    const seq = s.seq ?? next;
+    next = Math.max(next, seq + 1);
+    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
+    const declared = s.object ? find(workObjects, s.object) : void 0;
+    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
+    return {
+      id,
+      seq,
+      actor: actorRef(s.actor, id, "actor"),
+      verb: s.verb,
+      ...declared ? { object: declared.id } : {},
+      ...s.object ? { objectText: declared?.text ?? s.object } : {},
+      objectKind: declared?.kind ?? "document",
+      to: to.map((r2) => actorRef(r2, id, "to")),
+      ...s.toLabel ? { toLabel: s.toLabel } : {},
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? []
+    };
+  });
+  const elementRef = (ref2, element, field) => {
+    const hit2 = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    if (!hit2)
+      unresolved.push({ element, field, ref: ref2 });
+    return hit2;
+  };
+  const groups = c.groups.map((g2) => {
+    const id = alloc(g2.id, g2.text, "group");
+    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
+  });
+  const annotations = c.annotations.flatMap((a, i) => {
+    const id = alloc(a.id, `note-${i + 1}`, "note");
+    const on = elementRef(a.on, id, "on");
+    return on ? [{ id, on, text: a.text }] : [];
+  });
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c.icons ? { icons: c.icons } : {}, ...c.layout ? { layout: c.layout } : {}, unresolved, dsModel: true };
+}
+function readSentence(m2, s) {
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
+  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
+}
+function circled(n4) {
+  return n4 >= 1 && n4 <= 20 ? String.fromCodePoint(9312 + n4 - 1) : `(${n4})`;
+}
+var QUICK_START2 = "domainstorytelling.org/quick-start-guide";
+var NOTE_RECOMMENDED = 120;
+function displayWidth(text3) {
+  let n4 = 0;
+  for (const ch of text3)
+    n4 += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
+  return n4;
+}
+function checkDomainStory(content) {
+  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
+  const out = [];
+  for (const u3 of m2.unresolved)
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
+  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  for (const s of m2.sentences) {
+    if (s.to.includes(s.actor)) {
+      const others = s.to.filter((r2) => r2 !== s.actor);
+      out.push({
+        rule: "self-receiver",
+        severity: "warning",
+        element: s.id,
+        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
+        page: QUICK_START2
+      });
+    }
+    if (!s.objectText)
+      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
+  }
+  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
+  seqs.forEach((n4, i) => {
+    const expected = i === 0 ? 1 : seqs[i - 1] + 1;
+    if (n4 !== expected)
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n4}`, page: QUICK_START2 });
+  });
+  for (const n4 of seqs) {
+    const same2 = m2.sentences.filter((s) => s.seq === n4);
+    if (same2.length > 1)
+      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n4)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+  }
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
+  for (let i = 0; i < m2.groups.length; i++)
+    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
+      const [a, b2] = [m2.groups[i], m2.groups[j2]];
+      const sa = new Set(a.members);
+      const sb = new Set(b2.members);
+      const shared2 = [...sa].filter((x2) => sb.has(x2));
+      if (!shared2.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
+        continue;
+      out.push({
+        rule: "groups-overlap",
+        severity: "warning",
+        element: b2.id,
+        message: `groups "${a.text}" and "${b2.text}" share ${shared2.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
+        page: QUICK_START2
+      });
+    }
+  for (const n4 of m2.annotations) {
+    const w2 = displayWidth(n4.text);
+    if (w2 > NOTE_RECOMMENDED)
+      out.push({ rule: "note-long", severity: "warning", element: n4.id, message: `note on "${name(n4.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
+  }
+  for (const o of m2.workObjects) {
+    if (!m2.sentences.some((s) => s.object === o.id))
+      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START2 });
+  }
+  for (const a of m2.actors) {
+    if (!m2.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
+      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START2 });
+    if (!DS_ACTOR_KINDS.includes(a.kind))
+      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START2 });
+  }
+  out.push(...reviewDomainStory(m2));
+  return out;
+}
+
+// packages/canvas/dist/patch.js
+function lineOps(a, b2) {
+  let start = 0;
+  while (start < a.length && start < b2.length && a[start] === b2[start])
+    start++;
+  let endA = a.length;
+  let endB = b2.length;
+  while (endA > start && endB > start && a[endA - 1] === b2[endB - 1]) {
+    endA--;
+    endB--;
+  }
+  const n4 = endA - start;
+  const m2 = endB - start;
+  const lcs = new Int32Array((n4 + 1) * (m2 + 1));
+  const at3 = (i2, j3) => i2 * (m2 + 1) + j3;
+  for (let i2 = n4 - 1; i2 >= 0; i2--)
+    for (let j3 = m2 - 1; j3 >= 0; j3--)
+      lcs[at3(i2, j3)] = a[start + i2] === b2[start + j3] ? lcs[at3(i2 + 1, j3 + 1)] + 1 : Math.max(lcs[at3(i2 + 1, j3)], lcs[at3(i2, j3 + 1)]);
+  const ops = [];
+  for (let k2 = 0; k2 < start; k2++)
+    ops.push({ kind: " ", text: a[k2], a: k2, b: k2 });
+  let i = 0;
+  let j2 = 0;
+  while (i < n4 || j2 < m2) {
+    if (i < n4 && j2 < m2 && a[start + i] === b2[start + j2]) {
+      ops.push({ kind: " ", text: a[start + i], a: start + i, b: start + j2 });
+      i++;
+      j2++;
+    } else if (i < n4 && (j2 === m2 || lcs[at3(i + 1, j2)] >= lcs[at3(i, j2 + 1)])) {
+      ops.push({ kind: "-", text: a[start + i], a: start + i, b: start + j2 });
+      i++;
+    } else {
+      ops.push({ kind: "+", text: b2[start + j2], a: start + i, b: start + j2 });
+      j2++;
+    }
+  }
+  for (let k2 = 0; k2 < a.length - endA; k2++)
+    ops.push({ kind: " ", text: a[endA + k2], a: endA + k2, b: endB + k2 });
+  return ops;
+}
+var NO_EOL = "\0";
+function splitLines(text3) {
+  if (text3 === "")
+    return [];
+  const lines2 = text3.split("\n");
+  if (lines2[lines2.length - 1] === "")
+    lines2.pop();
+  else
+    lines2[lines2.length - 1] += NO_EOL;
+  return lines2;
+}
+function joinLines(lines2) {
+  return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
+`).join("");
+}
+function unifiedDiff(before, after, path15 = "file", context = 3) {
+  if (before === after)
+    return "";
+  const ops = lineOps(splitLines(before), splitLines(after));
+  const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
+  const out = [`--- a/${path15}`, `+++ b/${path15}`];
+  let k2 = 0;
+  while (k2 < changed.length) {
+    const lo = Math.max(0, changed[k2] - context);
+    let hiChange = changed[k2];
+    while (k2 + 1 < changed.length && changed[k2 + 1] - hiChange <= context * 2)
+      hiChange = changed[++k2];
+    const hi = Math.min(ops.length - 1, hiChange + context);
+    const slice = ops.slice(lo, hi + 1);
+    const aStart = slice[0].a + 1;
+    const bStart = slice[0].b + 1;
+    const aLen = slice.filter((o) => o.kind !== "+").length;
+    const bLen = slice.filter((o) => o.kind !== "-").length;
+    out.push(`@@ -${aLen ? aStart : aStart - 1},${aLen} +${bLen ? bStart : bStart - 1},${bLen} @@`);
+    for (const o of slice) {
+      if (o.text.endsWith(NO_EOL))
+        out.push(`${o.kind}${o.text.slice(0, -1)}`, "\\ No newline at end of file");
+      else
+        out.push(`${o.kind}${o.text}`);
+    }
+    k2++;
+  }
+  return out.join("\n") + "\n";
+}
+function firstChange(before, after) {
+  if (before === after)
+    return void 0;
+  const a = splitLines(before);
+  const ops = lineOps(a, splitLines(after));
+  const k2 = ops.findIndex((o) => o.kind !== " ");
+  if (k2 < 0)
+    return void 0;
+  let end = k2;
+  while (end + 1 < ops.length && ops[end + 1].kind !== " ")
+    end++;
+  const removed = ops.slice(k2, end + 1).filter((o) => o.kind === "-");
+  const line = Math.max(1, Math.min(a.length, ops[k2].a + 1));
+  return { line, endLine: removed.length ? removed[removed.length - 1].a + 1 : line };
+}
+function diffStat(diff) {
+  let added = 0;
+  let removed = 0;
+  for (const l of diff.split("\n")) {
+    if (l.startsWith("+++") || l.startsWith("---"))
+      continue;
+    if (l.startsWith("+"))
+      added++;
+    else if (l.startsWith("-"))
+      removed++;
+  }
+  return { added, removed };
+}
+var strip = (p) => p.replace(/^[ab]\//, "").replace(/\t.*$/, "").trim();
+function diffPath(diff) {
+  const plus = diff.split("\n").find((l) => l.startsWith("+++ "));
+  const minus = diff.split("\n").find((l) => l.startsWith("--- "));
+  const p = plus ? strip(plus.slice(4)) : minus ? strip(minus.slice(4)) : void 0;
+  return p && p !== "/dev/null" ? p : void 0;
+}
+function parseHunks(diff) {
+  const lines2 = diff.replace(/\r\n/g, "\n").split("\n");
+  if (lines2[lines2.length - 1] === "")
+    lines2.pop();
+  const hunks = [];
+  let files = 0;
+  let cur;
+  let last;
+  for (let i = 0; i < lines2.length; i++) {
+    const l = lines2[i];
+    const m2 = l.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+    if (m2) {
+      cur = { header: m2[0], aStart: Number(m2[1]), aLen: m2[2] === void 0 ? 1 : Number(m2[2]), bStart: Number(m2[3]), bLen: m2[4] === void 0 ? 1 : Number(m2[4]), old: [], new: [] };
+      hunks.push(cur);
+      last = void 0;
+      continue;
+    }
+    const inBody = cur && (cur.old.length < cur.aLen || cur.new.length < cur.bLen);
+    if (!inBody) {
+      if (l.startsWith("--- ")) {
+        files++;
+        if (files > 1)
+          return "the diff touches more than one file: propose one file at a time";
+      }
+      if (l.startsWith("\\") && cur && last) {
+        if (last !== "+")
+          cur.old[cur.old.length - 1] += NO_EOL;
+        if (last !== "-")
+          cur.new[cur.new.length - 1] += NO_EOL;
+      }
+      continue;
+    }
+    if (l.startsWith("\\")) {
+      if (last && last !== "+")
+        cur.old[cur.old.length - 1] += NO_EOL;
+      if (last && last !== "-")
+        cur.new[cur.new.length - 1] += NO_EOL;
+      continue;
+    }
+    const kind = l === "" ? " " : l[0];
+    const body = l.slice(1);
+    if (kind === " ") {
+      cur.old.push(body);
+      cur.new.push(body);
+    } else if (kind === "-")
+      cur.old.push(body);
+    else if (kind === "+")
+      cur.new.push(body);
+    else
+      return `line ${i + 1} of the diff is not part of a hunk (it should start with " ", "-" or "+"): ${JSON.stringify(l.slice(0, 80))}`;
+    last = kind;
+  }
+  if (!hunks.length)
+    return "no hunks (@@ -a,b +c,d @@) in the diff";
+  for (const [k2, h] of hunks.entries()) {
+    if (h.old.length !== h.aLen || h.new.length !== h.bLen)
+      return `hunk ${k2 + 1} (${h.header}) says ${h.aLen} old / ${h.bLen} new lines but has ${h.old.length} / ${h.new.length}`;
+  }
+  return hunks;
+}
+function applyUnifiedDiff(text3, diff) {
+  const parsed = parseHunks(diff);
+  if (typeof parsed === "string")
+    return { ok: false, error: parsed };
+  const lines2 = splitLines(text3);
+  const out = [];
+  let cursor = 0;
+  let delta = 0;
+  const offsets = [];
+  for (const [k2, h] of parsed.entries()) {
+    const want = (h.aLen === 0 ? h.aStart : h.aStart - 1) + delta;
+    const fits = (at4) => at4 >= cursor && at4 + h.old.length <= lines2.length && h.old.every((l, i) => lines2[at4 + i] === l);
+    let at3 = -1;
+    if (h.old.length === 0)
+      at3 = Math.min(Math.max(want, cursor), lines2.length);
+    else
+      for (let d = 0; d <= lines2.length; d++) {
+        if (fits(want - d)) {
+          at3 = want - d;
+          break;
+        }
+        if (d && fits(want + d)) {
+          at3 = want + d;
+          break;
+        }
+      }
+    if (at3 < 0) {
+      const near = lines2.slice(Math.max(0, want - 1), want + Math.max(3, h.old.length + 1)).map((l) => l.replace(NO_EOL, ""));
+      return { ok: false, hunk: k2 + 1, error: `hunk ${k2 + 1} (${h.header}) does not apply: its context and removed lines are not in the file${near.length ? ` (around line ${Math.max(1, want)} the file says: ${JSON.stringify(near.join("\n").slice(0, 200))})` : ""}` };
+    }
+    delta = at3 - (h.aLen === 0 ? h.aStart : h.aStart - 1);
+    offsets.push(delta);
+    out.push(...lines2.slice(cursor, at3), ...h.new);
+    cursor = at3 + h.old.length;
+  }
+  out.push(...lines2.slice(cursor));
+  const fixed = out.map((l, i) => i < out.length - 1 && l.endsWith(NO_EOL) ? l.slice(0, -1) : l);
+  return { ok: true, text: joinLines(fixed), offsets };
+}
+
+// packages/canvas/dist/routing.js
+var LOCAL_AGENT = "agent";
+var CONTEXT_MAX = 4e3;
+var str2 = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
+function responderOf(meta3) {
+  const r2 = meta3?.responder;
+  if (!r2 || typeof r2 !== "object")
+    return void 0;
+  if (r2.mode === "agent")
+    return str2(r2.agent) ? r2 : void 0;
+  return r2.mode === "any" || r2.mode === "studio" ? r2 : void 0;
+}
+function suggestionOf(meta3) {
+  return responderOf({ responder: meta3?.responderSuggestion });
+}
+function responderValue(r2) {
+  return r2.mode === "agent" ? r2.agent : r2.mode;
+}
+function responderName(r2) {
+  if (!r2 || r2.mode === "any")
+    return void 0;
+  return r2.mode === "studio" ? LOCAL_AGENT : r2.agent;
+}
+function responderLabel(r2) {
+  const n4 = responderName(r2);
+  return n4 ? displayName(n4) : "any agent";
+}
+function displayName(name) {
+  return name === LOCAL_AGENT ? "studio" : name;
+}
+function contextOf(meta3) {
+  const c = meta3?.context;
+  return c && typeof c === "object" && str2(c.text) ? c : void 0;
+}
+function handleOf(name) {
+  const raw = name.trim().replace(/^@+/, "");
+  if (raw.toLowerCase() === LOCAL_AGENT || raw.toLowerCase() === "studio")
+    return "studio";
+  const h = raw.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}_.-]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 60).replace(/[-.]+$/, "");
+  return h || "agent";
+}
+function sameAgent(a, b2) {
+  if (!a || !b2)
+    return false;
+  return handleOf(a) === handleOf(b2);
+}
+function resolveAgent(raw, known) {
+  if (!raw || !raw.trim())
+    return void 0;
+  const want = raw.trim().replace(/^@+/, "");
+  if (sameAgent(want, LOCAL_AGENT))
+    return LOCAL_AGENT;
+  return known.find((n4) => n4 === want) ?? known.find((n4) => n4.toLowerCase() === want.toLowerCase()) ?? known.find((n4) => sameAgent(n4, want));
+}
+function agentLabel(name) {
+  const h = handleOf(name);
+  const d = displayName(name);
+  return h === d ? `@${h}` : `@${h} (${d})`;
+}
+function parseResponder(raw, caller, by, at3) {
+  if (raw === null || raw === "" || raw === "default")
+    return null;
+  if (typeof raw === "object" && raw) {
+    const r2 = raw;
+    return parseResponder(r2.mode === "agent" ? r2.agent : r2.mode, caller, by, at3);
+  }
+  if (typeof raw !== "string")
+    return void 0;
+  const v2 = raw.trim();
+  if (v2 === "any")
+    return { mode: "any", by, at: at3 };
+  if (v2 === "studio" || v2 === LOCAL_AGENT)
+    return { mode: "studio", by, at: at3 };
+  const name = v2 === "me" ? caller : v2;
+  if (!name)
+    return void 0;
+  if (sameAgent(name, LOCAL_AGENT))
+    return { mode: "studio", by, at: at3 };
+  return { mode: "agent", agent: name.slice(0, 60), by, at: at3 };
+}
+var holderIn = (v2) => {
+  const h = v2?.holder;
+  return h && typeof h === "object" && str2(h.agent) ? h : void 0;
+};
+function holdersOf(meta3) {
+  const out = [];
+  const diagrams = meta3?.diagrams;
+  for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+    const holder = holderIn(d);
+    if (holder)
+      out.push({ key, ...str2(d?.source) ? { source: d.source } : {}, holder });
+  }
+  const wf = meta3?.workflow;
+  const h = holderIn(wf);
+  if (h)
+    out.push({ key: "workflow", ...str2(wf?.file) ? { source: wf.file } : {}, holder: h });
+  return out;
+}
+function holderOfFile(meta3, file2) {
+  if (!file2)
+    return void 0;
+  const diagrams = meta3?.diagrams;
+  for (const d of Object.values(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+    const files = d?.files && typeof d.files === "object" ? Object.keys(d.files) : [];
+    if (d?.source === file2 || files.includes(file2)) {
+      const h = holderIn(d);
+      if (h)
+        return h;
+    }
+  }
+  const wf = meta3?.workflow;
+  const wfFiles = wf?.files && typeof wf.files === "object" ? Object.keys(wf.files) : [];
+  return wfFiles.includes(file2) ? holderIn(wf) : void 0;
+}
+function holderOfItem(board, item) {
+  if (!item)
+    return void 0;
+  const d = diagramOf(board, item);
+  if (!d)
+    return void 0;
+  const diagrams = board.meta?.diagrams;
+  if (d.frameId)
+    return holderIn(diagrams?.[d.key]);
+  return holderIn(diagrams?.[d.key]) ?? (d.kind === "workflow" ? holderIn(board.meta?.workflow) : void 0);
+}
+function soleHolder(meta3) {
+  const names = [...new Set(holdersOf(meta3).map((h) => h.holder.agent))];
+  return names.length === 1 ? names[0] : void 0;
+}
+function stampHolders(current, next, caller, now) {
+  const out = { ...next };
+  const stamp = (cur, sent) => {
+    if (!sent || typeof sent !== "object")
+      return void 0;
+    const s = sent;
+    if (cur && s.at && s.at === cur.at && s.agent === cur.agent)
+      return cur;
+    const h = { agent: caller, at: now };
+    for (const k2 of ["machine", "root", "repo", "remote"])
+      if (str2(s[k2]))
+        h[k2] = s[k2].slice(0, 300);
+    if (h.remote)
+      h.remote = withoutCredentials(h.remote);
+    if (str2(s.applied)) {
+      h.applied = s.applied.slice(0, 80);
+      h.appliedAt = cur?.applied === h.applied && cur.appliedAt ? cur.appliedAt : now;
+    } else if (cur && sameAgent(cur.agent, caller) && cur.applied) {
+      h.applied = cur.applied;
+      h.appliedAt = cur.appliedAt;
+    }
+    if (cur && sameAgent(cur.agent, caller)) {
+      if (str2(cur.from))
+        h.from = cur.from;
+      if (str2(cur.handover))
+        h.handover = cur.handover;
+      if (!h.repo && !h.remote && !h.root) {
+        if (str2(cur.repo))
+          h.repo = cur.repo;
+        if (str2(cur.remote))
+          h.remote = cur.remote;
+      }
+    }
+    return h;
+  };
+  const diagrams = next.diagrams;
+  if (diagrams && typeof diagrams === "object") {
+    const curD = current?.diagrams ?? {};
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([key, d]) => {
+      if (!d || typeof d !== "object")
+        return [key, d];
+      const { holder: sent, ...rest } = d;
+      const h = stamp(holderIn(curD[key]), sent);
+      return [key, h ? { ...rest, holder: h } : rest];
+    }));
+  }
+  const wf = next.workflow;
+  if (wf && typeof wf === "object") {
+    const { holder: sent, ...rest } = wf;
+    const h = stamp(holderIn(current?.workflow), sent);
+    out.workflow = h ? { ...rest, holder: h } : rest;
+  }
+  return out;
+}
+function mergeBoardMeta(meta3, patch) {
+  const out = { ...meta3 ?? {} };
+  for (const [k2, v2] of Object.entries(patch)) {
+    if (k2 === "diagrams" && v2 && typeof v2 === "object" && !Array.isArray(v2)) {
+      const cur = out.diagrams && typeof out.diagrams === "object" ? { ...out.diagrams } : {};
+      for (const [key, d] of Object.entries(v2)) {
+        if (d === null || d === void 0)
+          delete cur[key];
+        else
+          cur[key] = d;
+      }
+      out.diagrams = cur;
+    } else if (v2 === null || v2 === void 0)
+      delete out[k2];
+    else
+      out[k2] = v2;
+  }
+  return out;
+}
+function heldElsewhereText(key, source, holder) {
+  return `the files of "${key}"${source ? ` (${source})` : ""} are held by ${displayName(holder)}: you cannot redraw them. Propose instead (canvas_files \u2192 canvas_propose_edit), or ask the person to hand them over to you (board panel \u2192 Hand over files).`;
+}
+var stable = (v2) => JSON.stringify(v2, (_k, x2) => x2 && typeof x2 === "object" && !Array.isArray(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k2) => [k2, x2[k2]])) : x2) ?? "";
+function keepHeldEntries(current, sent, caller) {
+  const out = { ...sent };
+  const curD = current?.diagrams ?? {};
+  const held = Object.entries(curD).filter(([, d]) => {
+    const h = holderIn(d);
+    return h && !sameAgent(h.agent, caller);
+  });
+  if (held.length) {
+    const sentD = sent.diagrams && typeof sent.diagrams === "object" && !Array.isArray(sent.diagrams) ? { ...sent.diagrams } : {};
+    for (const [key, d] of held)
+      if (!(key in sentD))
+        sentD[key] = d;
+    out.diagrams = sentD;
+  }
+  const wh = holderIn(current?.workflow);
+  if (wh && !sameAgent(wh.agent, caller) && !("workflow" in sent))
+    out.workflow = current.workflow;
+  return out;
+}
+function heldRefusal(current, next, caller) {
+  const curD = current?.diagrams ?? {};
+  const nextD = next.diagrams && typeof next.diagrams === "object" ? next.diagrams : {};
+  for (const [key, d] of Object.entries(curD)) {
+    const h = holderIn(d);
+    if (!h || sameAgent(h.agent, caller))
+      continue;
+    if (stable(d) !== stable(nextD[key]))
+      return heldElsewhereText(key, str2(d?.source), h.agent);
+  }
+  const wf = current?.workflow;
+  const wh = holderIn(wf);
+  if (wh && !sameAgent(wh.agent, caller) && stable(wf) !== stable(next.workflow))
+    return heldElsewhereText("workflow", str2(wf?.file), wh.agent);
+  return void 0;
+}
+function diagramRoots(meta3) {
+  return [...new Set(holdersOf(meta3).map((h) => h.holder.root).filter((r2) => typeof r2 === "string" && r2.length > 0))];
+}
+function withoutCredentials(url2) {
+  return url2.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1");
+}
+function redactHolders(meta3) {
+  if (!meta3)
+    return meta3;
+  const strip2 = (v2) => {
+    const h = holderIn(v2);
+    if (!h)
+      return v2;
+    const { machine: _m, root: _r, ...rest } = h;
+    return { ...v2, holder: rest };
+  };
+  const out = { ...meta3 };
+  const diagrams = meta3.diagrams;
+  if (diagrams && typeof diagrams === "object")
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, strip2(d)]));
+  if (meta3.workflow)
+    out.workflow = strip2(meta3.workflow);
+  return out;
+}
+function renameInMeta(meta3, from, to) {
+  if (!meta3)
+    return void 0;
+  let changed = false;
+  const out = { ...meta3 };
+  const r2 = responderOf(meta3);
+  if (r2?.mode === "agent" && sameAgent(r2.agent, from)) {
+    out.responder = { ...r2, agent: to };
+    changed = true;
+  }
+  const s = suggestionOf(meta3);
+  if (s?.mode === "agent" && sameAgent(s.agent, from)) {
+    out.responderSuggestion = { ...s, agent: to };
+    changed = true;
+  }
+  const fix = (v2) => {
+    const h = holderIn(v2);
+    if (!h || !sameAgent(h.agent, from) && !sameAgent(h.from, from))
+      return v2;
+    changed = true;
+    return { ...v2, holder: { ...h, ...sameAgent(h.agent, from) ? { agent: to } : {}, ...sameAgent(h.from, from) ? { from: to } : {} } };
+  };
+  const diagrams = meta3.diagrams;
+  if (diagrams && typeof diagrams === "object")
+    out.diagrams = Object.fromEntries(Object.entries(diagrams).map(([k2, d]) => [k2, fix(d)]));
+  if (meta3.workflow)
+    out.workflow = fix(meta3.workflow);
+  const ho = handoverOf(meta3);
+  if (ho && (sameAgent(ho.to, from) || sameAgent(ho.by, from) || ho.keys.some((k2) => sameAgent(k2.from, from) || sameAgent(k2.ready?.by, from)))) {
+    const swap = (n4) => sameAgent(n4, from) ? to : n4;
+    out.handover = { ...ho, to: swap(ho.to), by: swap(ho.by), keys: ho.keys.map((k2) => ({ ...k2, from: swap(k2.from), ...k2.ready ? { ready: { ...k2.ready, by: swap(k2.ready.by) } } : {} })) };
+    changed = true;
+  }
+  return changed ? out : void 0;
+}
+function handoverOf(meta3) {
+  const h = meta3?.handover;
+  if (!h || typeof h !== "object" || Array.isArray(h))
+    return void 0;
+  if (!str2(h.id) || !str2(h.to) || !str2(h.thread) || !str2(h.by) || !str2(h.at) || typeof h.answeredBy !== "boolean" || !Array.isArray(h.keys) || !h.keys.length)
+    return void 0;
+  const keys = [];
+  for (const raw of h.keys) {
+    const k2 = raw;
+    if (!k2 || typeof k2 !== "object" || !str2(k2.key) || !str2(k2.from))
+      return void 0;
+    const r2 = k2.ready;
+    const files = r2 && typeof r2 === "object" && r2.files && typeof r2.files === "object" && !Array.isArray(r2.files) ? Object.fromEntries(Object.entries(r2.files).filter(([, v2]) => typeof v2 === "string")) : void 0;
+    const ready = r2 && typeof r2 === "object" && str2(r2.by) && str2(r2.at) && files ? { by: r2.by, at: r2.at, files, ...r2.forced === true ? { forced: true } : {} } : void 0;
+    keys.push({ key: k2.key, from: k2.from, ...str2(k2.source) ? { source: k2.source } : {}, ...str2(k2.title) ? { title: k2.title } : {}, ...ready ? { ready } : {} });
+  }
+  return { id: h.id, to: h.to, answeredBy: h.answeredBy, thread: h.thread, by: h.by, at: h.at, keys };
+}
+function handoverFroms(h) {
+  const out = [];
+  for (const k2 of h.keys)
+    if (!out.some((o) => sameAgent(o, k2.from)))
+      out.push(k2.from);
+  return out;
+}
+function handoverThreadOf(root) {
+  const h = root?.type === "comment" ? root.data?.handover : void 0;
+  if (!h || typeof h !== "object" || !str2(h.id))
+    return void 0;
+  return { id: h.id, ...str2(h.state) ? { state: h.state } : {}, ...str2(h.to) ? { to: h.to } : {}, ...Array.isArray(h.from) ? { from: h.from.filter((x2) => typeof x2 === "string") } : {} };
+}
+var at = (name) => `@${handleOf(name)}`;
+var named2 = (k2) => `\xAB${k2.title ?? k2.key}\xBB`;
+var list = (names) => names.join(", ");
+var whenText = (iso) => iso && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? `${iso.slice(0, 16).replace("T", " ")} UTC` : "its last draw";
+function handoverStartText(h) {
+  const froms = handoverFroms(h);
+  const one = froms.length === 1;
+  const files = list(h.keys.map((k2) => `${named2(k2)}${k2.source ? ` (${k2.source})` : ""}${one ? "" : ` from ${at(k2.from)}`}`));
+  return [
+    `Handing over the files of ${files}${one ? ` from ${at(froms[0])}` : ""} to ${at(h.to)}.`,
+    `${list(froms.map(at))}: settle the open proposals on them, redraw any of them whose file changed since your last draw, then canvas_handover({ ready: true }).`,
+    `${at(h.to)}: when they are ready, canvas_handover({ accept: true }), keep the files in your repo (canvas_files), and redraw once from your copy. From then on proposals on them go to you.`
+  ].join("\n");
+}
+function handoverReadyText(h, marked, o = {}) {
+  const lines2 = [];
+  if (o.forced) {
+    for (const from of handoverFroms({ keys: marked })) {
+      const mine = marked.filter((k2) => sameAgent(k2.from, from));
+      lines2.push(`Handed over without ${at(from)}'s confirmation: ${list(mine.map((k2) => `${named2(k2)} as of its last draw, ${whenText(o.lastDraw?.[k2.key])}`))}`);
+    }
+  } else {
+    const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
+    lines2.push(`Ready: ${list(marked.map(named2))} \u2014 the files as of my last draw (${files.length ? list(files) : "no files on the board"})`);
+  }
+  if (h.keys.every((k2) => k2.ready))
+    lines2.push(`Every file is ready \u2014 ${at(h.to)}: canvas_handover({ accept: true }).`);
+  return lines2.join("\n");
+}
+function handoverAcceptText(h) {
+  const keys = list(h.keys.map(named2));
+  return [`Accepted \u2014 ${at(h.to)} holds the files of ${keys} now; proposals on them go to ${at(h.to)}. ${list(handoverFroms(h).filter((f) => !sameAgent(f, h.to)).map(at))}: propose from now on (canvas_files \u2192 canvas_propose_edit).`, ...h.answeredBy ? [`"Answered by" is ${at(h.to)} now, as the person asked when handing over.`] : []].join("\n");
+}
+function handoverCancelText(by, reason) {
+  return `Cancelled by ${by ? at(by) : "the person"}${reason?.trim() ? `: ${reason.trim()}` : ""}`;
+}
+function handoverLines(h) {
+  const keys = list(h.keys.map((k2) => `${named2(k2)}${k2.source ? ` (${k2.source})` : ""}${k2.ready ? ` [ready${k2.ready.forced ? ", handed over by the person" : ""}]` : ""}`));
+  const out = [`Handover open (thread ${h.thread}, started by ${h.by === "user" ? "the person" : displayName(h.by)}): the files of ${keys} go from ${list(handoverFroms(h).map(displayName))} to ${displayName(h.to)}${h.answeredBy ? '; "Answered by" becomes it on accept' : ""}`];
+  const waiting = handoverFroms({ keys: h.keys.filter((k2) => !k2.ready) });
+  for (const from of waiting) {
+    const mine = h.keys.filter((k2) => !k2.ready && sameAgent(k2.from, from));
+    out.push(`  waiting for ${displayName(from)}: settle the open proposals on ${list(mine.map(named2))}, redraw any whose file changed, then canvas_handover({ ready: true })`);
+  }
+  out.push(waiting.length ? `  then ${displayName(h.to)} accepts: canvas_handover({ accept: true })` : `  every file is ready \u2014 waiting for ${displayName(h.to)} to accept: canvas_handover({ accept: true })`);
+  out.push("  either side may decline it (canvas_handover({ cancel: true, reason })); only the person starts or forces a handover");
+  return out;
+}
+function handoverWaiting(h) {
+  return list(h.keys.filter((k2) => !k2.ready).map((k2) => `${named2(k2)} waits for ${at(k2.from)}`));
+}
+var DECLINE_TEXT = "No, leave the file as it is.";
+function isSettledThread(thread) {
+  return thread.some((m2, i) => i > 0 && (m2.id.startsWith("applied.") || (m2.text ?? "").trimStart().startsWith("Applied to ") || m2.createdBy === "user" && (m2.text ?? "").trim() === DECLINE_TEXT));
+}
+function proposalKeyOf(board, root) {
+  const file2 = proposedFile(root);
+  if (file2) {
+    const diagrams = board.meta?.diagrams;
+    for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {})) {
+      if (d?.source === file2 || d?.files && typeof d.files === "object" && file2 in d.files)
+        return key;
+    }
+    const wf = board.meta?.workflow;
+    if (wf?.files && typeof wf.files === "object" && file2 in wf.files)
+      return "workflow";
+  }
+  const ids = [...Array.isArray(wireProposalOf(root)?.about) ? wireProposalOf(root).about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
+  for (const id of ids) {
+    const d = diagramOf(board, board.items[id]);
+    if (d)
+      return d.frameId ? d.key : d.kind === "workflow" ? "workflow" : d.key;
+  }
+  return void 0;
+}
+function openProposals(board, keys) {
+  const roots = Object.values(board.items).filter((i) => i.type === "comment" && isProposal(i) && threadRoot(board, i).id === i.id);
+  return roots.filter((r2) => {
+    const key = proposalKeyOf(board, r2);
+    return key !== void 0 && keys.includes(key) && !isSettledThread(threadOf(board, r2));
+  }).sort((a, b2) => String(a.data?.postedAt ?? a.updatedAt).localeCompare(String(b2.data?.postedAt ?? b2.updatedAt))).map((r2) => r2.id);
+}
+function keepHandoverMarks(board, ops) {
+  return ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment" && op.item.data && "handover" in op.item.data) {
+      const was = board.items[op.item.id]?.data?.handover;
+      const data = { ...op.item.data };
+      if (was !== void 0)
+        data.handover = was;
+      else
+        delete data.handover;
+      return { ...op, item: { ...op.item, data } };
+    }
+    if (op.kind === "update" && op.patch.data && typeof op.patch.data === "object" && board.items[op.id]?.type === "comment") {
+      const was = board.items[op.id].data?.handover;
+      const data = { ...op.patch.data };
+      if (was !== void 0)
+        data.handover = was;
+      else
+        delete data.handover;
+      return { ...op, patch: { ...op.patch, data } };
+    }
+    return op;
+  });
+}
+function stampTodos(board, ops, who3, now) {
+  const mark = (sent, was) => {
+    if (!sent || typeof sent !== "object" || Array.isArray(sent))
+      return void 0;
+    const t = todoOf({ type: "comment", data: { todo: sent } });
+    const { doneBy: _b, doneAt: _a3, ...rest } = { ...sent, state: t.state };
+    if (t.state !== "done")
+      return rest;
+    return { ...rest, ...was?.state === "done" && was.doneBy ? { doneBy: was.doneBy, doneAt: was.doneAt ?? now } : { doneBy: who3, doneAt: now } };
+  };
+  return ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment" && op.item.data && "todo" in op.item.data) {
+      const todo = mark(op.item.data.todo, todoOf(board.items[op.item.id]));
+      const data = { ...op.item.data };
+      if (todo)
+        data.todo = todo;
+      else
+        delete data.todo;
+      return { ...op, item: { ...op.item, data } };
+    }
+    if (op.kind === "update" && op.patch.data && typeof op.patch.data === "object" && "todo" in op.patch.data && board.items[op.id]?.type === "comment") {
+      const todo = mark(op.patch.data.todo, todoOf(board.items[op.id]));
+      const data = { ...op.patch.data };
+      if (todo)
+        data.todo = todo;
+      else
+        delete data.todo;
+      return { ...op, patch: { ...op.patch, data } };
+    }
+    return op;
+  });
+}
+function mentionIn(text3, known) {
+  if (!text3 || !text3.includes("@"))
+    return void 0;
+  const tokens = [];
+  for (const n4 of /* @__PURE__ */ new Set([...known, "studio"])) {
+    if (!n4 || n4.length > 60)
+      continue;
+    const name = sameAgent(n4, LOCAL_AGENT) ? LOCAL_AGENT : n4;
+    for (const t of /* @__PURE__ */ new Set([n4, handleOf(n4)]))
+      tokens.push({ token: t.toLowerCase(), name });
+  }
+  tokens.sort((a, b2) => b2.token.length - a.token.length);
+  const re2 = /(^|[^\p{L}\p{N}_.@-])@/gu;
+  let m2;
+  while (m2 = re2.exec(text3)) {
+    const at3 = m2.index + m2[0].length;
+    const rest = text3.slice(at3).toLowerCase();
+    for (const { token, name } of tokens) {
+      if (!rest.startsWith(token))
+        continue;
+      const next = rest.charAt(token.length);
+      if (next && /[\p{L}\p{N}_-]/u.test(next))
+        continue;
+      return name;
+    }
+  }
+  return void 0;
+}
+function threadRoot(board, it) {
+  let cur = it;
+  const seen = /* @__PURE__ */ new Set();
+  while (!seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur;
+    cur = next;
+  }
+  return it;
+}
+var editOf = (it) => it.data?.discuss?.edit;
+var wireProposalOf = (it) => it.data?.discuss;
+function proposedFile(root) {
+  const edit = editOf(root);
+  if (edit && typeof edit.file === "string")
+    return edit.file;
+  return isAnnotationDraft(root) ? annotationOf(root)?.file : void 0;
+}
+function proposalHolder(board, root) {
+  const file2 = proposedFile(root);
+  const byFile = file2 ? holderOfFile(board.meta, file2) : void 0;
+  if (byFile)
+    return byFile;
+  if (editOf(root))
+    return holderOfItem(board, board.items[root.target ?? ""]);
+  const d = wireProposalOf(root);
+  if (d?.proposal || isAnnotationDraft(root)) {
+    const ids = [...Array.isArray(d?.about) ? d.about.filter((x2) => typeof x2 === "string") : [], root.target].filter(Boolean);
+    for (const id of ids) {
+      const h = holderOfItem(board, board.items[id]);
+      if (h)
+        return h;
+    }
+  }
+  return void 0;
+}
+var proposalHolderOf = (board, root) => proposalHolder(board, root)?.agent;
+var isProposal = (it) => Boolean(editOf(it) || wireProposalOf(it)?.proposal || isAnnotationDraft(it));
+var agentOf = (it) => it.createdBy === "agent" ? str2(it.data?.by) ?? LOCAL_AGENT : void 0;
+var DEFAULT_AGENT_TURNS = 6;
+function threadOf(board, root) {
+  const when2 = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
+  return Object.values(board.items).filter((i) => i.type === "comment" && (i.id === root.id || threadRoot(board, i).id === root.id)).sort((a, b2) => a.id === root.id ? -1 : b2.id === root.id ? 1 : when2(a).localeCompare(when2(b2)));
+}
+function trailingAgentTurns(thread) {
+  let n4 = 0;
+  for (let i = thread.length - 1; i >= 0 && thread[i].createdBy === "agent"; i--)
+    n4++;
+  return n4;
+}
+function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
+  const root = threadRoot(board, comment);
+  const thread = threadOf(board, root);
+  const author = agentOf(comment);
+  const out = [];
+  const add = (n4) => {
+    if (n4 && !sameAgent(n4, author) && !out.some((o) => sameAgent(o, n4)))
+      out.push(n4);
+  };
+  if (author) {
+    const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length);
+    if (trailingAgentTurns(upTo) > maxTurns)
+      return { to: [], route: "paused" };
+  }
+  if (comment.id === root.id && todoOf(root))
+    return { to: [], route: "todo" };
+  const ho = handoverThreadOf(root);
+  if (ho) {
+    const open2 = handoverOf(board.meta);
+    const parties = ho.to ? { to: ho.to, from: ho.from ?? [] } : open2 && open2.thread === root.id ? { to: open2.to, from: handoverFroms(open2) } : void 0;
+    if (parties) {
+      for (const f of parties.from)
+        add(f);
+      add(parties.to);
+      return { to: out, route: "handover" };
+    }
+  }
+  const asked = str2(comment.data?.mention) ? comment : thread.filter((i) => str2(i.data?.mention)).sort((a, b2) => String(b2.data?.mentionAt ?? "").localeCompare(String(a.data?.mentionAt ?? "")))[0];
+  const proposal = isProposal(root);
+  const holder = proposal ? proposalHolder(board, root) : void 0;
+  const proposer = proposal ? agentOf(root) : void 0;
+  if (asked) {
+    add(str2(asked.data?.mention));
+    add(agentOf(asked));
+    add(holder?.agent);
+    add(proposer);
+    return { to: out, route: "mention" };
+  }
+  if (holder) {
+    add(holder.agent);
+    add(proposer);
+    return { to: out, route: "proposal" };
+  }
+  const r2 = responderName(responderOf(board.meta));
+  if (!r2)
+    return {};
+  add(r2);
+  add(agentOf(root));
+  return { to: out, route: "responder" };
+}
+var ROUTING_KEYS = ["to", "route", "mention", "mentionAt", "paused", "postedAt"];
+function stampRouting(board, ops, known, now, apply, maxTurns = DEFAULT_AGENT_TURNS) {
+  const touched = /* @__PURE__ */ new Set();
+  const pre = ops.map((op) => {
+    if (op.kind === "add" && op.item.type === "comment") {
+      touched.add(op.item.id);
+      const was = board.items[op.item.id]?.data;
+      const data = withMention(clean(op.item.data), op.item.text, known, was, now, op.item.data?.ask);
+      data.postedAt = typeof was?.postedAt === "string" ? was.postedAt : now;
+      return { ...op, item: { ...op.item, data } };
+    }
+    if (op.kind === "update") {
+      const cur = board.items[op.id];
+      if (cur?.type !== "comment")
+        return op;
+      const textChanged = op.patch.text !== void 0 && op.patch.text !== cur.text;
+      if (!textChanged && !op.patch.data)
+        return op;
+      const base = { ...cur.data ?? {}, ...op.patch.data ?? {} };
+      for (const k2 of ROUTING_KEYS) {
+        if (cur.data?.[k2] !== void 0)
+          base[k2] = cur.data[k2];
+        else
+          delete base[k2];
+      }
+      if (!textChanged)
+        return { ...op, patch: { ...op.patch, data: base } };
+      touched.add(op.id);
+      return { ...op, patch: { ...op.patch, data: withMention(base, op.patch.text, known, cur.data, now, cur.data?.ask) } };
+    }
+    return op;
+  });
+  if (!touched.size)
+    return pre;
+  const next = apply(board, pre);
+  return pre.map((op) => {
+    const id = op.kind === "add" ? op.item.id : op.kind === "update" ? op.id : void 0;
+    if (!id || !touched.has(id))
+      return op;
+    const it = next.items[id];
+    if (!it)
+      return op;
+    const r2 = routeOf(next, it, maxTurns);
+    const set2 = (data) => {
+      const d = { ...data };
+      delete d.to;
+      delete d.route;
+      delete d.paused;
+      if (r2.to)
+        d.to = r2.to;
+      if (r2.route)
+        d.route = r2.route;
+      if (r2.route === "paused")
+        d.paused = true;
+      return d;
+    };
+    if (op.kind === "add")
+      return { ...op, item: { ...op.item, data: set2(op.item.data ?? {}) } };
+    if (op.kind === "update")
+      return { ...op, patch: { ...op.patch, data: set2(op.patch.data ?? { ...board.items[id]?.data ?? {} }) } };
+    return op;
+  });
+}
+var clean = (data) => {
+  const d = { ...data ?? {} };
+  for (const k2 of ROUTING_KEYS)
+    delete d[k2];
+  return d;
+};
+function withMention(data, text3, known, was, now, ask) {
+  const d = { ...data };
+  const m2 = mentionIn(text3, known) ?? (str2(ask) ? resolveAgent(ask, known) ?? ask.replace(/^@+/, "").slice(0, 60) : void 0);
+  if (m2) {
+    d.mention = m2;
+    d.mentionAt = was && sameAgent(str2(was.mention), m2) && str2(was.mentionAt) ? was.mentionAt : now;
+  } else {
+    delete d.mention;
+    delete d.mentionAt;
+  }
+  delete d.to;
+  return d;
+}
+function asksMe(board, change, me) {
+  return change.author === "agent" && mentionsMe(board, change, me);
+}
+function mentionsMe(board, change, me) {
+  if (change.author === "agent" && sameAgent(change.by ?? LOCAL_AGENT, me))
+    return false;
+  return change.ops.some((op) => {
+    const id = op.kind === "add" ? op.item.id : op.id;
+    const it = board.items[id] ?? (op.kind === "add" ? op.item : void 0);
+    if (it?.type !== "comment")
+      return false;
+    const route = it.data?.route;
+    const to = it.data?.to;
+    return (route === "mention" || route === "proposal" || route === "handover") && Array.isArray(to) && to.some((n4) => typeof n4 === "string" && sameAgent(n4, me));
+  });
+}
+var hasPendingNow = (op, before) => {
+  if (op.kind === "add")
+    return Boolean(op.item.data?.pending);
+  if (op.kind !== "update" || !op.patch.data)
+    return false;
+  const p = op.patch.data.pending;
+  return p !== void 0 && JSON.stringify(p) !== JSON.stringify(before?.data?.pending);
+};
+function addressedTo(board, change, me) {
+  const responder = responderName(responderOf(board.meta));
+  const toResponder = () => !responder || sameAgent(responder, me);
+  if (change.ops.length === 0)
+    return toResponder();
+  for (const op of change.ops) {
+    const id = op.kind === "add" ? op.item.id : op.id;
+    const item = board.items[id] ?? (op.kind === "add" ? op.item : void 0) ?? change.before[id] ?? void 0;
+    if (item?.type === "comment") {
+      const to = item.data?.to;
+      if (!Array.isArray(to) || to.some((n4) => typeof n4 === "string" && sameAgent(n4, me)))
+        return true;
+      continue;
+    }
+    if (item && hasPendingNow(op, change.before[id])) {
+      const h = holderOfItem(board, item);
+      if (h) {
+        if (sameAgent(h.agent, me))
+          return true;
+        continue;
+      }
+    }
+    if (toResponder())
+      return true;
+  }
+  return false;
+}
+function settingsLines(meta3) {
+  const out = [];
+  const c = contextOf(meta3);
+  if (c)
+    out.push(`Board context${c.by ? ` (from ${displayName(c.by)})` : ""}:`, ...c.text.split("\n").map((l) => `  ${l}`));
+  const r2 = responderOf(meta3);
+  if (r2 && r2.mode !== "any")
+    out.push(`Answered by: ${responderLabel(r2)} \u2014 the person's comments here go to it; an @mention sends a thread to another agent`);
+  const s = suggestionOf(meta3);
+  if (!r2 && s)
+    out.push(`Answered by: not set \u2014 ${s.by ? displayName(s.by) : "an agent"} suggested ${responderLabel(s)}; only the person can confirm it`);
+  for (const { key, source, holder } of holdersOf(meta3)) {
+    out.push(`Files of ${key}${source ? ` (${source})` : ""}: held by ${displayName(holder.agent)}${holder.repo ? ` in ${holder.repo}` : ""}${holder.remote ? ` \xB7 ${holder.remote}` : ""}${holder.from ? ` (handed over from ${displayName(holder.from)})` : ""} \u2014 proposals on it go to that agent; only it redraws it`);
+  }
+  const h = handoverOf(meta3);
+  if (h)
+    out.push(...handoverLines(h));
+  return out;
+}
+
+// packages/canvas/dist/todos.js
+var short = (s, n4 = 120) => {
+  const t = (s ?? "").replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
+var when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
+function todosOf(board) {
+  return Object.values(board.items).filter((it) => todoOf(it) && threadRoot(board, it).id === it.id).sort((a, b2) => when(a).localeCompare(when(b2))).map((item) => {
+    const thread = threadOf(board, item).slice(1);
+    const answers = thread.filter((r2) => r2.data?.todoAnswer === true);
+    const on = item.target ? board.items[item.target] : void 0;
+    return { item, todo: todoOf(item), ...on ? { on } : {}, by: item.createdBy === "user" ? "person" : typeof item.data?.by === "string" ? item.data.by : LOCAL_AGENT, ...answers.length ? { answerReply: answers[answers.length - 1] } : {}, replies: thread.filter((r2) => r2.data?.todoAnswer !== true) };
+  });
+}
+var isTodo = (it) => !!todoOf(it);
+var whoText = (name) => name === "person" ? "the person" : displayName(name);
+var aboutText = (it) => !it ? "" : `${it.type === "ui" ? String(it.data?.ui?.type ?? "ui") : it.role ?? it.type} "${short(it.text, 40) || it.id}"`;
+function todoLine(t) {
+  if (t.todo.state === "open") {
+    const bits = [t.todo.ask ? `ask ${t.todo.ask}` : "", t.on ? `on ${aboutText(t.on)}` : "", `opened by ${whoText(t.by)}`, t.replies.length ? `${t.replies.length} repl${t.replies.length === 1 ? "y" : "ies"}` : ""].filter(Boolean);
+    return `\u2610 ${short(t.item.text, 200)} [${bits.join(" \xB7 ")}]  #${t.item.id}`;
+  }
+  const by = t.todo.doneBy ? ` by ${whoText(t.todo.doneBy)}` : "";
+  return `\u2611 ${short(t.item.text, 120)} \u2014 ${t.todo.answer ? `answer: ${short(t.todo.answer, 160)}` : "checked off without an answer"}${by}  #${t.item.id}`;
+}
+function todoLines(board, o = {}) {
+  const all = todosOf(board).filter((t) => !o.only || o.only.has(t.item.id));
+  if (!all.length)
+    return [];
+  const open2 = all.filter((t) => t.todo.state === "open");
+  const done = all.filter((t) => t.todo.state === "done").sort((a, b2) => String(b2.todo.doneAt ?? "").localeCompare(String(a.todo.doneAt ?? "")));
+  const pad = o.indent ?? "  ";
+  const out = [`## TODOs \u2014 ${open2.length} open, ${done.length} done (to confirm with someone else: not questions to you; canvas_todo)`];
+  for (const t of open2) {
+    out.push(`${pad}${todoLine(t)}`);
+    const rs = t.replies.slice(-(o.replies ?? 2));
+    for (const r2 of rs)
+      out.push(`${pad}  \u21B3 (${r2.createdBy === "user" ? "person" : typeof r2.data?.by === "string" ? r2.data.by : LOCAL_AGENT}) ${short(r2.text, 160)}  #${r2.id}`);
+  }
+  const shown = done.slice(0, o.done ?? 5);
+  for (const t of shown)
+    out.push(`${pad}${todoLine(t)}`);
+  if (done.length > shown.length)
+    out.push(`${pad}\u2026 ${done.length - shown.length} more done`);
+  return out;
+}
+function todoCounts(board) {
+  const all = todosOf(board);
+  return { open: all.filter((t) => t.todo.state === "open").length, done: all.filter((t) => t.todo.state === "done").length };
+}
+function openDrafts(board) {
+  return Object.values(board.items).filter((it) => isAnnotationDraft(it) && threadRoot(board, it).id === it.id && !isSettledThread(threadOf(board, it)));
+}
+var TodoError = class extends Error {
+};
+function todoById(board, id) {
+  const it = board.items[id];
+  if (!it)
+    throw new TodoError(`no item "${id}" on this board \u2014 canvas_todo({ board }) lists the open TODOs with their ids`);
+  if (!todoOf(it))
+    throw new TodoError(`"${id}" is not a TODO (it is a ${it.type}${it.role ? ` ${it.role}` : ""}) \u2014 canvas_todo({ board }) lists the TODOs`);
+  return it;
+}
+function newTodo(id, text3, o = {}) {
+  return { id, type: "comment", text: text3.trim(), ...o.on ? { target: o.on } : {}, data: { todo: { state: "open", ...o.ask?.trim() ? { ask: o.ask.trim() } : {} } } };
+}
+function todoDoneOps(board, id, answer) {
+  const it = todoById(board, id);
+  const was = todoOf(it);
+  const a = answer?.trim();
+  const todo = { state: "done", ...was.ask ? { ask: was.ask } : {}, ...a ? { answer: a } : {} };
+  const update = { kind: "update", id, patch: { data: { ...it.data ?? {}, todo } } };
+  return { update, ...a ? { reply: { type: "comment", text: todoAnswerText(a), target: id, data: { todoAnswer: true } } } : {} };
+}
+function todoReopenOp(board, id) {
+  const it = todoById(board, id);
+  const was = todoOf(it);
+  return { kind: "update", id, patch: { data: { ...it.data ?? {}, todo: { state: "open", ...was.ask ? { ask: was.ask } : {} } } } };
+}
+
+// packages/canvas/dist/outline.js
+var short2 = (s, n4 = 60) => {
+  const t = (s ?? "").replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
+var KIND_LABEL = {
+  "event-storming": "EventStorming",
+  "user-story-map": "story map",
+  "user-journey": "journey",
+  wireframe: "wireframe",
+  workflow: "workflow",
+  kanban: "kanban",
+  "domain-story": "domain story",
+  "ui-mock": "UI mock"
+};
+function isContainer(it) {
+  if (it.type === "frame" || it.type === "lane")
+    return true;
+  if (it.type === "wireframe")
+    return it.role === "screen";
+  if (it.type === "ui")
+    return Boolean(it.data?.ui?.container);
+  return false;
+}
+var inside = (it, c) => {
+  const cx = it.x + it.w / 2;
+  const cy = it.y + it.h / 2;
+  return cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h;
+};
+function containmentTree(board) {
+  const items = Object.values(board.items).filter((i) => i.type !== "comment" && i.type !== "arrow");
+  const containers = items.filter(isContainer);
+  const parent = /* @__PURE__ */ new Map();
+  for (const it of items) {
+    const p = it.parent ? board.items[it.parent] : void 0;
+    if (!p || p.id === it.id || p.type === "comment" || p.type === "arrow")
+      continue;
+    let cur = p.id;
+    let cycle = false;
+    for (let guard = 0; cur && guard < 200; guard++) {
+      if (cur === it.id) {
+        cycle = true;
+        break;
+      }
+      cur = parent.get(cur) ?? board.items[cur]?.parent;
+    }
+    if (!cycle)
+      parent.set(it.id, p.id);
+  }
+  const isUnder = (cand, ancestor) => {
+    for (let cur = cand, guard = 0; cur && guard < 200; guard++, cur = parent.get(cur))
+      if (cur === ancestor)
+        return true;
+    return false;
+  };
+  for (const it of items) {
+    if (parent.has(it.id))
+      continue;
+    if (diagramSpecOf(it))
+      continue;
+    let best;
+    for (const c of containers) {
+      if (c.id === it.id || !inside(it, c))
+        continue;
+      if (isContainer(it) && c.w * c.h <= it.w * it.h)
+        continue;
+      if (isUnder(c.id, it.id))
+        continue;
+      if (!best || c.w * c.h < best.w * best.h)
+        best = c;
+    }
+    if (best)
+      parent.set(it.id, best.id);
+  }
+  const children = /* @__PURE__ */ new Map();
+  const roots = [];
+  for (const it of items) {
+    const p = parent.get(it.id);
+    if (p)
+      children.set(p, [...children.get(p) ?? [], it]);
+    else
+      roots.push(it);
+  }
+  return { parent, children, roots };
+}
+function descendants(tree, rootId) {
+  const out = /* @__PURE__ */ new Set();
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop();
+    for (const c of tree.children.get(id) ?? []) {
+      if (out.has(c.id))
+        continue;
+      out.add(c.id);
+      stack.push(c.id);
+    }
+  }
+  return out;
+}
+function resolveFrame(board, frame) {
+  const byKey = board.items[`diagram.${frame}`];
+  if (byKey)
+    return byKey;
+  const byId = board.items[frame];
+  if (byId && (isContainer(byId) || byId.type === "frame"))
+    return byId;
+  if (board.kind !== "freeform" && frame === board.kind)
+    return "board";
+  return void 0;
+}
+function frameKeys(board) {
+  const keys = Object.values(board.items).flatMap((i) => diagramSpecOf(i) ? [diagramSpecOf(i).key] : []);
+  return keys.length ? keys : board.kind !== "freeform" ? [board.kind] : [];
+}
+function itemsInFrame(board, frame, tree = containmentTree(board)) {
+  if (frame === "board")
+    return new Set(Object.keys(board.items));
+  const set2 = descendants(tree, frame.id);
+  set2.add(frame.id);
+  for (const it of Object.values(board.items))
+    if (it.type === "arrow" && (it.from && set2.has(it.from) || it.to && set2.has(it.to)))
+      set2.add(it.id);
+  return withThreads(board, set2);
+}
+function withThreads(board, ids) {
+  const out = new Set(ids);
+  for (const it of Object.values(board.items)) {
+    if (it.type !== "comment")
+      continue;
+    const root = rootOf(board, it);
+    if (out.has(it.id) || out.has(root.id) || root.target && ids.has(root.target)) {
+      out.add(it.id);
+      out.add(root.id);
+    }
+  }
+  return out;
+}
+function rootOf(board, it) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = it;
+  while (!seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur;
+    cur = next;
+  }
+  return it;
+}
+function byPos(a, b2) {
+  const rowA = Math.round(a.y / 60);
+  const rowB = Math.round(b2.y / 60);
+  return rowA !== rowB ? rowA - rowB : a.x - b2.x;
+}
+function pendingTag(it) {
+  const p = it.data?.pending;
+  if (!p || typeof p !== "object")
+    return void 0;
+  const kind = typeof p.kind === "string" ? p.kind : "change";
+  if (kind === "remove" && p.deleted)
+    return "deleted by the person \u2014 the file still has it: proposed remove from the file";
+  return `proposed ${kind}${typeof p.by === "string" ? ` by ${displayName(p.by)}` : ""}`;
+}
+var who = (c) => c.createdBy === "agent" && typeof c.data?.by === "string" ? c.data.by : c.createdBy;
+function outline(board, opts = {}) {
+  const items = Object.values(board.items);
+  const tree = containmentTree(board);
+  const only = opts.only;
+  const keep = (id) => !only || only.has(id);
+  const visible = /* @__PURE__ */ new Set();
+  const context = /* @__PURE__ */ new Set();
+  if (only) {
+    for (const id of only) {
+      const it = board.items[id];
+      if (it?.type === "comment") {
+        const t = rootOf(board, it).target;
+        if (t && board.items[t] && board.items[t].type !== "comment" && board.items[t].type !== "arrow" && !only.has(t))
+          context.add(t);
+      }
+    }
+    for (const id of [...only, ...context]) {
+      const it = board.items[id];
+      if (!it || it.type === "comment" || it.type === "arrow")
+        continue;
+      for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur))
+        visible.add(cur);
+    }
+  }
+  const shown = (id) => !only || visible.has(id);
+  const replies = /* @__PURE__ */ new Map();
+  const roots = [];
+  for (const c of items.filter((i) => i.type === "comment")) {
+    const root = rootOf(board, c);
+    if (isAnnotationCard(root) || isTodo(root))
+      continue;
+    if (root.id === c.id)
+      roots.push(c);
+    else
+      replies.set(root.id, [...replies.get(root.id) ?? [], c]);
+  }
+  const when2 = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
+  for (const list3 of replies.values())
+    list3.sort((a, b2) => when2(a).localeCompare(when2(b2)));
+  const threadsOn = /* @__PURE__ */ new Map();
+  for (const r2 of roots)
+    if (r2.target && board.items[r2.target])
+      threadsOn.set(r2.target, [...threadsOn.get(r2.target) ?? [], r2]);
+  const out = [];
+  if (!opts.bare) {
+    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`);
+    const settings = settingsLines(board.meta);
+    if (settings.length)
+      out.push(...settings, "");
+  }
+  const printed = /* @__PURE__ */ new Set();
+  const maxReplies = opts.replies ?? 3;
+  const said = (c) => {
+    const to = Array.isArray(c.data?.to) && (c.data.route === "mention" || c.data.route === "handover") && c.data.to.length ? ` \u2192 ${c.data.to.join(", ")}` : "";
+    return `(${who(c)}${to})${c.data?.paused ? " [agents paused here \u2014 waits for the person]" : ""}`;
+  };
+  const thread = (c, indent) => {
+    if (printed.has(c.id) || !keep(c.id))
+      return;
+    printed.add(c.id);
+    const rs = replies.get(c.id) ?? [];
+    const last = rs[rs.length - 1] ?? c;
+    const edit = c.data?.discuss?.edit;
+    const tags = [edit ? `proposal: edit to ${typeof edit.file === "string" ? edit.file : "a text"}` : "", rs.length ? `${rs.length + 1} messages` : "", last.createdBy === "user" ? "waiting for an answer" : ""].filter(Boolean);
+    if (isAnnotationDraft(c))
+      out.push(`${indent}\u{1F4DD} ${draftLine(c)}${rs.length ? ` [${rs.length + 1} messages]` : ""}  #${c.id}`);
+    else
+      out.push(`${indent}\u{1F4AC} ${said(c)} ${short2(c.text, 200)}${tags.length ? ` [${tags.join(" \xB7 ")}]` : ""}  #${c.id}`);
+    const hidden = Math.max(0, rs.length - maxReplies);
+    if (hidden)
+      out.push(`${indent}  \u21B3 \u2026 ${hidden} earlier repl${hidden === 1 ? "y" : "ies"} (ids: [${c.id}] with format json for all)`);
+    for (const r2 of rs.slice(hidden)) {
+      out.push(`${indent}  \u21B3 ${said(r2)} ${short2(r2.text, 200)}  #${r2.id}`);
+      printed.add(r2.id);
+    }
+    for (const r2 of rs)
+      printed.add(r2.id);
+  };
+  const draftLine = (c) => {
+    const t = c.target ? board.items[c.target] : void 0;
+    const whose = c.createdBy === "user" ? "the person's" : `${displayName(who(c))}'s`;
+    const file2 = annotationOf(c)?.file;
+    const thread2 = threadOf(board, c);
+    const state = isSettledThread(thread2) ? thread2.some((m2) => m2.id.startsWith("applied.") || (m2.text ?? "").trimStart().startsWith("Applied to ")) ? "applied to the file" : "declined" : `waiting for ${displayName(proposalHolderOf(board, c) ?? "the holder of the files")}${file2 ? ` to add it to ${file2}` : ""}${c.data?.discuss?.edit ? "" : " (no edit attached: write the annotations entry by hand)"}`;
+    return `${whose} draft annotation${t ? ` on ${aboutText(t)}` : ""}: '${short2(c.text, 200)}' \u2014 ${state} (thread ${c.id})`;
+  };
+  const cardsOn = /* @__PURE__ */ new Map();
+  for (const c of items)
+    if (isAnnotationCard(c) && c.target)
+      cardsOn.set(c.target, [...cardsOn.get(c.target) ?? [], c]);
+  const num2 = (c) => calloutOf(c) !== void 0 ? circled(calloutOf(c)) : "\u2022";
+  const meta3 = (i) => {
+    const f = [];
+    const notes = cardsOn.get(i.id);
+    if (notes?.length)
+      f.push(`annotation ${notes.map(num2).join("")}`);
+    if (i.data?.pivotal)
+      f.push("pivotal");
+    const pend = pendingTag(i);
+    if (pend)
+      f.push(pend);
+    if (i.type === "card" && i.role === "card") {
+      const labels = Array.isArray(i.data?.labels) ? i.data.labels.filter((l) => typeof l === "string") : [];
+      if (labels.length)
+        f.push(labels.join(", "));
+      if (typeof i.data?.size === "string")
+        f.push(`size ${i.data.size}`);
+      if (typeof i.data?.assignee === "string")
+        f.push(`@${i.data.assignee}`);
+    }
+    if (i.updatedBy === "user")
+      f.push("edited by user");
+    const n4 = threadsOn.get(i.id)?.length;
+    if (n4 && only)
+      f.push(`${n4} thread${n4 === 1 ? "" : "s"}`);
+    return f;
+  };
+  const line = (i, indent) => {
+    printed.add(i.id);
+    if (i.role === "pivotal")
+      return;
+    if (!keep(i.id) && !context.has(i.id))
+      return;
+    const role = i.type === "ui" ? String(i.data?.ui?.type ?? i.role ?? "ui") : i.role ?? i.type;
+    const f = meta3(i);
+    out.push(`${indent}- ${role}: ${short2(i.text, 80) || "(untitled)"}${f.length ? ` [${f.join(", ")}]` : ""}  #${i.id}`);
+    for (const c of threadsOn.get(i.id) ?? [])
+      thread(c, `${indent}    `);
+  };
+  const sortKids = (parent, kids) => {
+    if (parent?.role === "column")
+      return [...kids].sort((a, b2) => a.y - b2.y || (a.order ?? 0) - (b2.order ?? 0));
+    return [...kids].sort(byPos);
+  };
+  const arrowLine = (a) => {
+    const f = board.items[a.from ?? ""];
+    const t = board.items[a.to ?? ""];
+    const pend = pendingTag(a);
+    return `- ${short2(f?.text, 40) || a.from} \u2192 ${short2(t?.text, 40) || a.to}${a.label ? ` (${short2(a.label, 40)})` : ""}${a.role && !["flow", "arrow"].includes(a.role) ? ` [${a.role}${pend ? `, ${pend}` : ""}]` : pend ? ` [${pend}]` : ""}`;
+  };
+  const frameOfArrow = /* @__PURE__ */ new Map();
+  const topFrameOf = (id) => {
+    let top;
+    for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur))
+      if (diagramSpecOf(board.items[cur]))
+        top = cur;
+    return top;
+  };
+  for (const a of items.filter((i) => i.type === "arrow")) {
+    const fa = topFrameOf(a.from);
+    const fb = topFrameOf(a.to);
+    if (fa && fa === fb)
+      frameOfArrow.set(a.id, fa);
+  }
+  const arrowsIn = (frameId) => items.filter((a) => frameOfArrow.get(a.id) === frameId && keep(a.id));
+  const annotationsIn2 = (frameId) => {
+    const screenOf = (c) => {
+      for (let cur = c.target, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur))
+        if (board.items[cur]?.type === "ui" && board.items[cur]?.role === "screen")
+          return board.items[cur].x;
+      return 0;
+    };
+    return items.filter((c) => isAnnotationCard(c) && keep(c.id) && (topFrameOf(c.target) ?? "(board)") === frameId).sort((a, b2) => screenOf(a) - screenOf(b2) || (calloutOf(a) ?? 0) - (calloutOf(b2) ?? 0) || byPos(a, b2));
+  };
+  const annotationLine = (n4) => {
+    printed.add(n4.id);
+    const t = n4.target ? board.items[n4.target] : void 0;
+    const where = annotationOf(n4)?.board ? " [on the board only \u2014 no file behind it]" : "";
+    return `${num2(n4)} ${t ? aboutText(t) : "(nothing)"}: ${short2(n4.text, 200)}${where}  #${n4.id}`;
+  };
+  const walk = (c, indent) => {
+    if (!shown(c.id))
+      return;
+    printed.add(c.id);
+    const spec = diagramSpecOf(c);
+    if (spec) {
+      const n4 = descendants(tree, c.id).size;
+      const holder = holdersOf(board.meta).find((h) => h.key === spec.key);
+      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n4} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
+      out.push(`${indent}## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short2(c.text, 60)}" \u2014 ${bits.join(" \xB7 ")}  #${c.id}`);
+    } else {
+      const role = c.type === "ui" ? String(c.data?.ui?.type ?? "ui") : c.role ?? c.type;
+      const f = c.type === "lane" && c.role === "column" ? [`${(tree.children.get(c.id) ?? []).filter((k2) => k2.type === "card").length} cards${typeof c.data?.wip === "number" ? `, WIP ${c.data.wip}` : ""}`] : [];
+      if (c.data?.ds === "group" && Array.isArray(c.data?.members))
+        f.push(`members: ${c.data.members.join(", ")}`);
+      const pend = pendingTag(c);
+      if (pend)
+        f.push(pend);
+      const notes = cardsOn.get(c.id);
+      if (notes?.length)
+        f.push(`annotation ${notes.map(num2).join("")}`);
+      out.push(`${indent}## ${role}: ${short2(c.text, 80) || "(untitled)"}${f.length ? ` [${f.join("; ")}]` : ""}  #${c.id}`);
+    }
+    for (const t of threadsOn.get(c.id) ?? [])
+      thread(t, `${indent}    `);
+    for (const k2 of sortKids(c, tree.children.get(c.id) ?? [])) {
+      if (printed.has(k2.id))
+        continue;
+      if (isContainer(k2))
+        walk(k2, indent + "  ");
+      else
+        line(k2, indent + "  ");
+    }
+    if (spec?.kind === "domain-story") {
+      const sentences = [...new Map(Array.from(descendants(tree, c.id)).map((id) => board.items[id]).filter((i) => typeof i?.data?.sentence === "string" && keep(i.id)).sort((a, b2) => Number(a.data?.seq ?? 0) - Number(b2.data?.seq ?? 0)).map((i) => [String(i.data.sentence), i.id])).entries()];
+      if (sentences.length) {
+        out.push(`${indent}  sentences:`);
+        for (const [s, id] of sentences)
+          out.push(`${indent}    ${s}  #${id}`);
+      }
+    }
+    if (spec) {
+      const notes = annotationsIn2(c.id);
+      if (notes.length) {
+        out.push(`${indent}  ## annotations (${notes.length}) \u2014 what each item is for, from the file (not threads)`);
+        for (const n4 of notes)
+          out.push(`${indent}    ${annotationLine(n4)}`);
+      }
+      const ds = spec.kind === "domain-story";
+      const wires = arrowsIn(c.id).filter((a) => !(ds && (a.role === "activity" || a.role === "activity-to")));
+      if (wires.length) {
+        out.push(`${indent}  ## arrows (${wires.length})`);
+        for (const a of wires.sort((p, q2) => (p.from ?? "").localeCompare(q2.from ?? ""))) {
+          out.push(`${indent}    ${arrowLine(a)}`);
+          printed.add(a.id);
+        }
+      }
+      if (ds)
+        for (const a of arrowsIn(c.id))
+          printed.add(a.id);
+    }
+  };
+  const tops = tree.roots.filter(isContainer).sort((a, b2) => (diagramSpecOf(b2) ? 1 : 0) - (diagramSpecOf(a) ? 1 : 0) || byPos(a, b2));
+  for (const c of tops)
+    walk(c, "");
+  const loose = tree.roots.filter((s) => !isContainer(s) && !printed.has(s.id) && keep(s.id)).sort(byPos);
+  if (loose.length) {
+    out.push(tops.length ? "## outside any frame or lane" : "## items");
+    for (const s of loose)
+      line(s, "  ");
+  }
+  const rest = items.filter((a) => a.type === "arrow" && !printed.has(a.id) && keep(a.id));
+  if (rest.length) {
+    out.push(frameOfArrow.size || tops.some((t) => diagramSpecOf(t)) ? "## arrows between diagrams and loose items" : "## arrows");
+    for (const a of rest.sort((p, q2) => (p.from ?? "").localeCompare(q2.from ?? "")))
+      out.push(`  ${arrowLine(a)}`);
+  }
+  const looseNotes = annotationsIn2("(board)");
+  if (looseNotes.length) {
+    out.push(`## annotations (${looseNotes.length})${tops.some((t) => diagramSpecOf(t)) ? " \u2014 about items in no diagram frame" : ""}`);
+    for (const n4 of looseNotes)
+      out.push(`  ${annotationLine(n4)}`);
+  }
+  const orphan = roots.filter((c) => !printed.has(c.id) && keep(c.id));
+  if (orphan.length) {
+    out.push("## comments (general)");
+    for (const c of orphan.sort(byPos))
+      thread(c, "  ");
+  }
+  out.push(...todoLines(board, { ...only ? { only } : {}, replies: maxReplies }));
+  return out.join("\n");
+}
+
+// packages/canvas/dist/diff.js
+var short3 = (s, n4 = 60) => {
+  const t = (s ?? "").replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
+function nameOf(item, board) {
+  if (!item)
+    return "(unknown)";
+  if (item.type === "arrow") {
+    const from = board?.items[item.from ?? ""];
+    const to = board?.items[item.to ?? ""];
+    return `arrow ${short3(from?.text, 30) || item.from} \u2192 ${short3(to?.text, 30) || item.to}`;
+  }
+  const threaded = item.type === "comment" && board?.items[item.target ?? ""]?.type !== "comment" && Object.values(board?.items ?? {}).some((o) => o.type === "comment" && o.target === item.id);
+  const role = todoOf(item) ? "TODO" : isAnnotationDraft(item) ? "draft annotation" : isAnnotationCard(item) ? "annotation" : threaded ? "comment thread" : item.role ?? item.type;
+  const text3 = short3(item.text);
+  return text3 ? `${role} "${text3}" [${item.id}]` : `${role} [${item.id}]`;
+}
+function rootOf2(it, find) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = it;
+  while (!seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = find(cur.target);
+    if (next?.type !== "comment")
+      return cur;
+    cur = next;
+  }
+  return it;
+}
+function finder(board, changes) {
+  return (id) => {
+    if (!id)
+      return void 0;
+    if (board.items[id])
+      return board.items[id];
+    for (const c of changes)
+      if (c.before[id])
+        return c.before[id];
+    return void 0;
+  };
+}
+function containerName(id, board, changes) {
+  if (!id)
+    return void 0;
+  const cur = board.items[id];
+  if (cur)
+    return short3(cur.text, 40) || id;
+  for (const c of changes) {
+    const b2 = c.before[id];
+    if (b2)
+      return short3(b2.text, 40) || id;
+  }
+  return id;
+}
+var isUiBox = (i) => i.type === "ui" && Boolean(i.data?.ui?.container);
+function containerOf(board, item) {
+  if (item.parent && board.items[item.parent])
+    return board.items[item.parent];
+  const cx = item.x + item.w / 2;
+  const cy = item.y + item.h / 2;
+  let best;
+  for (const c of Object.values(board.items)) {
+    if (c.id === item.id || c.type !== "lane" && c.type !== "frame" && c.type !== "wireframe" && !isUiBox(c))
+      continue;
+    if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
+      if (!best || c.w * c.h < best.w * best.h)
+        best = c;
+    }
+  }
+  return best;
+}
+function summarize(board, changes, opts = {}) {
+  const lines2 = [];
+  const folded = /* @__PURE__ */ new Map();
+  const find = finder(board, changes);
+  for (const ch of changes) {
+    if (isBookkeeping(ch))
+      continue;
+    const who3 = ch.by ?? ch.author;
+    const prefix = `[${ch.seq} ${who3}]`;
+    const removed = new Set(ch.ops.flatMap((op) => op.kind === "remove" ? [op.id] : []));
+    const removedRoot = (it) => {
+      const root = it?.type === "comment" ? rootOf2(it, find) : void 0;
+      return root && root.id !== it?.id && removed.has(root.id) ? root.id : void 0;
+    };
+    for (const op of ch.ops) {
+      if (op.kind === "add") {
+        const it = op.item;
+        if (it.type === "comment") {
+          const root = rootOf2(it, find);
+          const on = find(root.target);
+          const text3 = short3(it.text, 200);
+          const to = Array.isArray(it.data?.to) ? it.data.to.filter((x2) => typeof x2 === "string") : [];
+          if (root.id !== it.id) {
+            if (todoOf(root) && it.data?.todoAnswer === true)
+              lines2.push(`${prefix} answered the TODO "${short3(root.text, 120)}": "${text3}" \u2014 decide whether the design changes [thread ${root.id}]`);
+            else
+              lines2.push(`${prefix} replied in thread on ${nameOf(on ?? root, board)}: "${text3}" [thread ${root.id}]`);
+          } else if (todoOf(it)) {
+            const ask = todoOf(it).ask;
+            lines2.push(`${prefix} added a TODO${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}"${ask ? ` (ask ${ask})` : ""} \u2014 to confirm with someone else, not a question to you [todo ${it.id}]`);
+          } else if (isAnnotationDraft(it)) {
+            lines2.push(`${prefix} drafted an annotation${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}" \u2014 a proposal to ${to.length ? to.map(displayName).join(", ") : "the holder of the files"}: judge it, then apply it or say why not [thread ${it.id}]`);
+          } else if (isAnnotationCard(it)) {
+            lines2.push(`${prefix} drew annotation ${calloutOf(it) !== void 0 ? `${circled(calloutOf(it))} ` : ""}${on ? `on ${nameOf(on, board)}` : ""}: "${text3}"`);
+          } else {
+            const edit = it.data?.discuss?.edit;
+            const what = edit && typeof edit.diff === "string" ? `proposed an edit to ${typeof edit.file === "string" ? edit.file : "a text"} (${diffCount(edit.diff)})` : "added comment";
+            lines2.push(`${prefix} ${what}${on ? ` on ${nameOf(on, board)}` : ""}: "${text3}" [thread ${it.id}]`);
+          }
+        } else if (it.type === "arrow") {
+          lines2.push(`${prefix} connected ${nameOf(board.items[it.from ?? ""] ?? ch.before[it.from ?? ""], board)} \u2192 ${nameOf(board.items[it.to ?? ""] ?? ch.before[it.to ?? ""], board)}${it.label ? ` ("${short3(it.label)}")` : ""}`);
+        } else {
+          const parent = containerName(it.parent, board, changes);
+          lines2.push(`${prefix} added ${nameOf(it, board)}${parent ? ` in ${parent}` : ""}`);
+        }
+        continue;
+      }
+      if (op.kind === "remove") {
+        const was2 = ch.before[op.id];
+        if (removedRoot(was2))
+          continue;
+        const replies = ch.ops.filter((o) => o.kind === "remove" && removedRoot(ch.before[o.id]) === op.id).length;
+        lines2.push(`${prefix} removed ${nameOf(was2, board)}${replies ? ` and its ${replies} repl${replies === 1 ? "y" : "ies"}` : ""}`);
+        continue;
+      }
+      const was = ch.before[op.id];
+      if (isSeenOnly(op, was))
+        continue;
+      if (!was && !board.items[op.id])
+        continue;
+      const now = board.items[op.id] ?? (was ? { ...was, ...op.patch } : void 0);
+      const patch = op.patch;
+      const name = nameOf(was ?? now, board);
+      const parts2 = [];
+      if (patch.text !== void 0 && patch.text !== was?.text) {
+        if (was?.type === "comment")
+          parts2.push(`edited comment to "${short3(patch.text, 200)}"`);
+        else
+          parts2.push(`renamed "${short3(was?.text)}" \u2192 "${short3(patch.text)}"`);
+      }
+      const parentChanged = patch.parent !== void 0 && patch.parent !== was?.parent;
+      const moved = patch.x !== void 0 && patch.x !== was?.x || patch.y !== void 0 && patch.y !== was?.y;
+      const resized = patch.w !== void 0 && patch.w !== was?.w || patch.h !== void 0 && patch.h !== was?.h;
+      if (parentChanged) {
+        parts2.push(`moved from ${containerName(was?.parent, board, changes) ?? "nowhere"} \u2192 ${containerName(patch.parent, board, changes) ?? "nowhere"}`);
+      } else if (moved && was) {
+        const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was);
+        const afterC = now ? containerOf(board, now) : void 0;
+        if (beforeC?.id !== afterC?.id && (beforeC || afterC)) {
+          parts2.push(`moved from ${beforeC ? short3(beforeC.text, 40) : "nowhere"} \u2192 ${afterC ? short3(afterC.text, 40) : "nowhere"}`);
+        } else if (!resized) {
+          const dx = (patch.x ?? was.x) - was.x;
+          const dy = (patch.y ?? was.y) - was.y;
+          const sib = neighbourBefore(board, now);
+          parts2.push(`moved by (${dx >= 0 ? "+" : ""}${Math.round(dx)}, ${dy >= 0 ? "+" : ""}${Math.round(dy)})${sib ? `, now before ${nameOf(sib, board)}` : ""}`);
+        }
+      }
+      if (patch.color !== void 0 && patch.color !== was?.color)
+        parts2.push(`recoloured ${was?.color ?? "?"} \u2192 ${patch.color}`);
+      if (patch.role !== void 0 && patch.role !== was?.role)
+        parts2.push(`role ${was?.role ?? "?"} \u2192 ${patch.role}`);
+      if (resized)
+        parts2.push(`resized ${was?.w}\xD7${was?.h} \u2192 ${patch.w ?? was?.w}\xD7${patch.h ?? was?.h}`);
+      if (patch.label !== void 0 && patch.label !== was?.label)
+        parts2.push(`relabelled "${short3(was?.label)}" \u2192 "${short3(patch.label)}"`);
+      if (patch.from !== void 0 && patch.from !== was?.from || patch.to !== void 0 && patch.to !== was?.to) {
+        const end = (id) => nameOf(board.items[id ?? ""] ?? ch.before[id ?? ""], board);
+        parts2.push(`reconnected to ${end(patch.from ?? was?.from)} \u2192 ${end(patch.to ?? was?.to)}`);
+      }
+      if (patch.data !== void 0 && JSON.stringify(patch.data.bend) !== JSON.stringify(was?.data?.bend))
+        parts2.push("rerouted");
+      const [tWas, tNow] = [todoOf(was ?? void 0), patch.data !== void 0 ? todoOf({ ...was ?? now, data: patch.data }) : void 0];
+      const todoMoved = !!tWas && !!tNow && tWas.state !== tNow.state;
+      if (todoMoved)
+        parts2.push(tNow.state === "done" ? `checked off${tNow.doneBy ? ` by ${tNow.doneBy === "person" ? "the person" : displayName(tNow.doneBy)}` : ""}${tNow.answer ? ` \u2014 answer: "${short3(tNow.answer, 160)}"` : " without an answer (nobody is notified)"}` : "reopened");
+      const meaning = (d) => JSON.stringify(todoMoved ? { ...meaningOf(d), todo: void 0 } : meaningOf(d));
+      if (patch.data !== void 0 && meaning(patch.data) !== meaning(was?.data))
+        parts2.push(`data changed: ${short3(JSON.stringify(meaningOf(patch.data)), 120)}`);
+      if (opts.collapseMoves && isLayoutOnly(op, was) && !parts2.some((p) => p.startsWith("moved from"))) {
+        folded.set(op.id, { seq: ch.seq, author: who3, resized: resized || (folded.get(op.id)?.resized ?? false) });
+        continue;
+      }
+      if (parts2.length)
+        lines2.push(`${prefix} ${name}: ${parts2.join("; ")}`);
+    }
+    if (ch.note && ch.ops.length === 0)
+      lines2.push(`${prefix} ${ch.note}`);
+  }
+  if (folded.size)
+    lines2.push(foldedLine(board, changes, folded));
+  return lines2;
+}
+function foldedLine(board, changes, folded) {
+  const all = [...folded.values()];
+  const seqs = all.map((f) => f.seq);
+  const lo = Math.min(...seqs);
+  const hi = Math.max(...seqs);
+  const authors = [...new Set(all.map((f) => f.author))].join("/");
+  const names = [...folded.keys()].map((id) => {
+    const it = board.items[id] ?? changes.find((c) => c.before[id])?.before[id];
+    return short3(it?.type === "arrow" ? nameOf(it, board) : it?.text, 30) || id;
+  });
+  const shown = names.slice(0, 6).join(", ") + (names.length > 6 ? ", \u2026" : "");
+  const verb = all.some((f) => f.resized) ? "moved or resized" : "moved";
+  return `[${lo === hi ? lo : `${lo}\u2013${hi}`} ${authors}] ${verb} ${names.length} item${names.length === 1 ? "" : "s"}: ${shown}`;
+}
+function cardMoves(board, changes) {
+  const out = [];
+  const find = finder(board, changes);
+  const columnName = (id) => {
+    const c = find(id);
+    return c && c.type === "lane" && c.role === "column" ? c.text ?? c.id : void 0;
+  };
+  for (const ch of changes) {
+    if (isBookkeeping(ch))
+      continue;
+    for (const op of ch.ops) {
+      if (op.kind !== "update")
+        continue;
+      const was = ch.before[op.id];
+      if (!was || was.type !== "card")
+        continue;
+      const now = board.items[op.id] ?? { ...was, ...op.patch };
+      let from;
+      let to;
+      if (op.patch.parent !== void 0 && op.patch.parent !== was.parent) {
+        from = columnName(was.parent);
+        to = columnName(op.patch.parent);
+      } else if (op.patch.x !== void 0 && op.patch.x !== was.x || op.patch.y !== void 0 && op.patch.y !== was.y) {
+        const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was);
+        const afterC = containerOf(board, now);
+        if (beforeC?.id === afterC?.id)
+          continue;
+        from = beforeC?.role === "column" ? beforeC.text : void 0;
+        to = afterC?.role === "column" ? afterC.text : void 0;
+      } else
+        continue;
+      if (from === to)
+        continue;
+      out.push({ cardId: op.id, title: now.text ?? was.text ?? op.id, from, to, seq: ch.seq, author: ch.author, ts: ch.ts });
+    }
+  }
+  return out;
+}
+function agentSeenOps(board, changes, agent) {
+  const ids = /* @__PURE__ */ new Set();
+  for (const ch of changes) {
+    if (ch.author !== "user" || isBookkeeping(ch))
+      continue;
+    for (const op of ch.ops)
+      ids.add(op.kind === "add" ? op.item.id : op.id);
+  }
+  const ops = [];
+  for (const id of ids) {
+    const it = board.items[id];
+    const op = it?.type === "comment" && it.createdBy === "user" && it.text?.trim() ? markSeen(it, "agent", agent) : void 0;
+    if (op)
+      ops.push(op);
+  }
+  return ops;
+}
+function neighbourBefore(board, item) {
+  if (!item)
+    return void 0;
+  const container = containerOf(board, item);
+  let best;
+  for (const o of Object.values(board.items)) {
+    if (o.id === item.id || o.type === "arrow" || o.type === "lane" || o.type === "frame" || o.type === "comment")
+      continue;
+    if (containerOf(board, o)?.id !== container?.id)
+      continue;
+    if (Math.abs(o.y - item.y) > item.h / 2)
+      continue;
+    if (o.x <= item.x)
+      continue;
+    if (!best || o.x < best.x)
+      best = o;
+  }
+  return best;
+}
+function diffCount(diff) {
+  const { added, removed } = diffStat(diff);
+  return `+${added} \u2212${removed} lines`;
+}
+var CHANGE_KINDS = ["add", "update", "remove", "comment", "move"];
+function opKind(op, before) {
+  const it = op.kind === "add" ? op.item : before;
+  if (it?.type === "comment")
+    return "comment";
+  if (op.kind === "add")
+    return "add";
+  if (op.kind === "remove")
+    return "remove";
+  return isLayoutOnly(op, before) ? "move" : "update";
+}
+var changeWho = (c) => c.by ?? (c.author === "user" ? "person" : "agent");
+function fromMatches(c, from) {
+  const who3 = changeWho(c).toLowerCase();
+  return from.some((f) => {
+    const n4 = f.trim().toLowerCase();
+    if (n4 === "person" || n4 === "user")
+      return c.author === "user";
+    if (n4 === "studio" || n4 === "agent")
+      return c.author === "agent" && !c.by;
+    return who3 === n4;
+  });
+}
+function filterChanges(board, changes, f) {
+  const kinds = f.kinds?.length ? new Set(f.kinds) : void 0;
+  let inFrame;
+  if (f.frame) {
+    const fr = resolveFrame(board, f.frame);
+    if (!fr)
+      throw Object.assign(new Error(`no frame "${f.frame}" on this board \u2014 diagram keys: ${frameKeys(board).join(", ") || "(none)"}`), { status: 404 });
+    if (fr !== "board") {
+      const set2 = itemsInFrame(board, fr);
+      const key = fr.data?.diagram?.key;
+      const was = (id, before) => {
+        if (set2.has(id))
+          return true;
+        if (key && id.startsWith(`${key}.`))
+          return true;
+        if (!before)
+          return false;
+        for (const ref2 of [before.parent, before.target, before.from])
+          if (ref2 && (ref2 === fr.id || set2.has(ref2)))
+            return true;
+        return false;
+      };
+      inFrame = was;
+    }
+  }
+  const out = [];
+  for (const c of changes) {
+    if (f.from?.length && !fromMatches(c, f.from))
+      continue;
+    if (!c.ops.length) {
+      if (!inFrame && (!kinds || kinds.has("update")))
+        out.push(c);
+      continue;
+    }
+    const ops = c.ops.filter((op) => {
+      const id = op.kind === "add" ? op.item.id : op.id;
+      const before = c.before[id] ?? (op.kind === "add" ? op.item : void 0);
+      if (kinds && !kinds.has(opKind(op, c.before[id])))
+        return false;
+      if (inFrame && !inFrame(id, before ?? board.items[id]))
+        return false;
+      return true;
+    });
+    if (ops.length)
+      out.push(ops.length === c.ops.length ? c : { ...c, ops });
+  }
+  return out;
+}
+function diffSummary(board, changes, lines2, o = { since: 0 }) {
+  const byWho = /* @__PURE__ */ new Map();
+  const byFrame = /* @__PURE__ */ new Map();
+  let ops = 0;
+  const tree = containmentTree(board);
+  const frameOf2 = (id, before) => {
+    for (let cur = id, g2 = 0; cur && g2 < 200; g2++, cur = tree.parent.get(cur) ?? board.items[cur]?.parent) {
+      const spec = diagramSpecOf(board.items[cur]);
+      if (spec)
+        return spec.key;
+    }
+    const it = before ?? board.items[id];
+    const ref2 = it?.target ?? it?.from ?? it?.parent;
+    if (ref2 && ref2 !== id && board.items[ref2])
+      return frameOf2(ref2, void 0);
+    const key = /^([a-z0-9-]+)\./.exec(id)?.[1];
+    return key && board.items[`diagram.${key}`] ? key : board.kind !== "freeform" ? board.kind : "(no frame)";
+  };
+  for (const c of changes) {
+    if (isBookkeeping(c))
+      continue;
+    const who3 = changeWho(c);
+    const m2 = byWho.get(who3) ?? /* @__PURE__ */ new Map();
+    byWho.set(who3, m2);
+    if (!c.ops.length) {
+      m2.set("update", (m2.get("update") ?? 0) + 1);
+      continue;
+    }
+    for (const op of c.ops) {
+      const id = op.kind === "add" ? op.item.id : op.id;
+      if (op.kind === "update" && isSeenOnly(op, c.before[id]))
+        continue;
+      ops++;
+      const k2 = opKind(op, c.before[id]);
+      m2.set(k2, (m2.get(k2) ?? 0) + 1);
+      const fr = frameOf2(id, c.before[id] ?? (op.kind === "add" ? op.item : void 0));
+      byFrame.set(fr, (byFrame.get(fr) ?? 0) + 1);
+    }
+  }
+  const last = o.last ?? 20;
+  const fmt = (m2) => [...m2.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `${n4} ${k2}`).join(", ");
+  const out = [`${changes.length} change(s) since seq ${o.since} (board seq ${board.seq}), ${ops} op(s), ${lines2.length} line(s)`];
+  if (byWho.size)
+    out.push("by who \xD7 kind:", ...[...byWho.entries()].map(([w2, m2]) => `  ${w2}: ${fmt(m2) || "\u2014"}`));
+  if (byFrame.size)
+    out.push("by frame (ops):", ...[...byFrame.entries()].sort((a, b2) => b2[1] - a[1]).map(([k2, n4]) => `  ${k2}: ${n4}`));
+  if (lines2.length)
+    out.push(`last ${Math.min(last, lines2.length)} line(s):`, ...lines2.slice(-last).map((l) => `  ${l}`));
+  return out.join("\n");
+}
+function pageLines(lines2, o) {
+  let from = 0;
+  if (o.cursor) {
+    const m2 = /^(?:[a-z]+:)?(\d+):(\d+)$/.exec(o.cursor.trim());
+    if (!m2)
+      throw Object.assign(new Error(`cursor "${o.cursor}" is not one this canvas gave out (it looks like "56:120")`), { status: 400 });
+    from = Number(m2[2]);
+  }
+  const max = Math.min(2e5, Math.max(2e3, o.maxChars ?? 4e4));
+  const limit = o.limit && o.limit > 0 ? o.limit : Infinity;
+  const page3 = [];
+  let size2 = 0;
+  let i = from;
+  for (; i < lines2.length && page3.length < limit; i++) {
+    const s = lines2[i].length + 1;
+    if (page3.length && size2 + s > max)
+      break;
+    page3.push(lines2[i]);
+    size2 += s;
+  }
+  const left = lines2.length - i;
+  return { lines: page3, left, from, ...left > 0 ? { nextCursor: `${o.seq}:${i}` } : {} };
 }
 
 // packages/canvas/dist/diagrams/eventStorming.js
@@ -40738,7 +41296,9 @@ var eventStormingSchema = external_exports.object({
   /** Phases / chapters / candidate bounded contexts over a stretch of the timeline (p.85, p.133). */
   phases: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string(), from: ref.optional(), to: ref.optional() })).default([]),
   /** Definitions of domain terms, kept below the flow (p.144). */
-  definitions: external_exports.array(external_exports.object({ id: external_exports.string().optional(), term: external_exports.string(), text: external_exports.string() })).default([])
+  definitions: external_exports.array(external_exports.object({ id: external_exports.string().optional(), term: external_exports.string(), text: external_exports.string() })).default([]),
+  /** What an element is for (docs/diagrams.md "Annotations"): numbered cards below the timeline, `on` an element id or text. */
+  annotations: annotationsSchema.optional()
 });
 var list2 = (v2) => v2 === void 0 ? [] : Array.isArray(v2) ? v2 : [v2];
 function normalizeEventStorming(raw) {
@@ -41628,9 +42188,9 @@ function flowTimes(m2, itemId, systemOcc, inlineRm) {
     t.set(itemId("event", e.id), idx.get(e.id));
   const policyT = /* @__PURE__ */ new Map();
   for (const p of m2.policies) {
-    const when = p.when.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
-    if (when.length)
-      policyT.set(p.id, Math.max(...when) + 0.25);
+    const when2 = p.when.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    if (when2.length)
+      policyT.set(p.id, Math.max(...when2) + 0.25);
     if (policyT.has(p.id))
       t.set(itemId("policy", p.id), policyT.get(p.id));
   }
@@ -41704,7 +42264,9 @@ var userStoryMapSchema = external_exports.object({
     }))
   })).min(1),
   /** Release cut lines, top → bottom. Stories with an unknown/absent release fall into the last lane ("Later"). */
-  releases: external_exports.array(external_exports.string()).default([])
+  releases: external_exports.array(external_exports.string()).default([]),
+  /** What an activity, step or story is for (docs/diagrams.md "Annotations"): numbered cards below the map. */
+  annotations: annotationsSchema.optional()
 });
 function normalizeUserStoryMap(raw) {
   const c = userStoryMapSchema.parse(raw);
@@ -41806,7 +42368,9 @@ var userJourneySchema = external_exports.object({
     emotion: external_exports.number().int().min(-2).max(2).default(0),
     pains: external_exports.array(external_exports.string()).default([]),
     opportunities: external_exports.array(external_exports.string()).default([])
-  })).min(1)
+  })).min(1),
+  /** What a stage or a sticky is for (docs/diagrams.md "Annotations"): numbered cards below the journey. */
+  annotations: annotationsSchema.optional()
 });
 var COL3 = STICKY_W + GAP;
 var ROW_H = 90;
@@ -41819,6 +42383,8 @@ function renderUserJourney(raw, opts = {}) {
   const items = [];
   const labelW = 130;
   const x0 = PAD + labelW + GAP;
+  const alloc = idAllocator();
+  const stageEl = c.stages.map((s) => alloc(void 0, s.text, "stage"));
   items.push(make({ id: id("persona", c.persona), type: "text", x: PAD, y: PAD, w: labelW + c.stages.length * COL3, h: 40, text: `Persona: ${c.persona}`, role: "persona", color: "white" }, now));
   const facets = [
     { key: "actions", label: "Actions", color: "white" },
@@ -41829,7 +42395,7 @@ function renderUserJourney(raw, opts = {}) {
   const maxRows = (key) => Math.max(1, ...c.stages.map((s) => s[key].length));
   let y2 = PAD + 40 + GAP;
   c.stages.forEach((s, i) => {
-    items.push(make({ id: id("stage", s.text), type: "sticky", x: x0 + i * COL3, y: y2, w: STICKY_W, h: 70, text: s.text, color: "yellow", role: "stage", order: i }, now));
+    items.push(make({ id: id("stage", s.text), type: "sticky", x: x0 + i * COL3, y: y2, w: STICKY_W, h: 70, text: s.text, color: "yellow", role: "stage", order: i, data: { element: stageEl[i] } }, now));
   });
   y2 += 70 + GAP;
   const drawFacet = (f) => {
@@ -41838,7 +42404,7 @@ function renderUserJourney(raw, opts = {}) {
     items.push(make({ id: rowId, type: "text", x: PAD, y: y2, w: labelW, h: 40, text: f.label, role: "row-label", color: "grey" }, now));
     c.stages.forEach((s, i) => {
       s[f.key].forEach((t, k2) => {
-        items.push(make({ id: id(f.key.replace(/s$/, ""), `${s.text}/${t}`), type: "sticky", x: x0 + i * COL3, y: y2 + k2 * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ""), data: { stage: s.text } }, now));
+        items.push(make({ id: id(f.key.replace(/s$/, ""), `${s.text}/${t}`), type: "sticky", x: x0 + i * COL3, y: y2 + k2 * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ""), data: { stage: s.text, element: alloc(`${stageEl[i]}/${slugify2(t) || f.key.replace(/s$/, "")}`, t) } }, now));
       });
     });
     y2 += rows * ROW_H + GAP / 2;
@@ -41852,7 +42418,7 @@ function renderUserJourney(raw, opts = {}) {
   c.stages.forEach((s, i) => {
     const level = s.emotion;
     const ey = y2 + (2 - level) * 40;
-    const e = make({ id: id("emotion", s.text), type: "sticky", x: x0 + i * COL3 + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? "green" : level < 0 ? "red" : "yellow", role: "emotion", parent: laneId, data: { stage: s.text, emotion: level } }, now);
+    const e = make({ id: id("emotion", s.text), type: "sticky", x: x0 + i * COL3 + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? "green" : level < 0 ? "red" : "yellow", role: "emotion", parent: laneId, data: { stage: s.text, emotion: level, element: alloc(`${stageEl[i]}/emotion`, "emotion") } }, now);
     items.push(e);
     if (prev)
       items.push(arrow(scope, prev, e.id, now, void 0, "emotion-curve"));
@@ -41862,6 +42428,949 @@ function renderUserJourney(raw, opts = {}) {
   drawFacet(facets[2]);
   drawFacet(facets[3]);
   return offsetAll(items, opts.at);
+}
+
+// packages/canvas/dist/textMetrics.js
+function defaultFont(it) {
+  if (it.type === "text")
+    return it.role === "title" || it.role === "heading" ? 22 : it.role === "annotation" ? 12.5 : 15;
+  if (it.type === "sticky" && it.role === "actor")
+    return 12.5;
+  if (it.type === "card" && it.role === "card")
+    return 13.5;
+  return 13;
+}
+var fontOf = (it) => it.fontSize ?? defaultFont(it);
+function textBoxOf(it) {
+  const font = fontOf(it);
+  const lh = (k2) => Math.round(font * k2 * 10) / 10;
+  switch (it.type) {
+    case "sticky":
+      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 10, padBottom: 14, padLeft: 10, center: it.role === "actor" };
+    case "card":
+      if (it.role === "card")
+        return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 };
+      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 };
+    case "text":
+      if (it.role === "annotation")
+        return { font, lineHeight: lh(1.5), weight: 400, padTop: 6, padRight: 8, padBottom: 6, padLeft: 10 };
+      return { font, lineHeight: lh(1.5), weight: it.role === "title" || it.role === "heading" ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
+    case "frame":
+    case "lane":
+      return { font: 13.5, lineHeight: 18, weight: 600, padTop: 8, padRight: 10, padBottom: 0, padLeft: 10, nowrap: true };
+    case "wireframe":
+      if (it.role === "heading")
+        return { font: 17, lineHeight: 22, weight: 600, padTop: 2, padRight: 4, padBottom: 2, padLeft: 4 };
+      if (it.role === "button")
+        return { font: 13, lineHeight: 17, weight: 500, padTop: 0, padRight: 6, padBottom: 0, padLeft: 6, center: true };
+      return { font: 13, lineHeight: 19.5, weight: 400, padTop: 2, padRight: 8, padBottom: 2, padLeft: 8 };
+    default:
+      return { font, lineHeight: lh(1.4), weight: 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
+  }
+}
+var WIDE = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1f300}-\u{1faff}]/u;
+function charEm(ch) {
+  if (WIDE.test(ch))
+    return 1;
+  if (ch === " ")
+    return 0.26;
+  if (/[iljtfrI.,:;'|!()[\]{}`]/.test(ch))
+    return 0.3;
+  if (/[mwMW@%]/.test(ch))
+    return 0.85;
+  if (/[A-Z]/.test(ch))
+    return 0.64;
+  if (/[0-9]/.test(ch))
+    return 0.56;
+  return 0.53;
+}
+function measure(text3, font, weight = 400) {
+  let em = 0;
+  for (const ch of text3)
+    em += charEm(ch);
+  return em * font * (weight >= 600 ? 1.05 : weight >= 500 ? 1.02 : 1);
+}
+function wrap(text3, width, font, weight = 400) {
+  const out = [];
+  const w2 = Math.max(width, font);
+  for (const para of text3.replace(/\r\n/g, "\n").split("\n")) {
+    const tokens = para.match(/[ \t]+|[^\sᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]+|./gu) ?? [""];
+    let line = "";
+    for (const tok of tokens) {
+      const next = line + tok;
+      if (measure(next.trimEnd(), font, weight) <= w2 || line === "") {
+        if (measure(tok, font, weight) > w2 && line === "") {
+          for (const ch of tok) {
+            if (measure(line + ch, font, weight) > w2 && line)
+              out.push(line), line = "";
+            line += ch;
+          }
+          continue;
+        }
+        line = next;
+        continue;
+      }
+      out.push(line.trimEnd());
+      line = /^\s+$/.test(tok) ? "" : tok;
+      if (measure(line, font, weight) > w2) {
+        const long = line;
+        line = "";
+        for (const ch of long) {
+          if (measure(line + ch, font, weight) > w2 && line)
+            out.push(line), line = "";
+          line += ch;
+        }
+      }
+    }
+    out.push(line.trimEnd());
+  }
+  return out;
+}
+function fitText(it) {
+  const box = textBoxOf(it);
+  const innerW = Math.max(1, it.w - box.padLeft - box.padRight);
+  const text3 = it.text ?? "";
+  const lines2 = box.nowrap ? [text3.split("\n")[0] ?? ""] : wrap(text3, innerW, box.font, box.weight);
+  const innerH = Math.max(0, it.h - box.padTop - box.padBottom);
+  const glyph = (box.lineHeight - box.font) / 2 + 0.6 * box.font;
+  const fits = innerH + 0.5 < glyph ? 0 : Math.floor((innerH + 0.5 - glyph) / box.lineHeight) + 1;
+  const needH = Math.ceil(lines2.length * box.lineHeight + box.padTop + box.padBottom);
+  const clipped = text3.trim() !== "" && (box.nowrap ? measure(lines2[0], box.font, box.weight) > innerW + 1 : lines2.length > fits);
+  return { box, lines: lines2, fits, clipped, needH, innerW };
+}
+function sizeToText(it, text3, o) {
+  const box = textBoxOf(it);
+  const padX = box.padLeft + box.padRight;
+  const longest = Math.max(0, ...text3.replace(/\r\n/g, "\n").split("\n").map((l) => measure(l, box.font, box.weight)));
+  const w2 = Math.ceil(Math.min(o.maxW, Math.max(o.minW, longest + padX + 6)));
+  const { needH } = fitText({ ...it, w: w2, h: 0, text: text3 });
+  return { w: w2, h: Math.max(o.minH ?? 0, needH + 4) };
+}
+
+// packages/canvas/dist/diagrams/unknownFields.js
+var def = (s) => s._zod.def;
+var WRAPPERS = /* @__PURE__ */ new Set(["optional", "default", "nullable", "readonly", "catch", "prefault", "nonoptional"]);
+function unwrap(s) {
+  for (let i = 0; i < 20; i++) {
+    const d = def(s);
+    if (WRAPPERS.has(d.type) && d.innerType)
+      s = d.innerType;
+    else if (d.type === "lazy" && d.getter)
+      s = d.getter();
+    else if (d.type === "pipe" && d.in && d.out)
+      s = def(d.in).type === "transform" ? d.out : d.in;
+    else
+      return s;
+  }
+  return s;
+}
+var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
+var at2 = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
+function unknownFields(schema, value, path15 = "") {
+  const s = unwrap(schema);
+  const d = def(s);
+  if (d.type === "object" && isPlainObject2(value)) {
+    const shape = d.shape ?? {};
+    const open2 = d.catchall && def(d.catchall).type !== "never";
+    const out = [];
+    for (const [k2, v2] of Object.entries(value)) {
+      if (k2 in shape)
+        out.push(...unknownFields(shape[k2], v2, at2(path15, k2)));
+      else if (!open2)
+        out.push({ path: path15 || "(root)", field: k2 });
+    }
+    return out;
+  }
+  if (d.type === "array" && Array.isArray(value) && d.element)
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path15, i)));
+  if (d.type === "record" && isPlainObject2(value) && d.valueType)
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path15, k2)));
+  if (d.type === "union" && d.options) {
+    const fits = d.options.filter((o) => {
+      const t = def(unwrap(o)).type;
+      return Array.isArray(value) ? t === "array" : isPlainObject2(value) ? t === "object" || t === "record" : t !== "object" && t !== "array";
+    });
+    if (!fits.length)
+      return [];
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path15) })).sort((a, b2) => a.extra.length - b2.extra.length);
+    return ranked[0].extra;
+  }
+  return [];
+}
+
+// packages/canvas/dist/diagrams/uiMock.js
+var UI_LAYOUT = ["stack", "row", "grid"];
+var UI_BOXES = ["card", "section", "navbar"];
+var UI_LEAVES = [
+  "heading",
+  "text",
+  "link",
+  "button",
+  "input",
+  "textarea",
+  "select",
+  "search",
+  "checkbox",
+  "radio",
+  "toggle",
+  "badge",
+  "avatar",
+  "icon",
+  "divider",
+  "image",
+  "table",
+  "list",
+  "stat",
+  "alert",
+  "progress",
+  "tabs",
+  "breadcrumb",
+  "pagination",
+  "spacer",
+  "empty",
+  "chart",
+  "sidebar"
+];
+var UI_TYPES = [...UI_LAYOUT, ...UI_BOXES, ...UI_LEAVES];
+var UI_ICONS = [
+  "plus",
+  "search",
+  "settings",
+  "user",
+  "users",
+  "bell",
+  "home",
+  "chevron-right",
+  "chevron-down",
+  "check",
+  "x",
+  "more",
+  "folder",
+  "file",
+  "star",
+  "trash",
+  "edit",
+  "arrow-left",
+  "arrow-right",
+  "menu",
+  "filter",
+  "calendar",
+  "mail",
+  "lock",
+  "board",
+  "chart",
+  "link",
+  "download",
+  "upload",
+  "eye",
+  "heart",
+  "comment"
+];
+var UI_DEVICES = { desktop: { w: 1280, h: 800 }, laptop: { w: 1024, h: 680 }, tablet: { w: 768, h: 1024 }, phone: { w: 390, h: 844 } };
+var tone = external_exports.enum(["neutral", "info", "success", "warning", "danger"]);
+var size = external_exports.enum(["sm", "md", "lg"]);
+var listItem = external_exports.union([
+  external_exports.string(),
+  external_exports.object({
+    id: external_exports.string().optional(),
+    text: external_exports.string(),
+    meta: external_exports.string().optional(),
+    icon: external_exports.string().optional(),
+    badge: external_exports.string().optional(),
+    active: external_exports.boolean().optional(),
+    /** What this entry is for, why it is there: a numbered pin on the entry, the text on a card beside the screen. */
+    note: external_exports.string().optional()
+  })
+]);
+var cell = external_exports.union([external_exports.string(), external_exports.number()]);
+var tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
+var UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12, calloutGap: 8 };
+function uiGutterOf(screen) {
+  return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h };
+}
+var isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
+var UI_CALLOUT = { font: 12, lineHeight: 17, padTop: 6, padRight: 8, padBottom: 6, padLeft: 30, border: 1, pin: 16 };
+function uiCalloutSize(text3) {
+  const c = UI_CALLOUT;
+  const inner = UI_GUTTER.noteW - c.padLeft - c.padRight - c.border * 2;
+  const lines2 = Math.max(1, wrap(text3.trim(), inner - 6, c.font).length);
+  return { w: UI_GUTTER.noteW, h: Math.ceil(lines2 * c.lineHeight + c.padTop + c.padBottom + c.border * 2) };
+}
+function uiCalloutOf(it) {
+  if (!it || it.type !== "comment" || it.role !== "note")
+    return void 0;
+  const n4 = it.data?.callout;
+  return typeof n4 === "number" && Number.isInteger(n4) && n4 > 0 ? n4 : void 0;
+}
+var uiNodeSchema = external_exports.lazy(() => external_exports.object({
+  type: external_exports.enum(UI_TYPES),
+  /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
+  id: external_exports.string().optional(),
+  /** The element's words: a button's label, a heading, a card's title, a form field's label. */
+  text: external_exports.string().optional(),
+  /** Form fields: the label (same as `text`). */
+  label: external_exports.string().optional(),
+  children: external_exports.array(uiNodeSchema).optional(),
+  gap: external_exports.number().min(0).optional(),
+  pad: external_exports.number().min(0).optional(),
+  align: external_exports.enum(["start", "center", "end", "stretch"]).optional(),
+  justify: external_exports.enum(["start", "center", "end", "between"]).optional(),
+  /** grid: columns (default 3). */
+  cols: external_exports.number().int().min(1).max(12).optional(),
+  /** In a row: columns of 12 this element takes. */
+  span: external_exports.number().int().min(1).max(12).optional(),
+  /** Fixed width / height in px. */
+  w: external_exports.number().min(1).optional(),
+  h: external_exports.number().min(1).optional(),
+  bg: external_exports.enum(["surface", "muted", "accent", "none"]).optional(),
+  /** button: primary | secondary | ghost | danger; text: body | muted | small | code; card: flat | elevated; list: plain; chart: bar | line. */
+  variant: external_exports.string().optional(),
+  /** heading: 1..4 */
+  level: external_exports.number().int().min(1).max(4).optional(),
+  tone: tone.optional(),
+  size: size.optional(),
+  icon: external_exports.string().optional(),
+  /** navbar links, sidebar, tabs, list rows, breadcrumb, select options. */
+  items: external_exports.array(listItem).optional(),
+  /** The selected entry of items: its text or index. */
+  active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+  columns: external_exports.array(external_exports.string()).optional(),
+  /** table: `[cells]` per row, or `{ cells, note }` for a row with a design note; chart: `[[numbers]]`. */
+  rows: external_exports.array(tableRow).optional(),
+  value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
+  placeholder: external_exports.string().optional(),
+  hint: external_exports.string().optional(),
+  checked: external_exports.boolean().optional(),
+  /** image: '16:9' (default), '4:3', '1:1' … */
+  ratio: external_exports.string().optional(),
+  /** stat: '+12%' / '-3' — the change, coloured by its sign. */
+  delta: external_exports.string().optional(),
+  /** What this element is for, why it is there (a design annotation): a numbered pin on it, the text on a card beside the screen. */
+  note: external_exports.string().optional(),
+  /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
+  sample: external_exports.boolean().optional(),
+  /** Tapping this element goes to that screen: a flow arrow. */
+  goto: external_exports.string().optional(),
+  traces: external_exports.array(traceSchema).optional()
+}));
+var uiMockSchema = external_exports.object({
+  /** Default device for every screen. */
+  device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+  /** The mock's own theme (independent of the canvas theme). */
+  theme: external_exports.enum(["light", "dark"]).optional(),
+  tokens: external_exports.object({
+    /** Accent colour (#rgb / #rrggbb). */
+    accent: external_exports.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i).optional(),
+    /** Corner radius in px (default 8). */
+    radius: external_exports.number().min(0).max(32).optional(),
+    font: external_exports.enum(["sans", "serif", "mono", "rounded"]).optional()
+  }).optional(),
+  screens: external_exports.array(external_exports.object({
+    id: external_exports.string().optional(),
+    name: external_exports.string(),
+    device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
+    /** Width / minimum height in px (default: the device's). */
+    w: external_exports.number().min(200).max(4e3).optional(),
+    h: external_exports.number().min(200).max(8e3).optional(),
+    theme: external_exports.enum(["light", "dark"]).optional(),
+    /** Padding and gap of the screen's body (default 0: put content in a section). */
+    pad: external_exports.number().min(0).optional(),
+    gap: external_exports.number().min(0).optional(),
+    note: external_exports.string().optional(),
+    /** The whole screen shows sample data (see the element's `sample`). */
+    sample: external_exports.boolean().optional(),
+    traces: external_exports.array(traceSchema).optional(),
+    body: external_exports.array(uiNodeSchema).default([])
+  })).min(1),
+  /** Arrows between screens: from a screen or '<screen>/<element>' to a screen. */
+  flows: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), label: external_exports.string().optional() })).default([]),
+  /**
+   * What a screen or an element is for, kept apart from the tree (docs/diagrams.md "Annotations"): `on: '<screen>/<element>'`
+   * reads like that element's own `note` — numbered with its screen's callouts.
+   */
+  annotations: annotationsSchema.optional()
+});
+var DEFAULT_ACCENT = "#4f46e5";
+function itemsOf(items, active) {
+  if (!items)
+    return void 0;
+  return items.map((it, i) => {
+    const o = typeof it === "string" ? { text: it } : it;
+    const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
+    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {}, ...o.note ? { note: o.note } : {} };
+  });
+}
+function rowsOf(rows) {
+  if (!rows)
+    return {};
+  const notes = {};
+  const cells = rows.map((r2, i) => {
+    if (Array.isArray(r2))
+      return r2;
+    if (r2.note)
+      notes[String(i)] = r2.note;
+    return r2.cells;
+  });
+  return { rows: cells, ...Object.keys(notes).length ? { rowNotes: notes } : {} };
+}
+function normalizeUiMock(raw) {
+  const c = uiMockSchema.parse(raw);
+  const usedScreens = /* @__PURE__ */ new Set();
+  const screens = c.screens.map((s, si) => {
+    let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
+    for (let n4 = 2; usedScreens.has(sid); n4++)
+      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n4}`;
+    usedScreens.add(sid);
+    const device = s.device ?? c.device ?? "desktop";
+    const theme = { theme: s.theme ?? c.theme ?? "light", accent: c.tokens?.accent ?? DEFAULT_ACCENT, radius: c.tokens?.radius ?? 8, font: c.tokens?.font ?? "sans" };
+    const used = /* @__PURE__ */ new Set();
+    const alloc = (explicit, text3, type) => {
+      const base = explicit && explicit.trim() || slugify2(text3 ?? "") || type;
+      let id = base;
+      for (let n4 = 2; used.has(id); n4++)
+        id = `${base}-${n4}`;
+      used.add(id);
+      return id;
+    };
+    const el = (n4, path15) => {
+      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n4;
+      const words = text3 ?? label2;
+      const id = alloc(n4.id, words, type);
+      return {
+        id,
+        ref: `${sid}/${id}`,
+        type,
+        ...words !== void 0 ? { text: words } : {},
+        textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
+        path: path15,
+        children: (children ?? []).map((ch, i) => el(ch, [...path15, "children", i])),
+        props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
+        ...note ? { note } : {},
+        ...goto ? { goto } : {},
+        traces: traces2 ?? []
+      };
+    };
+    return {
+      id: sid,
+      name: s.name,
+      device,
+      w: s.w ?? UI_DEVICES[device].w,
+      minH: s.h ?? UI_DEVICES[device].h,
+      pad: s.pad ?? 0,
+      gap: s.gap ?? 0,
+      theme,
+      ...s.note ? { note: s.note } : {},
+      ...s.sample ? { sample: true } : {},
+      traces: s.traces ?? [],
+      path: ["screens", si],
+      body: s.body.map((n4, i) => el(n4, ["screens", si, "body", i]))
+    };
+  });
+  return { screens, flows: c.flows };
+}
+function walkUi(els) {
+  return els.flatMap((e) => [e, ...walkUi(e.children)]);
+}
+var WIDE2 = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
+function textWidth(s, px = 14, bold = false) {
+  let w2 = 0;
+  for (const ch of s)
+    w2 += WIDE2.test(ch) ? px : ch === " " ? px * 0.3 : /[A-Z0-9]/.test(ch) ? px * 0.64 : /[il.,:;'|!]/.test(ch) ? px * 0.3 : px * 0.54;
+  return Math.ceil(w2 * (bold ? 1.07 : 1));
+}
+function lineCount(s, px, maxW, bold = false) {
+  if (!s)
+    return 1;
+  return s.split("\n").reduce((n4, seg) => n4 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
+}
+var HEADING = { 1: { px: 28, lh: 36 }, 2: { px: 22, lh: 30 }, 3: { px: 18, lh: 26 }, 4: { px: 15, lh: 22 } };
+var BUTTON = { sm: { h: 32, pad: 12 }, md: { h: 36, pad: 16 }, lg: { h: 44, pad: 20 } };
+var FIELD = { sm: 32, md: 38, lg: 44 };
+var HUG = /* @__PURE__ */ new Set(["button", "link", "badge", "avatar", "icon", "checkbox", "radio", "toggle", "pagination"]);
+var STRETCH = /* @__PURE__ */ new Set(["stack", "grid", "card", "section", "sidebar"]);
+var isDrawnContainer = (t) => UI_BOXES.includes(t);
+var isLayout = (t) => UI_LAYOUT.includes(t);
+function padOf(el) {
+  if (el.props.pad !== void 0)
+    return el.props.pad;
+  return el.type === "card" ? 16 : el.type === "section" ? 24 : el.type === "navbar" ? 16 : 0;
+}
+function gapOf(el) {
+  if (el.props.gap !== void 0)
+    return el.props.gap;
+  return el.type === "grid" ? 16 : el.type === "navbar" ? 8 : 12;
+}
+var titleH = (el) => el.type === "card" && el.text ? 26 : 0;
+function measure2(el, avail) {
+  const p = el.props;
+  const fixedW = p.w !== void 0 ? Math.min(p.w, avail) : void 0;
+  const sz = p.size ?? "md";
+  const t = el.text ?? "";
+  const leaf = (w2, h) => ({ w: fixedW ?? w2, h: p.h ?? h });
+  switch (el.type) {
+    case "stack":
+    case "card":
+    case "section": {
+      const pad = padOf(el);
+      const gap = gapOf(el);
+      const w2 = fixedW ?? avail;
+      const inner = w2 - pad * 2;
+      const hs = el.children.map((c) => measure2(c, inner).h);
+      const head = titleH(el);
+      const h = pad * 2 + head + (head && hs.length ? gap : 0) + hs.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, hs.length - 1);
+      return { w: w2, h: Math.max(p.h ?? 0, h) };
+    }
+    case "row": {
+      const w2 = fixedW ?? avail;
+      const pad = padOf(el);
+      const widths = rowWidths(el, w2 - pad * 2);
+      const h = pad * 2 + Math.max(0, ...el.children.map((c, i) => measure2(c, widths[i]).h));
+      return { w: w2, h: Math.max(p.h ?? 0, h) };
+    }
+    case "grid": {
+      const w2 = fixedW ?? avail;
+      const { rows } = gridCells(el, w2);
+      return { w: w2, h: Math.max(p.h ?? 0, rows.reduce((a, r2) => a + r2.h, 0) + gapOf(el) * Math.max(0, rows.length - 1) + padOf(el) * 2) };
+    }
+    case "navbar":
+      return { w: fixedW ?? avail, h: p.h ?? 56 };
+    case "sidebar":
+      return leaf(240, 16 + (t ? 48 : 0) + (p.items?.length ?? 0) * 36 + 16);
+    case "heading": {
+      const hd = HEADING[p.level ?? 2];
+      return leaf(avail, lineCount(t, hd.px, fixedW ?? avail, true) * hd.lh);
+    }
+    case "text": {
+      const small = p.variant === "small" || p.variant === "caption";
+      const px = small ? 12 : p.variant === "code" ? 13 : 14;
+      const lh = small ? 18 : 21;
+      return leaf(avail, lineCount(t, px, fixedW ?? avail) * lh + (p.variant === "code" ? 16 : 0));
+    }
+    case "link":
+      return leaf(textWidth(t, 14) + (p.icon ? 22 : 0) + 2, 21);
+    case "button": {
+      const b2 = BUTTON[sz];
+      const w2 = t ? textWidth(t, sz === "sm" ? 13 : 14, true) + b2.pad * 2 + (p.icon ? 22 : 0) : b2.h;
+      return leaf(w2, b2.h);
+    }
+    case "input":
+    case "select":
+    case "search":
+    case "textarea": {
+      const field = el.type === "textarea" ? p.h ?? 96 : FIELD[sz];
+      return { w: fixedW ?? avail, h: (t && el.type !== "search" ? 26 : 0) + field + (p.hint ? 22 : 0) };
+    }
+    case "checkbox":
+    case "radio":
+      return leaf(26 + textWidth(t, 14), 22);
+    case "toggle":
+      return leaf(48 + textWidth(t, 14), 24);
+    case "badge":
+      return leaf(textWidth(t, 12, true) + 20, 22);
+    case "avatar": {
+      const d = sz === "sm" ? 24 : sz === "lg" ? 48 : 32;
+      return leaf(d, d);
+    }
+    case "icon": {
+      const d = sz === "sm" ? 16 : sz === "lg" ? 28 : 20;
+      return leaf(d, d);
+    }
+    case "divider":
+      return leaf(avail, 1);
+    case "image": {
+      const [a, b2] = (p.ratio ?? "16:9").split(":").map(Number);
+      const w2 = fixedW ?? avail;
+      return { w: w2, h: p.h ?? Math.round(w2 * (b2 > 0 ? b2 : 9) / (a > 0 ? a : 16)) };
+    }
+    case "table":
+      return leaf(avail, (t ? 34 : 0) + 42 + (p.rows?.length ?? 0) * 46);
+    case "list": {
+      const rowH = (p.items ?? []).some((i) => i.meta) ? 60 : 44;
+      return leaf(avail, (t ? 30 : 0) + (p.items?.length ?? 0) * rowH);
+    }
+    case "stat":
+      return leaf(avail, 100);
+    case "alert":
+      return leaf(avail, Math.max(46, 24 + lineCount(t, 14, (fixedW ?? avail) - 56) * 21));
+    case "progress":
+      return leaf(avail, t ? 34 : 8);
+    case "tabs":
+      return leaf(avail, 42);
+    case "breadcrumb":
+      return leaf(avail, 21);
+    case "pagination":
+      return leaf(7 * 36, 32);
+    case "spacer":
+      return leaf(0, 16);
+    case "empty":
+      return leaf(avail, 220);
+    case "chart":
+      return leaf(avail, 220);
+  }
+}
+function rowWidths(el, inner) {
+  const gap = gapOf(el);
+  const n4 = el.children.length;
+  const colW = (inner - gap * 11) / 12;
+  const widths = el.children.map((c) => {
+    if (c.props.w !== void 0)
+      return Math.min(c.props.w, inner);
+    if (c.props.span !== void 0)
+      return colW * c.props.span + gap * (c.props.span - 1);
+    if (HUG.has(c.type) || c.type === "sidebar")
+      return Math.min(measure2(c, inner).w, inner);
+    return void 0;
+  });
+  const growers = widths.filter((w2) => w2 === void 0).length;
+  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n4 - 1);
+  const share = growers ? Math.max(24, (inner - used) / growers) : 0;
+  return widths.map((w2) => Math.round(w2 ?? share));
+}
+function gridCells(el, w2) {
+  const cols = el.props.cols ?? 3;
+  const gap = gapOf(el);
+  const inner = w2 - padOf(el) * 2;
+  const cellW = (inner - gap * (cols - 1)) / cols;
+  const rows = [];
+  for (let i = 0; i < el.children.length; i += cols) {
+    const items = el.children.slice(i, i + cols);
+    rows.push({ items, h: Math.max(0, ...items.map((c) => measure2(c, cellW).h)) });
+  }
+  return { cellW, rows };
+}
+function place(el, x2, y2, w2, h, parent, out) {
+  const drawn = !isLayout(el.type);
+  if (drawn)
+    out.push({ el, x: x2, y: y2, w: w2, h, ...parent ? { parent } : {} });
+  const holder = drawn ? el.ref : parent;
+  const pad = padOf(el);
+  const gap = gapOf(el);
+  const align2 = el.props.align;
+  switch (el.type) {
+    case "stack":
+    case "card":
+    case "section": {
+      const inner = w2 - pad * 2;
+      let cy = y2 + pad + titleH(el) + (titleH(el) && el.children.length ? gap : 0);
+      for (const c of el.children) {
+        const m2 = measure2(c, inner);
+        const cw = HUG.has(c.type) || c.props.w !== void 0 ? m2.w : inner;
+        const cx = align2 === "center" ? x2 + pad + (inner - cw) / 2 : align2 === "end" ? x2 + pad + inner - cw : x2 + pad;
+        place(c, cx, cy, cw, m2.h, holder, out);
+        cy += m2.h + gap;
+      }
+      return;
+    }
+    case "row": {
+      const inner = w2 - pad * 2;
+      const widths = rowWidths(el, inner);
+      const total = widths.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, widths.length - 1);
+      const free = Math.max(0, inner - total);
+      const j2 = el.props.justify ?? "start";
+      const extraGap = j2 === "between" && widths.length > 1 ? free / (widths.length - 1) : 0;
+      let cx = x2 + pad + (j2 === "center" ? free / 2 : j2 === "end" ? free : 0);
+      const rowH = h - pad * 2;
+      el.children.forEach((c, i) => {
+        const m2 = measure2(c, widths[i]);
+        const stretch = align2 === "stretch" || align2 === void 0 && STRETCH.has(c.type);
+        const ch = stretch ? Math.max(m2.h, rowH) : m2.h;
+        const cy = stretch || align2 === "start" ? y2 + pad : align2 === "end" ? y2 + pad + rowH - ch : y2 + pad + (rowH - ch) / 2;
+        place(c, cx, cy, widths[i], ch, holder, out);
+        cx += widths[i] + gap + extraGap;
+      });
+      return;
+    }
+    case "grid": {
+      const { cellW, rows } = gridCells(el, w2);
+      let cy = y2 + pad;
+      for (const r2 of rows) {
+        r2.items.forEach((c, i) => place(c, x2 + pad + i * (cellW + gap), cy, cellW, align2 === "start" ? measure2(c, cellW).h : r2.h, holder, out));
+        cy += r2.h + gap;
+      }
+      return;
+    }
+    case "navbar": {
+      let cx = x2 + w2 - pad;
+      for (const c of [...el.children].reverse()) {
+        const m2 = measure2(c, w2 / 2);
+        cx -= m2.w;
+        place(c, cx, y2 + (h - m2.h) / 2, m2.w, m2.h, holder, out);
+        cx -= gap;
+      }
+      return;
+    }
+    default:
+      return;
+  }
+}
+function layoutScreen(s) {
+  const out = [];
+  const inner = s.w - s.pad * 2;
+  let y2 = s.pad;
+  for (const el of s.body) {
+    const m2 = measure2(el, inner);
+    const w2 = HUG.has(el.type) || el.props.w !== void 0 ? m2.w : inner;
+    place(el, s.pad, y2, w2, m2.h, void 0, out);
+    y2 += m2.h + s.gap;
+  }
+  const content = y2 - (s.body.length ? s.gap : 0) + s.pad;
+  return { w: s.w, h: Math.max(s.minH, Math.ceil(content)), boxes: out.map((b2) => ({ ...b2, x: Math.round(b2.x), y: Math.round(b2.y), w: Math.round(b2.w), h: Math.round(b2.h) })) };
+}
+var NOTE_WORDS = ["OPEN", "TBD", "TODO", "FIXME", "sample", "proposal", "proposed", "placeholder", "lorem"];
+var NOTE_WORDS_CJK = ["\u5F85\u5B9A", "\u5F85\u78BA\u8A8D", "\u5F85\u6C7A\u5B9A", "\u793A\u4F8B", "\u7BC4\u4F8B", "\u5047\u8CC7\u6599", "\u63D0\u6848"];
+var NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
+var NOTE_RULE = "ui-text-reads-like-a-note";
+var NOTE_RULE_MESSAGE = "reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here";
+function noteWordIn(text3) {
+  const latin = NOTE_WORD_RE.exec(text3);
+  if (latin)
+    return latin[0];
+  return NOTE_WORDS_CJK.find((w2) => text3.includes(w2));
+}
+function productTexts(e) {
+  const out = [];
+  const p = e.props;
+  if (e.text)
+    out.push({ at: e.textKey, text: e.text });
+  if (p.placeholder)
+    out.push({ at: "placeholder", text: p.placeholder });
+  if (p.hint)
+    out.push({ at: "hint", text: p.hint });
+  if (typeof p.value === "string" && p.value)
+    out.push({ at: "value", text: p.value });
+  p.items?.forEach((it, i) => {
+    out.push({ at: `items[${i}].text`, text: it.text });
+    if (it.meta)
+      out.push({ at: `items[${i}].meta`, text: it.meta });
+  });
+  p.columns?.forEach((c, i) => out.push({ at: `columns[${i}]`, text: c }));
+  if (e.type === "table")
+    p.rows?.forEach((r2, i) => r2.forEach((c, j2) => typeof c === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c })));
+  return out;
+}
+function checkUiMock(raw) {
+  const m2 = normalizeUiMock(raw);
+  const out = [];
+  const screens = new Set(m2.screens.map((s) => s.id));
+  const refs2 = new Set(m2.screens.flatMap((s) => walkUi(s.body).map((e) => e.ref)));
+  const icons = new Set(UI_ICONS);
+  for (const s of m2.screens) {
+    const explicit = /* @__PURE__ */ new Map();
+    for (const e of walkUi(s.body)) {
+      const given = e.path.reduce((node4, k2) => node4?.[k2], raw);
+      if (given?.id)
+        explicit.set(given.id, (explicit.get(given.id) ?? 0) + 1);
+      if (e.goto && !screens.has(e.goto))
+        out.push({ severity: "warning", element: e.ref, message: `goto: no screen "${e.goto}" (screens: ${[...screens].join(", ")})` });
+      const cols = e.props.columns?.length;
+      if (e.type === "table" && cols)
+        e.props.rows?.forEach((r2, i) => r2.length !== cols && out.push({ severity: "warning", element: e.ref, message: `table row ${i + 1} has ${r2.length} cells for ${cols} columns` }));
+      for (const ic of [e.props.icon, ...(e.props.items ?? []).map((i) => i.icon)])
+        if (ic && !icons.has(ic))
+          out.push({ severity: "info", element: e.ref, message: `icon "${ic}" is not one the canvas draws (${UI_ICONS.join(", ")})` });
+      if (e.type === "button" && !e.text && !e.props.icon)
+        out.push({ severity: "warning", element: e.ref, message: "a button with neither text nor icon" });
+      if (e.children.length && !isLayout(e.type) && !isDrawnContainer(e.type))
+        out.push({ severity: "warning", element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) \u2014 they are not drawn` });
+      if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
+        out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
+      for (const t of productTexts(e)) {
+        const word = noteWordIn(t.text);
+        if (word)
+          out.push({ severity: "warning", element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` });
+      }
+    }
+    for (const [id, n4] of explicit)
+      if (n4 > 1)
+        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n4} times in screen ${s.id}; the others become ${id}-2 \u2026` });
+  }
+  for (const f of m2.flows) {
+    if (!screens.has(f.to))
+      out.push({ severity: "warning", message: `flow to "${f.to}": no such screen` });
+    if (!screens.has(f.from) && !refs2.has(f.from))
+      out.push({ severity: "warning", message: `flow from "${f.from}": no such screen or <screen>/<element>` });
+  }
+  return out;
+}
+var shortText = (s, n4 = 48) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
+var uiPathText = (p) => p.map((k2) => typeof k2 === "number" ? `[${k2}]` : `.${k2}`).join("").replace(/^\./, "");
+function lintUiMock(raw) {
+  const m2 = normalizeUiMock(raw);
+  const where = /* @__PURE__ */ new Map();
+  for (const s of m2.screens) {
+    where.set(uiPathText(s.path), s.id);
+    for (const e of walkUi(s.body))
+      where.set(uiPathText(e.path), e.ref);
+  }
+  const owner = (path15) => {
+    for (let p = path15; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+      const hit2 = where.get(p);
+      if (hit2)
+        return hit2;
+      if (!/(\.[^.[\]]+|\[\d+\])$/.test(p))
+        break;
+    }
+    return void 0;
+  };
+  const unknown2 = unknownFields(uiMockSchema, raw).map((u3) => {
+    const element = owner(u3.path);
+    return { severity: "warning", message: `unknown field \`${u3.field}\` at ${u3.path} \u2014 it is not part of ui-mock and will be ignored`, ...element ? { element } : {} };
+  });
+  return [...unknown2, ...checkUiMock(raw)];
+}
+function attachUiFindings(items, raw) {
+  const m2 = normalizeUiMock(raw);
+  const shownAt = /* @__PURE__ */ new Map();
+  const hold = (els, holder) => els.forEach((e) => {
+    const at3 = isLayout(e.type) ? holder : e.ref;
+    shownAt.set(e.ref, at3);
+    hold(e.children, at3);
+  });
+  for (const s of m2.screens) {
+    shownAt.set(s.id, s.id);
+    hold(s.body, s.id);
+  }
+  const found = /* @__PURE__ */ new Map();
+  for (const f of lintUiMock(raw)) {
+    const at3 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
+    found.set(at3, [...found.get(at3) ?? [], { severity: f.severity, message: f.message }]);
+  }
+  return items.map((it) => {
+    const ui = it.data?.ui;
+    if (it.type !== "ui" || !ui || typeof it.data?.element !== "string")
+      return it;
+    const { findings: _old, ...rest } = ui;
+    const mine = found.get(it.data.element);
+    if (!mine && !_old)
+      return it;
+    return { ...it, data: { ...it.data, ui: mine ? { ...rest, findings: mine } : rest } };
+  });
+}
+
+// packages/canvas/dist/templates/annotations.js
+function annotationsIn(content) {
+  const list3 = content?.annotations;
+  if (!Array.isArray(list3))
+    return [];
+  return list3.flatMap((a) => {
+    const o = a;
+    if (!o || typeof o.on !== "string" || !o.on.trim() || typeof o.text !== "string" || !o.text.trim())
+      return [];
+    return [{ ...typeof o.id === "string" && o.id.trim() ? { id: o.id.trim() } : {}, on: o.on, text: o.text }];
+  });
+}
+function annotationIds(list3, scope) {
+  const alloc = idAllocator();
+  return list3.map((a) => `${scope}.annotation.${alloc(a.id, a.on, "annotation")}`);
+}
+var MARKS = /* @__PURE__ */ new Set(["pivotal", "release-cut", "legend", "legend-title"]);
+var annotatable = (it) => it.type !== "arrow" && it.type !== "comment" && !MARKS.has(it.role ?? "");
+function resolveOn(items, on, scope) {
+  const want = on.trim();
+  if (!want)
+    return void 0;
+  const pool = items.filter(annotatable);
+  const pick3 = (hits) => hits.find((i) => !i.data?.occurrence) ?? hits[0];
+  return pool.find((i) => i.id === want) ?? pool.find((i) => i.id === `${scope}.${want}`) ?? pick3(pool.filter((i) => i.data?.element === want)) ?? pick3(pool.filter((i) => typeof i.text === "string" && i.text.trim() === want));
+}
+var ON_NAMES = {
+  "event-storming": "an element by its id or its text",
+  "user-story-map": "an activity, step or story by its id or its text, or a release lane (release.<slug>)",
+  "user-journey": "a stage or one of its stickies by its id (`checkout`, `checkout/pay`) or its text",
+  wireframe: "a screen (`<screen>`) or an element (`<screen>/<element>`: the slug of its text, else its role) by id, or its text",
+  "ui-mock": "a screen (`<screen>`) or an element (`<screen>/<element>`) \u2014 a stack, row or grid is not drawn: name an element in it",
+  kanban: "a card by its id (else the slug of its title) or its title, or a column by the slug of its name",
+  workflow: "a step or a trigger by its id"
+};
+function unresolvedAnnotations(kind, content, items, scope) {
+  const list3 = annotationsIn(content);
+  if (!list3.length || kind === "domain-story" || kind === "freeform")
+    return [];
+  const names = [...new Set(items.filter(annotatable).map((it) => annotationRefOf(it, scope)))].slice(0, 8);
+  return list3.flatMap((a, i) => resolveOn(items, a.on, scope) ? [] : [{ severity: "error", element: `annotations[${i}]`, message: `on "${a.on}" matches nothing in this diagram, so its card is not drawn \u2014 name ${ON_NAMES[kind] ?? "an element by its id"}, or an item id on the board${names.length ? ` (e.g. ${names.join(", ")})` : ""}` }]);
+}
+var LINE = 16;
+function readingOrder(notes) {
+  const byTop = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq);
+  const lines2 = [];
+  for (const n4 of byTop) {
+    const line = lines2[lines2.length - 1];
+    if (line && n4.anchorY - line[0].anchorY <= LINE)
+      line.push(n4);
+    else
+      lines2.push([n4]);
+  }
+  return lines2.flatMap((l) => l.sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq));
+}
+function timelineOrder(notes) {
+  const byLeft = [...notes].sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq);
+  const cols = [];
+  for (const n4 of byLeft) {
+    const col = cols[cols.length - 1];
+    if (col && n4.anchorX - col[0].anchorX <= LINE)
+      col.push(n4);
+    else
+      cols.push([n4]);
+  }
+  return cols.flatMap((c) => c.sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq));
+}
+function annotationCard(n4, at3, now, file2) {
+  const size2 = uiCalloutSize(n4.text);
+  return make({ id: n4.id, type: "comment", x: at3.x, y: at3.y, w: size2.w, h: size2.h, text: n4.text, role: "note", color: "yellow", target: n4.target, data: { ...n4.data, callout: n4.callout, annotation: { on: n4.on, ...file2 ? { file: file2 } : {} } } }, now);
+}
+function cardsInColumn(notes, gutter, now, o = {}) {
+  const out = [];
+  let bottom = o.below ?? -Infinity;
+  let gap = o.gap ?? UI_GUTTER.calloutGap;
+  for (const n4 of notes) {
+    const y2 = Math.max(n4.anchorY, gutter.y, bottom + gap);
+    const card = annotationCard(n4, { x: gutter.x, y: y2 }, now, o.file);
+    out.push(card);
+    bottom = y2 + card.h;
+    gap = UI_GUTTER.calloutGap;
+  }
+  return out;
+}
+function cardsInBand(notes, band, now, file2) {
+  const out = [];
+  const gap = UI_GUTTER.noteGap;
+  let top = band.top;
+  let rowRight = -Infinity;
+  let rowH = 0;
+  for (const n4 of notes) {
+    const size2 = uiCalloutSize(n4.text);
+    const under = (from) => Math.max(from, Math.min(n4.anchorX, band.right - size2.w), band.left);
+    let x2 = under(rowRight + gap);
+    if (rowRight > -Infinity && x2 + size2.w > Math.max(band.right, band.left + size2.w)) {
+      top += rowH + gap;
+      rowH = 0;
+      x2 = under(-Infinity);
+    }
+    const card = annotationCard(n4, { x: x2, y: top }, now, file2);
+    out.push(card);
+    rowRight = x2 + card.w;
+    rowH = Math.max(rowH, card.h);
+  }
+  return out;
+}
+function withAnnotationBand(items, content, o) {
+  const list3 = annotationsIn(content);
+  if (!list3.length)
+    return items;
+  const ids = annotationIds(list3, o.scope);
+  const notes = list3.flatMap((a, i) => {
+    const t = resolveOn(items, a.on, o.scope);
+    return t ? [{ id: ids[i], text: a.text, on: a.on, target: t.id, anchorX: t.x, anchorY: t.y, seq: i }] : [];
+  });
+  const boxes = items.filter((it) => it.type !== "arrow");
+  if (!notes.length || !boxes.length)
+    return items;
+  const band = { left: Math.min(...boxes.map((b2) => b2.x)), top: Math.max(...boxes.map((b2) => b2.y + b2.h)) + UI_GUTTER.gap, right: Math.max(...boxes.map((b2) => b2.x + b2.w)) };
+  const numbered = timelineOrder(notes).map((n4, i) => ({ ...n4, callout: i + 1 }));
+  return [...items, ...cardsInBand(numbered, band, o.now, o.file)];
 }
 
 // packages/canvas/dist/templates/wireframe.js
@@ -41883,10 +43392,12 @@ var wireframeSchema = external_exports.object({
       w: external_exports.number().min(1).max(12),
       /** Row span */
       h: external_exports.number().min(1).default(1),
-      /** Free-form notes for the human (rendered as a comment bubble). */
+      /** What this element is for (an annotation): a numbered card right of the screen, the same number on the element. */
       note: external_exports.string().optional()
     })).default([])
-  })).min(1)
+  })).min(1),
+  /** What a screen or an element is for (docs/diagrams.md "Annotations"), `on` a screen or `<screen>/<element>`. */
+  annotations: annotationsSchema.optional()
 });
 var ROW = 40;
 var SCREEN_GAP = 80;
@@ -41895,7 +43406,8 @@ function renderWireframe(raw, opts = {}) {
   const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
   const scope = opts.scope ?? "wf";
   const id = (role, name) => stableId(scope, role, name);
-  const items = [];
+  const alloc = idAllocator();
+  const screens = [];
   let sx = PAD;
   c.screens.forEach((s, si) => {
     const width = s.w ?? 960;
@@ -41904,20 +43416,45 @@ function renderWireframe(raw, opts = {}) {
     const rows = s.h ?? Math.max(8, ...s.elements.map((e) => e.y + (e.h ?? 1))) + 1;
     const height = rows * ROW + gridPad * 2 + 32;
     const screenId = id("screen", s.name);
-    items.push(make({ id: screenId, type: "wireframe", x: sx, y: PAD, w: width, h: height, text: s.name, role: "screen", color: "white", order: si }, now));
+    const screenEl = alloc(void 0, s.name, "screen");
+    const screen = make({ id: screenId, type: "wireframe", x: sx, y: PAD, w: width, h: height, text: s.name, role: "screen", color: "white", order: si, data: { element: screenEl } }, now);
+    const laid = { screen, items: [], notes: [] };
     s.elements.forEach((e, ei) => {
       const ex = sx + gridPad + e.x * colW;
       const ey = PAD + 32 + gridPad + e.y * ROW;
       const ew = e.w * colW - 8;
       const eh = (e.h ?? 1) * ROW - 8;
       const elId = id(e.role, `${s.name}/${e.text ?? ""}#${ei}`);
-      items.push(make({ id: elId, type: "wireframe", x: ex, y: ey, w: ew, h: eh, text: e.text, role: e.role, color: "grey", parent: screenId, order: ei }, now));
-      if (e.note) {
-        items.push(make({ id: id("comment", `${s.name}/${e.text ?? ""}#${ei}`), type: "comment", x: ex + ew - 20, y: ey - 20, w: 200, h: 60, text: e.note, role: "note", color: "yellow", target: elId }, now));
-      }
+      const element = alloc(`${screenEl}/${slugify2(e.text ?? "") || e.role}`, e.role);
+      laid.items.push(make({ id: elId, type: "wireframe", x: ex, y: ey, w: ew, h: eh, text: e.text, role: e.role, color: "grey", parent: screenId, order: ei, data: { element } }, now));
+      if (e.note)
+        laid.notes.push({ id: id("comment", `${s.name}/${e.text ?? ""}#${ei}`), text: e.note, on: element, target: elId, anchorX: ex, anchorY: ey, seq: ei });
     });
+    screens.push(laid);
     sx += width + SCREEN_GAP;
   });
+  const drawn = screens.flatMap((l) => [l.screen, ...l.items]);
+  const list3 = annotationsIn(raw);
+  const ids = annotationIds(list3, scope);
+  list3.forEach((a, i) => {
+    const t = resolveOn(drawn, a.on, scope);
+    const home = t && screens.find((l) => l.screen.id === t.id || l.items.includes(t));
+    if (t && home)
+      home.notes.push({ id: ids[i], text: a.text, on: a.on, target: t.id, anchorX: t.x, anchorY: t.y, seq: 1e4 + i });
+  });
+  const items = [];
+  let shift = 0;
+  let n4 = 0;
+  for (const l of screens) {
+    const moved = (it) => shift ? { ...it, x: it.x + shift } : it;
+    const screen = moved(l.screen);
+    items.push(screen, ...l.items.map(moved));
+    if (!l.notes.length)
+      continue;
+    const numbered = readingOrder(l.notes.map((x2) => ({ ...x2, anchorX: x2.anchorX + shift }))).map((x2) => ({ ...x2, callout: ++n4 }));
+    items.push(...cardsInColumn(numbered, { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y }, now, { file: opts.source, gap: 0 }));
+    shift += UI_GUTTER.gap + UI_GUTTER.w;
+  }
   return offsetAll(items, opts.at);
 }
 
@@ -42116,7 +43653,9 @@ var workflowSchema = external_exports.object({
     steps: external_exports.array(external_exports.string()).default([]),
     legacy: external_exports.boolean().optional(),
     detail: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-  })).default([])
+  })).default([]),
+  /** The workflow file's `annotations:` (the runner ignores them; `awd graph --json` passes them on): numbered cards below the graph. */
+  annotations: annotationsSchema.optional()
 });
 var KIND_COLOR = {
   trigger: "pink",
@@ -42159,7 +43698,7 @@ function renderWorkflow(raw, opts = {}) {
       color: KIND_COLOR[n4.kind] ?? "grey",
       role: n4.kind,
       order: row,
-      data: { nodeId: n4.id, kind: n4.kind, config: n4.config ?? {}, ...n4.config?.agent ? { agent: n4.config.agent } : {}, ...n4.detail ? { detail: n4.detail } : {} }
+      data: { nodeId: n4.id, element: n4.id, kind: n4.kind, config: n4.config ?? {}, ...n4.config?.agent ? { agent: n4.config.agent } : {}, ...n4.detail ? { detail: n4.detail } : {} }
     }, now));
   }
   for (const e of c.edges) {
@@ -42220,7 +43759,9 @@ var kanbanSchema = external_exports.object({
     traces: external_exports.array(traceSchema).optional(),
     /** Shorthand for the stories this card groups: `'<story map key>/<story id>'` → a `groups` trace (§6). */
     stories: external_exports.array(external_exports.string()).optional()
-  })).default([])
+  })).default([]),
+  /** What a card or a column is for (docs/diagrams.md "Annotations"): numbered cards below the board. */
+  annotations: annotationsSchema.optional()
 });
 var COLUMN_W = 280;
 var CARD_W2 = 240;
@@ -42288,440 +43829,6 @@ function bottomOf(board, column, h) {
   const last = cards[cards.length - 1];
   const y2 = last ? last.y + last.h + CARD_GAP : column.y + COLUMN_HEADER + CARD_GAP;
   return { x: column.x + COLUMN_PAD, y: y2, laneH: Math.max(column.h, y2 + h + COLUMN_PAD - column.y) };
-}
-
-// packages/canvas/dist/diagrams/dsIcons.js
-var DS_ICON_MAX_CHARS = 4e3;
-var DS_ICON_MAX_SHAPES = 40;
-var NUM = /^-?(\d+\.?\d*|\.\d+)$/;
-var PATH = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,+\-eE]+$/;
-var POINTS = /^[\s\d.,+\-eE]+$/;
-var SHAPES = {
-  path: { d: PATH },
-  circle: { cx: NUM, cy: NUM, r: NUM },
-  ellipse: { cx: NUM, cy: NUM, rx: NUM, ry: NUM },
-  rect: { x: NUM, y: NUM, width: NUM, height: NUM, rx: NUM, ry: NUM },
-  line: { x1: NUM, y1: NUM, x2: NUM, y2: NUM },
-  polyline: { points: POINTS },
-  polygon: { points: POINTS }
-};
-var REQUIRED = { path: ["d"], circle: ["r"], ellipse: ["rx", "ry"], rect: ["width", "height"], line: ["x2"], polyline: ["points"], polygon: ["points"] };
-var attrsOf = (text3) => {
-  const out = {};
-  for (const m2 of text3.matchAll(/([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
-    out[m2[1]] = (m2[2] ?? m2[3] ?? "").trim();
-  return out;
-};
-function parseDsIcon(svg) {
-  if (typeof svg !== "string" || !svg.trim() || svg.length > DS_ICON_MAX_CHARS)
-    return void 0;
-  const box = /<svg\b[^>]*>/i.exec(svg)?.[0];
-  const vb = box ? (attrsOf(box).viewBox ?? "").split(/[\s,]+/).map(Number) : [];
-  const viewBox = vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0 ? [vb[0], vb[1], vb[2], vb[3]] : [0, 0, 24, 24];
-  const shapes = [];
-  for (const m2 of svg.matchAll(/<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>/gi)) {
-    const tag = m2[1].toLowerCase();
-    const given = attrsOf(m2[2]);
-    const attrs = {};
-    for (const [name, ok] of Object.entries(SHAPES[tag]))
-      if (given[name] !== void 0 && ok.test(given[name]))
-        attrs[name] = given[name];
-    if (!REQUIRED[tag].every((name) => attrs[name] !== void 0))
-      continue;
-    shapes.push({ tag, attrs });
-    if (shapes.length >= DS_ICON_MAX_SHAPES)
-      break;
-  }
-  return shapes.length ? { viewBox, shapes } : void 0;
-}
-function dsGlyphTransform(g2) {
-  const [x2, y2, w2, h] = g2.viewBox;
-  if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
-    return void 0;
-  const s = 24 / Math.max(w2, h);
-  const r2 = (v2) => Math.round(v2 * 1e3) / 1e3;
-  return `translate(${r2((24 - w2 * s) / 2)} ${r2((24 - h * s) / 2)}) scale(${r2(s)}) translate(${r2(-x2)} ${r2(-y2)})`;
-}
-function dsGlyphMarkup(g2) {
-  const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
-  const t = dsGlyphTransform(g2);
-  return t ? `<g transform="${t}">${body}</g>` : body;
-}
-
-// packages/canvas/dist/diagrams/domainStoryReview.js
-var QUICK_START = "domainstorytelling.org/quick-start-guide";
-var EGON_HOWTO = "egon.io/howto";
-var BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"';
-var BUILT_IN_OBJECT_ICONS = /* @__PURE__ */ new Set(["document", "thing", "digital", "folder", "call", "email", "conversation", "info", "message", "information"]);
-var parts = (text3) => text3.split(/\s*[/／·|｜\n]\s*/).map((p) => p.trim()).filter(Boolean);
-var OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|completed|confirmed|done)$/i;
-var OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
-var CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
-var CONDITIONAL_CJK = /如果|否則|或者|還是/;
-var NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
-var DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
-var num = (n4) => `#${n4}`;
-function reviewDomainStory(m2) {
-  const out = [];
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  const unsaid = [!m2.scope.granularity && "granularity (coarse-, medium- or fine-grained)", !m2.scope.time && "time (as-is or to-be)", !m2.scope.purity && "purity (pure or digitalized)"].filter(Boolean);
-  if (unsaid.length)
-    out.push({ rule: "scope-missing", severity: "info", message: `the scope does not say its ${unsaid.join(", ")} \u2014 readers judge every sentence by it (how much detail, today or the future, with or without software), so decide it before telling the story`, page: QUICK_START });
-  const inStory = (id) => m2.sentences.some((s) => s.actor === id || s.to.includes(id));
-  const systems = m2.actors.filter((a) => a.kind === "system" && inStory(a.id));
-  if (m2.scope.purity === "pure" && systems.length)
-    out.push({ rule: "scope-purity", severity: "warning", element: systems[0].id, message: `the scope says pure, but ${systems.map((a) => `"${a.text}"`).join(", ")} ${systems.length > 1 ? "are software systems" : "is a software system"} \u2014 a story with software systems is digitalized; change the scope, or tell who does this work`, page: QUICK_START });
-  if (m2.scope.purity === "digitalized" && !systems.length)
-    out.push({ rule: "scope-purity", severity: "info", message: "the scope says digitalized, but no actor is a software system (kind: system) \u2014 a story without software systems is pure", page: QUICK_START });
-  const acting = m2.actors.filter((a) => inStory(a.id));
-  const [first, second] = acting;
-  if (m2.sentences.length >= 4 && acting.length === 2 && first.kind === "system" !== (second.kind === "system") && acting.every((a) => m2.sentences.some((s) => s.actor === a.id)))
-    out.push({ rule: "request-response", severity: "info", message: `every sentence is between "${first.text}" and "${second.text}" \u2014 a user and a system answering each other reads like a screen flow, which a mock-up shows better; a domain story models intent: what is the user after, who else is involved, and how does the system help? Each activity should push the story forward`, page: BOOK_STYLE });
-  const told = m2.sentences.filter((s) => s.objectText);
-  for (const s of m2.sentences) {
-    const words = [s.verb, s.objectText ?? "", s.toLabel ?? ""];
-    if (words.some((w2) => CONDITIONAL_EN.test(w2) || CONDITIONAL_CJK.test(w2)))
-      out.push({ rule: "conditional", severity: "info", element: s.id, message: `${num(s.seq)} "${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}" reads like a choice \u2014 a domain story is one concrete example: tell the usual case here, put the variation in a note, and give an alternative that matters a story of its own`, page: QUICK_START });
-    if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
-      out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
-  }
-  const negative = m2.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ""} ${s.note ?? ""}`));
-  if (m2.sentences.length >= 3 && negative.length * 2 >= m2.sentences.length)
-    out.push({ rule: "negative-story", severity: "info", element: negative[0].id, message: `${negative.length} of ${m2.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(" ")}) \u2014 a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE });
-  for (const s of m2.sentences) {
-    if (DATE.test(s.verb))
-      out.push({ rule: "date-in-verb", severity: "info", element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date \u2014 the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START });
-  }
-  const variants = /* @__PURE__ */ new Map();
-  for (const s of told) {
-    const first2 = (s.objectText ?? "").trim().split(/[\s／/·|]+/)[0]?.toLowerCase();
-    if (first2 && first2.length >= 2)
-      variants.set(first2, /* @__PURE__ */ new Set([...variants.get(first2) ?? [], s.objectText.trim()]));
-  }
-  for (const [first2, names2] of variants)
-    if (names2.size >= 3)
-      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n4) => `"${n4}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
-  const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
-  if (told.length >= 4 && names.size === told.length)
-    out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
-  const kinds = new Set(told.map((s) => s.objectKind));
-  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
-    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
-  const icons = m2.icons ?? {};
-  for (const [icon, svg] of Object.entries(icons)) {
-    if (!parseDsIcon(svg))
-      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
-  }
-  for (const o of m2.workObjects) {
-    if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
-      out.push({ rule: "icon-unknown", severity: "info", element: o.id, message: `"${o.text}": no icon named "${o.kind}" \u2014 it is drawn as a document; use a built-in kind or draw "${o.kind}" under \`icons:\``, page: EGON_HOWTO });
-  }
-  return out;
-}
-
-// packages/canvas/dist/diagrams/domainStory.js
-var DS_ACTOR_KINDS = ["person", "group", "system"];
-var DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
-var named2 = () => external_exports.union([
-  external_exports.string(),
-  external_exports.object({
-    id: external_exports.string().optional(),
-    text: external_exports.string().min(1),
-    /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
-    kind: external_exports.string().optional()
-  })
-]);
-var domainStorySchema = external_exports.object({
-  scope: external_exports.object({
-    granularity: external_exports.enum(DS_GRANULARITY).optional(),
-    time: external_exports.enum(["as-is", "to-be"]).optional(),
-    purity: external_exports.enum(["pure", "digitalized"]).optional()
-  }).optional(),
-  actors: external_exports.array(named2()).min(1),
-  workObjects: external_exports.array(named2()).default([]),
-  sentences: external_exports.array(external_exports.object({
-    id: external_exports.string().optional(),
-    /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
-    seq: external_exports.number().int().positive().optional(),
-    /** The actor who acts (id or text). */
-    actor: external_exports.string().min(1),
-    /** The activity, a verb from the domain language. */
-    verb: external_exports.string().min(1),
-    /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
-    object: external_exports.string().optional(),
-    /** The actor(s) the work object goes to. */
-    to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
-    /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
-    toLabel: external_exports.string().optional(),
-    note: external_exports.string().optional(),
-    traces: external_exports.array(traceSchema).optional()
-  })).min(1),
-  groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
-  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
-  /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
-  icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
-  /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
-  layout: external_exports.object({
-    spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
-    /** horizontal pitch of the actor grid in px (overrides the spacing's) */
-    gapX: external_exports.number().min(240).max(2e3).optional(),
-    /** vertical pitch of the actor grid in px */
-    gapY: external_exports.number().min(180).max(2e3).optional()
-  }).optional()
-});
-function normalizeDomainStory(raw) {
-  const c = domainStorySchema.parse(raw);
-  const alloc = idAllocator();
-  const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
-  const actors = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
-  const workObjects = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
-  const unresolved = [];
-  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
-  const actorRef = (ref2, element, field) => {
-    const hit2 = find(actors, ref2);
-    if (hit2)
-      return hit2.id;
-    unresolved.push({ element, field, ref: ref2 });
-    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
-    actors.push(added);
-    return added.id;
-  };
-  let next = 1;
-  const sentences = c.sentences.map((s) => {
-    const seq = s.seq ?? next;
-    next = Math.max(next, seq + 1);
-    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
-    const declared = s.object ? find(workObjects, s.object) : void 0;
-    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
-    return {
-      id,
-      seq,
-      actor: actorRef(s.actor, id, "actor"),
-      verb: s.verb,
-      ...declared ? { object: declared.id } : {},
-      ...s.object ? { objectText: declared?.text ?? s.object } : {},
-      objectKind: declared?.kind ?? "document",
-      to: to.map((r2) => actorRef(r2, id, "to")),
-      ...s.toLabel ? { toLabel: s.toLabel } : {},
-      ...s.note ? { note: s.note } : {},
-      traces: s.traces ?? []
-    };
-  });
-  const elementRef = (ref2, element, field) => {
-    const hit2 = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
-    if (!hit2)
-      unresolved.push({ element, field, ref: ref2 });
-    return hit2;
-  };
-  const groups = c.groups.map((g2) => {
-    const id = alloc(g2.id, g2.text, "group");
-    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
-  });
-  const annotations = c.annotations.flatMap((a, i) => {
-    const id = alloc(a.id, `note-${i + 1}`, "note");
-    const on = elementRef(a.on, id, "on");
-    return on ? [{ id, on, text: a.text }] : [];
-  });
-  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c.icons ? { icons: c.icons } : {}, ...c.layout ? { layout: c.layout } : {}, unresolved, dsModel: true };
-}
-function readSentence(m2, s) {
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
-  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
-}
-function circled(n4) {
-  return n4 >= 1 && n4 <= 20 ? String.fromCodePoint(9312 + n4 - 1) : `(${n4})`;
-}
-var QUICK_START2 = "domainstorytelling.org/quick-start-guide";
-var NOTE_RECOMMENDED = 120;
-function displayWidth(text3) {
-  let n4 = 0;
-  for (const ch of text3)
-    n4 += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
-  return n4;
-}
-function checkDomainStory(content) {
-  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
-  const out = [];
-  for (const u3 of m2.unresolved)
-    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
-  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  for (const s of m2.sentences) {
-    if (s.to.includes(s.actor)) {
-      const others = s.to.filter((r2) => r2 !== s.actor);
-      out.push({
-        rule: "self-receiver",
-        severity: "warning",
-        element: s.id,
-        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
-        page: QUICK_START2
-      });
-    }
-    if (!s.objectText)
-      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
-  }
-  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
-  seqs.forEach((n4, i) => {
-    const expected = i === 0 ? 1 : seqs[i - 1] + 1;
-    if (n4 !== expected)
-      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n4}`, page: QUICK_START2 });
-  });
-  for (const n4 of seqs) {
-    const same2 = m2.sentences.filter((s) => s.seq === n4);
-    if (same2.length > 1)
-      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n4)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
-  }
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
-  for (let i = 0; i < m2.groups.length; i++)
-    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
-      const [a, b2] = [m2.groups[i], m2.groups[j2]];
-      const sa = new Set(a.members);
-      const sb = new Set(b2.members);
-      const shared2 = [...sa].filter((x2) => sb.has(x2));
-      if (!shared2.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
-        continue;
-      out.push({
-        rule: "groups-overlap",
-        severity: "warning",
-        element: b2.id,
-        message: `groups "${a.text}" and "${b2.text}" share ${shared2.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
-        page: QUICK_START2
-      });
-    }
-  for (const n4 of m2.annotations) {
-    const w2 = displayWidth(n4.text);
-    if (w2 > NOTE_RECOMMENDED)
-      out.push({ rule: "note-long", severity: "warning", element: n4.id, message: `note on "${name(n4.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
-  }
-  for (const o of m2.workObjects) {
-    if (!m2.sentences.some((s) => s.object === o.id))
-      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START2 });
-  }
-  for (const a of m2.actors) {
-    if (!m2.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
-      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START2 });
-    if (!DS_ACTOR_KINDS.includes(a.kind))
-      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START2 });
-  }
-  out.push(...reviewDomainStory(m2));
-  return out;
-}
-
-// packages/canvas/dist/textMetrics.js
-function defaultFont(it) {
-  if (it.type === "text")
-    return it.role === "title" || it.role === "heading" ? 22 : it.role === "annotation" ? 12.5 : 15;
-  if (it.type === "sticky" && it.role === "actor")
-    return 12.5;
-  if (it.type === "card" && it.role === "card")
-    return 13.5;
-  return 13;
-}
-var fontOf = (it) => it.fontSize ?? defaultFont(it);
-function textBoxOf(it) {
-  const font = fontOf(it);
-  const lh = (k2) => Math.round(font * k2 * 10) / 10;
-  switch (it.type) {
-    case "sticky":
-      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 10, padBottom: 14, padLeft: 10, center: it.role === "actor" };
-    case "card":
-      if (it.role === "card")
-        return { font, lineHeight: lh(1.3), weight: 500, padTop: 10, padRight: 12, padBottom: 10, padLeft: 12 };
-      return { font, lineHeight: lh(1.3), weight: 500, padTop: 8, padRight: 9, padBottom: 14, padLeft: 11 };
-    case "text":
-      if (it.role === "annotation")
-        return { font, lineHeight: lh(1.5), weight: 400, padTop: 6, padRight: 8, padBottom: 6, padLeft: 10 };
-      return { font, lineHeight: lh(1.5), weight: it.role === "title" || it.role === "heading" ? 600 : 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
-    case "frame":
-    case "lane":
-      return { font: 13.5, lineHeight: 18, weight: 600, padTop: 8, padRight: 10, padBottom: 0, padLeft: 10, nowrap: true };
-    case "wireframe":
-      if (it.role === "heading")
-        return { font: 17, lineHeight: 22, weight: 600, padTop: 2, padRight: 4, padBottom: 2, padLeft: 4 };
-      if (it.role === "button")
-        return { font: 13, lineHeight: 17, weight: 500, padTop: 0, padRight: 6, padBottom: 0, padLeft: 6, center: true };
-      return { font: 13, lineHeight: 19.5, weight: 400, padTop: 2, padRight: 8, padBottom: 2, padLeft: 8 };
-    default:
-      return { font, lineHeight: lh(1.4), weight: 400, padTop: 4, padRight: 6, padBottom: 4, padLeft: 6 };
-  }
-}
-var WIDE = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1f300}-\u{1faff}]/u;
-function charEm(ch) {
-  if (WIDE.test(ch))
-    return 1;
-  if (ch === " ")
-    return 0.26;
-  if (/[iljtfrI.,:;'|!()[\]{}`]/.test(ch))
-    return 0.3;
-  if (/[mwMW@%]/.test(ch))
-    return 0.85;
-  if (/[A-Z]/.test(ch))
-    return 0.64;
-  if (/[0-9]/.test(ch))
-    return 0.56;
-  return 0.53;
-}
-function measure(text3, font, weight = 400) {
-  let em = 0;
-  for (const ch of text3)
-    em += charEm(ch);
-  return em * font * (weight >= 600 ? 1.05 : weight >= 500 ? 1.02 : 1);
-}
-function wrap(text3, width, font, weight = 400) {
-  const out = [];
-  const w2 = Math.max(width, font);
-  for (const para of text3.replace(/\r\n/g, "\n").split("\n")) {
-    const tokens = para.match(/[ \t]+|[^\sᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]+|./gu) ?? [""];
-    let line = "";
-    for (const tok of tokens) {
-      const next = line + tok;
-      if (measure(next.trimEnd(), font, weight) <= w2 || line === "") {
-        if (measure(tok, font, weight) > w2 && line === "") {
-          for (const ch of tok) {
-            if (measure(line + ch, font, weight) > w2 && line)
-              out.push(line), line = "";
-            line += ch;
-          }
-          continue;
-        }
-        line = next;
-        continue;
-      }
-      out.push(line.trimEnd());
-      line = /^\s+$/.test(tok) ? "" : tok;
-      if (measure(line, font, weight) > w2) {
-        const long = line;
-        line = "";
-        for (const ch of long) {
-          if (measure(line + ch, font, weight) > w2 && line)
-            out.push(line), line = "";
-          line += ch;
-        }
-      }
-    }
-    out.push(line.trimEnd());
-  }
-  return out;
-}
-function fitText(it) {
-  const box = textBoxOf(it);
-  const innerW = Math.max(1, it.w - box.padLeft - box.padRight);
-  const text3 = it.text ?? "";
-  const lines2 = box.nowrap ? [text3.split("\n")[0] ?? ""] : wrap(text3, innerW, box.font, box.weight);
-  const innerH = Math.max(0, it.h - box.padTop - box.padBottom);
-  const glyph = (box.lineHeight - box.font) / 2 + 0.6 * box.font;
-  const fits = innerH + 0.5 < glyph ? 0 : Math.floor((innerH + 0.5 - glyph) / box.lineHeight) + 1;
-  const needH = Math.ceil(lines2.length * box.lineHeight + box.padTop + box.padBottom);
-  const clipped = text3.trim() !== "" && (box.nowrap ? measure(lines2[0], box.font, box.weight) > innerW + 1 : lines2.length > fits);
-  return { box, lines: lines2, fits, clipped, needH, innerW };
-}
-function sizeToText(it, text3, o) {
-  const box = textBoxOf(it);
-  const padX = box.padLeft + box.padRight;
-  const longest = Math.max(0, ...text3.replace(/\r\n/g, "\n").split("\n").map((l) => measure(l, box.font, box.weight)));
-  const w2 = Math.ceil(Math.min(o.maxW, Math.max(o.minW, longest + padX + 6)));
-  const { needH } = fitText({ ...it, w: w2, h: 0, text: text3 });
-  return { w: w2, h: Math.max(o.minH ?? 0, needH + 4) };
 }
 
 // packages/canvas/dist/edgeLabel.js
@@ -43286,720 +44393,9 @@ function groupOutlines(groups) {
   return new Map([...out].map(([id, o]) => [id, { box: o.box, ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, overlaps: o.overlaps }]));
 }
 
-// packages/canvas/dist/diagrams/unknownFields.js
-var def = (s) => s._zod.def;
-var WRAPPERS = /* @__PURE__ */ new Set(["optional", "default", "nullable", "readonly", "catch", "prefault", "nonoptional"]);
-function unwrap(s) {
-  for (let i = 0; i < 20; i++) {
-    const d = def(s);
-    if (WRAPPERS.has(d.type) && d.innerType)
-      s = d.innerType;
-    else if (d.type === "lazy" && d.getter)
-      s = d.getter();
-    else if (d.type === "pipe" && d.in && d.out)
-      s = def(d.in).type === "transform" ? d.out : d.in;
-    else
-      return s;
-  }
-  return s;
-}
-var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at2 = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
-function unknownFields(schema, value, path15 = "") {
-  const s = unwrap(schema);
-  const d = def(s);
-  if (d.type === "object" && isPlainObject2(value)) {
-    const shape = d.shape ?? {};
-    const open2 = d.catchall && def(d.catchall).type !== "never";
-    const out = [];
-    for (const [k2, v2] of Object.entries(value)) {
-      if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at2(path15, k2)));
-      else if (!open2)
-        out.push({ path: path15 || "(root)", field: k2 });
-    }
-    return out;
-  }
-  if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path15, i)));
-  if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path15, k2)));
-  if (d.type === "union" && d.options) {
-    const fits = d.options.filter((o) => {
-      const t = def(unwrap(o)).type;
-      return Array.isArray(value) ? t === "array" : isPlainObject2(value) ? t === "object" || t === "record" : t !== "object" && t !== "array";
-    });
-    if (!fits.length)
-      return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path15) })).sort((a, b2) => a.extra.length - b2.extra.length);
-    return ranked[0].extra;
-  }
-  return [];
-}
-
-// packages/canvas/dist/diagrams/uiMock.js
-var UI_LAYOUT = ["stack", "row", "grid"];
-var UI_BOXES = ["card", "section", "navbar"];
-var UI_LEAVES = [
-  "heading",
-  "text",
-  "link",
-  "button",
-  "input",
-  "textarea",
-  "select",
-  "search",
-  "checkbox",
-  "radio",
-  "toggle",
-  "badge",
-  "avatar",
-  "icon",
-  "divider",
-  "image",
-  "table",
-  "list",
-  "stat",
-  "alert",
-  "progress",
-  "tabs",
-  "breadcrumb",
-  "pagination",
-  "spacer",
-  "empty",
-  "chart",
-  "sidebar"
-];
-var UI_TYPES = [...UI_LAYOUT, ...UI_BOXES, ...UI_LEAVES];
-var UI_ICONS = [
-  "plus",
-  "search",
-  "settings",
-  "user",
-  "users",
-  "bell",
-  "home",
-  "chevron-right",
-  "chevron-down",
-  "check",
-  "x",
-  "more",
-  "folder",
-  "file",
-  "star",
-  "trash",
-  "edit",
-  "arrow-left",
-  "arrow-right",
-  "menu",
-  "filter",
-  "calendar",
-  "mail",
-  "lock",
-  "board",
-  "chart",
-  "link",
-  "download",
-  "upload",
-  "eye",
-  "heart",
-  "comment"
-];
-var UI_DEVICES = { desktop: { w: 1280, h: 800 }, laptop: { w: 1024, h: 680 }, tablet: { w: 768, h: 1024 }, phone: { w: 390, h: 844 } };
-var tone = external_exports.enum(["neutral", "info", "success", "warning", "danger"]);
-var size = external_exports.enum(["sm", "md", "lg"]);
-var listItem = external_exports.union([
-  external_exports.string(),
-  external_exports.object({
-    id: external_exports.string().optional(),
-    text: external_exports.string(),
-    meta: external_exports.string().optional(),
-    icon: external_exports.string().optional(),
-    badge: external_exports.string().optional(),
-    active: external_exports.boolean().optional(),
-    /** What this entry is for, why it is there: a numbered pin on the entry, the text on a card beside the screen. */
-    note: external_exports.string().optional()
-  })
-]);
-var cell = external_exports.union([external_exports.string(), external_exports.number()]);
-var tableRow = external_exports.union([external_exports.array(cell), external_exports.object({ cells: external_exports.array(cell), note: external_exports.string().optional() })]);
-var UI_GUTTER = { gap: 24, w: 260, noteW: 240, noteH: 64, noteGap: 12, calloutGap: 8 };
-function uiGutterOf(screen) {
-  return { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y, w: UI_GUTTER.w, h: screen.h };
-}
-var isUiScreen = (it) => !!it && it.type === "ui" && it.role === "screen";
-var UI_CALLOUT = { font: 12, lineHeight: 17, padTop: 6, padRight: 8, padBottom: 6, padLeft: 30, border: 1, pin: 16 };
-function uiCalloutSize(text3) {
-  const c = UI_CALLOUT;
-  const inner = UI_GUTTER.noteW - c.padLeft - c.padRight - c.border * 2;
-  const lines2 = Math.max(1, wrap(text3.trim(), inner - 6, c.font).length);
-  return { w: UI_GUTTER.noteW, h: Math.ceil(lines2 * c.lineHeight + c.padTop + c.padBottom + c.border * 2) };
-}
-function uiCalloutOf(it) {
-  if (!it || it.type !== "comment" || it.role !== "note")
-    return void 0;
-  const n4 = it.data?.callout;
-  return typeof n4 === "number" && Number.isInteger(n4) && n4 > 0 ? n4 : void 0;
-}
-var uiNodeSchema = external_exports.lazy(() => external_exports.object({
-  type: external_exports.enum(UI_TYPES),
-  /** Stable element id, unique in its screen; default: the slug of its text, else its type. */
-  id: external_exports.string().optional(),
-  /** The element's words: a button's label, a heading, a card's title, a form field's label. */
-  text: external_exports.string().optional(),
-  /** Form fields: the label (same as `text`). */
-  label: external_exports.string().optional(),
-  children: external_exports.array(uiNodeSchema).optional(),
-  gap: external_exports.number().min(0).optional(),
-  pad: external_exports.number().min(0).optional(),
-  align: external_exports.enum(["start", "center", "end", "stretch"]).optional(),
-  justify: external_exports.enum(["start", "center", "end", "between"]).optional(),
-  /** grid: columns (default 3). */
-  cols: external_exports.number().int().min(1).max(12).optional(),
-  /** In a row: columns of 12 this element takes. */
-  span: external_exports.number().int().min(1).max(12).optional(),
-  /** Fixed width / height in px. */
-  w: external_exports.number().min(1).optional(),
-  h: external_exports.number().min(1).optional(),
-  bg: external_exports.enum(["surface", "muted", "accent", "none"]).optional(),
-  /** button: primary | secondary | ghost | danger; text: body | muted | small | code; card: flat | elevated; list: plain; chart: bar | line. */
-  variant: external_exports.string().optional(),
-  /** heading: 1..4 */
-  level: external_exports.number().int().min(1).max(4).optional(),
-  tone: tone.optional(),
-  size: size.optional(),
-  icon: external_exports.string().optional(),
-  /** navbar links, sidebar, tabs, list rows, breadcrumb, select options. */
-  items: external_exports.array(listItem).optional(),
-  /** The selected entry of items: its text or index. */
-  active: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
-  columns: external_exports.array(external_exports.string()).optional(),
-  /** table: `[cells]` per row, or `{ cells, note }` for a row with a design note; chart: `[[numbers]]`. */
-  rows: external_exports.array(tableRow).optional(),
-  value: external_exports.union([external_exports.string(), external_exports.number()]).optional(),
-  placeholder: external_exports.string().optional(),
-  hint: external_exports.string().optional(),
-  checked: external_exports.boolean().optional(),
-  /** image: '16:9' (default), '4:3', '1:1' … */
-  ratio: external_exports.string().optional(),
-  /** stat: '+12%' / '-3' — the change, coloured by its sign. */
-  delta: external_exports.string().optional(),
-  /** What this element is for, why it is there (a design annotation): a numbered pin on it, the text on a card beside the screen. */
-  note: external_exports.string().optional(),
-  /** This content is sample data: the board shows it as a hatched stripe on the frame, not as a badge inside the product. */
-  sample: external_exports.boolean().optional(),
-  /** Tapping this element goes to that screen: a flow arrow. */
-  goto: external_exports.string().optional(),
-  traces: external_exports.array(traceSchema).optional()
-}));
-var uiMockSchema = external_exports.object({
-  /** Default device for every screen. */
-  device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
-  /** The mock's own theme (independent of the canvas theme). */
-  theme: external_exports.enum(["light", "dark"]).optional(),
-  tokens: external_exports.object({
-    /** Accent colour (#rgb / #rrggbb). */
-    accent: external_exports.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i).optional(),
-    /** Corner radius in px (default 8). */
-    radius: external_exports.number().min(0).max(32).optional(),
-    font: external_exports.enum(["sans", "serif", "mono", "rounded"]).optional()
-  }).optional(),
-  screens: external_exports.array(external_exports.object({
-    id: external_exports.string().optional(),
-    name: external_exports.string(),
-    device: external_exports.enum(Object.keys(UI_DEVICES)).optional(),
-    /** Width / minimum height in px (default: the device's). */
-    w: external_exports.number().min(200).max(4e3).optional(),
-    h: external_exports.number().min(200).max(8e3).optional(),
-    theme: external_exports.enum(["light", "dark"]).optional(),
-    /** Padding and gap of the screen's body (default 0: put content in a section). */
-    pad: external_exports.number().min(0).optional(),
-    gap: external_exports.number().min(0).optional(),
-    note: external_exports.string().optional(),
-    /** The whole screen shows sample data (see the element's `sample`). */
-    sample: external_exports.boolean().optional(),
-    traces: external_exports.array(traceSchema).optional(),
-    body: external_exports.array(uiNodeSchema).default([])
-  })).min(1),
-  /** Arrows between screens: from a screen or '<screen>/<element>' to a screen. */
-  flows: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), label: external_exports.string().optional() })).default([])
-});
-var DEFAULT_ACCENT = "#4f46e5";
-function itemsOf(items, active) {
-  if (!items)
-    return void 0;
-  return items.map((it, i) => {
-    const o = typeof it === "string" ? { text: it } : it;
-    const isActive = o.active ?? (active !== void 0 && (active === i || active === o.text || active === o.id));
-    return { id: o.id ?? (slugify2(o.text) || `item-${i + 1}`), text: o.text, ...o.meta ? { meta: o.meta } : {}, ...o.icon ? { icon: o.icon } : {}, ...o.badge ? { badge: o.badge } : {}, ...isActive ? { active: true } : {}, ...o.note ? { note: o.note } : {} };
-  });
-}
-function rowsOf(rows) {
-  if (!rows)
-    return {};
-  const notes = {};
-  const cells = rows.map((r2, i) => {
-    if (Array.isArray(r2))
-      return r2;
-    if (r2.note)
-      notes[String(i)] = r2.note;
-    return r2.cells;
-  });
-  return { rows: cells, ...Object.keys(notes).length ? { rowNotes: notes } : {} };
-}
-function normalizeUiMock(raw) {
-  const c = uiMockSchema.parse(raw);
-  const usedScreens = /* @__PURE__ */ new Set();
-  const screens = c.screens.map((s, si) => {
-    let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
-    for (let n4 = 2; usedScreens.has(sid); n4++)
-      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n4}`;
-    usedScreens.add(sid);
-    const device = s.device ?? c.device ?? "desktop";
-    const theme = { theme: s.theme ?? c.theme ?? "light", accent: c.tokens?.accent ?? DEFAULT_ACCENT, radius: c.tokens?.radius ?? 8, font: c.tokens?.font ?? "sans" };
-    const used = /* @__PURE__ */ new Set();
-    const alloc = (explicit, text3, type) => {
-      const base = explicit && explicit.trim() || slugify2(text3 ?? "") || type;
-      let id = base;
-      for (let n4 = 2; used.has(id); n4++)
-        id = `${base}-${n4}`;
-      used.add(id);
-      return id;
-    };
-    const el = (n4, path15) => {
-      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n4;
-      const words = text3 ?? label2;
-      const id = alloc(n4.id, words, type);
-      return {
-        id,
-        ref: `${sid}/${id}`,
-        type,
-        ...words !== void 0 ? { text: words } : {},
-        textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
-        path: path15,
-        children: (children ?? []).map((ch, i) => el(ch, [...path15, "children", i])),
-        props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
-        ...note ? { note } : {},
-        ...goto ? { goto } : {},
-        traces: traces2 ?? []
-      };
-    };
-    return {
-      id: sid,
-      name: s.name,
-      device,
-      w: s.w ?? UI_DEVICES[device].w,
-      minH: s.h ?? UI_DEVICES[device].h,
-      pad: s.pad ?? 0,
-      gap: s.gap ?? 0,
-      theme,
-      ...s.note ? { note: s.note } : {},
-      ...s.sample ? { sample: true } : {},
-      traces: s.traces ?? [],
-      path: ["screens", si],
-      body: s.body.map((n4, i) => el(n4, ["screens", si, "body", i]))
-    };
-  });
-  return { screens, flows: c.flows };
-}
-function walkUi(els) {
-  return els.flatMap((e) => [e, ...walkUi(e.children)]);
-}
-var WIDE2 = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
-function textWidth(s, px = 14, bold = false) {
-  let w2 = 0;
-  for (const ch of s)
-    w2 += WIDE2.test(ch) ? px : ch === " " ? px * 0.3 : /[A-Z0-9]/.test(ch) ? px * 0.64 : /[il.,:;'|!]/.test(ch) ? px * 0.3 : px * 0.54;
-  return Math.ceil(w2 * (bold ? 1.07 : 1));
-}
-function lineCount(s, px, maxW, bold = false) {
-  if (!s)
-    return 1;
-  return s.split("\n").reduce((n4, seg) => n4 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
-}
-var HEADING = { 1: { px: 28, lh: 36 }, 2: { px: 22, lh: 30 }, 3: { px: 18, lh: 26 }, 4: { px: 15, lh: 22 } };
-var BUTTON = { sm: { h: 32, pad: 12 }, md: { h: 36, pad: 16 }, lg: { h: 44, pad: 20 } };
-var FIELD = { sm: 32, md: 38, lg: 44 };
-var HUG = /* @__PURE__ */ new Set(["button", "link", "badge", "avatar", "icon", "checkbox", "radio", "toggle", "pagination"]);
-var STRETCH = /* @__PURE__ */ new Set(["stack", "grid", "card", "section", "sidebar"]);
-var isDrawnContainer = (t) => UI_BOXES.includes(t);
-var isLayout = (t) => UI_LAYOUT.includes(t);
-function padOf(el) {
-  if (el.props.pad !== void 0)
-    return el.props.pad;
-  return el.type === "card" ? 16 : el.type === "section" ? 24 : el.type === "navbar" ? 16 : 0;
-}
-function gapOf(el) {
-  if (el.props.gap !== void 0)
-    return el.props.gap;
-  return el.type === "grid" ? 16 : el.type === "navbar" ? 8 : 12;
-}
-var titleH = (el) => el.type === "card" && el.text ? 26 : 0;
-function measure2(el, avail) {
-  const p = el.props;
-  const fixedW = p.w !== void 0 ? Math.min(p.w, avail) : void 0;
-  const sz = p.size ?? "md";
-  const t = el.text ?? "";
-  const leaf = (w2, h) => ({ w: fixedW ?? w2, h: p.h ?? h });
-  switch (el.type) {
-    case "stack":
-    case "card":
-    case "section": {
-      const pad = padOf(el);
-      const gap = gapOf(el);
-      const w2 = fixedW ?? avail;
-      const inner = w2 - pad * 2;
-      const hs = el.children.map((c) => measure2(c, inner).h);
-      const head = titleH(el);
-      const h = pad * 2 + head + (head && hs.length ? gap : 0) + hs.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, hs.length - 1);
-      return { w: w2, h: Math.max(p.h ?? 0, h) };
-    }
-    case "row": {
-      const w2 = fixedW ?? avail;
-      const pad = padOf(el);
-      const widths = rowWidths(el, w2 - pad * 2);
-      const h = pad * 2 + Math.max(0, ...el.children.map((c, i) => measure2(c, widths[i]).h));
-      return { w: w2, h: Math.max(p.h ?? 0, h) };
-    }
-    case "grid": {
-      const w2 = fixedW ?? avail;
-      const { rows } = gridCells(el, w2);
-      return { w: w2, h: Math.max(p.h ?? 0, rows.reduce((a, r2) => a + r2.h, 0) + gapOf(el) * Math.max(0, rows.length - 1) + padOf(el) * 2) };
-    }
-    case "navbar":
-      return { w: fixedW ?? avail, h: p.h ?? 56 };
-    case "sidebar":
-      return leaf(240, 16 + (t ? 48 : 0) + (p.items?.length ?? 0) * 36 + 16);
-    case "heading": {
-      const hd = HEADING[p.level ?? 2];
-      return leaf(avail, lineCount(t, hd.px, fixedW ?? avail, true) * hd.lh);
-    }
-    case "text": {
-      const small = p.variant === "small" || p.variant === "caption";
-      const px = small ? 12 : p.variant === "code" ? 13 : 14;
-      const lh = small ? 18 : 21;
-      return leaf(avail, lineCount(t, px, fixedW ?? avail) * lh + (p.variant === "code" ? 16 : 0));
-    }
-    case "link":
-      return leaf(textWidth(t, 14) + (p.icon ? 22 : 0) + 2, 21);
-    case "button": {
-      const b2 = BUTTON[sz];
-      const w2 = t ? textWidth(t, sz === "sm" ? 13 : 14, true) + b2.pad * 2 + (p.icon ? 22 : 0) : b2.h;
-      return leaf(w2, b2.h);
-    }
-    case "input":
-    case "select":
-    case "search":
-    case "textarea": {
-      const field = el.type === "textarea" ? p.h ?? 96 : FIELD[sz];
-      return { w: fixedW ?? avail, h: (t && el.type !== "search" ? 26 : 0) + field + (p.hint ? 22 : 0) };
-    }
-    case "checkbox":
-    case "radio":
-      return leaf(26 + textWidth(t, 14), 22);
-    case "toggle":
-      return leaf(48 + textWidth(t, 14), 24);
-    case "badge":
-      return leaf(textWidth(t, 12, true) + 20, 22);
-    case "avatar": {
-      const d = sz === "sm" ? 24 : sz === "lg" ? 48 : 32;
-      return leaf(d, d);
-    }
-    case "icon": {
-      const d = sz === "sm" ? 16 : sz === "lg" ? 28 : 20;
-      return leaf(d, d);
-    }
-    case "divider":
-      return leaf(avail, 1);
-    case "image": {
-      const [a, b2] = (p.ratio ?? "16:9").split(":").map(Number);
-      const w2 = fixedW ?? avail;
-      return { w: w2, h: p.h ?? Math.round(w2 * (b2 > 0 ? b2 : 9) / (a > 0 ? a : 16)) };
-    }
-    case "table":
-      return leaf(avail, (t ? 34 : 0) + 42 + (p.rows?.length ?? 0) * 46);
-    case "list": {
-      const rowH = (p.items ?? []).some((i) => i.meta) ? 60 : 44;
-      return leaf(avail, (t ? 30 : 0) + (p.items?.length ?? 0) * rowH);
-    }
-    case "stat":
-      return leaf(avail, 100);
-    case "alert":
-      return leaf(avail, Math.max(46, 24 + lineCount(t, 14, (fixedW ?? avail) - 56) * 21));
-    case "progress":
-      return leaf(avail, t ? 34 : 8);
-    case "tabs":
-      return leaf(avail, 42);
-    case "breadcrumb":
-      return leaf(avail, 21);
-    case "pagination":
-      return leaf(7 * 36, 32);
-    case "spacer":
-      return leaf(0, 16);
-    case "empty":
-      return leaf(avail, 220);
-    case "chart":
-      return leaf(avail, 220);
-  }
-}
-function rowWidths(el, inner) {
-  const gap = gapOf(el);
-  const n4 = el.children.length;
-  const colW = (inner - gap * 11) / 12;
-  const widths = el.children.map((c) => {
-    if (c.props.w !== void 0)
-      return Math.min(c.props.w, inner);
-    if (c.props.span !== void 0)
-      return colW * c.props.span + gap * (c.props.span - 1);
-    if (HUG.has(c.type) || c.type === "sidebar")
-      return Math.min(measure2(c, inner).w, inner);
-    return void 0;
-  });
-  const growers = widths.filter((w2) => w2 === void 0).length;
-  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n4 - 1);
-  const share = growers ? Math.max(24, (inner - used) / growers) : 0;
-  return widths.map((w2) => Math.round(w2 ?? share));
-}
-function gridCells(el, w2) {
-  const cols = el.props.cols ?? 3;
-  const gap = gapOf(el);
-  const inner = w2 - padOf(el) * 2;
-  const cellW = (inner - gap * (cols - 1)) / cols;
-  const rows = [];
-  for (let i = 0; i < el.children.length; i += cols) {
-    const items = el.children.slice(i, i + cols);
-    rows.push({ items, h: Math.max(0, ...items.map((c) => measure2(c, cellW).h)) });
-  }
-  return { cellW, rows };
-}
-function place(el, x2, y2, w2, h, parent, out) {
-  const drawn = !isLayout(el.type);
-  if (drawn)
-    out.push({ el, x: x2, y: y2, w: w2, h, ...parent ? { parent } : {} });
-  const holder = drawn ? el.ref : parent;
-  const pad = padOf(el);
-  const gap = gapOf(el);
-  const align2 = el.props.align;
-  switch (el.type) {
-    case "stack":
-    case "card":
-    case "section": {
-      const inner = w2 - pad * 2;
-      let cy = y2 + pad + titleH(el) + (titleH(el) && el.children.length ? gap : 0);
-      for (const c of el.children) {
-        const m2 = measure2(c, inner);
-        const cw = HUG.has(c.type) || c.props.w !== void 0 ? m2.w : inner;
-        const cx = align2 === "center" ? x2 + pad + (inner - cw) / 2 : align2 === "end" ? x2 + pad + inner - cw : x2 + pad;
-        place(c, cx, cy, cw, m2.h, holder, out);
-        cy += m2.h + gap;
-      }
-      return;
-    }
-    case "row": {
-      const inner = w2 - pad * 2;
-      const widths = rowWidths(el, inner);
-      const total = widths.reduce((a, b2) => a + b2, 0) + gap * Math.max(0, widths.length - 1);
-      const free = Math.max(0, inner - total);
-      const j2 = el.props.justify ?? "start";
-      const extraGap = j2 === "between" && widths.length > 1 ? free / (widths.length - 1) : 0;
-      let cx = x2 + pad + (j2 === "center" ? free / 2 : j2 === "end" ? free : 0);
-      const rowH = h - pad * 2;
-      el.children.forEach((c, i) => {
-        const m2 = measure2(c, widths[i]);
-        const stretch = align2 === "stretch" || align2 === void 0 && STRETCH.has(c.type);
-        const ch = stretch ? Math.max(m2.h, rowH) : m2.h;
-        const cy = stretch || align2 === "start" ? y2 + pad : align2 === "end" ? y2 + pad + rowH - ch : y2 + pad + (rowH - ch) / 2;
-        place(c, cx, cy, widths[i], ch, holder, out);
-        cx += widths[i] + gap + extraGap;
-      });
-      return;
-    }
-    case "grid": {
-      const { cellW, rows } = gridCells(el, w2);
-      let cy = y2 + pad;
-      for (const r2 of rows) {
-        r2.items.forEach((c, i) => place(c, x2 + pad + i * (cellW + gap), cy, cellW, align2 === "start" ? measure2(c, cellW).h : r2.h, holder, out));
-        cy += r2.h + gap;
-      }
-      return;
-    }
-    case "navbar": {
-      let cx = x2 + w2 - pad;
-      for (const c of [...el.children].reverse()) {
-        const m2 = measure2(c, w2 / 2);
-        cx -= m2.w;
-        place(c, cx, y2 + (h - m2.h) / 2, m2.w, m2.h, holder, out);
-        cx -= gap;
-      }
-      return;
-    }
-    default:
-      return;
-  }
-}
-function layoutScreen(s) {
-  const out = [];
-  const inner = s.w - s.pad * 2;
-  let y2 = s.pad;
-  for (const el of s.body) {
-    const m2 = measure2(el, inner);
-    const w2 = HUG.has(el.type) || el.props.w !== void 0 ? m2.w : inner;
-    place(el, s.pad, y2, w2, m2.h, void 0, out);
-    y2 += m2.h + s.gap;
-  }
-  const content = y2 - (s.body.length ? s.gap : 0) + s.pad;
-  return { w: s.w, h: Math.max(s.minH, Math.ceil(content)), boxes: out.map((b2) => ({ ...b2, x: Math.round(b2.x), y: Math.round(b2.y), w: Math.round(b2.w), h: Math.round(b2.h) })) };
-}
-var NOTE_WORDS = ["OPEN", "TBD", "TODO", "FIXME", "sample", "proposal", "proposed", "placeholder", "lorem"];
-var NOTE_WORDS_CJK = ["\u5F85\u5B9A", "\u5F85\u78BA\u8A8D", "\u5F85\u6C7A\u5B9A", "\u793A\u4F8B", "\u7BC4\u4F8B", "\u5047\u8CC7\u6599", "\u63D0\u6848"];
-var NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
-var NOTE_RULE = "ui-text-reads-like-a-note";
-var NOTE_RULE_MESSAGE = "reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here";
-function noteWordIn(text3) {
-  const latin = NOTE_WORD_RE.exec(text3);
-  if (latin)
-    return latin[0];
-  return NOTE_WORDS_CJK.find((w2) => text3.includes(w2));
-}
-function productTexts(e) {
-  const out = [];
-  const p = e.props;
-  if (e.text)
-    out.push({ at: e.textKey, text: e.text });
-  if (p.placeholder)
-    out.push({ at: "placeholder", text: p.placeholder });
-  if (p.hint)
-    out.push({ at: "hint", text: p.hint });
-  if (typeof p.value === "string" && p.value)
-    out.push({ at: "value", text: p.value });
-  p.items?.forEach((it, i) => {
-    out.push({ at: `items[${i}].text`, text: it.text });
-    if (it.meta)
-      out.push({ at: `items[${i}].meta`, text: it.meta });
-  });
-  p.columns?.forEach((c, i) => out.push({ at: `columns[${i}]`, text: c }));
-  if (e.type === "table")
-    p.rows?.forEach((r2, i) => r2.forEach((c, j2) => typeof c === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c })));
-  return out;
-}
-function checkUiMock(raw) {
-  const m2 = normalizeUiMock(raw);
-  const out = [];
-  const screens = new Set(m2.screens.map((s) => s.id));
-  const refs2 = new Set(m2.screens.flatMap((s) => walkUi(s.body).map((e) => e.ref)));
-  const icons = new Set(UI_ICONS);
-  for (const s of m2.screens) {
-    const explicit = /* @__PURE__ */ new Map();
-    for (const e of walkUi(s.body)) {
-      const given = e.path.reduce((node4, k2) => node4?.[k2], raw);
-      if (given?.id)
-        explicit.set(given.id, (explicit.get(given.id) ?? 0) + 1);
-      if (e.goto && !screens.has(e.goto))
-        out.push({ severity: "warning", element: e.ref, message: `goto: no screen "${e.goto}" (screens: ${[...screens].join(", ")})` });
-      const cols = e.props.columns?.length;
-      if (e.type === "table" && cols)
-        e.props.rows?.forEach((r2, i) => r2.length !== cols && out.push({ severity: "warning", element: e.ref, message: `table row ${i + 1} has ${r2.length} cells for ${cols} columns` }));
-      for (const ic of [e.props.icon, ...(e.props.items ?? []).map((i) => i.icon)])
-        if (ic && !icons.has(ic))
-          out.push({ severity: "info", element: e.ref, message: `icon "${ic}" is not one the canvas draws (${UI_ICONS.join(", ")})` });
-      if (e.type === "button" && !e.text && !e.props.icon)
-        out.push({ severity: "warning", element: e.ref, message: "a button with neither text nor icon" });
-      if (e.children.length && !isLayout(e.type) && !isDrawnContainer(e.type))
-        out.push({ severity: "warning", element: e.ref, message: `${e.type} does not hold children (only stack, row, grid, card, section, navbar do) \u2014 they are not drawn` });
-      if (e.props.active !== void 0 && e.props.items && !e.props.items.some((i) => i.active))
-        out.push({ severity: "info", element: e.ref, message: `active "${e.props.active}" is none of its items` });
-      for (const t of productTexts(e)) {
-        const word = noteWordIn(t.text);
-        if (word)
-          out.push({ severity: "warning", element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` });
-      }
-    }
-    for (const [id, n4] of explicit)
-      if (n4 > 1)
-        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n4} times in screen ${s.id}; the others become ${id}-2 \u2026` });
-  }
-  for (const f of m2.flows) {
-    if (!screens.has(f.to))
-      out.push({ severity: "warning", message: `flow to "${f.to}": no such screen` });
-    if (!screens.has(f.from) && !refs2.has(f.from))
-      out.push({ severity: "warning", message: `flow from "${f.from}": no such screen or <screen>/<element>` });
-  }
-  return out;
-}
-var shortText = (s, n4 = 48) => {
-  const t = s.replace(/\s+/g, " ").trim();
-  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
-};
-var uiPathText = (p) => p.map((k2) => typeof k2 === "number" ? `[${k2}]` : `.${k2}`).join("").replace(/^\./, "");
-function lintUiMock(raw) {
-  const m2 = normalizeUiMock(raw);
-  const where = /* @__PURE__ */ new Map();
-  for (const s of m2.screens) {
-    where.set(uiPathText(s.path), s.id);
-    for (const e of walkUi(s.body))
-      where.set(uiPathText(e.path), e.ref);
-  }
-  const owner = (path15) => {
-    for (let p = path15; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
-      const hit2 = where.get(p);
-      if (hit2)
-        return hit2;
-      if (!/(\.[^.[\]]+|\[\d+\])$/.test(p))
-        break;
-    }
-    return void 0;
-  };
-  const unknown2 = unknownFields(uiMockSchema, raw).map((u3) => {
-    const element = owner(u3.path);
-    return { severity: "warning", message: `unknown field \`${u3.field}\` at ${u3.path} \u2014 it is not part of ui-mock and will be ignored`, ...element ? { element } : {} };
-  });
-  return [...unknown2, ...checkUiMock(raw)];
-}
-function attachUiFindings(items, raw) {
-  const m2 = normalizeUiMock(raw);
-  const shownAt = /* @__PURE__ */ new Map();
-  const hold = (els, holder) => els.forEach((e) => {
-    const at3 = isLayout(e.type) ? holder : e.ref;
-    shownAt.set(e.ref, at3);
-    hold(e.children, at3);
-  });
-  for (const s of m2.screens) {
-    shownAt.set(s.id, s.id);
-    hold(s.body, s.id);
-  }
-  const found = /* @__PURE__ */ new Map();
-  for (const f of lintUiMock(raw)) {
-    const at3 = f.element && shownAt.get(f.element) || (m2.screens[0]?.id ?? "");
-    found.set(at3, [...found.get(at3) ?? [], { severity: f.severity, message: f.message }]);
-  }
-  return items.map((it) => {
-    const ui = it.data?.ui;
-    if (it.type !== "ui" || !ui || typeof it.data?.element !== "string")
-      return it;
-    const { findings: _old, ...rest } = ui;
-    const mine = found.get(it.data.element);
-    if (!mine && !_old)
-      return it;
-    return { ...it, data: { ...it.data, ui: mine ? { ...rest, findings: mine } : rest } };
-  });
-}
-
 // packages/canvas/dist/templates/ui-mock.js
 var SCREEN_LABEL = 28;
 var SCREEN_GAP2 = 120;
-var LINE = 16;
-function readingOrder(notes) {
-  const byTop = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq);
-  const lines2 = [];
-  for (const n4 of byTop) {
-    const line = lines2[lines2.length - 1];
-    if (line && n4.anchorY - line[0].anchorY <= LINE)
-      line.push(n4);
-    else
-      lines2.push([n4]);
-  }
-  return lines2.flatMap((l) => l.sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq));
-}
 function entryTop(e, i) {
   const title = e.text ? 1 : 0;
   switch (e.type) {
@@ -44029,6 +44425,7 @@ function renderUiMock(raw, opts = {}) {
   const items = [];
   const byRef = /* @__PURE__ */ new Map();
   let sx = PAD;
+  const screens = [];
   m2.screens.forEach((s, si) => {
     const lay = layoutScreen(s);
     const sy = PAD + SCREEN_LABEL;
@@ -44047,14 +44444,25 @@ function renderUiMock(raw, opts = {}) {
       order: si,
       data: { element: s.id, ui: { type: "screen", device: s.device, path: s.path, textKey: "name", container: true, ...look, ...s.sample ? { sample: true } : {} }, ...s.traces.length ? { traces: s.traces } : {} }
     }, now);
-    items.push(screen);
     const notes = [];
-    lay.boxes.forEach((b2, bi) => items.push(...elementItems(b2, bi, sx, sy, sid, look, notes)));
-    const callouts = numberCallouts(notes);
-    const screenNote = s.note ? { id: noteId(s.id), text: s.note, target: sid } : void 0;
-    items.push(...gutterItems(uiGutterOf(screen), screenNote, callouts));
+    const drawn = lay.boxes.flatMap((b2, bi) => elementItems(b2, bi, sx, sy, sid, look, notes));
+    items.push(screen, ...drawn);
+    screens.push({ screen, drawn, notes, ...s.note ? { screenNote: { id: noteId(s.id), text: s.note, target: sid } } : {} });
     sx += lay.w + UI_GUTTER.gap + UI_GUTTER.w + SCREEN_GAP2;
   });
+  const list3 = annotationsIn(raw);
+  const annotationId = annotationIds(list3, scope);
+  const everything = screens.flatMap((x2) => [x2.screen, ...x2.drawn]);
+  list3.forEach((a, i) => {
+    const t = resolveOn(everything, a.on, scope);
+    const home = t && screens.find((x2) => x2.screen === t || x2.drawn.includes(t));
+    if (!t || !home)
+      return;
+    const screen = t === home.screen;
+    home.notes.push({ id: annotationId[i], text: a.text, ref: a.on, target: t.id, anchorX: t.x, anchorY: t.y, seq: (screen ? -1e4 : 1e4) + i, on: { item: t, kind: screen ? "screen" : "element" } });
+  });
+  for (const x2 of screens)
+    items.push(...gutterItems(uiGutterOf(x2.screen), x2.screenNote, numberCallouts(x2.notes)));
   function elementItems(b2, order, sx2, sy, sid, look, notes) {
     const e = b2.el;
     const id = elId(e.ref);
@@ -44073,7 +44481,7 @@ function renderUiMock(raw, opts = {}) {
       parent: b2.parent ? elId(b2.parent) : sid,
       data: { element: e.ref, ui: uiData(e, look), ...e.traces.length ? { traces: e.traces } : {} }
     }, now);
-    const note = (n4) => notes.push({ ...n4, target: id, anchorX: left, seq: notes.length });
+    const note = (n4) => notes.push({ ...n4, ref: e.ref, target: id, anchorX: left, seq: notes.length });
     if (e.note)
       note({ id: noteId(e.ref), text: e.note, anchorY: top, on: { item, kind: "element" } });
     e.props.items?.forEach((it, i) => {
@@ -44091,11 +44499,14 @@ function renderUiMock(raw, opts = {}) {
       const callout = i + 1;
       const on = n4.on;
       const ui = { ...on.item.data.ui };
-      if (on.kind === "element")
-        Object.assign(ui, { callout, note: n4.text });
-      else if (on.kind === "item")
+      if (on.kind === "element" || on.kind === "screen") {
+        if (typeof ui.callout === "number")
+          ui.callouts = [...Array.isArray(ui.callouts) ? ui.callouts : [ui.callout], callout];
+        else
+          Object.assign(ui, { callout, note: n4.text });
+      } else if (on.kind === "item")
         ui.items = ui.items.map((it, j2) => j2 === on.index ? { ...it, callout } : it);
-      else
+      else if (on.kind === "row")
         ui.rowCallouts = { ...ui.rowCallouts, [String(on.index)]: callout };
       on.item.data = { ...on.item.data, ui };
       return { ...n4, callout };
@@ -44112,7 +44523,7 @@ function renderUiMock(raw, opts = {}) {
     for (const n4 of callouts) {
       const size2 = uiCalloutSize(n4.text);
       const y2 = Math.max(n4.anchorY, gutter.y, bottom + gap);
-      out.push(make({ id: n4.id, type: "comment", x: gutter.x, y: y2, w: size2.w, h: size2.h, text: n4.text, role: "note", color: "yellow", target: n4.target, data: { ...n4.data, callout: n4.callout } }, now));
+      out.push(make({ id: n4.id, type: "comment", x: gutter.x, y: y2, w: size2.w, h: size2.h, text: n4.text, role: "note", color: "yellow", target: n4.target, data: { ...n4.data, callout: n4.callout, annotation: { on: n4.ref, ...opts.source ? { file: opts.source } : {} } } }, now));
       bottom = y2 + size2.h;
       gap = UI_GUTTER.calloutGap;
     }
@@ -44292,7 +44703,24 @@ var contentSchemas = {
   "ui-mock": uiMockSchema,
   freeform: freeformSchema
 };
+var DEFAULT_SCOPE = {
+  "event-storming": "es",
+  "user-story-map": "usm",
+  "user-journey": "uj",
+  wireframe: "wf",
+  workflow: "wf",
+  kanban: "kb",
+  "domain-story": "ds",
+  "ui-mock": "ui",
+  freeform: "ff"
+};
+var BAND_KINDS = /* @__PURE__ */ new Set(["event-storming", "user-story-map", "user-journey", "kanban", "workflow"]);
 function render(kind, content, opts = {}) {
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const items = renderKind(kind, content, { ...opts, now });
+  return BAND_KINDS.has(kind) ? withAnnotationBand(items, content, { scope: opts.scope ?? DEFAULT_SCOPE[kind], now, ...opts.source ? { file: opts.source } : {} }) : items;
+}
+function renderKind(kind, content, opts) {
   switch (kind) {
     case "event-storming":
       return renderEventStorming(content, opts);
@@ -51462,7 +51890,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.23.0";
+var VERSION = "0.24.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -51961,11 +52389,23 @@ function lintDesignContent(d) {
     return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
   if (d.kind === "domain-story")
     return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+  const notes = annotationFindings(d.kind, parsed.data, d.key);
   if (d.kind === "ui-mock")
-    return lintUiMock(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element }));
+    return [...lintUiMock(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
   if (d.kind !== "event-storming")
-    return unknown2;
-  return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+    return [...unknown2, ...notes];
+  return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page })), ...notes];
+}
+function annotationFindings(kind, content, key) {
+  if (!annotationsIn(content).length || !diagramKinds.includes(kind))
+    return [];
+  let items;
+  try {
+    items = render(kind, content, { scope: key, now: "1970-01-01T00:00:00.000Z" });
+  } catch {
+    return [];
+  }
+  return unresolvedAnnotations(kind, content, items, key);
 }
 function findingLine(f) {
   return `${f.severity === "error" ? "\u2716" : f.severity === "warning" ? "\u26A0" : "\xB7"} ${f.element ? `${f.element}: ` : ""}${f.message}${f.page ? `  (${f.page})` : ""}`;
@@ -52132,6 +52572,12 @@ function originsOf(changes) {
 function redrawInputs(changes) {
   return { placed: placedByUser(changes.filter((c) => c.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
 }
+function isFileAnnotationCard(it) {
+  if (it.type !== "comment" || it.role !== "note")
+    return false;
+  const a = annotationOf(it);
+  return calloutOf(it) !== void 0 && !a?.draft && !a?.board;
+}
 var label = (it) => {
   const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
   return t ? t.length > 48 ? `${t.slice(0, 47)}\u2026` : t : String(it?.type ?? "?");
@@ -52228,7 +52674,7 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
   for (const it of Object.values(board)) {
     if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id))
       continue;
-    if (!it.id.startsWith(scope.prefix) || it.type === "comment")
+    if (!it.id.startsWith(scope.prefix) || it.type === "comment" && !isFileAnnotationCard(it))
       continue;
     if (byHand(it)) {
       foreign.add(it.id);
@@ -52574,7 +53020,7 @@ Call canvas_focus on the sentence you are talking about. Put a finding on the bo
     arg: { name: "board", hint: "[board]", description: "The board to review (title or id)" },
     fallback: "the board we are working on \u2014 find it with canvas_list_boards and ask me if there are several",
     body: `Review the open comments on {arg} on the Unprose canvas.
-Read the board (canvas_read_board) and find every comment thread that has no answer from you yet and is for you (not a thread routed or @mentioned to another agent \u2014 leave those to it). Answer each one in its thread (canvas_add_items, a comment with target). For a proposal \u2014 a dragged wire, edited text, a proposed story \u2014 say whether you agree and which file change would follow. Apply only what I have already agreed to in the thread, and only to files you hold (edit the file, design_lint, design_draw with applied: <thread id>) \u2014 another agent's "agree" is not mine; then tell me which files you changed, one line each. Then wait for more comments (canvas_wait). Talk with me in the language I use.`
+Read the board (canvas_read_board) and find every comment thread that has no answer from you yet and is for you (not a thread routed or @mentioned to another agent \u2014 leave those to it). Answer each one in its thread (canvas_add_items, a comment with target). For a proposal \u2014 a dragged wire, edited text, a proposed story \u2014 say whether you agree and which file change would follow. Apply only what I have already agreed to in the thread, and only to files you hold (edit the file, design_lint, design_draw with applied: <thread id>) \u2014 another agent's "agree" is not mine; then tell me which files you changed, one line each. My draft annotation (what an item is for) is my own words: judge it in its thread \u2014 true to the design, not contradicting the file or another annotation, saying what the item is for? \u2014 and if it is sound and you hold the file, add it to the file's annotations and redraw with applied: <thread id> right away; if you have doubts, say why and wait for me. Leave TODOs alone (canvas_todo lists them): they are notes to confirm something with someone else, not questions to you. Then wait for more comments (canvas_wait). Talk with me in the language I use.`
   }
 ];
 function promptText(p, arg) {
@@ -60833,7 +61279,9 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
 Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on a card \u2014 placed along the wire, else beside it, else wrapped to two lines or cut with \u2026 (the full text in the tooltip), else shown as a dot that reveals it on hover. Keep them to a few words; on an arrow, data.label: { at: 0..1, short: '<shorter text>' } says where along the wire to try first (0 = source) and what to show when the whole label does not fit (canvas_apply update op: { kind: 'update', id: '<arrow>', patch: { data: { ...its data, label: { short: 'updates' } } } }). canvas_check_layout lists labels that are cut or hidden, with the room they need.`;
 var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long \u2014 timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
-var READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
+var ANNOTATIONS_HELP = `Annotations say what an item is for; they live in the design file (a top-level \`annotations: [{ on, text }]\` in every kind) and are drawn as numbered cards beside the drawing with a pin on the item \u2014 not threads. The person writes one on the canvas as a draft: a proposal to the agent holding the files. A draft annotation is the person's own words: judge it first \u2014 true to the design? does it contradict the file or another annotation? does it say what the item is for? \u2014 and reply in its thread with your judgement in a sentence or two. If it is sound, apply it at once (the person wrote it, so that counts as consent): the edit adds one \`annotations:\` entry \u2014 check \`base\`, apply, lint, redraw with --applied <thread>. If you have doubts, say why and wait for the person. An agent without the files proposes an annotation with canvas_propose_edit like any edit.`;
+var TODO_HELP = `A TODO marks something still to be confirmed with someone outside the board (the PM, legal, the backend team) \u2014 a note, not a question to you: never answer one yourself. It lives on the board only and wakes no agent when written. Whoever finds out checks it off (the person, or an agent); checked off with an answer, the answer is posted as a reply in its thread and goes to the board's "Answered by" agent, which decides whether the design changes and proposes that as usual; checked off without an answer it notifies nobody.`;
+var READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
 var text2 = (s) => ({ content: [{ type: "text", text: s }] });
 var ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`;
 var DIAGRAMS = `${WHICH_DIAGRAM}
@@ -60893,6 +61341,7 @@ function helpText(o) {
     'Conversation: canvas_wait (block until the person comments or hands over, up to 30 min per call; from: "person" (default) or "others" to also wake on other agents; untilMention: true wakes only when you are @mentioned), canvas_diff (what changed since a seq; the same `from`), canvas_focus (take the person\'s page to an item or frame)',
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
     `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files \u2014 and only that agent redraws them; canvas_wait wakes you only for what is yours`,
+    "Annotations and TODOs: an annotation (what an item is for) lives in the design file, drawn as a numbered card beside the drawing; the person's draft annotation is a proposal to the agent holding the files \u2014 judge it in its thread and apply it when it is sound. canvas_todo lists, opens, checks off and reopens TODOs: things to confirm with someone outside the board, not questions to you",
     "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
@@ -60923,6 +61372,8 @@ function helpText(o) {
     '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
+    `Annotations: ${ANNOTATIONS_HELP}`,
+    `TODOs: ${TODO_HELP}`,
     `Proposals and saving: files stay the truth. An agent that cannot write the files behind a board proposes (canvas_files \u2192 canvas_propose_edit); the person discusses it in the thread; the agent that has the files \u2014 studio's session on the canvas machine, or the person's own Claude Code \u2014 applies it after they agree (checking the file still has the base sha-1), lints, tests and redraws. Watch for proposals from other agents with canvas_wait({ from: "others" }). A diagram whose files another agent holds cannot be redrawn by you (design_draw refuses it): propose instead, or ask the person to hand the files over to you \u2014 they start it (board panel \u2192 Hand over files), the holder marks them ready (canvas_handover({ ready: true })), you accept (canvas_handover({ accept: true })), keep the files in your repo and redraw once from your copy.`,
     "Remote agents: another machine or a cloud agent connects to <canvas>/mcp \u2014 with OAuth (the person approves it on the canvas, typing the code the agent shows) or with a token from the canvas page Connected agents. Changes are signed with the agent's name. One credential serves every tool and the awd CLI (UNPROSE_TOKEN, else the token a pairing code got). Scripts of your own calling the canvas through a tunnel must send a User-Agent: Cloudflare refuses Python's default one with a 403.",
     `Several agents on one board (docs/canvas.md): read the board context first (canvas_context, or the top of canvas_read_board). Four separate things: watching a board (canvas_wait) gives you nothing more than its news; answering it ("Answered by") is set only by the person \u2014 drawing a new board or canvas_context answeredBy only suggests it; being @mentioned routes one thread to you; applying a proposal is for the agent holding the files, after the person agreed in the thread (draw access on a token is not consent). The person picks who answers ("Answered by" in the board header); @<handle> in a comment sends that thread to one agent, and agents can ask each other the same way (canvas_ask) \u2014 the answer goes back to the asker. After 6 agent messages in a row in one thread agents pause there until the person replies. Another agent's reply is never the person's consent. Proposals go to the agent that holds the files (it drew them); it applies after the person agrees, redraws with --applied <thread id> and, if its machine set UNPROSE_APPLY_COMMIT=1, commits. Only the holder redraws a diagram; the files change hands only when the person hands them over (canvas_handover: the holder marks them ready, the new holder accepts and becomes the holder \u2014 and "Answered by" when the person asked for it).`
@@ -60945,7 +61396,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.23.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP}` });
+  const server = new McpServer({ name: "unprose", version: "0.24.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -61008,7 +61459,7 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
       id: external_exports.string(),
       format: external_exports.enum(["outline", "json", "summary"]).default("outline").describe("'outline' (default): text grouped by diagram frame \u2192 lane / column \u2192 items, with threads and wires; 'summary': counts per frame (start here on a big board); 'json': the items with ids and geometry, one per line"),
       frame: external_exports.string().optional().describe('only this diagram (its key, e.g. "studio-es") or this frame / lane / column item id'),
-      types: external_exports.array(external_exports.string()).optional().describe('only these item types or roles, e.g. ["comment"], ["event","hotspot"], ["card"], ["arrow"]'),
+      types: external_exports.array(external_exports.string()).optional().describe('only these item types or roles, e.g. ["comment"], ["event","hotspot"], ["card"], ["arrow"], ["annotation"] (the numbered cards), ["todo"]'),
       ids: external_exports.array(external_exports.string()).optional().describe("only these items (a container brings what it holds; threads come along)"),
       text: external_exports.string().optional().describe("only items whose text, label or id contains this (case-insensitive)"),
       fields: external_exports.array(external_exports.string()).optional().describe('json: the item fields to return, e.g. ["id","role","text","x","y","w","h","parent"] or "data.ui"; default all, with bulky data summarised'),
@@ -61094,7 +61545,7 @@ ${r2.lines.join("\n")}${page3}`);
   });
   server.registerTool("canvas_wait", {
     title: "Wait for the user to change the board",
-    description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) \u2014 or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) \u2014 the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' \u2014 also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one "moved N items: \u2026" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally \u2014 @mentioned (or answered in a thread where you were), or a proposal to files you hold \u2014 not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next \u2014 just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing.`,
+    description: `Block until the person has changed something after \`since\` AND stopped for \`quietSec\` (default 2.5 s) \u2014 or pressed "Hand to agent" in the UI, which returns at once. \`from\` decides whose changes wake you: 'person' (default) \u2014 the person, from any of their pages (a browser signed in through a tunnel counts as the person), and another agent asking you (an @mention of you, a proposal to files you hold); 'others' \u2014 also every other agent's change on this board (never your own). \`listen\` decides which: 'mine' (default) only what is for you (you answer the board, you were @mentioned, you hold the files), 'all' everything. \`wake\` decides what counts: 'meaningful' (default) wakes on comments, adds, removals, renames, connections, recolours and handoff, while pure moves/resizes/reroutes neither wake you nor restart the quiet window \u2014 they ride along collapsed into one "moved N items: \u2026" line; 'any' wakes on every change with one line each; 'handoff' waits for the "Hand to agent" button only. \`untilMention: true\` wakes you only when you are addressed personally \u2014 @mentioned (or answered in a thread where you were), or a proposal to files you hold \u2014 not for every comment on a board you answer: idle cheaply on a busy board. Every return costs you tokens, so wait long: timeoutSec defaults to ${WAIT_DEFAULT_SEC} and goes up to ${WAIT_MAX_SEC} (30 min); with nothing for you it returns one line with the seq to wait from next \u2014 just call again, do not poll. If your MCP client gives up first, nothing is lost: call again with the same \`since\`. Returns the diff lines and the new seq. While you wait the UI shows "agent is watching", so call this right after drawing. The person's draft annotation on files you hold wakes you like any proposal; a TODO wakes nobody \u2014 its answer, a reply in its thread, comes to whoever answers the board.`,
     inputSchema: {
       id: external_exports.string(),
       since: external_exports.number().int().min(0),
@@ -61225,6 +61676,8 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       `Answered by: ${s.answeredBy}${s.suggestion ? ` (suggested: ${displayName(s.suggestion)}${s.suggestionWhy === "asked" ? `${s.suggestionBy ? ` by ${displayName(s.suggestionBy)}` : ""} \u2014 waiting for the person to confirm it in the board header` : ", who holds every diagram's files \u2014 the person can confirm it"})` : ""}`,
       ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : [],
       ...s.handover ? handoverLines(s.handover) : [],
+      ...s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done \u2014 things to confirm with someone else, not questions to you (canvas_todo lists them)`] : [],
+      ...s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} \u2014 the person's own words: the holder judges each in its thread, then applies it or says why not`] : [],
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));
@@ -61324,6 +61777,58 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
       ...holders.length ? ["Files behind the diagrams (only the holder redraws one; the others propose):", ...holders] : ["No diagram on this board has files held by an agent."]
     ].join("\n"));
   });
+  server.registerTool("canvas_todo", {
+    title: "TODOs: what still has to be confirmed with someone else",
+    description: `${TODO_HELP} Open one yourself when something needs a person outside the board: { board, text, on?: <item id>, ask?: <who to confirm it with> }. Check one off: { board, done: <todo id>, answer? } \u2014 the answer only when you really got one. Reopen: { board, reopen: <todo id> }. Only { board }: the open TODOs and the last ones checked off.`,
+    inputSchema: {
+      board: external_exports.string().describe("board id"),
+      text: external_exports.string().min(1).max(2e3).optional().describe("open a TODO: what still has to be confirmed, in a sentence"),
+      on: external_exports.string().optional().describe("open: the item it is about (an item id); the TODO sits beside it"),
+      ask: external_exports.string().max(200).optional().describe('open: who to confirm it with, e.g. "PM", "legal", "the backend team"'),
+      done: external_exports.string().optional().describe("check off this TODO (its id)"),
+      answer: external_exports.string().max(4e3).optional().describe(`done: what was confirmed \u2014 posted in its thread, it goes to the board's "Answered by" agent`),
+      reopen: external_exports.string().optional().describe("reopen this TODO (its id)")
+    }
+  }, async ({ board, text: t, on, ask, done, answer, reopen }) => {
+    const asked = [t !== void 0 && "text", done !== void 0 && "done", reopen !== void 0 && "reopen"].filter(Boolean);
+    if (asked.length > 1)
+      return { ...text2(`give one of text (open a TODO), done or reopen (not ${asked.join(" and ")})`), isError: true };
+    const b2 = await client.getBoard(board);
+    const rand = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    try {
+      if (t !== void 0) {
+        const target = on ? b2.items[on] : void 0;
+        if (on && (!target || target.type === "comment" || target.type === "arrow"))
+          return { ...text2(`on: ${!target ? `no item "${on}" on this board` : `"${on}" is a ${target.type} \u2014 name the item the TODO is about`}`), isError: true };
+        const id = `todo.${rand()}`;
+        const all = Object.values(b2.items);
+        const loose = all.filter((i) => isTodo(i) && !i.target).length;
+        const at3 = target ? {} : { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - 110 * (loose + 1), w: 260, h: 90 };
+        const { ops } = await client.template(board, "freeform", { items: [{ ...newTodo(id, t, { on, ask }), ...at3 }] });
+        const r2 = await client.apply(board, ops, "agent", `TODO: ${t.trim().slice(0, 80)}`);
+        return text2(`Opened TODO ${id}${target ? ` on ${aboutText(target)}` : ""}: "${t.trim()}"${ask?.trim() ? ` \u2014 ask ${ask.trim()}` : ""} (board seq ${r2.seq}). It wakes nobody; when someone checks it off with an answer, the answer comes to the board's "Answered by" agent as a reply in its thread.`);
+      }
+      if (done !== void 0) {
+        const { update, reply } = todoDoneOps(b2, done, answer);
+        const ops = [update, ...reply ? (await client.template(board, "freeform", { items: [{ ...reply, id: `${done}.answer.${rand()}` }] })).ops : []];
+        const r2 = await client.apply(board, ops, "agent", `checked off TODO ${done}`);
+        const posted = r2.change?.ops.find((o) => o.kind === "add" && o.item.type === "comment");
+        const to = posted && posted.kind === "add" && Array.isArray(posted.item.data?.to) ? posted.item.data.to : void 0;
+        const who3 = to === void 0 ? "every agent watching (nobody answers this board yet)" : to.length ? to.map(displayName).join(", ") : "nobody else (you answer this board)";
+        return text2(`Checked off TODO ${done} "${b2.items[done].text ?? ""}"${reply ? ` with the answer "${answer.trim()}" \u2014 posted in its thread; it goes to ${who3}, which decides whether the design changes` : " without an answer: nobody is notified"} (board seq ${r2.seq}).`);
+      }
+      if (reopen !== void 0) {
+        const r2 = await client.apply(board, [todoReopenOp(b2, reopen)], "agent", `reopened TODO ${reopen}`);
+        return text2(`Reopened TODO ${reopen} "${b2.items[reopen].text ?? ""}" (board seq ${r2.seq}).`);
+      }
+    } catch (e) {
+      if (e instanceof TodoError)
+        return { ...text2(e.message), isError: true };
+      throw e;
+    }
+    const lines2 = todoLines(b2, { done: 5 });
+    return text2(lines2.length ? [...lines2, `(board seq ${b2.seq})`].join("\n") : `No TODOs on board ${board} (seq ${b2.seq}). Open one with canvas_todo({ board, text, on?, ask? }) when something needs a person outside the board.`);
+  });
   server.registerTool("unprose_feedback", {
     title: "Tell the owner what to improve in Unprose",
     description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.",
@@ -61394,8 +61899,8 @@ The file is unchanged until whoever has it applies the edit after the person agr
   return server;
 }
 function answerIn(board, root, agent) {
-  const when = (i) => String(i.data?.postedAt ?? i.updatedAt);
-  return Object.values(board.items).filter((i) => i.type === "comment" && i.id !== root && threadRoot(board, i).id === root && sameAgent(agentOf(i), agent)).sort((a, b2) => when(a).localeCompare(when(b2))).pop();
+  const when2 = (i) => String(i.data?.postedAt ?? i.updatedAt);
+  return Object.values(board.items).filter((i) => i.type === "comment" && i.id !== root && threadRoot(board, i).id === root && sameAgent(agentOf(i), agent)).sort((a, b2) => when2(a).localeCompare(when2(b2))).pop();
 }
 async function connectWithCode(base, client, name) {
   const res = await fetch(`${base}/device_authorization`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": userAgent("mcp") }, body: new URLSearchParams({ client_name: name, scope: "write" }) }).catch((e) => ({ ok: false, status: 0, statusText: e.message, json: async () => ({ error_description: e.message }) }));
@@ -61601,7 +62106,7 @@ function selectIds(board, o) {
     set2 = new Set([...set2].filter((id) => {
       const it = board.items[id];
       const ui = it.data?.ui?.type;
-      return t.has(it.type) || it.role && t.has(it.role.toLowerCase()) || ui && t.has(ui) || t.has("thread") && it.type === "comment";
+      return t.has(it.type) || it.role && t.has(it.role.toLowerCase()) || ui && t.has(ui) || t.has("thread") && it.type === "comment" || t.has("annotation") && isAnnotationCard(it) || t.has("todo") && isTodo(it);
     }));
   }
   if (o.text) {
@@ -61706,11 +62211,11 @@ function summaryText(board, only, o) {
   const out = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${Object.keys(board.items).length} items${only ? `, ${items.length} matched` : ""})`];
   const ctx = contextOf(board.meta);
   if (ctx)
-    out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ""}: ${short(ctx.text, 300)}`);
+    out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ""}: ${short2(ctx.text, 300)}`);
   const r2 = responderOf(board.meta);
   out.push(`Answered by: ${responderLabel(r2)}`);
   const threadsOf = (set2) => {
-    const roots = set2.filter((c) => c.type === "comment" && rootOf(board, c).id === c.id);
+    const roots = set2.filter((c) => c.type === "comment" && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c));
     const all = Object.values(board.items).filter((c) => c.type === "comment");
     let waiting = 0;
     for (const root of roots) {
@@ -61718,9 +62223,10 @@ function summaryText(board, only, o) {
       if (msgs[msgs.length - 1]?.createdBy === "user")
         waiting++;
     }
-    const proposals = roots.filter((c) => c.data?.discuss?.edit).length;
-    return { threads: roots.length, waiting, proposals };
+    const proposals = roots.filter((c) => c.data?.discuss?.edit || isAnnotationDraft(c)).length;
+    return { threads: roots.length, waiting, proposals, annotations: set2.filter((c) => isAnnotationCard(c)).length };
   };
+  const notes = (t) => t.annotations ? ` \xB7 ${t.annotations} annotation(s)` : "";
   const counts = (set2) => {
     const m2 = /* @__PURE__ */ new Map();
     for (const i of set2) {
@@ -61743,18 +62249,21 @@ function summaryText(board, only, o) {
     const holder = holdersOf(board.meta).find((h) => h.key === spec.key);
     const t = threadsOf(inside3);
     const pend = inside3.filter((i) => i.type !== "comment" && pendingTag(i)).length;
-    out.push("", `## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short(f.text, 60)}" \u2014 frame: "${spec.key}"${spec.source ? ` \xB7 ${spec.source}` : ""}${holder ? ` \xB7 files held by ${displayName(holder.holder.agent)}` : ""}  #${f.id}`);
+    out.push("", `## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short2(f.text, 60)}" \u2014 frame: "${spec.key}"${spec.source ? ` \xB7 ${spec.source}` : ""}${holder ? ` \xB7 files held by ${displayName(holder.holder.agent)}` : ""}  #${f.id}`);
     out.push(`  ${inside3.length} items: ${counts(inside3) || "\u2014"}`);
     const lanes = (tree.children.get(f.id) ?? []).filter(isContainer).sort(byPos);
     if (lanes.length)
-      out.push(`  ${lanes.length} ${lanes[0].role === "column" ? "columns" : "lanes / groups"}: ${lanes.slice(0, 12).map((l) => `${short(l.text, 24) || l.id}${l.role === "column" ? ` (${(tree.children.get(l.id) ?? []).length})` : ""}`).join(" \xB7 ")}${lanes.length > 12 ? " \xB7 \u2026" : ""}`);
-    out.push(`  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ""}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ""}${pend ? ` \xB7 ${pend} proposed element(s)` : ""}`);
+      out.push(`  ${lanes.length} ${lanes[0].role === "column" ? "columns" : "lanes / groups"}: ${lanes.slice(0, 12).map((l) => `${short2(l.text, 24) || l.id}${l.role === "column" ? ` (${(tree.children.get(l.id) ?? []).length})` : ""}`).join(" \xB7 ")}${lanes.length > 12 ? " \xB7 \u2026" : ""}`);
+    out.push(`  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ""}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ""}${pend ? ` \xB7 ${pend} proposed element(s)` : ""}${notes(t)}`);
   }
   const rest = items.filter((i) => !seen.has(i.id));
   if (rest.length) {
     const t = threadsOf(rest);
-    out.push("", `## ${frames.length ? "outside the diagram frames" : "the board"}`, `  ${rest.length} items: ${counts(rest) || "\u2014"}`, `  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ""}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ""}`);
+    out.push("", `## ${frames.length ? "outside the diagram frames" : "the board"}`, `  ${rest.length} items: ${counts(rest) || "\u2014"}`, `  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ""}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ""}${notes(t)}`);
   }
+  const todos = todoCounts(board);
+  if (todos.open || todos.done)
+    out.push("", `TODOs: ${todos.open} open, ${todos.done} done \u2014 to confirm with someone else, not questions to you (canvas_todo lists them)`);
   out.push("", `Next: canvas_read_board with frame: "<key>" (outline of one diagram), types / text / ids to narrow, format: "json" with fields for geometry; canvas_snapshot to see it; canvas_check_layout for overlaps and clipped text.`);
   void o;
   return out.join("\n");
@@ -62165,7 +62674,7 @@ function oneLine(s, maxW, font, weight = 400) {
 }
 var rect = (bx, attrs, rx = 0) => `<rect x="${n3(bx.x)}" y="${n3(bx.y)}" width="${n3(Math.max(0, bx.w))}" height="${n3(Math.max(0, bx.h))}"${rx ? ` rx="${n3(rx)}"` : ""} ${attrs}/>`;
 function boxOf(it) {
-  if (it.type === "comment")
+  if (it.type === "comment" && !isAnnotationCard(it))
     return { x: it.x, y: it.y, w: BADGE, h: BADGE };
   return { x: it.x, y: it.y, w: it.w, h: it.h };
 }
@@ -62631,7 +63140,44 @@ function drawUi(c, it) {
       return rect(bx, `fill="${pal.surface}" stroke="${pal.line}"`, radius) + word(t, bx.x + 10, bx.y + 20);
   }
 }
+function pin(c, cx, cy, num2) {
+  const r2 = UI_CALLOUT.pin / 2;
+  return `<circle cx="${n3(cx)}" cy="${n3(cy)}" r="${r2}" fill="${c.p.paper}" stroke="${c.p.ink2}" stroke-width="1.2"/>${c.text && num2 !== void 0 ? `<text x="${n3(cx)}" y="${n3(cy + 3.5)}" font-size="10" font-weight="600" text-anchor="middle" fill="${c.p.ink2}">${num2}</text>` : ""}`;
+}
+function drawAnnotation(c, it) {
+  const { p, b: b2 } = c;
+  const cc = UI_CALLOUT;
+  const num2 = calloutOf(it);
+  const bx = boxOf(it);
+  const parts2 = [rect(bx, `fill="${p.paper}" stroke="${p.rule2}" stroke-width="${cc.border}"`, 4), pin(c, bx.x + cc.padLeft / 2 + 1, bx.y + cc.padTop + cc.lineHeight / 2, num2)];
+  if (c.text) {
+    const inner = bx.w - cc.padLeft - cc.padRight;
+    const lines2 = wrap((it.text ?? "").trim(), inner, cc.font);
+    parts2.push(textBlock(lines2, { x: bx.x + cc.padLeft, y: bx.y + cc.padTop, font: cc.font, lh: cc.lineHeight, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - cc.padTop - cc.padBottom) / cc.lineHeight)) }));
+  }
+  const t = it.target ? b2.items[it.target] : void 0;
+  if (t && t.type !== "comment" && t.type !== "arrow") {
+    const before = Object.values(b2.items).filter((o) => o.id !== it.id && o.target === t.id && isAnnotationCard(o) && ((calloutOf(o) ?? 0) < (num2 ?? 0) || (calloutOf(o) ?? 0) === (num2 ?? 0) && o.id < it.id)).length;
+    parts2.push(pin(c, t.x + t.w - 4 - before * (cc.pin + 2), t.y + 4, num2));
+  }
+  return parts2.join("");
+}
+function drawTodo(c, it) {
+  const { p } = c;
+  const done = todoOf(it)?.state === "done";
+  const ink = done ? p.ink3 : p.marker;
+  const bx = { x: it.x + 5, y: it.y + 5, w: BADGE - 10, h: BADGE - 10 };
+  return [
+    rect({ x: it.x, y: it.y, w: BADGE, h: BADGE }, `fill="${p.paper}" stroke="${ink}" stroke-width="1.2"`, 5),
+    rect(bx, `fill="none" stroke="${ink}" stroke-width="1.5"`, 2),
+    done ? `<path d="M${n3(bx.x + 3)} ${n3(bx.y + 8)}l3.5 3.5l6-7" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` : ""
+  ].join("");
+}
 function drawComment(c, it) {
+  if (isAnnotationCard(it))
+    return drawAnnotation(c, it);
+  if (todoOf(it))
+    return drawTodo(c, it);
   const { p, b: b2 } = c;
   const msgs = 1 + Object.values(b2.items).filter((o) => o.type === "comment" && o.id !== it.id && rootOf3(b2, o) === it.id).length;
   const ink = it.createdBy === "agent" ? p.agent : p.user;
@@ -62802,12 +63348,12 @@ var MARK_TOL = 2;
 var SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
 var isContainer3 = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
 var isLane = (it) => !!it && it.type === "lane";
-var short3 = (s, n4 = 40) => {
+var short4 = (s, n4 = 40) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
   return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
 };
 var nameOf2 = (it) => {
-  const t = short3(it.text);
+  const t = short4(it.text);
   return t ? `${it.role ?? it.type} "${t}"` : `${it.role ?? it.type}`;
 };
 var r = Math.round;
@@ -63005,7 +63551,7 @@ function checkLayout(board, opts = {}) {
     const label2 = planned?.label;
     if (!label2 || !text3)
       continue;
-    const what = `label "${short3(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
+    const what = `label "${short4(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
     if (label2.mode !== "dot")
       marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
     if (label2.dragged) {
@@ -63061,12 +63607,14 @@ function checkLayout(board, opts = {}) {
     if (c.type !== "comment" || c.w <= 8 || c.h <= 8)
       continue;
     const t = c.target ? shown.items[c.target] : void 0;
+    if (t?.type === "comment")
+      continue;
     if (root && !inside2(shown, c, root) && !(t && inScope.has(t.id)))
       continue;
     const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c);
     const screen = t ? uiScreenOf2(t) : void 0;
     const gutter = screen ? uiGutterOf(screen) : void 0;
-    const label2 = `comment "${short3(c.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
+    const label2 = `comment "${short4(c.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
     const into = gutter && screen && t ? `move it into the gutter right of ${nameOf2(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) \u2014 notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf2(t)} onto free paper, or add it without x/y so the canvas places it` : "move it onto free paper";
     const push = (f2) => found.push({ id: c.id, ...f2, severity: "info", ...info?.key ? { frame: info.key } : {} });
     const covered = coverable.map((it) => ({ it, ox: Math.min(c.x + c.w, it.x + it.w) - Math.max(c.x, it.x), oy: Math.min(c.y + c.h, it.y + it.h) - Math.max(c.y, it.y) })).filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL).sort((a, b2) => byReading(a.it, b2.it));
@@ -63077,7 +63625,7 @@ function checkLayout(board, opts = {}) {
       const worst = (leaves.length ? leaves : covered).reduce((a, b2) => a.ox * a.oy >= b2.ox * b2.oy ? a : b2);
       push({ kind: "comment-covers", message: `${label2} covers ${names}${more} (${r(worst.ox)}\xD7${r(worst.oy)} px on ${nameOf2(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) });
     }
-    if (!t || !info?.frameId)
+    if (!t || !info?.frameId || isAnnotationDraft(c))
       continue;
     const f = shown.items[info.frameId];
     if (!f)
@@ -63278,7 +63826,7 @@ function extractNative(tgz) {
   return { ...found[0], pkg };
 }
 var sha256 = (b2) => crypto5.createHash("sha256").update(b2).digest("hex");
-var short4 = (msg) => msg.replace(/\s+/g, " ").trim().slice(0, 160);
+var short5 = (msg) => msg.replace(/\s+/g, " ").trim().slice(0, 160);
 var NO = "no PNG rasterizer";
 function createRasterizer(over = {}) {
   const d = { ...defaultDeps(over.env), ...over };
@@ -63287,15 +63835,15 @@ function createRasterizer(over = {}) {
   let inflight;
   const fromNative = (m2, renderer) => ({ render: (svg, opts) => new m2.Resvg(svg, JSON.stringify(opts)).render().asPng(), renderer });
   const nativeDir = () => path9.join(d.dataDir, "native", "resvg", d.version);
-  const manifestPath = (pin) => path9.join(nativeDir(), `${pin.name.replace(/^@resvg\//, "")}.json`);
-  function cached2(pin) {
+  const manifestPath = (pin2) => path9.join(nativeDir(), `${pin2.name.replace(/^@resvg\//, "")}.json`);
+  function cached2(pin2) {
     let man;
     try {
-      man = JSON.parse(fs8.readFileSync(manifestPath(pin), "utf8"));
+      man = JSON.parse(fs8.readFileSync(manifestPath(pin2), "utf8"));
     } catch {
       return void 0;
     }
-    if (man.name !== pin.name || man.version !== pin.version || man.integrity !== pin.integrity || !/^[\w.-]+\.node$/.test(man.file))
+    if (man.name !== pin2.name || man.version !== pin2.version || man.integrity !== pin2.integrity || !/^[\w.-]+\.node$/.test(man.file))
       return void 0;
     const file2 = path9.join(nativeDir(), man.file);
     let data;
@@ -63306,11 +63854,11 @@ function createRasterizer(over = {}) {
     }
     if (sha256(data) !== man.sha256)
       return void 0;
-    return fromNative(d.loadNative(file2), `resvg ${pin.version} (downloaded native, ${file2})`);
+    return fromNative(d.loadNative(file2), `resvg ${pin2.version} (downloaded native, ${file2})`);
   }
-  async function download(pin) {
+  async function download(pin2) {
     const base = (d.env.UNPROSE_NPM_REGISTRY || REGISTRY).replace(/\/+$/, "");
-    const url2 = pin.resolved.startsWith(REGISTRY) ? base + pin.resolved.slice(REGISTRY.length) : pin.resolved;
+    const url2 = pin2.resolved.startsWith(REGISTRY) ? base + pin2.resolved.slice(REGISTRY.length) : pin2.resolved;
     const res = await d.fetch(url2, { signal: AbortSignal.timeout(d.timeoutMs), redirect: "follow", headers: { "user-agent": userAgent("snapshot") } });
     if (!res.ok)
       throw new Error(`${res.status} ${res.statusText} for ${url2}`);
@@ -63320,24 +63868,24 @@ function createRasterizer(over = {}) {
     const tgz = Buffer.from(await res.arrayBuffer());
     if (tgz.length > MAX_TARBALL)
       throw new Error(`the tarball is ${tgz.length} bytes \u2014 too big`);
-    if (!checkIntegrity(tgz, pin.integrity))
-      throw new IntegrityError(`${pin.name}@${pin.version} failed its integrity check (its sha512 is not the one in package-lock.json) \u2014 nothing was installed`);
+    if (!checkIntegrity(tgz, pin2.integrity))
+      throw new IntegrityError(`${pin2.name}@${pin2.version} failed its integrity check (its sha512 is not the one in package-lock.json) \u2014 nothing was installed`);
     const { file: file2, data, pkg } = extractNative(tgz);
-    if (pkg && (pkg.name !== pin.name || pkg.version !== pin.version))
-      throw new IntegrityError(`the tarball says it is ${pkg.name}@${pkg.version}, not ${pin.name}@${pin.version}`);
+    if (pkg && (pkg.name !== pin2.name || pkg.version !== pin2.version))
+      throw new IntegrityError(`the tarball says it is ${pkg.name}@${pkg.version}, not ${pin2.name}@${pin2.version}`);
     const dir = nativeDir();
     fs8.mkdirSync(dir, { recursive: true });
     const tmp = path9.join(dir, `.${file2}.tmp-${process.pid}`);
     fs8.writeFileSync(tmp, data, { mode: 420 });
     fs8.renameSync(tmp, path9.join(dir, file2));
-    const man = { name: pin.name, version: pin.version, integrity: pin.integrity, file: file2, sha256: sha256(data) };
-    const mtmp = `${manifestPath(pin)}.tmp-${process.pid}`;
+    const man = { name: pin2.name, version: pin2.version, integrity: pin2.integrity, file: file2, sha256: sha256(data) };
+    const mtmp = `${manifestPath(pin2)}.tmp-${process.pid}`;
     fs8.writeFileSync(mtmp, JSON.stringify(man, null, 2) + "\n");
-    fs8.renameSync(mtmp, manifestPath(pin));
+    fs8.renameSync(mtmp, manifestPath(pin2));
   }
-  async function downloadLocked(pin) {
+  async function downloadLocked(pin2) {
     fs8.mkdirSync(nativeDir(), { recursive: true });
-    const lock = path9.join(nativeDir(), `.lock-${pin.name.replace(/^@resvg\//, "")}`);
+    const lock = path9.join(nativeDir(), `.lock-${pin2.name.replace(/^@resvg\//, "")}`);
     const deadline = d.now() + d.lockWaitMs;
     for (; ; ) {
       try {
@@ -63355,7 +63903,7 @@ function createRasterizer(over = {}) {
       } catch {
         continue;
       }
-      const done = cached2(pin);
+      const done = cached2(pin2);
       if (done)
         return done;
       if (d.now() > deadline)
@@ -63363,11 +63911,11 @@ function createRasterizer(over = {}) {
       await new Promise((r2) => setTimeout(r2, 200));
     }
     try {
-      const done = cached2(pin);
+      const done = cached2(pin2);
       if (done)
         return done;
-      await download(pin);
-      const now = cached2(pin);
+      await download(pin2);
+      const now = cached2(pin2);
       if (!now)
         throw new Error("the downloaded native did not verify");
       return now;
@@ -63385,25 +63933,25 @@ function createRasterizer(over = {}) {
       }
     }
     const libc = d.platform === "linux" ? d.libc() : void 0;
-    const pin = selectPin(d.pins, d.platform, d.arch, libc);
-    if (!pin)
+    const pin2 = selectPin(d.pins, d.platform, d.arch, libc);
+    if (!pin2)
       return { why: `${NO}: resvg publishes no prebuilt native for ${d.platform}-${d.arch}${libc ? `-${libc}` : ""} and ${RESVG} is not installed, so the snapshot is SVG` };
     try {
-      const c = cached2(pin);
+      const c = cached2(pin2);
       if (c)
         return c;
     } catch (e) {
-      return { why: `${NO}: the downloaded ${pin.name} would not load (${short4(e.message)}), so the snapshot is SVG` };
+      return { why: `${NO}: the downloaded ${pin2.name} would not load (${short5(e.message)}), so the snapshot is SVG` };
     }
     if (mode === "never-download")
       return { why: `${NO}: ${RESVG} is not installed and downloading it is off (UNPROSE_SNAPSHOT_PNG=never-download), so the snapshot is SVG` };
     try {
-      return await downloadLocked(pin);
+      return await downloadLocked(pin2);
     } catch (e) {
-      const msg = short4(e.message);
+      const msg = short5(e.message);
       if (e instanceof IntegrityError)
         return { why: `${NO}: ${msg}; the snapshot is SVG` };
-      return { why: `${NO}: could not get ${pin.name}@${pin.version} from the npm registry (${msg}), so the snapshot is SVG \u2014 tried again in ${Math.round(d.retryMs / 6e4)} min` };
+      return { why: `${NO}: could not get ${pin2.name}@${pin2.version} from the npm registry (${msg}), so the snapshot is SVG \u2014 tried again in ${Math.round(d.retryMs / 6e4)} min` };
     }
   }
   async function rasterizer() {
@@ -63432,7 +63980,7 @@ function createRasterizer(over = {}) {
       const png = r2.render(svg, { font: { loadSystemFonts: true, defaultFontFamily: "Helvetica" }, background: "rgba(0,0,0,0)" });
       return { png: Buffer.from(png), renderer: r2.renderer };
     } catch (e) {
-      return { why: `rasterizing failed (${short4(e.message)}); here is the SVG`, renderer: "svg" };
+      return { why: `rasterizing failed (${short5(e.message)}); here is the SVG`, renderer: "svg" };
     }
   }
   return { svgToPng: svgToPng2, rasterizer };
@@ -63682,6 +64230,9 @@ function startServer(opts = {}) {
       agentTurns: maxTurns(b2),
       holders,
       handover: handoverOf(b2.meta) ?? null,
+      // TODOs still open, and the person's draft annotations waiting for the holder of the files (docs/canvas.md)
+      todos: todoCounts(b2),
+      drafts: openDrafts(b2).length,
       suggestion,
       ...suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? "asked" : "holder" } : {},
       agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w2) => sameAgent(w2, name)), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
@@ -63925,9 +64476,9 @@ function startServer(opts = {}) {
         throw new HttpError(403, `only ${displayName(ho.to)} accepts this handover \u2014 the files go to it`);
       if (ho.keys.some((k2) => !k2.ready))
         throw new HttpError(409, `not ready yet: ${handoverWaiting(ho)} (canvas_handover({ ready: true })) \u2014 or the person hands them over anyway (board panel \u2192 Hand over files \u2192 Hand over anyway)`);
-      const str2 = (v2, n4) => typeof v2 === "string" && v2.trim() ? v2.trim().slice(0, n4) : void 0;
-      const repo = str2(body.repo, 300);
-      const remote = str2(body.remote, 300);
+      const str3 = (v2, n4) => typeof v2 === "string" && v2.trim() ? v2.trim().slice(0, n4) : void 0;
+      const repo = str3(body.repo, 300);
+      const remote = str3(body.remote, 300);
       const holder = (k2) => ({ agent: ho.to, at: now, from: k2.from, handover: ho.thread, ...repo ? { repo } : {}, ...remote ? { remote: withoutCredentials(remote) } : {} });
       const meta3 = board.meta ?? {};
       const diagrams = { ...meta3.diagrams ?? {} };
@@ -64252,7 +64803,8 @@ function startServer(opts = {}) {
         if (!isAuthor(body.author) && !grant.as)
           throw new HttpError(400, "author must be 'agent' or 'user'");
         const who3 = actor(req, grant, body.author, "agent");
-        const ops = routed(board, keepHandoverMarks(board, stampAttribution(board, assertOps(body.ops), who3.by)), who3.author);
+        const signed = stampTodos(board, stampAttribution(board, assertOps(body.ops), who3.by), who3.author === "agent" ? who3.by ?? LOCAL_AGENT : "person", (/* @__PURE__ */ new Date()).toISOString());
+        const ops = routed(board, keepHandoverMarks(board, signed), who3.author);
         checkMentionRate(ops, who3.author, who3.by);
         if (who3.author === "agent")
           remember(who3.by);
@@ -64599,7 +65151,7 @@ function startServer(opts = {}) {
         if (!parsed.success)
           throw new HttpError(400, `invalid content: ${parsed.error.message}`);
         const now = (/* @__PURE__ */ new Date()).toISOString();
-        const rendered = render(kind, parsed.data, request ? { at: frameOrigin(board.items, request), scope: request.key, now } : { at: body.at, scope: body.scope, now });
+        const rendered = render(kind, parsed.data, request ? { at: frameOrigin(board.items, request), scope: request.key, now, ...request.source ? { source: request.source } : {} } : { at: body.at, scope: body.scope, now });
         const drawn = request ? placeInFrame(board.items, request, rendered, now).items : rendered;
         const traces2 = resolveTraces(drawn, board.items, now);
         const items = [...drawn, ...traces2.wires];

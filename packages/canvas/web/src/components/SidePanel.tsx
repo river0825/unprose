@@ -24,6 +24,11 @@ import { BoardContextPanel } from './BoardAgents'
 import { BoardHandover } from './Handover'
 import { handoverStamp } from '../inspector/handover'
 import { MentionText, MentionTextarea } from './Mention'
+import { itemLink } from '../itemLink'
+import { copyText } from '../clipboard'
+import { isAnnotationDraft, calloutOf, todoOf } from '../../../src/annotations'
+import { BoardTodos } from './TodoList'
+import { ItemMarks, type ItemMarksActions } from './ItemMarks'
 
 interface Props {
   board: Board
@@ -62,6 +67,13 @@ interface Props {
   onHoverItems?: (ids: string[]) => void
   /** show items on the board (move there, flash) without selecting them — a click on a Connected / Wiring link */
   onReveal?: (ids: string[]) => void
+  /** annotations and TODOs (docs/canvas.md → "Notes"): write one on an item (a TODO also about the whole board: null) */
+  onAnnotate: (itemId: string, text: string) => void
+  onAddTodo: (itemId: string | null, text: string, ask?: string) => void
+  onCheckTodo: (id: string, answer?: string) => void
+  onReopenTodo: (id: string) => void
+  /** go to an annotation's, a draft's or a TODO's card on the board */
+  onShowMark: (cardId: string) => void
 }
 
 /** The ids a panel link points at: any element marked \`data-item-link="<id> <id>…"\` (one handler for every list). */
@@ -98,7 +110,7 @@ const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.
 
 type Filter = 'all' | 'agent' | 'user'
 
-export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onUiOps, onPickWireEvent, onDismiss, onHoverItems, onReveal }: Props) {
+export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, sourceRequest, onComment, onChat, onReply, onAnchoredComment, onEditText, onSelect, onMoveToContainer, onLocate, onToast, onWireChat, onUndoWire, onEditChat, onUndoUiText, onUiOps, onPickWireEvent, onDismiss, onHoverItems, onReveal, onAnnotate, onAddTodo, onCheckTodo, onReopenTodo, onShowMark }: Props) {
   const [tab, setTab] = useState<'feed' | 'item' | 'chat' | 'chats' | 'files'>('feed')
   const [nav, setNav] = useState<FileNav>({})
   // Items come live over the websocket; meta (the files snapshot) is re-read — see useFreshMeta. A handover's steps
@@ -128,11 +140,19 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
     if (sourceRequest) setTab('item')
   }, [sourceRequest?.n])
 
+  // the conversations about it: its annotations and TODOs are listed in their own section
   const comments = selected
     ? Object.values(board.items)
-        .filter((i) => i.type === 'comment' && i.target === selected.id)
+        .filter((i) => i.type === 'comment' && i.target === selected.id && calloutOf(i) === undefined && !isAnnotationDraft(i) && !todoOf(i))
         .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
     : []
+  const todoActions = useMemo(() => ({ onShow: onShowMark, onCheck: onCheckTodo, onReopen: onReopenTodo }), [onShowMark, onCheckTodo, onReopenTodo])
+  // an item (not a comment or a wire) carries annotations and TODOs: listed in its panel, with the two ways to add one
+  const markable = selected && selected.type !== 'comment' && selected.type !== 'arrow' ? selected : undefined
+  const marksActions: ItemMarksActions | undefined = markable
+    ? { ...todoActions, onAnnotate: (text) => onAnnotate(markable.id, text), onAddTodo: (text, ask) => onAddTodo(markable.id, text, ask) }
+    : undefined
+  const marksPanel = markable && marksActions ? <ItemMarks key={markable.id} board={liveBoard} item={markable} actions={marksActions} /> : undefined
 
   const visible = changes.filter((c) => filter === 'all' || c.author === filter)
   const needYou = useMemo(() => chatsNeedingYou(board), [board])
@@ -153,6 +173,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
     >
       <BoardContextPanel board={board} onToast={onToast} />
       <BoardHandover board={board} onLocate={onLocate} onToast={onToast} />
+      <BoardTodos board={liveBoard} actions={todoActions} onAdd={(text, ask) => onAddTodo(null, text, ask)} />
       <div className="panel-tabs" role="tablist">
         <button role="tab" aria-selected={activeTab === 'feed'} onClick={() => setTab('feed')}>
           Changes
@@ -272,6 +293,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
             onAnchoredComment={onAnchoredComment}
             onReply={onReply}
             sourceRequest={sourceRequest?.id === selected.id ? sourceRequest : undefined}
+            marks={marksPanel}
           />
         ) : selected ? (
           <ItemDetail
@@ -284,6 +306,7 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
             onToast={onToast}
             onEditText={onEditText}
             onSelect={onSelect}
+            marksPanel={marksPanel}
             diagramPanel={
               selectedDiagram ? (
                 <DiagramFramePanel
@@ -358,11 +381,14 @@ function ItemDetail({
   onSelect,
   wirePanel,
   diagramPanel,
+  marksPanel,
 }: {
   board: Board
   item: Item
   comments: Item[]
   onSelect: (id: string) => void
+  /** its annotations and TODOs (components/ItemMarks.tsx) */
+  marksPanel?: ReactNode
   /** the Event / proposal section of a workflow flow wire */
   wirePanel?: ReactNode
   /** a diagram frame, or an element inside one (docs/diagrams.md) */
@@ -378,13 +404,9 @@ function ItemDetail({
   const containers = Object.values(board.items).filter((i) => isContainer(i) && i.id !== item.id)
   const canMove = !isContainer(item) && item.type !== 'arrow' && item.type !== 'ui' && containers.length > 0
   const copyLink = () => {
-    // a diagram frame opens by its stable key (?frame=), anything else by its item id (?focus=)
-    const key = (item.type === 'frame' ? (item.data?.diagram as { key?: string } | undefined)?.key : undefined)
-    const url = `${location.origin}/b/${encodeURIComponent(board.id)}${key ? `?frame=${encodeURIComponent(key)}` : `?focus=${encodeURIComponent(item.id)}`}`
-    navigator.clipboard
-      .writeText(url)
-      .then(() => onToast('Link copied'))
-      .catch(() => onToast(`Copy this link: ${url}`))
+    // a diagram frame opens by its stable key (?frame=), anything else by its item id (?focus=) — the item menu's too
+    const url = itemLink(board, item, location.origin)
+    void copyText(url).then((ok) => onToast(ok ? 'Link copied' : `Copy this link: ${url}`))
   }
   return (
     <div>
@@ -441,6 +463,8 @@ function ItemDetail({
           </select>
         </div>
       )}
+
+      {marksPanel}
 
       <h3>Comments</h3>
       {comments.length === 0 ? (

@@ -5,6 +5,7 @@
 // with a card, domain-story group outlines that intersect, comments that cover an item or lie outside the diagram
 // frame their target is in. Each finding says what to do in plain words. Shared by the server
 // (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
+import { isAnnotationDraft } from './annotations.js'
 import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
@@ -355,6 +356,8 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
   for (const c of Object.values(shown.items)) {
     if (c.type !== 'comment' || c.w <= 8 || c.h <= 8) continue
     const t = c.target ? shown.items[c.target] : undefined
+    // a reply is drawn inside its thread (a TODO's answer, the holder's answer to a draft), never where it is stored
+    if (t?.type === 'comment') continue
     if (root && !inside(shown, c, root) && !(t && inScope.has(t.id))) continue
     const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c)
     const screen = t ? uiScreenOf(t) : undefined
@@ -374,7 +377,8 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
       const worst = (leaves.length ? leaves : covered).reduce((a, b) => (a.ox * a.oy >= b.ox * b.oy ? a : b))
       push({ kind: 'comment-covers', message: `${label} covers ${names}${more} (${r(worst.ox)}×${r(worst.oy)} px on ${nameOf(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) })
     }
-    if (!t || !info?.frameId) continue
+    // a draft annotation waits in the column right of the frame until the holder draws it from the file
+    if (!t || !info?.frameId || isAnnotationDraft(c)) continue
     const f = shown.items[info.frameId]
     if (!f) continue
     const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) }

@@ -18,7 +18,7 @@ function importsOf(file: string): string[] {
 const rel = (f: string) => path.relative(SRC, f)
 
 type Layer = 'domain' | 'ports' | 'adapters' | 'driving' | 'shim' | 'external'
-const DOMAIN = ['model.ts', 'diff.ts', 'place.ts', 'thumb.ts', 'demo.ts', 'updatePolicy.ts', 'accessPolicy.ts', 'patch.ts', 'proposals.ts', 'routing.ts', 'version.ts', 'outline.ts', 'read.ts', 'shown.ts', 'textMetrics.ts', 'snapshot.ts', 'layoutCheck.ts', 'edgeLabel.ts', 'wireGeometry.ts']
+const DOMAIN = ['model.ts', 'annotations.ts', 'annotationFile.ts', 'todos.ts', 'diff.ts', 'place.ts', 'thumb.ts', 'demo.ts', 'updatePolicy.ts', 'accessPolicy.ts', 'patch.ts', 'proposals.ts', 'routing.ts', 'version.ts', 'outline.ts', 'read.ts', 'shown.ts', 'textMetrics.ts', 'snapshot.ts', 'layoutCheck.ts', 'edgeLabel.ts', 'wireGeometry.ts']
 function layerOf(file: string): Layer {
   const r = rel(file)
   if (DOMAIN.includes(r) || r.startsWith('templates/') || r.startsWith('diagrams/')) return 'domain'
@@ -38,7 +38,8 @@ test('the domain is pure: no IO builtins, no ports, no adapters (zod is the sche
       // node:crypto is hashing (deterministic ids), not IO — the one builtin the domain may use.
       assert.ok(!spec.startsWith('node:') || spec === 'node:crypto', `${rel(f)} imports ${spec}`)
       const t = target(f, spec)
-      assert.ok(t === 'domain' || (t === 'external' && (spec === 'zod' || spec === 'node:crypto')), `${rel(f)} imports ${spec} (${t})`)
+      // yaml is the files' language as zod is the schemas': text in, text out (an annotation added to a design file)
+      assert.ok(t === 'domain' || (t === 'external' && (spec === 'zod' || spec === 'yaml' || spec === 'node:crypto')), `${rel(f)} imports ${spec} (${t})`)
     }
   }
 })

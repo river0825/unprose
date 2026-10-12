@@ -2,15 +2,19 @@ import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { useRef, useState, type ReactNode } from 'react'
 import { ownLock, type ColorToken, type Item } from '../../../../src/model'
 import type { ItemNode } from '../boardToFlow'
-import { CommentBadge, ThreadBody } from '../CommentThread'
+import { annotationOf, calloutOf, isAnnotationDraft, todoOf, type TodoMark } from '../../../../src/annotations'
+import { CommentBadge, ThreadBody, ThreadReplies } from '../CommentThread'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { PlayStoryButton } from '../../components/ReplayBar'
 import { PlayMockButton } from '../../components/PlayBar'
+import { CheckOffField } from '../../components/CheckOff'
 import { SCALES_FONT, fontOf } from '../font'
+import { draftStatus } from '../annotationsView'
+import { todoBy } from '../todoView'
 import { DsIconNode } from './DsIconNode'
-import { CalloutPin, UiNode } from './UiNode'
-import { uiCalloutOf } from '../notesView'
+import { UiNode } from './UiNode'
+import { CalloutPin, DraftGlyph, ItemMarksRow, withMarks } from './Marks'
 import { WireBadges } from '../WireControls'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
@@ -29,7 +33,10 @@ export const Rims = () => (
   </>
 )
 
-/** Shared chrome: agent-change wash, comment-attach click, double-click to edit, connection handles, resize handles. */
+/**
+ * Shared chrome: agent-change wash, comment-attach click, double-click to edit, connection handles, resize handles, and
+ * the annotation pins and TODO markers on the item's top-right corner (flow/nodes/Marks.tsx).
+ */
 export function Shell({
   item,
   pulse,
@@ -41,6 +48,7 @@ export function Shell({
   style,
   onDouble,
   onClick,
+  ownMarks = false,
 }: {
   item: Item
   pulse: boolean
@@ -54,6 +62,8 @@ export function Shell({
   onDouble?: () => void
   /** what a click does (a UI mock element being played, flow/uiPlay.ts); the comment tool's attach comes first */
   onClick?: () => void
+  /** the node draws its marks itself (a UI mock element, beside its callout pins) */
+  ownMarks?: boolean
 }) {
   const edit = useEdit()
   // a locked item (docs/diagrams.md "What a redraw keeps") is not dragged or resized until it is unlocked
@@ -113,6 +123,8 @@ export function Shell({
       {children}
       {locked ? <LockBadge frame={item.type === 'frame'} /> : null}
     </div>
+    {/* a sibling of the box, so a box that clips its content does not cut them */}
+    {ownMarks ? null : <ItemMarksRow />}
     </>
   )
 }
@@ -337,20 +349,146 @@ export function WireframeNode({ data, selected }: NodeProps<ItemNode>) {
 const Tether = () => <Handle id="tether" type="source" position={Position.Top} isConnectable={false} className="tether-handle" />
 
 /**
- * A UI mock's callout card (docs/diagrams.md §6c): what pin `n` on an element is about — the same numbered circle,
- * then the note. An explanation, not a thread: no author line, no reply box, nothing to edit in place (the file holds
- * the note; a double-click does nothing). Pointing at it outlines its pin.
+ * An annotation card (docs/canvas.md → "Notes"; a UI mock's callout, docs/diagrams.md §6c): what pin `n` on an item is
+ * about — the same numbered circle, then the text. An explanation, not a thread: no author line, no reply box. The file
+ * holds the text, so nothing is edited in place (a double-click does nothing) — except an annotation written on the
+ * board only, which has no file. Pointing at it outlines its pin.
  */
 function CalloutCard({ item, n, pulse, selected }: { item: Item; n: number; pulse: boolean; selected: boolean }) {
   const edit = useEdit()
-  const target = item.target
-  const hover = target && edit.hoverCallout ? (on: boolean) => edit.hoverCallout!(target, n, on, 'card') : undefined
+  const own = annotationOf(item)?.board === true
+  const hover = (on: boolean) => edit.hoverMark?.(item.id, on, 'card')
   return (
-    <Shell item={item} pulse={pulse} selected={selected} className="callout-card" handles={false} style={{ minHeight: item.h }} onDouble={() => undefined}>
-      <div className="callout" onPointerEnter={hover ? () => hover(true) : undefined} onPointerLeave={hover ? () => hover(false) : undefined}>
+    <Shell item={item} pulse={pulse} selected={selected} className={`callout-card ${own ? 'on-board' : ''}`} handles={false} style={{ minHeight: item.h }} onDouble={own ? undefined : () => undefined}>
+      <div className="callout" onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
         <CalloutPin n={n} />
-        <p className="callout-text">{item.text}</p>
+        {own ? <Text item={item} className="callout-text" placeholder="What is it for?" /> : <p className="callout-text">{item.text}</p>}
       </div>
+    </Shell>
+  )
+}
+
+/**
+ * The person's draft annotation (src/annotations.ts), waiting for the holder of the files: the annotation card's
+ * family, dashed — a ✎ instead of a number, the text, and where the discussion stands. A click opens its thread, where
+ * the holder answers (and the person replies). Settled, it is not drawn: the card drawn from the file replaces it.
+ */
+function DraftCard({ item, replies, pulse, selected }: { item: Item; replies: Item[]; pulse: boolean; selected: boolean }) {
+  const edit = useEdit()
+  const hover = (on: boolean) => edit.hoverMark?.(item.id, on, 'card')
+  const status = draftStatus(replies, edit.holderOf?.(item.id))
+  const open = () => edit.setCommentOpen(item.id, true)
+  return (
+    <Shell item={item} pulse={pulse} selected={selected} className="callout-card draft-card" handles={false} style={{ minHeight: item.h }} onDouble={open}>
+      {/* the click goes on to the node too, so the opened thread is selected and drawn above its neighbours */}
+      <div className="callout" title="Your annotation, proposed to the holder of the files — click to open the thread" onClick={() => {
+          if (!edit.attachTarget) open()
+        }} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
+        <span className="ui-pin draft" role="img" aria-label="Draft annotation">
+          <DraftGlyph />
+        </span>
+        <p className="callout-text">{item.text}</p>
+        <p className="draft-status">{status}</p>
+      </div>
+    </Shell>
+  )
+}
+
+/** A draft opened to its thread: what it is, then the discussion with the holder and the reply box. */
+function DraftThread({ item, replies, pulse, selected }: { item: Item; replies: Item[]; pulse: boolean; selected: boolean }) {
+  const edit = useEdit()
+  const holder = edit.holderOf?.(item.id)
+  const withEdit = Boolean((item.data?.discuss as { edit?: unknown } | undefined)?.edit)
+  return (
+    <Shell item={item} pulse={pulse} selected={selected} resizable className="comment user draft-thread" handles={false} style={{ minHeight: item.h }} onDouble={() => undefined}>
+      <div className="draft-head">
+        <span className="ui-pin draft" aria-hidden="true">
+          <DraftGlyph />
+        </span>
+        Draft annotation · for {holder ?? 'the holder of the files'}
+      </div>
+      {withEdit ? null : <p className="draft-note">No diff with it: {holder ?? 'the holder'} writes it into the file by hand.</p>}
+      <ThreadBody messages={[item, ...replies]} />
+    </Shell>
+  )
+}
+
+/**
+ * A TODO (src/annotations.ts): something still to be confirmed with someone else — a checkbox, the text, who to ask,
+ * the agent that opened it, its replies. Ticking it asks what was found out (CheckOffField); done, it is muted with
+ * its answer, and a tick reopens it. Opened, its thread is under it.
+ */
+function TodoCard({ item, todo, open, replies, pulse, selected }: { item: Item; todo: TodoMark; open: boolean; replies: Item[]; pulse: boolean; selected: boolean }) {
+  const edit = useEdit()
+  const [asking, setAsking] = useState(false)
+  const done = todo.state === 'done'
+  const by = todoBy(item)
+  const hover = (on: boolean) => edit.hoverMark?.(item.id, on, 'card')
+  const n = replies.length
+  return (
+    <Shell item={item} pulse={pulse} selected={selected} resizable className={`todo-card ${done ? 'done' : ''}`} handles={false} style={{ minHeight: item.h }}>
+      <div className="todo-row" onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={done}
+          className="todo-check nodrag nopan"
+          aria-label={done ? 'Done — reopen this TODO' : 'Check this TODO off'}
+          title={done ? `Done${todo.doneBy ? ` (${todo.doneBy === 'person' ? 'you' : todo.doneBy})` : ''} — click to reopen` : 'Check it off'}
+          onPointerDown={stop}
+          onMouseDown={stop}
+          onDoubleClick={stop}
+          // the click goes on to the node: the card is selected, so its field is drawn above its neighbours
+          onClick={() => {
+            if (done) edit.reopenTodo?.(item.id)
+            else setAsking((a) => !a)
+          }}
+        >
+          {done ? (
+            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.5 8.5l3 3 6-7" />
+            </svg>
+          ) : null}
+        </button>
+        <div className="todo-main">
+          <Text item={item} className="todo-text" placeholder="What still has to be confirmed?" />
+          <div className="todo-meta">
+            <span className="todo-tag">TODO</span>
+            {todo.ask ? <span>ask: {todo.ask}</span> : null}
+            {by ? <span>by {by}</span> : null}
+            <button
+              type="button"
+              className="todo-replies nodrag nopan"
+              aria-expanded={open}
+              onPointerDown={stop}
+              onDoubleClick={stop}
+              onClick={(e) => {
+                e.stopPropagation()
+                edit.setCommentOpen(item.id, !open)
+              }}
+            >
+              {open ? 'fold' : n ? `${n} ${n === 1 ? 'reply' : 'replies'}` : 'reply'}
+            </button>
+          </div>
+          {done && todo.answer ? <p className="todo-answer">✓ {todo.answer}</p> : null}
+        </div>
+      </div>
+      {asking && !done ? (
+        <CheckOffField
+          compact
+          answeredBy={edit.answeredBy?.()}
+          onCancel={() => setAsking(false)}
+          onDone={(answer) => {
+            setAsking(false)
+            edit.checkTodo?.(item.id, answer)
+          }}
+        />
+      ) : null}
+      {open ? (
+        <div className="todo-thread comment">
+          <ThreadReplies root={item} replies={replies} />
+        </div>
+      ) : null}
     </Shell>
   )
 }
@@ -358,9 +496,13 @@ function CalloutCard({ item, n, pulse, selected }: { item: Item; n: number; puls
 export function CommentNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse, open, done, replies } = data
   const edit = useEdit()
-  const callout = uiCalloutOf(item)
+  const callout = calloutOf(item)
   if (callout !== undefined) return <CalloutCard item={item} n={callout} pulse={pulse} selected={Boolean(selected)} />
   const messages = [item, ...replies]
+  if (isAnnotationDraft(item))
+    return open || messages.some((m) => m.id === edit.editingId) ? <DraftThread item={item} replies={replies} pulse={pulse} selected={Boolean(selected)} /> : <DraftCard item={item} replies={replies} pulse={pulse} selected={Boolean(selected)} />
+  const todo = todoOf(item)
+  if (todo) return <TodoCard item={item} todo={todo} open={open || replies.some((m) => m.id === edit.editingId)} replies={replies} pulse={pulse} selected={Boolean(selected)} />
   if (!open && !messages.some((m) => m.id === edit.editingId))
     return (
       <>
@@ -375,15 +517,16 @@ export function CommentNode({ data, selected }: NodeProps<ItemNode>) {
   )
 }
 
+// every kind of item can carry annotation pins and TODO markers (its node data `marks`); a comment never does
 export const nodeTypes = {
-  dsIcon: DsIconNode,
-  sticky: StickyNode,
-  text: TextNode,
-  frame: FrameNode,
-  lane: LaneNode,
-  card: CardNode,
-  wireframe: WireframeNode,
-  ui: UiNode,
+  dsIcon: withMarks(DsIconNode),
+  sticky: withMarks(StickyNode),
+  text: withMarks(TextNode),
+  frame: withMarks(FrameNode),
+  lane: withMarks(LaneNode),
+  card: withMarks(CardNode),
+  wireframe: withMarks(WireframeNode),
+  ui: withMarks(UiNode),
   comment: CommentNode,
   // arrows are edges; a stray arrow item with missing endpoints renders as a sticky so it is visible
   arrow: StickyNode,

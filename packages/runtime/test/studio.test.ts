@@ -476,6 +476,26 @@ test('a source-dialog edit is read from discuss.edit and shown first in the brie
   assert.match(brief, /\*\*before\*\* applying/)
 })
 
+test('the person\'s draft annotation: a chat whose brief says judge it, then apply it at once when it is sound', async () => {
+  const { chatRequest, sessionLabel } = await import('../src/application/studio.js')
+  const board = { id: 'b1', title: 't', seq: 2, items: {
+    e: { id: 'e', type: 'sticky', role: 'event', text: 'Order paid', data: { element: 'paid' } },
+    d: { id: 'd', type: 'comment', text: 'Refunds start here', target: 'e', createdBy: 'user', data: { annotation: { draft: true, on: 'paid', file: 'design/shop.es.yaml' }, discuss: { about: ['e'], edit: { file: 'design/shop.es.yaml', base: 'abc123', diff: '--- a\n+++ b\n@@ -1 +1,3 @@\n x\n+annotations:\n+  - on: paid\n' } }, to: ['agent'] } },
+    n: { id: 'n', type: 'comment', text: 'The bank decides', target: 'e', createdBy: 'user', data: { annotation: { draft: true, on: 'paid' }, discuss: { about: ['e'] } } },
+  } }
+  const req = chatRequest(board, board.items.d, 2)!
+  assert.deepEqual(req.annotation, { on: 'paid', file: 'design/shop.es.yaml' })
+  assert.equal(sessionLabel(req), `${req.block} · draft annotation`)
+  const brief = renderBrief({ req, board, canvasUrl: 'http://x' })
+  assert.match(brief, /## The person's draft annotation/)
+  assert.match(brief, /Judge it first: is it true to the design\? does it contradict the file or another annotation\? does it say what the item is for\?/)
+  assert.match(brief, /If it is sound, apply it right away \(the person wrote it, so that counts as their consent\): check the file still has sha-1 `abc123`, lint, and redraw with `--applied d`/)
+  assert.match(brief, /```diff\n--- a/)
+  assert.doesNotMatch(brief, /## Proposed edit/)
+  const bare = renderBrief({ req: chatRequest(board, board.items.n, 2)!, board, canvasUrl: 'http://x' })
+  assert.match(bare, /No edit came with it \(the board did not have the file\): add `- on: paid`/)
+})
+
 // ── §10: an edit proposed by another (remote) agent ─────────────────────
 
 const DIFF = '--- a/dev/workflow.yaml\n+++ b/dev/workflow.yaml\n@@ -40,1 +40,1 @@\n-    ai: planner\n+    ai: architect\n'

@@ -1,7 +1,9 @@
 // Reading a board at agent scale (docs/canvas.md "Reading big boards"): filters (a frame, types, ids, a text),
 // three formats (outline, json, summary), pages (`limit` / `cursor`) and a hard size cap that says what it left
 // out and how to get it. Pure — the server, the MCP tool and the CLI all use it.
+import { isAnnotationCard, isAnnotationDraft } from './annotations.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
+import { isTodo, todoCounts } from './todos.js'
 import { containmentTree, frameKeys, isContainer, itemsInFrame, KIND_LABEL, outline, pendingTag, resolveFrame, rootOf, short, withThreads, byPos, descendants } from './outline.js'
 import { contextOf, displayName, holdersOf, responderLabel, responderOf } from './routing.js'
 
@@ -81,7 +83,7 @@ export function selectIds(board: Board, o: Pick<ReadOptions, 'frame' | 'types' |
     set = new Set([...set].filter((id) => {
       const it = board.items[id]
       const ui = (it.data?.ui as { type?: string } | undefined)?.type
-      return t.has(it.type) || (it.role && t.has(it.role.toLowerCase())) || (ui && t.has(ui)) || (t.has('thread') && it.type === 'comment')
+      return t.has(it.type) || (it.role && t.has(it.role.toLowerCase())) || (ui && t.has(ui)) || (t.has('thread') && it.type === 'comment') || (t.has('annotation') && isAnnotationCard(it)) || (t.has('todo') && isTodo(it))
     }))
   }
   if (o.text) {
@@ -191,16 +193,18 @@ function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions
   const r = responderOf(board.meta)
   out.push(`Answered by: ${responderLabel(r)}`)
   const threadsOf = (set: Item[]) => {
-    const roots = set.filter((c) => c.type === 'comment' && rootOf(board, c).id === c.id)
+    // annotation cards and TODOs are not conversations: counted apart
+    const roots = set.filter((c) => c.type === 'comment' && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c))
     const all = Object.values(board.items).filter((c) => c.type === 'comment')
     let waiting = 0
     for (const root of roots) {
       const msgs = all.filter((c) => rootOf(board, c).id === root.id).sort((a, b) => String(a.data?.postedAt ?? a.updatedAt).localeCompare(String(b.data?.postedAt ?? b.updatedAt)))
       if (msgs[msgs.length - 1]?.createdBy === 'user') waiting++
     }
-    const proposals = roots.filter((c) => (c.data?.discuss as { edit?: unknown } | undefined)?.edit).length
-    return { threads: roots.length, waiting, proposals }
+    const proposals = roots.filter((c) => (c.data?.discuss as { edit?: unknown } | undefined)?.edit || isAnnotationDraft(c)).length
+    return { threads: roots.length, waiting, proposals, annotations: set.filter((c) => isAnnotationCard(c)).length }
   }
+  const notes = (t: { annotations: number }) => (t.annotations ? ` · ${t.annotations} annotation(s)` : '')
   const counts = (set: Item[]) => {
     const m = new Map<string, number>()
     for (const i of set) {
@@ -224,13 +228,15 @@ function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions
     out.push(`  ${inside.length} items: ${counts(inside) || '—'}`)
     const lanes = (tree.children.get(f.id) ?? []).filter(isContainer).sort(byPos)
     if (lanes.length) out.push(`  ${lanes.length} ${lanes[0].role === 'column' ? 'columns' : 'lanes / groups'}: ${lanes.slice(0, 12).map((l) => `${short(l.text, 24) || l.id}${l.role === 'column' ? ` (${(tree.children.get(l.id) ?? []).length})` : ''}`).join(' · ')}${lanes.length > 12 ? ' · …' : ''}`)
-    out.push(`  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ''}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ''}${pend ? ` · ${pend} proposed element(s)` : ''}`)
+    out.push(`  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ''}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ''}${pend ? ` · ${pend} proposed element(s)` : ''}${notes(t)}`)
   }
   const rest = items.filter((i) => !seen.has(i.id))
   if (rest.length) {
     const t = threadsOf(rest)
-    out.push('', `## ${frames.length ? 'outside the diagram frames' : 'the board'}`, `  ${rest.length} items: ${counts(rest) || '—'}`, `  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ''}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ''}`)
+    out.push('', `## ${frames.length ? 'outside the diagram frames' : 'the board'}`, `  ${rest.length} items: ${counts(rest) || '—'}`, `  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ''}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ''}${notes(t)}`)
   }
+  const todos = todoCounts(board)
+  if (todos.open || todos.done) out.push('', `TODOs: ${todos.open} open, ${todos.done} done — to confirm with someone else, not questions to you (canvas_todo lists them)`)
   out.push('', `Next: canvas_read_board with frame: "<key>" (outline of one diagram), types / text / ids to narrow, format: "json" with fields for geometry; canvas_snapshot to see it; canvas_check_layout for overlaps and clipped text.`)
   void o
   return out.join('\n')

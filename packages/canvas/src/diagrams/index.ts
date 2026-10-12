@@ -1,7 +1,7 @@
 // `@awd/canvas/diagrams` — the pure diagram layer (docs/diagrams.md): content schemas with stable element
 // ids, the EventStorming grammar check, and the EventStorming → story map proposer. No node builtins, so
 // the CLI and the web share it.
-export { slugify, idAllocator, parseTraceRef, DIAGRAM_KEY, TRACE_LABEL, TRACE_RELS, traceSchema, type Trace, type TraceRel } from './ids.js'
+export { slugify, idAllocator, parseTraceRef, DIAGRAM_KEY, TRACE_LABEL, TRACE_RELS, traceSchema, annotationSchema, annotationsSchema, type Trace, type TraceRel, type AnnotationEntry } from './ids.js'
 export {
   eventStormingSchema,
   normalizeEventStorming,
@@ -80,7 +80,7 @@ export { proposeFromDomainStory, type ProposeFromDomainStoryOptions } from './pr
 export { diagramOf, diagramFrames, diagramSpecOf, diagramFrameId, type DiagramSpec, type DiagramInfo, type DiagramFrameKind } from '../model.js'
 export { gotoTargets, rankTargets, type GotoTarget } from './goto.js'
 export { contentSchemaFor, unknownFields, unknownContentFields, type UnknownField } from './check.js'
-export { KIND_ALIASES, designFromObject, yamlCommentHint, lintDesignContent, withDesignFindings, findingLine, frameOf, growFrame, proposalOps, type DesignFile, type DesignFinding } from './designFile.js'
+export { KIND_ALIASES, designFromObject, yamlCommentHint, lintDesignContent, annotationFindings, withDesignFindings, findingLine, frameOf, growFrame, proposalOps, type DesignFile, type DesignFinding } from './designFile.js'
 export {
   placedByUser,
   keepUserLayout,

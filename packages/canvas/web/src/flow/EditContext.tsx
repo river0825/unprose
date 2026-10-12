@@ -39,8 +39,21 @@ export interface EditApi {
    * or on its card — outline its pin
    */
   hoverCallout?: (elementId: string, n: number, on: boolean, from: 'pin' | 'card') => void
-  /** a click on callout `n`'s pin: select its card and bring it into view (in Notes: badges, show or hide the card) */
+  /** a click on callout `n`'s pin: select its card and bring it into view (in Annotations: pins, show or hide the card) */
   showCallout?: (elementId: string, n: number) => void
+  /**
+   * the pointer is on (or off) a marker on an item — an annotation's pin, a draft's ✎, a TODO's square — or on the card
+   * it stands for (flow/annotationsView.ts): light the other one
+   */
+  hoverMark?: (cardId: string, on: boolean, from: 'pin' | 'card') => void
+  /** a click on a marker: select its card and bring it into view (a card not drawn — Annotations: pins — is shown, or put away again) */
+  showMark?: (cardId: string) => void
+  /** check a TODO off, with what was found out (posted in its thread for the Answered by agent), or reopen a done one */
+  checkTodo?: (id: string, answer?: string) => void
+  reopenTodo?: (id: string) => void
+  /** who a draft annotation is for (the holder of its file), and who answers the board (Answered by), as people read them */
+  holderOf?: (draftId: string) => string | undefined
+  answeredBy?: () => string | undefined
 }
 
 export const EditContext = createContext<EditApi>({

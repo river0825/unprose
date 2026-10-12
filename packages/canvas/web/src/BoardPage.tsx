@@ -35,9 +35,18 @@ import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
 import { nodeTypes } from './flow/nodes'
 import { useStoredSet } from './flow/storedSet'
-import { NotesControls, TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useNotesMode, useTraceView, useWireView } from './flow/WireControls'
+import { AnnotationsControls, NotesControls, TodosControls, TraceControls, TRACE_MODE_NAMES, WireBadgeContext, WireControls, MODE_NAMES, useAnnotationsMode, useNotesMode, useTodosMode, useTraceView, useWireView } from './flow/WireControls'
 import { applyTraceView, traceCounts, TRACE_MODES } from './flow/traceView'
-import { calloutCommentOf, hasComments, litCallouts, notesShown, NOTES_MODE_NAMES, type CommentShown, type NotesMode } from './flow/notesView'
+import { calloutCommentOf, hasComments, notesShown, NOTES_MODE_NAMES, type CommentShown, type NotesMode } from './flow/notesView'
+import { annotateHint, annotateWhere, ANNOTATIONS_MODE_NAMES, besideItem, boardAnnotation, freeSpotBeside, draftHolder, draftSize, hasAnnotations, isAnnotation, litMarks, marksByTarget, type AnnotationsMode, type ItemMarks } from './flow/annotationsView'
+import { checkOffOps, hasTodos, newTodo, reopenOps, todoSize, todoVisible, TODOS_MODE_NAMES, type TodosMode } from './flow/todoView'
+import { todoOf } from '../../src/annotations'
+import { displayName, responderName, responderOf } from '../../src/routing'
+import { api } from './api'
+import { sha1 } from './inspector/diff'
+import { MarkInput, type MarkInputState } from './components/MarkInput'
+import { itemLink } from './itemLink'
+import { copyText } from './clipboard'
 import { sameWorkObject } from './diagrams/sameObject'
 import { applyWireMode, catchAllWires, type WireBadge } from './flow/catchAll'
 import { useBoard } from './store'
@@ -99,6 +108,7 @@ function isInside(board: Board, id: string, container: string): boolean {
 const snap = (n: number) => Math.round(n / 10) * 10
 const NO_PULSE: ReadonlySet<string> = new Set()
 const NO_COMMENTS: ReadonlyMap<string, CommentShown> = new Map()
+const NO_MARKS: ReadonlyMap<string, ItemMarks> = new Map()
 const sameShown = (a: ReadonlyMap<string, CommentShown>, b: ReadonlyMap<string, CommentShown>) => {
   if (a.size !== b.size) return false
   for (const [k, v] of a) if (b.get(k) !== v) return false
@@ -157,20 +167,46 @@ function BoardInner({ id }: { id: string }) {
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [openBundles, setOpenBundles] = useState<Set<string>>(() => new Set())
   // which comments this viewer sees (flow/notesView.ts): all / badges / none; `expandedNotes` are the threads opened
-  // in this session beyond the stored set — a settled proposal's ✓, a badge in `badges` mode — and empty again on a mode change
+  // in this session beyond the stored set — a settled proposal's ✓, a badge in `badges` mode, a card shown from its
+  // pin — and empty again on a mode change. Annotations (all / pins / none) and TODOs (open / all / none) have their own.
   const [notesMode, setNotesModeStored, cycleNotesStored] = useNotesMode()
+  const [annotationsMode, setAnnotationsModeStored, cycleAnnotationsStored] = useAnnotationsMode()
+  const [todosMode, setTodosModeStored, cycleTodosStored] = useTodosMode()
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(() => new Set())
+  const foldAll = useCallback(() => setExpandedNotes((prev) => (prev.size ? new Set() : prev)), [])
   const setNotesMode = useCallback(
     (m: NotesMode) => {
       setNotesModeStored(m)
-      setExpandedNotes((prev) => (prev.size ? new Set() : prev))
+      foldAll()
     },
-    [setNotesModeStored],
+    [setNotesModeStored, foldAll],
   )
   const cycleNotes = useCallback(() => {
-    setExpandedNotes((prev) => (prev.size ? new Set() : prev))
+    foldAll()
     return cycleNotesStored()
-  }, [cycleNotesStored])
+  }, [cycleNotesStored, foldAll])
+  const setAnnotationsMode = useCallback(
+    (m: AnnotationsMode) => {
+      setAnnotationsModeStored(m)
+      foldAll()
+    },
+    [setAnnotationsModeStored, foldAll],
+  )
+  const cycleAnnotations = useCallback(() => {
+    foldAll()
+    return cycleAnnotationsStored()
+  }, [cycleAnnotationsStored, foldAll])
+  const setTodosMode = useCallback(
+    (m: TodosMode) => {
+      setTodosModeStored(m)
+      foldAll()
+    },
+    [setTodosModeStored, foldAll],
+  )
+  const cycleTodos = useCallback(() => {
+    foldAll()
+    return cycleTodosStored()
+  }, [cycleTodosStored, foldAll])
   const toggleBadge = useCallback(
     (b: WireBadge) =>
       setExpandedWires((prev) => {
@@ -201,13 +237,18 @@ function BoardInner({ id }: { id: string }) {
   // starting or ending an edit that changes nothing here does not rebuild the flow graph
   const shownRef = useRef(NO_COMMENTS)
   const commentsShown = useMemo(() => {
-    const next = laid ? notesShown(laid, { mode: notesMode, open: openComments, expanded: expandedNotes, editing: editingId }) : NO_COMMENTS
+    const next = laid ? notesShown(laid, { mode: notesMode, annotations: annotationsMode, todos: todosMode, open: openComments, expanded: expandedNotes, editing: editingId }) : NO_COMMENTS
     if (sameShown(shownRef.current, next)) return shownRef.current
     return (shownRef.current = next)
-  }, [laid, notesMode, openComments, expandedNotes, editingId])
-  const derived = useMemo(() => (laid ? boardToFlow(laid, NO_PULSE, commentsShown, { show: wireView.catchAll, expanded: expandedWires }) : { nodes: [], edges: [] as Edge[] }), [laid, commentsShown, wireView.catchAll, expandedWires])
+  }, [laid, notesMode, annotationsMode, todosMode, openComments, expandedNotes, editingId])
+  // the annotation pins and TODO markers on every item, once per board change (flow/annotationsView.ts): node data, so
+  // only the items whose marks changed are drawn again
+  const marks = useMemo(() => (laid ? marksByTarget(laid, { annotations: annotationsMode, todos: todosMode }) : NO_MARKS), [laid, annotationsMode, todosMode])
+  const derived = useMemo(() => (laid ? boardToFlow(laid, NO_PULSE, commentsShown, { show: wireView.catchAll, expanded: expandedWires }, marks) : { nodes: [], edges: [] as Edge[] }), [laid, commentsShown, wireView.catchAll, expandedWires, marks])
   const hasCatchAll = useMemo(() => (board ? catchAllWires(board).size > 0 : false), [board])
   const anyComments = useMemo(() => (board ? hasComments(board) : false), [board])
+  const anyAnnotations = useMemo(() => (board ? hasAnnotations(board) : false), [board])
+  const anyTodos = useMemo(() => (board ? hasTodos(board) : false), [board])
   useEffect(() => {
     const card = cardWhenDrawn.current && derived.nodes.some((n) => n.id === cardWhenDrawn.current) ? cardWhenDrawn.current : null
     if (card) cardWhenDrawn.current = null
@@ -236,15 +277,16 @@ function BoardInner({ id }: { id: string }) {
   // a link under the pointer in the side panel lights up the item(s) it points at on the board
   const [panelHover, setPanelHover] = useState<string[]>([])
   const onHoverItems = useCallback((ids: string[]) => setPanelHover((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids)), [])
-  // a UI mock's callouts (docs/diagrams.md §6c): a pin under the pointer lights its card through panelHover, a card
-  // under the pointer outlines its pin; only the element holding that pin gets a new node (`calloutLit`)
+  // annotations, drafts and TODOs (flow/annotationsView.ts; a UI mock's callouts, docs/diagrams.md §6c): a marker under
+  // the pointer lights its card through panelHover, a card under the pointer outlines its marker; only the item holding
+  // that marker gets a new node (`markLit`, and `calloutLit` for a UI mock element's numbered pin)
   const [cardHover, setCardHover] = useState<string | null>(null)
-  const litPins = useMemo(() => litCallouts(board ?? undefined, cardHover ? [...panelHover, cardHover] : panelHover), [board, panelHover, cardHover])
-  // a pin or card that goes away under the pointer (Shift+N) never says it was left: nothing stays lit
+  const litPins = useMemo(() => litMarks(board ?? undefined, cardHover ? [...panelHover, cardHover] : panelHover), [board, panelHover, cardHover])
+  // a marker or card that goes away under the pointer (Shift+N / A / T) never says it was left: nothing stays lit
   useEffect(() => {
     setCardHover(null)
     onHoverItems([])
-  }, [notesMode, onHoverItems])
+  }, [notesMode, annotationsMode, todosMode, onHoverItems])
   // "show it on the board" from a panel link: the view moves there and the item flashes for a moment
   const [flashIds, setFlashIds] = useState<string[]>([])
   const hasTraces = useMemo(() => (board ? Object.values(board.items).some((it) => it.type === 'arrow' && it.role === 'trace') : false), [board])
@@ -284,7 +326,7 @@ function BoardInner({ id }: { id: string }) {
       const count = traceBadges?.get(n.id)
       if (pulsed.has(n.id)) n = { ...n, data: { ...n.data, pulse: true } }
       const lit = litPins.get(n.id)
-      if (lit !== undefined) n = { ...n, data: { ...n.data, calloutLit: lit } as ItemNode['data'] }
+      if (lit !== undefined) n = { ...n, data: { ...n.data, markLit: lit.card, ...(lit.n !== undefined ? { calloutLit: lit.n } : {}) } }
       if (sameObject.has(n.id)) n = { ...n, className: `${n.className ?? ''} same-object` }
       if (!on.has(n.id) && !count) return n
       // the badge is drawn by CSS from the count (styles.css .has-traces), so every kind of node gets it
@@ -594,6 +636,115 @@ function BoardInner({ id }: { id: string }) {
     },
     [board, commit, flow, setOpenComment],
   )
+
+  // ---- annotations and TODOs (docs/canvas.md → "Notes"; flow/annotationsView.ts, flow/todoView.ts)
+
+  /**
+   * The person's annotation on an item: drawn from a file → a draft for the holder of the files, carrying the edit to
+   * the file when the board has the whole file (else without it: the holder writes it in by hand); no file behind it →
+   * a numbered card on the board itself.
+   */
+  const addAnnotation = useCallback(
+    async (targetId: string, text: string) => {
+      const t = board?.items[targetId]
+      if (!board || !t || !text.trim()) return
+      const name = (t.text ?? t.label ?? t.type).split('\n')[0].slice(0, 40)
+      const now = new Date().toISOString()
+      if (annotateWhere(board, t).kind === 'board') {
+        void commit([{ kind: 'add', item: boardAnnotation(board, t, text.trim(), { id: newId('c'), now }) }], `annotated '${name}'`)
+        return
+      }
+      // the file as the board has it now: meta does not travel over the websocket (inspector/useFreshMeta.ts); the
+      // draft is built with the yaml parser, loaded now
+      const [fresh, { annotationDraft, withBase }] = await Promise.all([
+        api.getBoard(board.id).then(
+          (b) => ({ ...board, meta: b.meta }),
+          () => board,
+        ),
+        import('./flow/annotationDraft'),
+      ])
+      const plan = annotationDraft(fresh, t, text.trim())
+      if (!plan) return
+      const data = plan.baseText !== undefined ? withBase(plan, await sha1(plan.baseText)) : plan.data
+      const size = draftSize(text.trim())
+      const item = makeItem({ type: 'comment', ...besideItem(board, t, size, true), ...size, text: text.trim(), target: targetId, data })
+      void commit([{ kind: 'add', item }], `proposed an annotation on '${name}'`)
+      const who = plan.holder ? displayName(plan.holder) : 'the holder of the files'
+      store.toast(plan.why ? `Draft for ${who}, without a diff (${plan.why}): they write it into the file by hand` : `Draft for ${who}: they add it to ${plan.file}`)
+    },
+    [board, commit, store],
+  )
+
+  /** A TODO on an item (beside it, on free paper) or about the whole board (near the top-left of the view). Wakes no agent. */
+  const addTodo = useCallback(
+    (targetId: string | undefined, text: string, ask?: string) => {
+      if (!board || !text.trim()) return
+      const t = targetId ? board.items[targetId] : undefined
+      const rect = wrapRef.current?.getBoundingClientRect()
+      const at = t ? freeSpotBeside(board, t, todoSize(text)) : rect ? flow.screenToFlowPosition({ x: rect.left + 48, y: rect.top + 48 }) : { x: 0, y: 0 }
+      const item = newTodo(t, text, ask, { id: newId('c'), now: new Date().toISOString(), at })
+      void commit([{ kind: 'add', item }], t ? `added a TODO on '${(t.text ?? t.label ?? t.type).split('\n')[0].slice(0, 40)}'` : 'added a TODO about the board')
+    },
+    [board, commit, flow],
+  )
+
+  /** Check a TODO off; with an answer, the answer is posted in its thread (and goes to the Answered by agent). */
+  const checkTodo = useCallback(
+    (iid: string, answer?: string) => {
+      if (!board) return
+      const ops = checkOffOps(board, iid, answer, { now: new Date().toISOString(), replyId: newId('c') })
+      if (ops.length) void commit(ops, answer?.trim() ? `checked off a TODO: '${answer.trim().slice(0, 40)}'` : 'checked off a TODO')
+    },
+    [board, commit],
+  )
+  const reopenTodo = useCallback(
+    (iid: string) => {
+      const ops = board ? reopenOps(board, iid) : []
+      if (ops.length) void commit(ops, 'reopened a TODO')
+    },
+    [board, commit],
+  )
+
+  /**
+   * Show the card of an annotation, draft or TODO: select it and bring it into view when it is off screen (`center`:
+   * always). A card the switches do not draw (Annotations: pins, a done TODO under TODOs: open) is drawn for this
+   * viewer first; with `toggle`, a second click on its marker puts it away again.
+   */
+  const revealCard = useCallback(
+    (cardId: string, o: { toggle?: boolean; center?: boolean } = {}) => {
+      const c = board?.items[cardId]
+      if (!c) return
+      const todo = todoOf(c)
+      const onDemand = isAnnotation(c) ? annotationsMode !== 'all' : todo ? !todoVisible(todo, todosMode) : false
+      if (onDemand && o.toggle && expandedNotes.has(cardId)) {
+        setExpandedNotes((prev) => {
+          const next = new Set(prev)
+          next.delete(cardId)
+          return next
+        })
+        if (selectedRef.current.includes(cardId)) select([])
+        return
+      }
+      if (onDemand && !expandedNotes.has(cardId)) {
+        setExpandedNotes((prev) => new Set(prev).add(cardId))
+        cardWhenDrawn.current = cardId
+      } else select([cardId])
+      const r = wrapRef.current?.getBoundingClientRect()
+      if (!r) return
+      const [a, b] = [flow.flowToScreenPosition({ x: c.x, y: c.y }), flow.flowToScreenPosition({ x: c.x + c.w, y: c.y + c.h })]
+      if (!o.center && a.x >= r.left && a.y >= r.top && b.x <= r.right && b.y <= r.bottom) return
+      views.mark()
+      flow.setCenter(c.x + c.w / 2, c.y + c.h / 2, { zoom: o.center ? Math.max(flow.getZoom(), 0.8) : flow.getZoom(), duration: 300 })
+      if (o.center) {
+        setFlashIds([cardId])
+        if (flashTimer.current) clearTimeout(flashTimer.current)
+        flashTimer.current = setTimeout(() => setFlashIds([]), 1600)
+      }
+    },
+    [board, annotationsMode, todosMode, expandedNotes, select, flow, views],
+  )
+  const [markInput, setMarkInput] = useState<MarkInputState | null>(null)
+  const closeMarkInput = useCallback(() => setMarkInput(null), [])
 
   const setCommentOpen = useCallback(
     (iid: string, open: boolean) => {
@@ -906,36 +1057,34 @@ function BoardInner({ id }: { id: string }) {
       setSourceRequest({ id: iid, mode, n: Date.now() })
     },
     commitOps: (ops: Op[], label: string) => void commit(ops, label),
-    // a callout pin under the pointer lights up its card, like a panel link does; its card under the pointer outlines the pin
+    // a marker under the pointer lights up its card, like a panel link does; its card under the pointer outlines the marker
+    hoverMark: (cardId: string, on: boolean, from: 'pin' | 'card') => {
+      if (from === 'pin') onHoverItems(on ? [cardId] : [])
+      else setCardHover(on ? cardId : null)
+    },
+    // a click on a marker selects its card — nothing else — and brings it into view when it is off screen; in
+    // Annotations: pins the card is drawn for this viewer only after that click, and a second click puts it away
+    showMark: (cardId: string) => revealCard(cardId, { toggle: true }),
+    // a UI mock element's numbered pins name their card by element and number
     hoverCallout: (elementId: string, n: number, on: boolean, from: 'pin' | 'card') => {
       const c = on && board ? calloutCommentOf(board, elementId, n) : undefined
       if (from === 'pin') onHoverItems(c ? [c.id] : [])
       else setCardHover(c ? c.id : null)
     },
-    // a click on a pin selects its card — nothing else — and brings it into view when it is off screen; in Notes: badges
-    // the card is drawn for this viewer only after that click, and a second click puts it away
     showCallout: (elementId: string, n: number) => {
       const c = board ? calloutCommentOf(board, elementId, n) : undefined
-      if (!c) return
-      if (notesMode === 'badges') {
-        if (expandedNotes.has(c.id)) {
-          setExpandedNotes((prev) => {
-            const next = new Set(prev)
-            next.delete(c.id)
-            return next
-          })
-          if (selectedRef.current.includes(c.id)) select([])
-          return
-        }
-        setExpandedNotes((prev) => new Set(prev).add(c.id))
-        cardWhenDrawn.current = c.id
-      } else select([c.id])
-      const r = wrapRef.current?.getBoundingClientRect()
-      if (!r) return
-      const [a, b] = [flow.flowToScreenPosition({ x: c.x, y: c.y }), flow.flowToScreenPosition({ x: c.x + c.w, y: c.y + c.h })]
-      if (a.x >= r.left && a.y >= r.top && b.x <= r.right && b.y <= r.bottom) return
-      views.mark()
-      flow.setCenter(c.x + c.w / 2, c.y + c.h / 2, { zoom: flow.getZoom(), duration: 300 })
+      if (c) revealCard(c.id, { toggle: true })
+    },
+    checkTodo,
+    reopenTodo,
+    holderOf: (draftId: string) => {
+      const d = board?.items[draftId]
+      const h = board && d ? draftHolder(board, d) : undefined
+      return h ? displayName(h) : undefined
+    },
+    answeredBy: () => {
+      const r = responderName(responderOf(board?.meta))
+      return r ? displayName(r) : undefined
     },
   }
   const latest = useRef(actions)
@@ -957,6 +1106,12 @@ function BoardInner({ id }: { id: string }) {
       commitOps: (ops, label) => latest.current.commitOps(ops, label),
       hoverCallout: (elementId, n, on, from) => latest.current.hoverCallout(elementId, n, on, from),
       showCallout: (elementId, n) => latest.current.showCallout(elementId, n),
+      hoverMark: (cardId, on, from) => latest.current.hoverMark(cardId, on, from),
+      showMark: (cardId) => latest.current.showMark(cardId),
+      checkTodo: (iid, answer) => latest.current.checkTodo(iid, answer),
+      reopenTodo: (iid) => latest.current.reopenTodo(iid),
+      holderOf: (draftId) => latest.current.holderOf(draftId),
+      answeredBy: () => latest.current.answeredBy(),
       uiRemoved,
     }),
     [editingId, tool, uiRemoved],
@@ -967,7 +1122,7 @@ function BoardInner({ id }: { id: string }) {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       const typing = target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.isContentEditable)
-      if (menu || helpOpen) return
+      if (menu || helpOpen || markInput) return
       // a replay has its own keys (components/ReplayBar.tsx); the board's edit keys wait until it stops
       if ((replayOn.current || playOn.current) && !(e.metaKey || e.ctrlKey)) return
       // A text view or the source dialog handles its own keys (arrows move lines, not items; ⌘Z is the editor's).
@@ -1052,11 +1207,13 @@ function BoardInner({ id }: { id: string }) {
         const next = TRACE_MODES[(TRACE_MODES.indexOf(traceView.mode) + 1) % TRACE_MODES.length]
         setTraceView({ mode: next })
         store.toast(`Traces: ${TRACE_MODE_NAMES[next].toLowerCase()}`)
-      } else if (e.key === 'N') store.toast(`Notes: ${NOTES_MODE_NAMES[cycleNotes()].toLowerCase()}`)
+      } else if (e.key === 'N') store.toast(`Comments: ${NOTES_MODE_NAMES[cycleNotes()].toLowerCase()}`)
+      else if (e.key === 'A') store.toast(`Annotations: ${ANNOTATIONS_MODE_NAMES[cycleAnnotations()].toLowerCase()}`)
+      else if (e.key === 'T') store.toast(`TODOs: ${TODOS_MODE_NAMES[cycleTodos()].toLowerCase()}`)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView, cycleNotes, views, locate])
+  }, [editingId, deleteSelection, addItem, flow, nudge, selectedIds, store, duplicate, menu, helpOpen, markInput, board, openMenu, startEdit, copyAsImage, cycleWires, traceView.mode, setTraceView, cycleNotes, cycleAnnotations, cycleTodos, views, locate])
 
   // React Flow hands these to every node and wire (and writes the tracked ones into its store, waking every
   // subscriber), so a new function on each render re-rendered the whole board: the same functions are given every
@@ -1112,8 +1269,14 @@ function BoardInner({ id }: { id: string }) {
       if (frame && !it) {
         goTo([frame.id])
       } else if (it) {
-        select([it.id])
-        flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: 1 })
+        // a comment or a card opens for this viewer, whatever the switches say (a reply's link opens its thread)
+        const root = it.type === 'comment' ? (threadRoot(board, it.id) ?? it) : it
+        if (root.type === 'comment') {
+          setExpandedNotes((prev) => new Set(prev).add(root.id))
+          cardWhenDrawn.current = root.id
+        }
+        select([root.id])
+        flow.setCenter(root.x + root.w / 2, root.y + root.h / 2, { zoom: 1 })
       } else {
         flow.fitView({ padding: 0.15 })
       }
@@ -1172,8 +1335,8 @@ function BoardInner({ id }: { id: string }) {
         onHelp={() => setHelpOpen(true)}
       />
       <div
-        // Notes: none hides the callout pins of UI mocks too (ui-mock.css), so Copy as image leaves them out as well
-        className={`canvas-wrap notes-${notesMode}`}
+        // Annotations: none hides the callout pins of UI mocks too (ui-mock.css), so Copy as image leaves them out as well
+        className={`canvas-wrap notes-${notesMode} annotations-${annotationsMode} todos-${todosMode}`}
         ref={wrapRef}
         onDoubleClick={onWrapDoubleClick}
         // what a rubber band needs (flow/bandSelect.ts): the selection when the drag began, Shift, and where the pointer is
@@ -1230,8 +1393,18 @@ function BoardInner({ id }: { id: string }) {
               onChange={setWireView}
               hasCatchAll={hasCatchAll}
               traces={hasTraces ? TRACE_MODE_NAMES[traceView.mode].toLowerCase() : undefined}
-              notes={anyComments ? NOTES_MODE_NAMES[notesMode].toLowerCase() : undefined}
-              after={anyComments ? <NotesControls mode={notesMode} onChange={setNotesMode} /> : null}
+              notes={[
+                ...(anyComments ? [['Comments', NOTES_MODE_NAMES[notesMode].toLowerCase()] as [string, string]] : []),
+                ...(anyAnnotations ? [['Annotations', ANNOTATIONS_MODE_NAMES[annotationsMode].toLowerCase()] as [string, string]] : []),
+                ...(anyTodos ? [['TODOs', TODOS_MODE_NAMES[todosMode].toLowerCase()] as [string, string]] : []),
+              ]}
+              after={
+                <>
+                  {anyComments ? <NotesControls mode={notesMode} onChange={setNotesMode} /> : null}
+                  {anyAnnotations ? <AnnotationsControls mode={annotationsMode} onChange={setAnnotationsMode} /> : null}
+                  {anyTodos ? <TodosControls mode={todosMode} onChange={setTodosMode} /> : null}
+                </>
+              }
             >
               {hasTraces ? <TraceControls view={traceView} onChange={setTraceView} /> : null}
             </WireControls>
@@ -1306,6 +1479,11 @@ function BoardInner({ id }: { id: string }) {
             select(ids)
           }}
           onToast={(t) => store.toast(t)}
+          onAnnotate={(iid, text) => void addAnnotation(iid, text)}
+          onAddTodo={(iid, text, ask) => addTodo(iid ?? undefined, text, ask)}
+          onCheckTodo={checkTodo}
+          onReopenTodo={reopenTodo}
+          onShowMark={(cid) => revealCard(cid, { center: true })}
           onSelect={(sid) => {
             select(sid ? [sid] : [])
             if (sid) {
@@ -1334,7 +1512,13 @@ function BoardInner({ id }: { id: string }) {
           onDuplicate={(iid) => duplicate([iid])}
           onDelete={(iid) => deleteItems([iid])}
           onCopyImage={(iid) => void copyAsImage(selectedIds.includes(iid) ? selectedIds : [iid])}
+          onAnnotate={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : (iid) => setMarkInput({ kind: 'annotate', itemId: iid, x: menu.x, y: menu.y })}
+          onTodo={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : (iid) => setMarkInput({ kind: 'todo', itemId: iid, x: menu.x, y: menu.y })}
           copyCount={selectedIds.includes(menu.itemId) ? selectedIds.length : 1}
+          onCopyLink={(iid) => {
+            const url = itemLink(board, board.items[iid], location.origin)
+            void copyText(url).then((ok) => store.toast(ok ? 'Link copied' : `Copy this link: ${url}`))
+          }}
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
           onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
@@ -1355,6 +1539,18 @@ function BoardInner({ id }: { id: string }) {
           }}
         />
       )}
+      {markInput && (markInput.itemId === undefined || board.items[markInput.itemId]) ? (
+        <MarkInput
+          state={markInput}
+          title={`${markInput.kind === 'annotate' ? 'Annotate' : 'TODO on'} ${markInput.itemId ? `‘${(board.items[markInput.itemId].text ?? board.items[markInput.itemId].label ?? board.items[markInput.itemId].type).split('\n')[0].slice(0, 40)}’` : 'the board'}`}
+          hint={markInput.kind === 'annotate' && markInput.itemId ? annotateHint(annotateWhere(board, board.items[markInput.itemId])) : 'On the board only; it wakes no agent. Checked off with an answer, the answer goes to the board’s Answered by agent.'}
+          onSubmit={(text, ask) => {
+            if (markInput.kind === 'annotate' && markInput.itemId) void addAnnotation(markInput.itemId, text)
+            else if (markInput.kind === 'todo') addTodo(markInput.itemId, text, ask)
+          }}
+          onClose={closeMarkInput}
+        />
+      ) : null}
       {helpOpen && <ShortcutsSheet onClose={() => setHelpOpen(false)} />}
     </div>
   )

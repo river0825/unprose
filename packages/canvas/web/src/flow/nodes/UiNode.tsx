@@ -11,8 +11,9 @@ import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { play, usePlay } from '../uiPlay'
-import { itemCallout, itemNote, rowCallout, rowNote } from '../notesView'
+import { cornerCallouts, itemCallout, itemNote, rowCallout, rowNote } from '../notesView'
 import { Rims, Shell } from './index'
+import { CalloutPin, MarkRow, useMarks } from './Marks'
 import '../../ui-mock.css'
 
 interface UiItem {
@@ -60,6 +61,8 @@ export interface UiData {
   /** the element's own note (docs/diagrams.md §6c): a numbered pin on its top-right corner, `note` its tooltip */
   callout?: number
   note?: string
+  /** the numbers of every annotation on the element itself, when it has several: one pin each on its corner */
+  callouts?: number[]
   /** the words and numbers here are made up to show the layout: a hatched "sample" stripe outside the top edge */
   sample?: boolean
 }
@@ -167,54 +170,19 @@ function Val({ sub, text, children }: { sub: UiPath; text: string; children?: Re
 }
 
 // ── callouts (docs/diagrams.md §6c): a numbered pin on the element, entry or row, its card beside the screen ──
-/** What the pins of one element need: its id (to find the card), whether the mock is being played, the pin to outline. */
-const NoteCtx = createContext<{ elementId: string; playing: boolean; lit?: number } | null>(null)
-
-const stopPin = (e: { stopPropagation: () => void }) => e.stopPropagation()
-
 /**
- * A callout pin: a 16 px graphite circle on paper with its number, in the canvas's own type, not the mock's — a design
- * annotation, never product UI. Pointing at it lights up its card (and the card lights it up, `lit`); a click selects
- * the card and brings it into view. The note is its tooltip, so `Notes: badges` (cards hidden) still says it. While
- * the mock plays, or inside the card itself (no `elementId`), it is a label only. Notes: none hides every pin (CSS).
+ * What the pins of one element need: its id (to find the card), whether the mock is being played, the pin to outline,
+ * and the text of each numbered card about it (the tooltip where the element has no `note` of its own).
  */
-export function CalloutPin({ n, note, elementId, playing = false, lit = false, className = '' }: { n: number; note?: string; elementId?: string; playing?: boolean; lit?: boolean; className?: string }) {
-  const edit = useEdit()
-  const cls = `ui-pin ${lit ? 'lit' : ''} ${playing ? 'playing' : ''} ${className}`
-  const label = note ? `Note ${n}: ${note}` : `Note ${n}`
-  if (playing || !elementId)
-    return (
-      <span className={cls} role="img" aria-label={label} title={elementId ? note : undefined}>
-        {n}
-      </span>
-    )
-  return (
-    <button
-      type="button"
-      className={`${cls} nodrag nopan`}
-      aria-label={`${label}. Show the note`}
-      title={note}
-      onPointerEnter={() => edit.hoverCallout?.(elementId, n, true, 'pin')}
-      onPointerLeave={() => edit.hoverCallout?.(elementId, n, false, 'pin')}
-      onPointerDown={stopPin}
-      onMouseDown={stopPin}
-      onDoubleClick={stopPin}
-      onClick={(e) => {
-        e.stopPropagation()
-        edit.showCallout?.(elementId, n)
-      }}
-    >
-      {n}
-    </button>
-  )
-}
+const NoteCtx = createContext<{ elementId: string; playing: boolean; lit?: number; noteOf: (n: number) => string | undefined } | null>(null)
 
 /** The pin of one entry or row, at the end of it (in place of the old ⓘ). */
 function EntryPin({ n, note }: { n: number | undefined; note: string | undefined }) {
   const ctx = useContext(NoteCtx)
   if (n === undefined || !ctx) return null
-  return <CalloutPin n={n} note={note} elementId={ctx.elementId} playing={ctx.playing} lit={ctx.lit === n} className="ui-pin-entry" />
+  return <CalloutPin n={n} note={note ?? ctx.noteOf(n)} elementId={ctx.elementId} playing={ctx.playing} lit={ctx.lit === n} className="ui-pin-entry" />
 }
+
 
 /** A closed select shows its options' pins after the chevron (the tooltip names the option); open, each option has its own. */
 function SelectPins({ items }: { items: UiItem[] }) {
@@ -659,15 +627,25 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   const toggles = live && (u.type === 'checkbox' || u.type === 'radio' || u.type === 'toggle')
   const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : undefined
   // the pin whose card is pointed at (BoardPage: only this element's node gets a new `calloutLit`)
-  const lit = (data as { calloutLit?: number }).calloutLit
-  const noteCtx = useMemo(() => ({ elementId: item.id, playing, lit }), [item.id, playing, lit])
-  const corner = typeof u.callout === 'number' && u.type !== 'screen' ? u.callout : undefined
+  const lit = data.calloutLit
+  // the annotation pins, drafts and TODOs on this element (flow/annotationsView.ts): the cards' texts for the pins'
+  // tooltips, and the drafts' and TODOs' markers beside the corner pins
+  const marks = useMarks()
+  const noteCtx = useMemo(() => ({ elementId: item.id, playing, lit, noteOf: (n: number) => marks?.marks.pins.find((p) => p.n === n)?.text }), [item.id, playing, lit, marks])
+  const corners = cornerCallouts(u)
+  const extra = marks ? <MarkRow marks={marks.marks} lit={marks.lit} numbered={false} playing={playing} className="ui-pin-marks" /> : null
   return (
     <>
     {u.sample === true ? <SampleStripe phone={u.type === 'screen' && u.device === 'phone'} /> : null}
-    {corner !== undefined ? (
-      // the element's own callout: on its top-right corner, half outside, a sibling of the box so a clipping box does not cut it
-      <CalloutPin n={corner} note={u.note} elementId={item.id} playing={playing} lit={lit === corner} className={`ui-pin-corner ${findings.length ? 'beside-finding' : ''}`} />
+    {corners.length || extra ? (
+      // the element's (or the screen's) own callouts: on its top-right corner, half outside, a sibling of the box so a
+      // clipping box does not cut them
+      <span className={`ui-pin-corner ${findings.length ? 'beside-finding' : ''}`}>
+        {extra}
+        {corners.map((n) => (
+          <CalloutPin key={n} n={n} note={corners.length === 1 ? (u.note ?? noteCtx.noteOf(n)) : noteCtx.noteOf(n)} elementId={item.id} playing={playing} lit={lit === n} />
+        ))}
+      </span>
     ) : null}
     <Shell
       item={item}
@@ -679,6 +657,7 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
       style={style}
       onDouble={editable ? undefined : () => undefined}
       onClick={onClick}
+      ownMarks
     >
       {(u.type === 'screen' || u.type === 'section') && <Rims />}
       <NoteCtx.Provider value={noteCtx}>

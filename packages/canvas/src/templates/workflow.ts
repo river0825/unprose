@@ -2,6 +2,7 @@
 // Triggers form layer 0; each step's layer = 1 + max layer of its predecessors.
 import { z } from 'zod'
 import type { ColorToken, Item } from '../model.js'
+import { annotationsSchema } from '../diagrams/ids.js'
 import { layered } from './layered.js'
 import { GAP, LANE_HEADER, PAD, STICKY_H, STICKY_W, arrow, fit, make, offsetAll, type RenderOpts } from './util.js'
 
@@ -50,6 +51,8 @@ export const workflowSchema = z.object({
       }),
     )
     .default([]),
+  /** The workflow file's `annotations:` (the runner ignores them; `awd graph --json` passes them on): numbered cards below the graph. */
+  annotations: annotationsSchema.optional(),
 })
 export type WorkflowContent = z.input<typeof workflowSchema>
 
@@ -109,7 +112,7 @@ export function renderWorkflow(raw: WorkflowContent, opts: RenderOpts = {}): Ite
           color: KIND_COLOR[n.kind] ?? 'grey',
           role: n.kind,
           order: row,
-          data: { nodeId: n.id, kind: n.kind, config: n.config ?? {}, ...(n.config?.agent ? { agent: n.config.agent } : {}), ...(n.detail ? { detail: n.detail } : {}) },
+          data: { nodeId: n.id, element: n.id, kind: n.kind, config: n.config ?? {}, ...(n.config?.agent ? { agent: n.config.agent } : {}), ...(n.detail ? { detail: n.detail } : {}) },
         },
         now,
       ),

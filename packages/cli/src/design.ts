@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
-import { designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, tellBack, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
+import { annotationFindings, designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, tellBack, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
 import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
@@ -45,8 +45,10 @@ export function parseDesignFile(file: string, text: string): DesignFile {
 export function lintDesign(d: DesignFile, file?: string): DesignFinding[] {
   if (d.kind === 'workflow') {
     if (!file) return [{ severity: 'info', message: 'workflow: lint it with awd lint <file>' }]
-    const r = lintWorkflow(loadWorkflow(file).def)
-    return [...r.errors.map((e) => ({ severity: 'error' as const, message: `${e.where}: ${e.message}` })), ...r.warnings.map((w) => ({ severity: 'warning' as const, message: `${w.where}: ${w.message}` }))]
+    const def = loadWorkflow(file).def
+    const r = lintWorkflow(def)
+    // the workflow's annotations are drawn on its graph (docs/diagrams.md "Annotations"): each `on` must name a block
+    return [...r.errors.map((e) => ({ severity: 'error' as const, message: `${e.where}: ${e.message}` })), ...r.warnings.map((w) => ({ severity: 'warning' as const, message: `${w.where}: ${w.message}` })), ...annotationFindings('workflow', toGraph(def), d.key)]
   }
   return lintDesignContent(d)
 }
@@ -232,7 +234,7 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     const findings = lintDesign(parsed, file)
     const errors = findings.filter((f) => f.severity === 'error')
     if (errors.length) {
-      for (const e of errors) console.error(`✖ ${e.message}`)
+      for (const e of errors) console.error(`✖ ${e.element ? `${e.element}: ` : ''}${e.message}`)
       return false
     }
     for (const w of findings.filter((f) => f.severity === 'warning' && f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.message}`)

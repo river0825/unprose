@@ -20,9 +20,10 @@ import { findRelease, type Release } from './release.js'
 import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, sha1, stampAttribution, type ProposalInput } from './proposals.js'
+import { openDrafts, todoCounts } from './todos.js'
 import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
 import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
-import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
+import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, stampTodos, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
 import { AccessService } from './access.js'
@@ -351,6 +352,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       agentTurns: maxTurns(b),
       holders,
       handover: handoverOf(b.meta) ?? null,
+      // TODOs still open, and the person's draft annotations waiting for the holder of the files (docs/canvas.md)
+      todos: todoCounts(b),
+      drafts: openDrafts(b).length,
       suggestion,
       ...(suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? 'asked' : 'holder' } : {}),
       agents: knownAgents(b.id, g)
@@ -907,8 +911,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         // a token is always its agent and a signed-in browser always the person: only this machine must say who it is
         if (!isAuthor(body.author) && !grant.as) throw new HttpError(400, "author must be 'agent' or 'user'")
         const who = actor(req, grant, body.author, 'agent')
-        // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity")
-        const ops = routed(board, keepHandoverMarks(board, stampAttribution(board, assertOps(body.ops), who.by)), who.author)
+        // a comment is signed with the caller's name as the server knows it (docs/canvas.md "Identity"), and so is a TODO checked off
+        const signed = stampTodos(board, stampAttribution(board, assertOps(body.ops), who.by), who.author === 'agent' ? (who.by ?? LOCAL_AGENT) : 'person', new Date().toISOString())
+        const ops = routed(board, keepHandoverMarks(board, signed), who.author)
         checkMentionRate(ops, who.author, who.by)
         if (who.author === 'agent') remember(who.by)
         const change = store.apply(id, ops, who.author, body.note, who.by)
@@ -1227,7 +1232,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         const parsed = contentSchemas[kind].safeParse(content)
         if (!parsed.success) throw new HttpError(400, `invalid content: ${parsed.error.message}`)
         const now = new Date().toISOString()
-        const rendered = render(kind, parsed.data, request ? { at: frameOrigin(board.items, request), scope: request.key, now } : { at: body.at, scope: body.scope, now })
+        const rendered = render(kind, parsed.data, request ? { at: frameOrigin(board.items, request), scope: request.key, now, ...(request.source ? { source: request.source } : {}) } : { at: body.at, scope: body.scope, now })
         const drawn = request ? placeInFrame(board.items, request, rendered, now).items : rendered
         // traces whose target is not on the board are reported, not silently dropped (river0825/unprose#6)
         const traces = resolveTraces(drawn, board.items, now)

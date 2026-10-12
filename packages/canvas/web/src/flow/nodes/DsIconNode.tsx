@@ -7,6 +7,7 @@ import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { dsGlyphTransform, parseDsIcon } from '../../../../src/diagrams/dsIcons'
+import { ItemMarksRow } from './Marks'
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -129,6 +130,7 @@ export function DsIconNode({ data, selected }: NodeProps<ItemNode>) {
       <div className="ds-name">
         <EditableText text={item.text ?? ''} editing={edit.editingId === item.id} onCommit={(t) => edit.commitText(item.id, t)} onCancel={edit.cancelEdit} placeholder="Name" />
       </div>
+      <ItemMarksRow />
     </div>
   )
 }

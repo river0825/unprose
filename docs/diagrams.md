@@ -142,9 +142,9 @@ hides the flow. Use **a short title + the full detail**:
 - **On the card: a short bilingual title** — `Order placed · 訂單已成立`, two short phrases, not two sentences.
 - **The full text goes where the kind keeps longer text** (shown in the Inspector, not on the card): kanban
   `cards[].description`; story map `stories[].acceptance`; wireframe / UI mock `note`; domain story `sentences[].note`
-  and `annotations`; workflow `description` / `detail`; EventStorming has no free-text field on a sticky — put the
-  explanation in a `definitions` entry (`term` + `text`, the glossary below the timeline) or, for an open question,
-  a `hotspots` entry on the element.
+  and `annotations`; workflow `description` / `detail`; in every kind, an `annotations` entry on the item (§2b) —
+  EventStorming has no free-text field on a sticky, so the explanation goes there, in a `definitions` entry (`term` +
+  `text`, the glossary below the timeline) or, for an open question, a `hotspots` entry on the element.
 - **Do not enlarge stickies** (no `w` / `h` / `fontSize` to make text fit): templates keep every sticky the same
   size so the timeline reads; a cut-off title means the title is too long.
 
@@ -162,6 +162,54 @@ Recommended maximum length of the **text on the card**, per language (CJK charac
 
 Keep ids in one language (ASCII slugs: `order-placed`) so traces and references stay stable when a translation
 changes. The start prompts (`/unprose:eventstorm`, …) and `canvas_create_board`'s content help say the same.
+
+## 2b. Annotations — what an item is for, in every kind
+
+An annotation says **what an item is for**: why it is there, what it promises, what to keep in mind about it. It is
+not a question or a disagreement (a hotspot, a comment), not something still to check with someone else (a TODO on the
+board — docs/canvas.md "TODOs"), not the item's own words. Every kind's file takes a top-level list:
+
+```yaml
+annotations:
+  - on: paid                    # the item it is about
+    text: Shown only after the bank confirms the payment
+  - id: frozen-cart             # optional: the card keeps this id when `on` is rewritten
+    on: Order placed
+    text: From here on the cart cannot change
+```
+
+- **`on` names one item of the diagram** — the same ids traces use, or the item's text:
+
+  | Kind | `on` |
+  |---|---|
+  | EventStorming | an element's id or its text, as `hotspots[].on`: `paid`, `Order paid` |
+  | Story map | an activity, step or story id or text; a release lane `release.<slug>` |
+  | Journey | a stage `checkout` (the slug of its text), one of its stickies `checkout/pay`, or the text |
+  | Kanban | a card's `id` (else the slug of its title) or its title; a column by the slug of its name (`done`) |
+  | Wireframe | a screen `home` (the slug of its name) or an element `home/sign-up` (the slug of its text, else its role), or the text |
+  | UI mock | a screen `home` or an element `home/new-board` — `<screen>/<element>`, as flows and traces (a stack, row or grid is not drawn: name an element in it) |
+  | Workflow | a step or trigger id: `plan` (the runner ignores `annotations:`) |
+  | Domain story | an actor, work object or sentence (§6b — Egon.io's notes) |
+
+  Also, in every kind: the board item's id (`shop-es.event.paid`) or its id inside the diagram (`event.paid`) — what
+  the canvas writes for a draft on an item that has no element id.
+- **Drawn** as a numbered card beside the drawing, never on it: in a **band below** an EventStorming, story map,
+  journey, kanban or workflow — numbered along the drawing, left to right, a column top to bottom — and in a
+  **gutter right of the screen** for a wireframe and a UI mock (§6c), numbered top to bottom. Each card sits under
+  (beside) what it is about when that is free, else next to the card before; the frame grows to hold them. The page
+  puts a pin with the same number on the item and shows or hides both with the Notes switch. A card is a comment with
+  `role: note`, `data.callout` and `data.annotation = { on, file }` — not a thread: it has no replies.
+- **Inline notes are annotations too**: a wireframe element's `note:` and a UI mock element's, entry's or row's `note:`
+  are numbered with the file's `annotations:` (a UI mock element with several: `data.ui.callouts` lists every number).
+  A **domain story** keeps Egon.io's convention instead — a text note with a dashed line (§6b); a draft from the canvas
+  appends to the same list.
+- **Lint**: an `on` that names nothing is an error — `annotations[2]: on "refnd" matches nothing in this diagram, so its
+  card is not drawn — name …, e.g. paid, placed, …` — and the draw leaves that card out.
+- **Redraw**: content and numbers follow the file; a card the person moved stays where they put it; a card whose
+  annotation left the file goes.
+- **From the canvas**: the person writes an annotation on an item as a *draft* — a proposal to the agent holding the
+  file, with the edit that adds one entry here. The holder judges it and, when it is sound, applies it at once (the
+  person wrote it); otherwise it says why in the thread (docs/canvas.md "Annotations").
 
 ## 3. EventStorming, as the book describes it
 
@@ -220,7 +268,8 @@ with wire proposals). Stories already present (same trace) are not proposed agai
 
 `user-story-map` file: `activities[{ id, text, steps[{ id, text, stories[{ id, text, release?,
 acceptance?: string[], traces? }] }] }]`, `releases: string[]` (drawn as horizontal cut lines, top to
-bottom; "Later" last). The cut line decides scope: stories above the first line are Release 1.
+bottom; "Later" last). The cut line decides scope: stories above the first line are Release 1. What an activity,
+step or story is for goes in `annotations` (§2b), numbered cards below the map.
 
 ### Frozen headers
 
@@ -513,8 +562,13 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   - **Data contract.** Every note is a `comment` with `role: note`, `color: yellow`, its stable id —
     `<key>.note.<screen>`, `<key>.note.<screen>.<element>`, `….<element>.item-<i>` / `.row-<i>` — and `target` the
     screen or element; an entry's carries `data.item`, a row's `data.row` (the index), and every callout
-    `data.callout: <number>`. The element's `data.ui` says where the pins go: `callout` (and `note`, the pin's
-    tooltip) for its own note, `items[i].callout`, and `rowCallouts: { "<row index>": <number> }` beside `rowNotes`.
+    `data.callout: <number>` and `data.annotation: { on: '<screen>/<element>' }`. The element's `data.ui` says where
+    the pins go: `callout` (and `note`, the pin's tooltip) for its own note, `items[i].callout`, and `rowCallouts: {
+    "<row index>": <number> }` beside `rowNotes`.
+  - **The file's `annotations:`** (§2b) read like notes: `on: '<screen>/<element>'` is numbered with that element's
+    callouts (after its own note at the same spot; card id `<key>.annotation.<id, else the slug of on>`), `on:
+    '<screen>'` is a callout on the screen itself (before what is at its top). An element with several numbers keeps
+    the first in `data.ui.callout` and lists every one in `data.ui.callouts`.
   - **Conversation is not numbered.** People's comments and agents' threads (`canvas_add_items` without x/y, a
     proposal) land in the same gutter at the height of their target, below the screen's callouts and whatever else
     is there; the frame is fitted to hold every screen's gutter.

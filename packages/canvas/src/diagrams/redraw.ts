@@ -2,6 +2,7 @@
 // match the drawing while keeping where the person put things and every proposal not yet explained by the
 // file. Pure — shared by the CLI (`awd design draw`, `awd graph --canvas`) and the canvas server's remote
 // design tools (docs/canvas.md "Remote agents").
+import { annotationOf, calloutOf } from '../annotations.js'
 import { layoutLock } from '../model.js'
 import { growFrame } from './designFile.js'
 
@@ -210,6 +211,13 @@ export interface RedrawResult {
   keptLayout: Set<string>
 }
 
+/** A numbered card a file's annotation (or a UI mock / wireframe note) drew — not a draft, not one written on the board. */
+function isFileAnnotationCard(it: BoardItem): boolean {
+  if (it.type !== 'comment' || it.role !== 'note') return false
+  const a = annotationOf(it as never)
+  return calloutOf(it as never) !== undefined && !a?.draft && !a?.board
+}
+
 const label = (it: BoardItem | undefined): string => {
   const t = String(it?.text ?? it?.label ?? '').replace(/\s+/g, ' ').trim()
   return t ? (t.length > 48 ? `${t.slice(0, 47)}…` : t) : String(it?.type ?? '?')
@@ -302,7 +310,8 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
   const foreign = new Set<string>()
   for (const it of Object.values(board)) {
     if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id)) continue
-    if (!it.id.startsWith(scope.prefix) || it.type === 'comment') continue
+    // comments stay (threads are the person's), but for the numbered annotation cards the file drew: gone from the file, gone
+    if (!it.id.startsWith(scope.prefix) || (it.type === 'comment' && !isFileAnnotationCard(it))) continue
     if (byHand(it)) {
       foreign.add(it.id)
       continue

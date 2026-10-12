@@ -952,13 +952,36 @@ button.ui-pin:focus-visible {
 .ui-pin.playing {
   pointer-events: none;
 }
-/* the element's own callout: centred on its top-right corner — half outside each edge, so only the corner itself is
-   under it, never the element's words — and no further into the gap to a neighbour than that gap (8 px) is wide */
+/* the element's own callouts: centred on its top-right corner — half outside each edge, so only the corner itself is
+   under it, never the element's words — and no further into the gap to a neighbour than that gap (8 px) is wide;
+   several (data.ui.callouts) side by side leftwards, a draft's ✎ and the TODO squares before them */
 .ui-pin-corner {
   position: absolute;
   top: -8px;
   right: -8px;
   z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+.ui-pin-corner > *,
+.ui-pin-marks > * {
+  pointer-events: auto;
+}
+.ui-pin-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+/* a screen's own callouts (an annotation on the screen): at the right end of its name line, above the box — the
+   corner itself is under the screen's navbar or first element */
+.react-flow__node:has(> .item.ui-screen) > .ui-pin-corner {
+  top: -23px;
+  right: 0;
+}
+.react-flow__node:has(> .item.ui-screen.d-phone) > .ui-pin-corner {
+  top: -29px;
 }
 /* a lint mark holds that corner: the pin sits just left of it */
 .ui-pin-corner.beside-finding {
@@ -994,8 +1017,8 @@ button.ui-pin:focus-visible {
 .ui-pin-group > .ui-pin-entry {
   margin-left: 0;
 }
-/* Notes: none (BoardPage .canvas-wrap.notes-none) draws no pin, so Copy as image has none either */
-.canvas-wrap.notes-none .ui-pin {
+/* Annotations: none (BoardPage .canvas-wrap.annotations-none) draws no pin, so Copy as image has none either */
+.canvas-wrap.annotations-none .ui-pin {
   display: none;
 }
 

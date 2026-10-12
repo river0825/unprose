@@ -1,10 +1,12 @@
 // Several agents on one board (docs/canvas.md "Several agents on one board"): who answers the board, who a
 // comment is for (@mentions), what the board is about (its context note) and who holds the files behind each
-// diagram. Pure and dependency-free (model.ts only), so the server, the MCP tools and the web UI share it.
+// diagram. Pure and dependency-free (model.ts, and the annotation / TODO marks of annotations.ts), so the server, the
+// MCP tools and the web UI share it.
 //
 // Names: an agent is known by its name — a token's / OAuth client's name, or UNPROSE_AGENT_NAME for a local
 // agent. The default local agent (studio, or a local session without a name) is `agent`; people write it as
 // `@studio`.
+import { annotationOf, isAnnotationDraft, todoOf } from './annotations.js'
 import { diagramOf, type Board, type Change, type Item, type Op } from './model.js'
 
 /** The default local agent: studio, or a local session without UNPROSE_AGENT_NAME. */
@@ -562,14 +564,14 @@ export function isSettledThread(thread: Item[]): boolean {
 
 /** The diagram key a proposal thread is about: the diagram whose files hold the edited file ('workflow' for meta.workflow), else the diagram its items are in. */
 export function proposalKeyOf(board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Item): string | undefined {
-  const edit = editOf(root)
-  if (edit && typeof edit.file === 'string') {
+  const file = proposedFile(root)
+  if (file) {
     const diagrams = board.meta?.diagrams as Record<string, { source?: unknown; files?: unknown }> | undefined
     for (const [key, d] of Object.entries(diagrams && typeof diagrams === 'object' ? diagrams : {})) {
-      if (d?.source === edit.file || (d?.files && typeof d.files === 'object' && edit.file in (d.files as object))) return key
+      if (d?.source === file || (d?.files && typeof d.files === 'object' && file in (d.files as object))) return key
     }
     const wf = board.meta?.workflow as { files?: unknown } | undefined
-    if (wf?.files && typeof wf.files === 'object' && edit.file in (wf.files as object)) return 'workflow'
+    if (wf?.files && typeof wf.files === 'object' && file in (wf.files as object)) return 'workflow'
   }
   const ids = [...(Array.isArray(wireProposalOf(root)?.about) ? ((wireProposalOf(root)!.about as unknown[]).filter((x): x is string => typeof x === 'string')) : []), root.target].filter(Boolean) as string[]
   for (const id of ids) {
@@ -609,6 +611,38 @@ export function keepHandoverMarks(board: Pick<Board, 'items'>, ops: Op[]): Op[] 
       const data = { ...(op.patch.data as Data) }
       if (was !== undefined) data.handover = was
       else delete data.handover
+      return { ...op, patch: { ...op.patch, data } }
+    }
+    return op
+  })
+}
+
+/**
+ * `data.todo` as the canvas keeps it (docs/canvas.md "TODOs"): who checked a TODO off and when are the caller (`who`: an
+ * agent's name, or `person`) and now, whatever was sent; checking off one already done keeps who did it; reopening
+ * drops them. A new comment with `data.todo` starts open unless it is written done.
+ */
+export function stampTodos(board: Pick<Board, 'items'>, ops: Op[], who: string, now: string): Op[] {
+  const mark = (sent: unknown, was: ReturnType<typeof todoOf>): Data | undefined => {
+    if (!sent || typeof sent !== 'object' || Array.isArray(sent)) return undefined
+    const t = todoOf({ type: 'comment', data: { todo: sent } })!
+    const { doneBy: _b, doneAt: _a, ...rest }: Data = { ...(sent as Data), state: t.state }
+    if (t.state !== 'done') return rest
+    return { ...rest, ...(was?.state === 'done' && was.doneBy ? { doneBy: was.doneBy, doneAt: was.doneAt ?? now } : { doneBy: who, doneAt: now }) }
+  }
+  return ops.map((op): Op => {
+    if (op.kind === 'add' && op.item.type === 'comment' && op.item.data && 'todo' in op.item.data) {
+      const todo = mark(op.item.data.todo, todoOf(board.items[op.item.id]))
+      const data = { ...op.item.data }
+      if (todo) data.todo = todo
+      else delete data.todo
+      return { ...op, item: { ...op.item, data } }
+    }
+    if (op.kind === 'update' && op.patch.data && typeof op.patch.data === 'object' && 'todo' in (op.patch.data as Data) && board.items[op.id]?.type === 'comment') {
+      const todo = mark((op.patch.data as Data).todo, todoOf(board.items[op.id]))
+      const data = { ...(op.patch.data as Data) }
+      if (todo) data.todo = todo
+      else delete data.todo
       return { ...op, patch: { ...op.patch, data } }
     }
     return op
@@ -661,14 +695,25 @@ export function threadRoot(board: Pick<Board, 'items'>, it: Item): Item {
 
 const editOf = (it: Item) => (it.data?.discuss as { edit?: { file?: unknown; by?: unknown } } | undefined)?.edit
 const wireProposalOf = (it: Item) => (it.data?.discuss as { proposal?: unknown; about?: unknown } | undefined)
-
-/** The holder a proposal thread goes to: the file's holder (an edit), or the holder of the wire / items it is about. */
-function proposalHolder(board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Item): FileHolder | undefined {
+/** The file a proposal changes: its edit's, else the file a draft annotation goes into (a draft sent without the edit). */
+function proposedFile(root: Item): string | undefined {
   const edit = editOf(root)
-  if (edit && typeof edit.file === 'string') return holderOfFile(board.meta, edit.file) ?? holderOfItem(board, board.items[root.target ?? ''])
+  if (edit && typeof edit.file === 'string') return edit.file
+  return isAnnotationDraft(root) ? annotationOf(root)?.file : undefined
+}
+
+/**
+ * The holder a proposal thread goes to: the file's holder (an edit, or the file a draft annotation names), or the holder
+ * of the wire / items it is about.
+ */
+function proposalHolder(board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Item): FileHolder | undefined {
+  const file = proposedFile(root)
+  const byFile = file ? holderOfFile(board.meta, file) : undefined
+  if (byFile) return byFile
+  if (editOf(root)) return holderOfItem(board, board.items[root.target ?? ''])
   const d = wireProposalOf(root)
-  if (d?.proposal) {
-    const ids = [...(Array.isArray(d.about) ? (d.about as unknown[]).filter((x): x is string => typeof x === 'string') : []), root.target].filter(Boolean) as string[]
+  if (d?.proposal || isAnnotationDraft(root)) {
+    const ids = [...(Array.isArray(d?.about) ? (d.about as unknown[]).filter((x): x is string => typeof x === 'string') : []), root.target].filter(Boolean) as string[]
     for (const id of ids) {
       const h = holderOfItem(board, board.items[id])
       if (h) return h
@@ -677,12 +722,16 @@ function proposalHolder(board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Ite
   return undefined
 }
 
-const isProposal = (it: Item) => Boolean(editOf(it) || wireProposalOf(it)?.proposal)
+/** The agent a proposal thread goes to (the holder of the files), when the board names one. */
+export const proposalHolderOf = (board: Pick<Board, 'kind' | 'items' | 'meta'>, root: Item): string | undefined => proposalHolder(board, root)?.agent
+
+/** A proposal thread's root: an edit to a file, a wire change, or the person's draft annotation (with or without its edit). */
+export const isProposal = (it: Item) => Boolean(editOf(it) || wireProposalOf(it)?.proposal || isAnnotationDraft(it))
 /** The agent that wrote a comment ('agent' for the default local one); undefined for the person. */
 export const agentOf = (it: Item): string | undefined => (it.createdBy === 'agent' ? (str(it.data?.by) ?? LOCAL_AGENT) : undefined)
 
-/** Why a comment goes where it goes. */
-export type Route = 'mention' | 'proposal' | 'responder' | 'paused' | 'handover'
+/** Why a comment goes where it goes ('todo': a TODO itself, which wakes nobody — docs/canvas.md "TODOs"). */
+export type Route = 'mention' | 'proposal' | 'responder' | 'paused' | 'handover' | 'todo'
 
 /** Consecutive agent messages in one thread, without a person's message, before agents pause there (the loop guard). */
 export const DEFAULT_AGENT_TURNS = 6
@@ -711,12 +760,14 @@ export function isPaused(board: Pick<Board, 'items'>, root: Item): boolean {
 /**
  * Who a comment is for (the agents it wakes) and why; `to` undefined = anyone (as before):
  *   0. loop guard: an agent's message past `maxTurns` agent messages in a row in its thread wakes nobody (`paused`);
+ *      a TODO (the root of its thread, `data.todo`) wakes nobody either (`todo`) — the answer, a reply, goes on below;
  *   ½. a handover thread (its root carries `data.handover`) goes to both sides: every agent handing files over and the
  *      agent receiving them — before any @mention (its first message mentions them all);
  *   1. an @mention — in the comment, else the latest one in its thread — makes it a conversation between the agent
  *      mentioned and whoever mentioned it: each message goes to the other side (an agent asking another agent gets the
  *      answer back; the person asking an agent gets nobody else woken);
- *   2. a proposal thread (an edit to a file, a wire change) goes to the holder of the files and back to the proposer;
+ *   2. a proposal thread (an edit to a file, a wire change, the person's draft annotation) goes to the holder of the files
+ *      and back to the proposer;
  *   3. otherwise the board's responder (and the agent that started the thread); no responder → anyone.
  * The comment's own author is never among its recipients.
  */
@@ -732,6 +783,8 @@ export function routeOf(board: Pick<Board, 'kind' | 'items' | 'meta'>, comment: 
     const upTo = thread.slice(0, thread.findIndex((i) => i.id === comment.id) + 1 || thread.length)
     if (trailingAgentTurns(upTo) > maxTurns) return { to: [], route: 'paused' }
   }
+  // a note to confirm something with someone else, not a question to an agent: written (or edited) it wakes nobody
+  if (comment.id === root.id && todoOf(root)) return { to: [], route: 'todo' }
   const ho = handoverThreadOf(root)
   if (ho) {
     // the parties are on the root (they stay after the handover is done); else the open handover of this thread

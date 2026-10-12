@@ -121,6 +121,18 @@ test('lintDesign runs the workflow linter on workflow files', async () => {
   assert.deepEqual(lintDesign(d, file).filter((f) => f.severity === 'error'), [])
 })
 
+test('a workflow file\'s annotations: drawn on its graph, so `awd design lint` checks each names a block', async () => {
+  const { lintDesign } = await import('../src/design.js')
+  const os = await import('node:os')
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'awd-wf-annotations-'))
+  const file = path.join(tmp, 'triage.workflow.yaml')
+  fs.writeFileSync(file, 'name: triage\ntriggers: { t: { on: manual } }\nsteps: { a: { on: t, run: "true" } }\nannotations:\n  - on: a\n    text: The only step\n  - on: b\n    text: Gone\n')
+  const errors = lintDesign(parseDesignFile(file, fs.readFileSync(file, 'utf8')), file).filter((f) => f.severity === 'error')
+  assert.deepEqual(errors.map((e) => e.element), ['annotations[1]'])
+  assert.match(errors[0].message, /^on "b" matches nothing in this diagram, so its card is not drawn — name a step or a trigger by its id/)
+  fs.rmSync(tmp, { recursive: true, force: true })
+})
+
 // ── river0825/unprose#6 #8 #9 ────────────────────────────────────────────────
 
 test('#9: kanban (and every kind with a schema) is linted offline', async () => {

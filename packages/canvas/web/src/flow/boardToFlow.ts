@@ -8,7 +8,8 @@ import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
 import { planWires } from '../../../src/wireGeometry'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
 import type { CommentShown } from './notesView'
-import { uiCalloutOf } from '../../../src/diagrams/uiMock'
+import type { ItemMarks } from './annotationsView'
+import { calloutOf, isAnnotationDraft, todoOf } from '../../../src/annotations'
 
 /** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
 export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
@@ -35,6 +36,11 @@ export type ItemNode = Node<
     wireBadges?: WireBadge[]
     /** a UI mock being played (flow/uiPlay.ts): on the screen on view (`live`) or on another one, and where a click leads */
     play?: PlayOn
+    /** the annotation pins and TODO markers on this item (flow/annotationsView.ts marksByTarget) */
+    marks?: ItemMarks
+    /** the card whose marker on this item is lit (its card is pointed at), and that marker's number for a UI mock element */
+    markLit?: string
+    calloutLit?: number
   },
   Item['type'] | 'dsIcon'
 >
@@ -128,9 +134,10 @@ export interface CatchAllView { show: boolean; expanded: Set<string> }
 
 /**
  * `comments` says how each thread is drawn (flow/notesView.ts `notesShown`, by root id); a plain Set of ids is the
- * older form — those threads are open, the rest folded.
+ * older form — those threads are open, the rest folded. `marks` are the pins and TODO markers on items, by item id
+ * (flow/annotationsView.ts `marksByTarget`).
  */
-export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: ReadonlySet<string> | ReadonlyMap<string, CommentShown>, catchAll: CatchAllView = { show: false, expanded: new Set() }): { nodes: ItemNode[]; edges: Edge[] } {
+export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: ReadonlySet<string> | ReadonlyMap<string, CommentShown>, catchAll: CatchAllView = { show: false, expanded: new Set() }, marks?: ReadonlyMap<string, ItemMarks>): { nodes: ItemNode[]; edges: Edge[] } {
   const items = Object.values(board.items)
   const byId = board.items
   const nodes: ItemNode[] = []
@@ -156,20 +163,23 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
     const thread = byRoot.get(it.id) ?? []
     const shown = it.type === 'comment' ? shownAs(it.id) : 'open'
     const open = shown === 'open'
+    // a draft annotation and a TODO fold into their card, not into a bubble
+    const card = open || (it.type === 'comment' && (isAnnotationDraft(it) || todoOf(it) !== undefined))
     const at = stacked.get(it.id) ?? { x: it.x, y: it.y }
+    const mine = marks?.get(it.id)
     nodes.push({
       id: it.id,
       // a domain story's actors and work objects are pictograms, not boxes (docs/diagrams.md §6b)
       type: typeof it.data?.ds === 'string' && DS_ICONS.has(it.data.ds) ? 'dsIcon' : it.type,
       position: parent ? { x: at.x - parent.x, y: at.y - parent.y } : { x: at.x, y: at.y },
-      width: open ? it.w : BADGE,
-      height: it.type === 'comment' ? (open ? undefined : BADGE) : it.h,
+      width: card ? it.w : BADGE,
+      height: it.type === 'comment' ? (card ? undefined : BADGE) : it.h,
       initialHeight: it.h,
       parentId: parent?.id,
       // a kanban card must be able to leave its column; drag-stop re-parents it by where it lands
       extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
-      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}) },
+      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}), ...(mine ? { marks: mine } : {}) },
       ...nodeClass(it),
       // a frame, lane, column or screen moves by its title bar or border; a drag on its body draws a selection box (docs/canvas.md)
       ...(passThrough(it) ? { dragHandle: `.${DRAG_HANDLE}` } : {}),
@@ -215,8 +225,8 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
     // a reply renders inside its root; a thread the viewer hid (Notes: none) is not drawn, nor is its tether
     if (it.type === 'comment' && (!byRoot.has(it.id) || shownAs(it.id) === 'hidden')) continue
     push(it)
-    // a UI mock's callout card has no tether: its number is on what it explains (docs/diagrams.md §6c)
-    const about = it.type === 'comment' && it.target && uiCalloutOf(it) === undefined ? byId[it.target] : undefined
+    // an annotation card has no tether: its number is on what it explains (docs/diagrams.md §6c); a draft neither — its ✎ is
+    const about = it.type === 'comment' && it.target && calloutOf(it) === undefined && !isAnnotationDraft(it) ? byId[it.target] : undefined
     if (about && about.type !== 'arrow' && about.type !== 'comment') {
       edges.push({
         id: `tether:${it.id}`,

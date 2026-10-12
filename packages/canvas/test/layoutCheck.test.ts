@@ -158,3 +158,17 @@ test('comments: a drawn UI mock has none on its screens; a note moved onto the s
   assert.equal(esCovers[0].message, 'comment "on it" on sticky "one" covers sticky "one" (140×80 px on sticky "one")')
   assert.equal(esCovers[0].suggestion, 'move it beside sticky "one" onto free paper, or add it without x/y so the canvas places it')
 })
+
+test('a reply is drawn in its thread and a draft annotation waits beside the frame: neither is a comment finding', () => {
+  const ev = item({ id: 'a.event.placed', type: 'sticky', x: 40, y: 40, text: 'Order placed', parent: 'diagram.a' })
+  const legend = item({ id: 'a.legend', type: 'sticky', x: 40, y: 400, text: 'Legend', parent: 'diagram.a' })
+  const todo = item({ id: 'c_todo', type: 'comment', x: 40, y: 170, w: 220, h: 50, text: 'Can a guest order?', target: ev.id, data: { todo: { state: 'done' } } })
+  // the answer is stored where the page put it — on the legend — but it is drawn inside the TODO card
+  const answer = item({ id: 'c_answer', type: 'comment', x: 40, y: 400, w: 160, h: 64, text: 'Confirmed: yes', target: 'c_todo', data: { todoAnswer: true } })
+  const draft = item({ id: 'c_draft', type: 'comment', x: 1100, y: 40, w: 240, h: 66, text: 'Sends the tracking mail', target: ev.id, data: { annotation: { draft: true, on: 'placed' } } })
+  const b = board([frame('diagram.a', 'a'), ev, legend, todo, answer, draft])
+  assert.deepEqual([...of(b, 'comment-covers'), ...of(b, 'comment-outside')].map((f) => f.id), [])
+  // a plain comment out there still is
+  const loose = item({ id: 'c_loose', type: 'comment', x: 1100, y: 40, w: 200, h: 64, text: 'hm', target: ev.id })
+  assert.deepEqual(of(board([frame('diagram.a', 'a'), ev, loose]), 'comment-outside').map((f) => f.id), ['c_loose'])
+})

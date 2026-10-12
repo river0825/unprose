@@ -4,6 +4,7 @@
 // alone. Pure, tested on its own. The kept node also keeps what React Flow wrote on it (`measured`, `selected`).
 import type { Edge } from '@xyflow/react'
 import type { ItemNode } from './boardToFlow'
+import { sameMarks } from './annotationsView'
 
 const sameList = <T>(a: readonly T[] | undefined, b: readonly T[] | undefined, same: (x: T, y: T) => boolean = Object.is): boolean => {
   if (a === b) return true
@@ -35,7 +36,7 @@ export function sameNode(prev: ItemNode, next: ItemNode): boolean {
   if (p.item !== n.item || p.pulse !== n.pulse || p.open !== n.open || p.done !== n.done || p.childCount !== n.childCount || !sameList(p.replies, n.replies)) return false
   const [pd, nd] = [p.diagram, n.diagram]
   if (pd !== nd && (!pd || !nd || pd.kind !== nd.kind || pd.name !== nd.name || pd.key !== nd.key || pd.findings !== nd.findings)) return false
-  return sameList(p.wireBadges, n.wireBadges, sameBadge)
+  return sameList(p.wireBadges, n.wireBadges, sameBadge) && sameMarks(p.marks, n.marks)
 }
 
 type EdgeData = { item?: unknown; port?: Record<string, number>; dsPlan?: unknown; bundle?: unknown }

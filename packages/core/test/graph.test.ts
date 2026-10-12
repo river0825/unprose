@@ -92,3 +92,9 @@ steps:
   assert.deepEqual(e('go', 'wait'), [{ event: 'ping', condition: undefined, resume: true }])
   assert.deepEqual(e('*.failed', 'catch'), [{ event: '*.failed', condition: undefined, resume: undefined }])
 })
+
+test('the file\'s annotations ride along in the graph (the board draws them; the runner ignores them)', () => {
+  const src = 'name: bare\ntriggers:\n  go: { on: cli, emit: ping }\nsteps:\n  s:\n    on: ping\n    run: "true"\n    terminal: [done]\nannotations:\n  - on: s\n    text: Runs the deploy\n  - { id: odd, on: go }\n'
+  assert.deepEqual(toGraph(parseWorkflow(src)).annotations, [{ on: 's', text: 'Runs the deploy' }])
+  assert.equal('annotations' in toGraph(parseWorkflow('name: bare\ntriggers:\n  go: { on: cli, emit: ping }\nsteps:\n  s:\n    on: ping\n    run: "true"\n    terminal: [done]\n')), false)
+})

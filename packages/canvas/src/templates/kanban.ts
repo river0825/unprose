@@ -5,7 +5,7 @@
 import { z } from 'zod'
 import type { Board, Item } from '../model.js'
 import { make, offsetAll, stableId, type RenderOpts } from './util.js'
-import { idAllocator, slugify, traceSchema, type Trace } from '../diagrams/ids.js'
+import { annotationsSchema, idAllocator, slugify, traceSchema, type Trace } from '../diagrams/ids.js'
 
 export const CARD_SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const
 
@@ -29,6 +29,8 @@ export const kanbanSchema = z.object({
       }),
     )
     .default([]),
+  /** What a card or a column is for (docs/diagrams.md "Annotations"): numbered cards below the board. */
+  annotations: annotationsSchema.optional(),
 })
 export type KanbanContent = z.input<typeof kanbanSchema>
 

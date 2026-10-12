@@ -62,6 +62,11 @@ export interface DiscussRequest {
   proposedBy?: string
   /** Another agent asked studio (an @studio mention, canvas_ask) — not the person (docs/studio.md §11). */
   askedBy?: string
+  /**
+   * The person's draft annotation (docs/canvas.md "Annotations", `data.annotation.draft`): what an item is for, in their
+   * words, to add to the file's `annotations:` — judged, then applied at once when it is sound.
+   */
+  annotation?: { on?: string; file?: string }
   /** A new message in a chat that already exists (the text is that message, not the first one). */
   followUp?: boolean
 }
@@ -210,6 +215,7 @@ export function chatRequest(board: StudioBoard, comment: StudioItem, seq: number
   const proposedBy = comment.createdBy === 'agent' ? editOf(discuss)?.by : undefined
   // another agent asked studio (an @studio mention): a chat like the person's, marked as the agent's
   const askedBy = comment.createdBy === 'agent' && !proposedBy && comment.data?.route === 'mention' && typeof comment.data?.by === 'string' ? (comment.data.by as string) : undefined
+  const annotation = draftOf(comment)
   if (!comment.target) {
     if (comment.createdBy === 'agent' && !proposedBy && !askedBy) return undefined
     return {
@@ -251,8 +257,16 @@ export function chatRequest(board: StudioBoard, comment: StudioItem, seq: number
     ...(editOf(discuss) ? { edit: editOf(discuss) } : {}),
     ...(proposedBy ? { proposedBy } : {}),
     ...(askedBy ? { askedBy } : {}),
+    ...(annotation ? { annotation } : {}),
     ...(text !== undefined ? { followUp: true } : {}),
   }
+}
+
+/** The person's draft annotation a comment carries (`data.annotation.draft`), as far as the brief needs it. */
+function draftOf(comment: StudioItem): DiscussRequest['annotation'] {
+  const a = comment.data?.annotation as { draft?: unknown; on?: unknown; file?: unknown } | undefined
+  if (!a || typeof a !== 'object' || a.draft !== true || comment.createdBy !== 'user') return undefined
+  return { ...(typeof a.on === 'string' && a.on ? { on: a.on } : {}), ...(typeof a.file === 'string' && a.file ? { file: a.file } : {}) }
 }
 
 /** A comment's `data.anchor`, when it is well-formed. */
@@ -648,6 +662,7 @@ function speaker(i: StudioItem): string {
  */
 function editSection(req: DiscussRequest): string[] {
   const e = req.edit
+  if (req.annotation && !req.followUp) return annotationSection(req)
   if (!e) return []
   const file = e.file ?? e.doc ?? 'a text'
   const diff = ['```diff', e.diff.trimEnd(), '```', '']
@@ -676,6 +691,27 @@ function editSection(req: DiscussRequest): string[] {
     `   - If it differs, the file changed since the proposal. Try the diff anyway (\`git apply --check\` with the diff saved to a file); if it applies cleanly, say so in the thread. If not, do not force it: rebase the change by hand onto the current file and show the person the new diff, or ask \`${who}\` in the thread to read the file again from the board after the next redraw and propose again.`,
     `2. Reply in this thread first: say that \`${who}\` proposed it, what it changes in a sentence or two, what it touches beyond the lines (other steps on the same event, goldens, gates, traces), and ask the person whether to apply it. Then stop and wait — their answer comes to you from studio as a new message.`,
     `3. When the person agrees: apply it (\`git apply\` the saved diff, or edit by hand), then lint and test, and redraw with \`--applied ${req.commentId}\` (\`awd design draw <file> --board … --applied ${req.commentId}\` / \`awd graph <wf> --canvas --applied ${req.commentId}\`): it answers "Applied to \`${file}\`" in this thread and clears any dashed wire the proposal drew. It commits the file only if this machine set UNPROSE_APPLY_COMMIT=1 (and pushes with UNPROSE_APPLY_PUSH=1) — never commit by hand. If they decline, say so in the thread; dashed wires it drew go away with Undo on the wire.`,
+    '',
+  ]
+}
+
+/**
+ * The person's draft annotation (docs/canvas.md "Annotations"): their own words on what an item is for. The session
+ * judges it and says so in the thread; a sound one is applied at once — the person wrote it, so that is their consent.
+ */
+function annotationSection(req: DiscussRequest): string[] {
+  const a = req.annotation!
+  const e = req.edit
+  const file = a.file ?? e?.file ?? 'the design file'
+  return [
+    '## The person\'s draft annotation',
+    '',
+    `The person wrote an annotation — what this item is for — for \`${file}\`${a.on ? ` (\`on: ${a.on}\`)` : ''}. It is their own words, not a request to change the design.`,
+    '',
+    ...(e ? ['The edit it makes (one more `annotations:` entry):', '', '```diff', e.diff.trimEnd(), '```', ''] : [`No edit came with it (the board did not have the file): add \`- on: ${a.on ?? '<the item>'}\` / \`text: <the request text below>\` to the file's top-level \`annotations:\` list yourself.`, '']),
+    '1. Judge it first: is it true to the design? does it contradict the file or another annotation? does it say what the item is for? Reply in this thread with your judgement in a sentence or two.',
+    `2. If it is sound, apply it right away (the person wrote it, so that counts as their consent)${e?.base ? `: check the file still has sha-1 \`${e.base}\`` : ''}, lint, and redraw with \`--applied ${req.commentId}\` — it answers "Applied to \`${file}\`" here.`,
+    '3. If you have doubts, say why and wait for the person.',
     '',
   ]
 }
@@ -710,7 +746,7 @@ export function promptForFollowUp(req: DiscussRequest, briefPath: string, resume
 
 /** Claude Code's session display name (`claude -n`): the selection, and what kind of chat it is. */
 export function sessionLabel(req: DiscussRequest): string {
-  return `${req.block}${req.proposal ? ' · proposed wire' : req.proposedBy ? ` · proposal by ${req.proposedBy}` : req.edit ? ' · proposed edit' : ''}`
+  return `${req.block}${req.proposal ? ' · proposed wire' : req.proposedBy ? ` · proposal by ${req.proposedBy}` : req.annotation ? ' · draft annotation' : req.edit ? ' · proposed edit' : ''}`
 }
 
 /** The agent's comment under the request, as a freeform item (the canvas places it beside its target). */

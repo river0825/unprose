@@ -6,6 +6,8 @@ import { REL_NAMES } from '../diagrams/traces'
 import { DEFAULT_TRACE_VIEW, TRACE_MODES, TRACE_RELS, type TraceMode, type TraceView } from './traceView'
 import { WIRE_MODES, type WireBadge, type WireMode } from './catchAll'
 import { DEFAULT_NOTES_MODE, NOTES_MODE_NAMES, NOTES_MODES, type NotesMode } from './notesView'
+import { ANNOTATIONS_MODE_NAMES, ANNOTATIONS_MODES, DEFAULT_ANNOTATIONS_MODE, type AnnotationsMode } from './annotationsView'
+import { DEFAULT_TODOS_MODE, TODOS_MODE_NAMES, TODOS_MODES, type TodosMode } from './todoView'
 
 export interface WireView { mode: WireMode; catchAll: boolean }
 
@@ -52,9 +54,10 @@ const MODE_TIPS: Record<WireMode, string> = {
 
 /**
  * What this viewer sees of the lines and the notes, in the bottom-right corner: one quiet button that says the
- * current choice ("Traces: selected · Lines: all · Notes: badges") and opens the settings — the trace view
- * (`children`), the wire modes, the catch-all switch and the notes modes (`after`). Closed by default, closed again
- * by Escape or a click elsewhere; W, Shift+W and Shift+N still cycle.
+ * current choice ("Traces: selected · Lines: all · Comments: badges · Annotations: pins · TODOs: open") and opens
+ * the settings — the trace view (`children`), the wire modes, the catch-all switch and the comments, annotations and
+ * TODOs modes (`after`). Closed by default, closed again by Escape or a click elsewhere; W, Shift+W, Shift+N, Shift+A
+ * and Shift+T still cycle.
  */
 export function WireControls({
   view,
@@ -69,8 +72,8 @@ export function WireControls({
   onChange: (patch: Partial<WireView>) => void
   hasCatchAll: boolean
   traces?: string
-  /** the notes mode's name, when the board has comments */
-  notes?: string
+  /** what is said after the lines, in order: the comments, annotations and TODOs modes the board has, e.g. ['Comments', 'badges'] */
+  notes?: Array<[string, string]>
   /** the trace view, above the wire modes */
   children?: ReactNode
   /** the notes modes, below them */
@@ -118,9 +121,9 @@ export function WireControls({
             {after}
           </div>
         )}
-        <button type="button" className="view-toggle" aria-expanded={open} title={`What is drawn: the lines inside diagrams (W cycles), the traces between them (Shift+W)${notes ? ' and the comments (Shift+N)' : ''}`} onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="view-toggle" aria-expanded={open} title={`What is drawn: the lines inside diagrams (W cycles), the traces between them (Shift+W)${notes?.length ? ', the comments (Shift+N), annotations (Shift+A) and TODOs (Shift+T)' : ''}`} onClick={() => setOpen((v) => !v)}>
           {traces ? `Traces: ${traces} · ` : ''}Lines: {MODE_NAMES[view.mode].toLowerCase()}
-          {notes ? ` · Notes: ${notes}` : ''}
+          {notes?.map(([what, mode]) => ` · ${what}: ${mode}`).join('')}
         </button>
       </div>
     </Panel>
@@ -197,34 +200,56 @@ export function TraceControls({ view, onChange }: { view: TraceView; onChange: (
   )
 }
 
-const NOTES_KEY = 'awd.canvas.notes'
-
-function readNotes(): NotesMode {
-  try {
-    const v = JSON.parse(localStorage.getItem(NOTES_KEY) ?? 'null') as { mode?: unknown } | null
-    return NOTES_MODES.includes(v?.mode as NotesMode) ? (v!.mode as NotesMode) : DEFAULT_NOTES_MODE
-  } catch {
-    return DEFAULT_NOTES_MODE
-  }
-}
-
-/** The notes mode (flow/notesView.ts), remembered in this browser; `cycle` steps all → badges → none (Shift+N). */
-export function useNotesMode(): [NotesMode, (mode: NotesMode) => void, () => NotesMode] {
-  const [mode, setMode] = useState(readNotes)
-  const update = useCallback((next: NotesMode) => {
-    setMode(next)
+/** A mode remembered in this browser under `key` (as `{ mode }`); `cycle` steps to the next one and says which. */
+function useStoredMode<M extends string>(key: string, modes: readonly M[], fallback: M): [M, (mode: M) => void, () => M] {
+  const [mode, setMode] = useState<M>(() => {
     try {
-      localStorage.setItem(NOTES_KEY, JSON.stringify({ mode: next }))
+      const v = JSON.parse(localStorage.getItem(key) ?? 'null') as { mode?: unknown } | null
+      return modes.includes(v?.mode as M) ? (v!.mode as M) : fallback
     } catch {
-      // a per-viewer preference only; losing it is harmless
+      return fallback
     }
-  }, [])
+  })
+  const update = useCallback(
+    (next: M) => {
+      setMode(next)
+      try {
+        localStorage.setItem(key, JSON.stringify({ mode: next }))
+      } catch {
+        // a per-viewer preference only; losing it is harmless
+      }
+    },
+    [key],
+  )
   const cycle = useCallback(() => {
-    const next = NOTES_MODES[(NOTES_MODES.indexOf(mode) + 1) % NOTES_MODES.length]
+    const next = modes[(modes.indexOf(mode) + 1) % modes.length]
     update(next)
     return next
-  }, [mode, update])
+  }, [mode, modes, update])
   return [mode, update, cycle]
+}
+
+/** The comments mode (flow/notesView.ts), remembered in this browser; `cycle` steps all → badges → none (Shift+N). */
+export const useNotesMode = () => useStoredMode<NotesMode>('awd.canvas.notes', NOTES_MODES, DEFAULT_NOTES_MODE)
+/** The annotations mode (flow/annotationsView.ts): all → pins → none (Shift+A). */
+export const useAnnotationsMode = () => useStoredMode<AnnotationsMode>('awd.canvas.annotations', ANNOTATIONS_MODES, DEFAULT_ANNOTATIONS_MODE)
+/** The TODOs mode (flow/todoView.ts): open → all → none (Shift+T). */
+export const useTodosMode = () => useStoredMode<TodosMode>('awd.canvas.todos', TODOS_MODES, DEFAULT_TODOS_MODE)
+
+/** One row of modes in the settings: a label, then a button per mode. */
+function Modes<M extends string>({ label, keys, modes, names, tips, mode, onChange }: { label: string; keys: string; modes: readonly M[]; names: Record<M, string>; tips: Record<M, string>; mode: M; onChange: (mode: M) => void }) {
+  return (
+    <div className="wire-modes" role="radiogroup" aria-label={`${label} shown (${keys})`}>
+      <span className="wire-modes-label" aria-hidden="true">
+        {label}
+      </span>
+      {modes.map((m) => (
+        <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} title={`${tips[m]} (${keys} cycles)`} onClick={() => onChange(m)}>
+          {names[m]}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 const NOTES_MODE_TIPS: Record<NotesMode, string> = {
@@ -233,20 +258,31 @@ const NOTES_MODE_TIPS: Record<NotesMode, string> = {
   none: 'Draw no comment (the panel’s Chats tab still lists them)',
 }
 
-/** The notes part of the settings: the three modes, shown when the board has comments. */
+/** The comments part of the settings: threads only, shown when the board has a conversation. */
 export function NotesControls({ mode, onChange }: { mode: NotesMode; onChange: (mode: NotesMode) => void }) {
-  return (
-    <div className="wire-modes" role="radiogroup" aria-label="Notes shown (Shift+N)">
-      <span className="wire-modes-label" aria-hidden="true">
-        Notes
-      </span>
-      {NOTES_MODES.map((m) => (
-        <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} title={`${NOTES_MODE_TIPS[m]} (Shift+N cycles)`} onClick={() => onChange(m)}>
-          {NOTES_MODE_NAMES[m]}
-        </button>
-      ))}
-    </div>
-  )
+  return <Modes label="Comments" keys="Shift+N" modes={NOTES_MODES} names={NOTES_MODE_NAMES} tips={NOTES_MODE_TIPS} mode={mode} onChange={onChange} />
+}
+
+const ANNOTATIONS_MODE_TIPS: Record<AnnotationsMode, string> = {
+  all: 'Draw every annotation as a numbered pin on its item and a card with the same number beside it; your drafts dashed',
+  pins: 'Draw the pins only — point at one to read it, click it to show its card',
+  none: 'Draw no annotation (the item’s panel still lists them)',
+}
+
+/** The annotations part of the settings, shown when the board has an annotation. */
+export function AnnotationsControls({ mode, onChange }: { mode: AnnotationsMode; onChange: (mode: AnnotationsMode) => void }) {
+  return <Modes label="Annotations" keys="Shift+A" modes={ANNOTATIONS_MODES} names={ANNOTATIONS_MODE_NAMES} tips={ANNOTATIONS_MODE_TIPS} mode={mode} onChange={onChange} />
+}
+
+const TODOS_MODE_TIPS: Record<TodosMode, string> = {
+  open: 'Draw the open TODOs; done ones are only in the panel’s TODO list',
+  all: 'Draw every TODO, the done ones muted with their answer',
+  none: 'Draw no TODO (the panel’s TODO list still has them)',
+}
+
+/** The TODOs part of the settings, shown when the board has a TODO. */
+export function TodosControls({ mode, onChange }: { mode: TodosMode; onChange: (mode: TodosMode) => void }) {
+  return <Modes label="TODOs" keys="Shift+T" modes={TODOS_MODES} names={TODOS_MODE_NAMES} tips={TODOS_MODE_TIPS} mode={mode} onChange={onChange} />
 }
 
 /** Clicking a badge draws its wires again (or folds them back). */

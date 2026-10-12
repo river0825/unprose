@@ -101,6 +101,8 @@ export interface RenderOpts {
   scope?: string
   now?: string
   author?: Author
+  /** The design file the drawing comes from (`data.diagram.source`): annotation cards name it in `data.annotation.file`. */
+  source?: string
 }
 
 export function offsetAll(items: Item[], at?: { x: number; y: number }): Item[] {

@@ -2,7 +2,7 @@
 // cut lines top → bottom. Stories carry acceptance criteria and trace links (usually derived-from an
 // EventStorming command). Pure and builtin-free.
 import { z } from 'zod'
-import { idAllocator, traceSchema, type Trace } from './ids.js'
+import { annotationsSchema, idAllocator, traceSchema, type Trace } from './ids.js'
 
 const trace = traceSchema
 
@@ -35,6 +35,8 @@ export const userStoryMapSchema = z.object({
     .min(1),
   /** Release cut lines, top → bottom. Stories with an unknown/absent release fall into the last lane ("Later"). */
   releases: z.array(z.string()).default([]),
+  /** What an activity, step or story is for (docs/diagrams.md "Annotations"): numbered cards below the map. */
+  annotations: annotationsSchema.optional(),
 })
 export type UserStoryMapContent = z.input<typeof userStoryMapSchema>
 

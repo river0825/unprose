@@ -6,6 +6,42 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-10-12
+
+### Added
+- **Annotations — what an item is for — in every diagram kind** (docs/diagrams.md §2b, docs/canvas.md →
+  Annotations). Until now the board only had comments, which are conversations. A design file now takes
+  `annotations: [{ on, text }]` (EventStorming, story map, journey, kanban, wireframe, UI mock, workflow; a domain
+  story keeps its Egon.io annotations). Each is drawn the way UI mock callouts are: a small **numbered pin on the item**
+  and a quiet **card with the same number** beside the drawing — in a band below it for the wide kinds, right of the
+  screen for UI mocks and wireframes — with no author line and no reply box, so nobody reads it as a thread.
+  `awd design lint` reports an `on` that names nothing.
+- **The person writes annotations on the canvas.** Right-click an item → **Annotate…** (or the item's panel). On an
+  item drawn from a file it becomes a **draft** — a dashed card with ✎ — and a proposal to the agent holding the
+  files, with the one-line file edit attached. That agent judges it in its thread first (true to the design? at odds
+  with the file or another annotation?) and, when it is sound, applies it at once — the person wrote it, which is
+  consent — else says why and waits; the redraw draws the numbered card and the draft goes away. On an item with no
+  file behind it, the card is written on the board itself. Agents see annotations as annotations:
+  `canvas_read_board` lists them per diagram, not as threads (`types: ["annotation"]`).
+- **TODOs — something still to confirm with someone else** (docs/canvas.md → TODOs). Right-click → **Add TODO…**
+  (with an optional *ask whom*) puts an amber square on the item and a card with a check box beside it; the board
+  panel's **TODOs** section lists them. A TODO lives on the board only and wakes no agent when it is written. Checking
+  it off asks *What did you find out?*: an answer is posted in its thread and goes to the Answered-by agent, which
+  decides whether the design changes; without one nobody is told. Agents open, list, check off and reopen TODOs with
+  the new **`canvas_todo`** tool; `canvas_context` counts open TODOs and drafts waiting.
+- **Copy link in the right-click menu** of every item, comments and annotation cards included — the same link as the
+  panel's *Copy link*. A `?focus=` link opens a comment, a card or a TODO even when the view switches hide it.
+
+### Changed
+- **The Notes switch is three switches:** *Comments* (All / Badges / None, Shift+N — threads only), *Annotations*
+  (All / Pins / None, Shift+A; *Pins* keeps the numbers and shows a card on click) and *TODOs* (Open / All / None,
+  Shift+T). UI mock callouts follow *Annotations* now. Copy as image draws what the switches draw.
+- **A wireframe's `note:` is a numbered annotation card**, no longer a comment thread.
+- **A redraw removes a numbered card whose annotation left the file** (UI mock notes too); a card the person moved
+  keeps its place.
+- `canvas_snapshot` draws annotation cards with their numbered pins, and TODOs as check boxes.
+- Studio's brief for a draft annotation says: judge it, then apply it at once when it is sound.
+
 ## [0.23.0] — 2026-10-08
 
 ### Changed
@@ -875,7 +911,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/river0825/unprose/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/river0825/unprose/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/river0825/unprose/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/river0825/unprose/compare/v0.20.0...v0.21.0

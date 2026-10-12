@@ -3,8 +3,10 @@
 // theme tokens, no CSS variables, no external references), close enough to what the page draws: frames, lanes,
 // kanban columns and cards (at the stacked position the page shows, src/shown.ts), stickies with wrapped text
 // (src/textMetrics.ts), wireframe primitives, UI mock elements, Domain Storytelling pictograms, wires with
-// arrowheads and labels, folded comment badges. A rasterizer (resvg) can turn it into a PNG; that is the
-// driving side's job.
+// arrowheads and labels, folded comment badges, annotation cards with their numbered pins, TODOs as check boxes.
+// A rasterizer (resvg) can turn it into a PNG; that is the driving side's job.
+import { calloutOf, isAnnotationCard, todoOf } from './annotations.js'
+import { UI_CALLOUT } from './diagrams/uiMock.js'
 import type { Board, ColorToken, Item } from './model.js'
 import { shownBoard } from './shown.js'
 import { dsGlyphMarkup, parseDsIcon } from './diagrams/dsIcons.js'
@@ -205,7 +207,8 @@ interface Selection {
 }
 
 function boxOf(it: Item): Box {
-  if (it.type === 'comment') return { x: it.x, y: it.y, w: BADGE, h: BADGE }
+  // an annotation card is drawn as it is (docs/canvas.md "Annotations"); a thread or a TODO folds into a badge
+  if (it.type === 'comment' && !isAnnotationCard(it)) return { x: it.x, y: it.y, w: BADGE, h: BADGE }
   return { x: it.x, y: it.y, w: it.w, h: it.h }
 }
 
@@ -644,7 +647,52 @@ function drawUi(c: Ctx, it: Item): string {
   }
 }
 
+/** A numbered pin (UI_CALLOUT.pin across), graphite on paper — the card's number, and the same on the item. */
+function pin(c: Ctx, cx: number, cy: number, num: number | undefined): string {
+  const r = UI_CALLOUT.pin / 2
+  return `<circle cx="${n(cx)}" cy="${n(cy)}" r="${r}" fill="${c.p.paper}" stroke="${c.p.ink2}" stroke-width="1.2"/>${c.text && num !== undefined ? `<text x="${n(cx)}" y="${n(cy + 3.5)}" font-size="10" font-weight="600" text-anchor="middle" fill="${c.p.ink2}">${num}</text>` : ''}`
+}
+
+/**
+ * An annotation card (docs/canvas.md "Annotations"): the number in a pin, the text at 12 px, a hairline — and the same
+ * number on its item's top-right corner (several cards on one item: side by side, leftwards).
+ */
+function drawAnnotation(c: Ctx, it: Item): string {
+  const { p, b } = c
+  const cc = UI_CALLOUT
+  const num = calloutOf(it)
+  const bx = boxOf(it)
+  const parts = [rect(bx, `fill="${p.paper}" stroke="${p.rule2}" stroke-width="${cc.border}"`, 4), pin(c, bx.x + cc.padLeft / 2 + 1, bx.y + cc.padTop + cc.lineHeight / 2, num)]
+  if (c.text) {
+    const inner = bx.w - cc.padLeft - cc.padRight
+    const lines = wrap((it.text ?? '').trim(), inner, cc.font)
+    parts.push(textBlock(lines, { x: bx.x + cc.padLeft, y: bx.y + cc.padTop, font: cc.font, lh: cc.lineHeight, fill: p.ink, maxLines: Math.max(1, Math.floor((bx.h - cc.padTop - cc.padBottom) / cc.lineHeight)) }))
+  }
+  const t = it.target ? b.items[it.target] : undefined
+  if (t && t.type !== 'comment' && t.type !== 'arrow') {
+    // the cards on this item before this one, by number: each pin one step left
+    const before = Object.values(b.items).filter((o) => o.id !== it.id && o.target === t.id && isAnnotationCard(o) && ((calloutOf(o) ?? 0) < (num ?? 0) || ((calloutOf(o) ?? 0) === (num ?? 0) && o.id < it.id))).length
+    parts.push(pin(c, t.x + t.w - 4 - before * (cc.pin + 2), t.y + 4, num))
+  }
+  return parts.join('')
+}
+
+/** A TODO (docs/canvas.md "TODOs"): a check box — open in the marker colour, done ticked and quiet. */
+function drawTodo(c: Ctx, it: Item): string {
+  const { p } = c
+  const done = todoOf(it)?.state === 'done'
+  const ink = done ? p.ink3 : p.marker
+  const bx = { x: it.x + 5, y: it.y + 5, w: BADGE - 10, h: BADGE - 10 }
+  return [
+    rect({ x: it.x, y: it.y, w: BADGE, h: BADGE }, `fill="${p.paper}" stroke="${ink}" stroke-width="1.2"`, 5),
+    rect(bx, `fill="none" stroke="${ink}" stroke-width="1.5"`, 2),
+    done ? `<path d="M${n(bx.x + 3)} ${n(bx.y + 8)}l3.5 3.5l6-7" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` : '',
+  ].join('')
+}
+
 function drawComment(c: Ctx, it: Item): string {
+  if (isAnnotationCard(it)) return drawAnnotation(c, it)
+  if (todoOf(it)) return drawTodo(c, it)
   const { p, b } = c
   const msgs = 1 + Object.values(b.items).filter((o) => o.type === 'comment' && o.id !== it.id && rootOf(b, o) === it.id).length
   const ink = it.createdBy === 'agent' ? p.agent : p.user

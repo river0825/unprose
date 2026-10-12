@@ -189,6 +189,19 @@ export function ThreadBody({ messages }: { messages: Item[] }) {
         </button>
       </Meta>
       <Message item={root} placeholder="Comment" />
+      <ThreadReplies root={root} replies={replies} now={now} reply={!drafting} onFocus={markRead} />
+    </div>
+  )
+}
+
+/** A thread's replies in order and its reply box: under an open thread, and under a TODO card opened to its thread. */
+export function ThreadReplies({ root, replies, now, reply = true, onFocus }: { root: Item; replies: Item[]; now?: number; reply?: boolean; onFocus?: () => void }) {
+  const edit = useEdit()
+  const clock = useMinuteClock()
+  const at = now ?? clock
+  const markRead = onFocus ?? (() => (replies.some((m) => isUnread(m, 'user')) ? edit.setCommentOpen(root.id, true) : undefined))
+  return (
+    <>
       {replies.length > 0 && (
         <ol className="replies nowheel" aria-label={`${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}`}>
           {replies.map((m) => (
@@ -200,13 +213,13 @@ export function ThreadBody({ messages }: { messages: Item[] }) {
                 edit.startEdit(m.id)
               }}
             >
-              <Meta item={m} now={now} />
+              <Meta item={m} now={at} />
               <Message item={m} placeholder="Reply" />
             </li>
           ))}
         </ol>
       )}
-      {!drafting && <ReplyBox rootId={root.id} onFocus={markRead} />}
-    </div>
+      {reply && <ReplyBox rootId={root.id} onFocus={markRead} />}
+    </>
   )
 }

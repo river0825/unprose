@@ -3,7 +3,7 @@
 // element id once, so the renderer, the grammar check and the story proposer read the same model.
 // Pure and builtin-free (the web imports it for the grammar panel).
 import { z } from 'zod'
-import { idAllocator, traceSchema, type Trace } from './ids.js'
+import { annotationsSchema, idAllocator, traceSchema, type Trace } from './ids.js'
 
 const ref = z.string()
 const refs = z.union([ref, z.array(ref)])
@@ -113,6 +113,8 @@ export const eventStormingSchema = z.object({
   phases: z.array(z.object({ id: z.string().optional(), text: z.string(), from: ref.optional(), to: ref.optional() })).default([]),
   /** Definitions of domain terms, kept below the flow (p.144). */
   definitions: z.array(z.object({ id: z.string().optional(), term: z.string(), text: z.string() })).default([]),
+  /** What an element is for (docs/diagrams.md "Annotations"): numbered cards below the timeline, `on` an element id or text. */
+  annotations: annotationsSchema.optional(),
 })
 export type EventStormingContent = z.input<typeof eventStormingSchema>
 export type EventStormingParsed = z.output<typeof eventStormingSchema>
