@@ -5,7 +5,7 @@
 import { annotationOf, calloutOf, isAnnotationCard, isAnnotationDraft } from './annotations.js'
 import { circled } from './diagrams/domainStory.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
-import { displayName, holdersOf, isSettledThread, proposalHolderOf, settingsLines, threadOf } from './routing.js'
+import { displayName, framelessLines, holdersOf, isSettledThread, proposalHolderOf, settingsLines, threadOf } from './routing.js'
 import { aboutText, isTodo, todoLines } from './todos.js'
 
 export const short = (s: string | undefined, n = 60) => {
@@ -241,7 +241,7 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const out: string[] = []
   if (!opts.bare) {
     out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`)
-    const settings = settingsLines(board.meta)
+    const settings = [...settingsLines(board.meta), ...framelessLines(board)]
     if (settings.length) out.push(...settings, '')
   }
   const printed = new Set<string>()

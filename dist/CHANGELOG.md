@@ -6,6 +6,22 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-10-13
+
+### Added
+- **Do a UI mock click without playing**: ⌥ click (Alt+click) an element a click leads from, or right-click it →
+  **Click → <screen>**, and the view goes to that screen and flashes it — ⌥ ← comes back (docs/diagrams.md §6c
+  "Clickable").
+- **A diagram whose frame is gone is told to agents.** Removing a frame (over `/ops`, or on the page) leaves the
+  diagram registered — its holder and file snapshot. `canvas_read_board` and `canvas_context` now say so, with the two
+  ways out: the holder redraws it from the file, or drops the entry (`PATCH /api/boards/:id
+  {"meta":{"diagrams":{"<key>":null}}}`); `GET …/settings` lists them as `frameless`.
+
+### Changed
+- **Right-click → Play starts on that screen.** Play from the menu of an element, a screen, or a note or thread about
+  one starts on its screen instead of the first, and Restart goes back there; Play on the frame header or panel still
+  starts on the first.
+
 ## [0.25.0] — 2026-10-13
 
 ### Added
@@ -938,7 +954,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/river0825/unprose/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/river0825/unprose/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/river0825/unprose/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/river0825/unprose/compare/v0.22.0...v0.23.0

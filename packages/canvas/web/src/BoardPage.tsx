@@ -20,7 +20,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import './select.css'
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import type { Board, ColorToken, Item, Op } from '../../src/model'
 import { isUnread, markSeen, newId, ownLock, layoutLock, LAYOUT_LOCK } from '../../src/model'
 import { ContextMenu, type MenuState } from './components/ContextMenu'
@@ -70,7 +70,7 @@ import { buildReplay } from './diagrams/replay'
 import { reuse, sameEdge, sameNode } from './flow/reuse'
 import { useViewHistory } from './flow/useViewHistory'
 import { PlayBar } from './components/PlayBar'
-import { applyPlay, play, playFrameOf, usePlay } from './flow/uiPlay'
+import { applyPlay, clickTargetOf, play, playFrameOf, playScreenOf, usePlay } from './flow/uiPlay'
 import { buildPlay, reconcilePlay } from './diagrams/uiPlay'
 import { boardClickTags, clickTags, uiMockFrames, type ClickTag } from './diagrams/uiClickable'
 import { applyClickable, clickable, clickHint, clickLooks, useClickable, useClickHint, type ClickOn } from './flow/clickableView'
@@ -484,6 +484,24 @@ function BoardInner({ id }: { id: string }) {
       flashTimer.current = setTimeout(() => setFlashIds([]), 1600)
     },
     [board, locate],
+  )
+
+  // Option+click (or the menu's "Click → …") on a UI mock element a click leads from, outside Play: do that click — the view
+  // goes to the screen it leads to and flashes it; ⌥ ← comes back (the jump is a view of the history, like a panel link)
+  const clickThrough = useCallback(
+    (to: { id: string; name: string }) => {
+      reveal([to.id])
+      store.toast(`→ ${to.name} (⌥ ← back)`)
+    },
+    [reveal, store],
+  )
+  const onNodeClick = useCallback(
+    (e: ReactMouseEvent, node: Node) => {
+      if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey || !board || play.get()) return
+      const to = clickTargetOf(board, board.items[node.id])
+      if (to) clickThrough(to)
+    },
+    [board, clickThrough],
   )
 
   // "Take me there": fit the view to these items and select them (the palette, ?frame= links, canvas_focus).
@@ -1389,6 +1407,7 @@ function BoardInner({ id }: { id: string }) {
             connectionMode={ConnectionMode.Loose}
             onEdgeDoubleClick={handlers.onEdgeDoubleClick}
             onSelectionChange={onSelectionChange}
+            onNodeClick={onNodeClick}
             onNodeMouseEnter={handlers.onNodeMouseEnter}
             onNodeMouseLeave={handlers.onNodeMouseLeave}
             onEdgeClick={handlers.onEdgeClick}
@@ -1550,7 +1569,8 @@ function BoardInner({ id }: { id: string }) {
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
           onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
-          onPlayMock={playFrameOf(board, menuItem) ? () => play.start(playFrameOf(board, menuItem)!) : undefined}
+          onPlayMock={playFrameOf(board, menuItem) ? () => play.start(playFrameOf(board, menuItem)!, playScreenOf(board, menuItem)) : undefined}
+          onClickThrough={((to) => (to ? { screen: to.name, run: () => clickThrough(to) } : undefined))(clickTargetOf(board, menuItem))}
           lock={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : { locked: ownLock(menuItem), frame: menuItem.type === 'frame', byFrame: !ownLock(menuItem) && layoutLock(board.items, menuItem.id) === 'frame' }}
           onToggleLock={(iid) => {
             const it = board.items[iid]

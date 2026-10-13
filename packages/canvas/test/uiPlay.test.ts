@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Board, Item } from '../src/model.js'
 import { renderUiMock, type UiMockContent } from '../src/templates/ui-mock.js'
-import { buildPlay, canPlay, currentScreen, emptyPlay, gotoTarget, playBack, playGoto, playOpen, playPick, playRestart, playStatuses, playTab, playToggle, playType, reconcilePlay, startPlay } from '../web/src/diagrams/uiPlay.js'
+import { buildPlay, canPlay, clickTarget, currentScreen, emptyPlay, gotoTarget, playBack, playGoto, playOpen, playPick, playRestart, playStatuses, playTab, playToggle, playType, reconcilePlay, startPlay } from '../web/src/diagrams/uiPlay.js'
 
 const now = '2026-10-07T00:00:00Z'
 const mock: UiMockContent = {
@@ -138,4 +138,35 @@ test('reconcile: an empty start takes the first screen; a redraw that lost the s
   assert.deepEqual(r.history, [S('boards')])
   assert.equal(reconcilePlay(model, deep), deep, 'nothing to settle: the same state')
   assert.equal(reconcilePlay(buildPlay(board, 'loose'), deep), undefined)
+})
+
+test('play from a right-clicked item starts on its screen, and Restart goes back there — not to the first', () => {
+  const s = reconcilePlay(model, emptyPlay('frame', S('new-board')))!
+  assert.equal(s.screen, S('new-board'), 'the page keeps the screen it was asked to start on')
+  assert.equal(s.start, S('new-board'))
+  assert.deepEqual(s.history, [])
+  const on = startPlay(model, S('new-board'))!
+  assert.deepEqual([on.screen, on.start], [S('new-board'), S('new-board')])
+  const moved = playType(playGoto(on, S('boards')), E('new-board/title'), 'Refunds')
+  const again = playRestart(model, moved)
+  assert.deepEqual([again.screen, again.start, again.history, again.typed], [S('new-board'), S('new-board'), [], {}])
+  // a screen that is not one of the frame's (the frame itself was right-clicked): the first, as before
+  assert.deepEqual([startPlay(model, 'nope')!.screen, startPlay(model, 'nope')!.start], [S('boards'), undefined])
+  assert.equal(reconcilePlay(model, emptyPlay('frame', 'nope'))!.screen, S('boards'))
+  // a redraw that loses the start screen: Restart goes to the first
+  const lost = reconcilePlay(buildPlay(boardOf({ ...mock, screens: mock.screens.filter((x) => x.id !== 'new-board') }), 'frame'), on)!
+  assert.equal(lost.start, undefined)
+  assert.equal(playRestart(model, lost).screen, S('boards'))
+  // every element, note and thread of a screen knows it (what right-click → Play asks)
+  assert.equal(model.screenOf.get(E('new-board/title')), S('new-board'))
+  assert.equal(model.screenOf.get(S('new-board')), S('new-board'))
+})
+
+test('outside Play, Option+click and the menu\'s "Click → …" follow what a click does: the screen and its name', () => {
+  assert.deepEqual(clickTarget(model, E('boards/new-board')), { id: S('new-board'), element: 'new-board', name: 'New board' })
+  assert.equal(clickTarget(model, E('boards/studio'))?.name, 'Phone', 'a flow from the element')
+  assert.equal(clickTarget(model, E('new-board/cancel'))?.name, 'Boards')
+  assert.equal(clickTarget(model, E('boards/broken')), undefined, 'a goto to a missing screen leads nowhere')
+  assert.equal(clickTarget(model, E('boards/projects')), undefined, 'tabs are operated, not followed')
+  assert.equal(clickTarget(model, S('boards')), undefined, 'a whole screen is no click')
 })

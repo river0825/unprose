@@ -638,9 +638,10 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
 
 A mock is drawn to be pointed at; sometimes the question is "and what happens when I press this?". **Play** lets
 the person operate the screens the way a Figma prototype runs: start it with **Play** on a UI-mock frame's
-header, in the frame's side panel, or from the right-click menu of the frame or anything in it.
+header, in the frame's side panel, or from the right-click menu of the frame or anything in it — from an element, a
+screen, or a note or thread about one, play starts **on that screen** (and Restart goes back there).
 
-- **One screen at a time.** Play starts on the first screen; the others wait faintly where they are, with the
+- **One screen at a time.** Play starts on the first screen (or the right-clicked one); the others wait faintly where they are, with the
   navigate arrows. A click on an element whose `goto` names a screen — or that a `flows` entry starts from —
   moves the view to that screen; a card (section, navbar) that leads somewhere takes the click anywhere on it,
   except on a field, select, toggle or tabs inside it, which keep their own job. A `goto` to a screen that does
@@ -650,7 +651,7 @@ header, in the frame's side panel, or from the right-click menu of the frame or 
   typing, a `checkbox` / `radio` / `toggle` flips. What the person typed, picked and toggled stays while they move
   between screens; Restart forgets it.
 - **Controls** (a floating bar at the top of the canvas, the Replay bar's shape): the screen on view by name,
-  "2 / 3", ⏮ restart, ◀ back to the screen before, ✕ exit. Keys: ← or Backspace back, Home restart, Esc exit —
+  "2 / 3", ⏮ restart (on the screen play started on), ◀ back to the screen before, ✕ exit. Keys: ← or Backspace back, Home restart, Esc exit —
   none of them while typing into a mocked field.
 - **The view follows**: each screen is shown whole, below the bar, never zoomed in past 100 %.
 - **Purely a way of looking**: nothing is stored on the board, the file does not change, other viewers are not
@@ -675,6 +676,9 @@ button: **Clickable** on a UI-mock frame's header (after Play), *Show clickable*
   does not exist are not tagged.
 - **The frame's panel lists them** — *Clickable (n)*, by screen in the frame's order, `<element> → <screen>`; a click
   takes the board to the element and flashes it, › opens it.
+- **Do the click without playing**: **⌥ click** (Alt+click) an element a click leads from — or right-click it →
+  **Click → <screen>** — and the view goes to that screen and flashes it, as Play would; **⌥ ←** comes back. Whether
+  the switch is on or not; while a frame plays, a click is Play's.
 - **A way of looking**: for this viewer, every UI mock on the board, remembered in this browser
   (`awd.canvas.clickable`); nothing is stored. Copy as image draws it; while a frame plays, Play's own look wins there.
 - **So write where a click goes as `goto` / `flows`, never as a note** — lint flags a note that only says it

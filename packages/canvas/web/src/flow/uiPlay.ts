@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react'
 import type { Edge } from '@xyflow/react'
 import type { Board, Item } from '../../../src/model'
 import { diagramOf } from '../diagrams/frame'
-import { emptyPlay, playStatuses, type PlayModel, type PlayState } from '../diagrams/uiPlay'
+import { buildPlay, clickTarget, emptyPlay, playStatuses, type PlayModel, type PlayScreen, type PlayState } from '../diagrams/uiPlay'
 import type { ItemNode } from './boardToFlow'
 
 let state: PlayState | null = null
@@ -19,9 +19,12 @@ export const play = {
     listeners.add(l)
     return () => void listeners.delete(l)
   },
-  /** start playing a frame: the page builds the model from the board and settles the first screen (reconcilePlay) */
-  start(frameId: string) {
-    state = emptyPlay(frameId)
+  /**
+   * start playing a frame — on `screen` (the screen of what was right-clicked), else the page builds the model from the
+   * board and settles the first screen (reconcilePlay)
+   */
+  start(frameId: string, screen?: string) {
+    state = emptyPlay(frameId, screen)
     emit()
   },
   /** every move goes through a pure step of diagrams/uiPlay.ts */
@@ -49,6 +52,18 @@ export function usePlay(): PlayState | null {
 export function playFrameOf(board: Board, it: Item | undefined): string | undefined {
   const d = diagramOf(board, it)
   return d?.kind === 'ui-mock' && d.frame ? d.frame.id : undefined
+}
+
+/** The screen (item id) of the UI mock an item is, or sits in, or is a note or thread about — where Play starts from it. */
+export function playScreenOf(board: Board, it: Item | undefined): string | undefined {
+  const frame = playFrameOf(board, it)
+  return frame && it ? buildPlay(board, frame).screenOf.get(it.id) : undefined
+}
+
+/** Where a click on this element leads (its goto, a flow, the card it is in), outside Play: Option+click, the menu's "Click → …". */
+export function clickTargetOf(board: Board, it: Item | undefined): PlayScreen | undefined {
+  const frame = playFrameOf(board, it)
+  return frame && it ? clickTarget(buildPlay(board, frame), it.id) : undefined
 }
 
 /**

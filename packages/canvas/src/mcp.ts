@@ -181,7 +181,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.25.0' },
+    { name: 'unprose', version: '0.26.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound — they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -527,6 +527,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
           ...(s.handover ? handoverLines(s.handover) : []),
           ...(s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done — things to confirm with someone else, not questions to you (canvas_todo lists them)`] : []),
           ...(s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} — the person's own words: the holder judges each in its thread, then applies it or says why not`] : []),
+          ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ''} is still registered, but its frame is gone from the board${f.holder ? ` — files held by ${displayName(f.holder)}` : ''}: ${f.holder ? 'its holder redraws it from the file, or drops the entry' : 'redraw it from the file, or drop the entry'} — PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? ' (only the holder may)' : ''}`),
           `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
           `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,
         ].join('\n'),

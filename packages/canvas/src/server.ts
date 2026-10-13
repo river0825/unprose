@@ -22,7 +22,7 @@ import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, sha1, stampAttribution, type ProposalInput } from './proposals.js'
 import { openDrafts, todoCounts } from './todos.js'
 import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
-import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
+import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, framelessDiagrams, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
 import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, stampTodos, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
@@ -355,6 +355,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       // TODOs still open, and the person's draft annotations waiting for the holder of the files (docs/canvas.md)
       todos: todoCounts(b),
       drafts: openDrafts(b).length,
+      // diagrams the board still registers whose frame is gone (removed over /ops or on the page)
+      frameless: framelessDiagrams(viewOf(g, b)).map(({ key, source, holder }) => ({ key, ...(source ? { source } : {}), ...(holder ? { holder: holder.agent } : {}) })),
       suggestion,
       ...(suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? 'asked' : 'holder' } : {}),
       agents: knownAgents(b.id, g)

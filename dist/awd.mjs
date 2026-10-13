@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.25.0";
+    VERSION2 = "0.26.0";
   }
 });
 
@@ -79777,7 +79777,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.25.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.26.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -80059,6 +80059,7 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       ...s.handover ? handoverLines(s.handover) : [],
       ...s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done \u2014 things to confirm with someone else, not questions to you (canvas_todo lists them)`] : [],
       ...s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} \u2014 the person's own words: the holder judges each in its thread, then applies it or says why not`] : [],
+      ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ""} is still registered, but its frame is gone from the board${f.holder ? ` \u2014 files held by ${displayName(f.holder)}` : ""}: ${f.holder ? "its holder redraws it from the file, or drops the entry" : "redraw it from the file, or drop the entry"} \u2014 PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? " (only the holder may)" : ""}`),
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));

@@ -40256,6 +40256,19 @@ function addressedTo(board, change, me) {
   }
   return false;
 }
+function framelessDiagrams(board) {
+  const diagrams = board.meta?.diagrams;
+  if (!diagrams || typeof diagrams !== "object")
+    return [];
+  const framed = new Set(Object.values(board.items).map((it) => diagramSpecOf(it)?.key).filter((k2) => !!k2));
+  return Object.entries(diagrams).filter(([key]) => !framed.has(key) && !board.items[diagramFrameId(key)]).map(([key, d]) => {
+    const holder = holderIn(d);
+    return { key, ...str2(d?.source) ? { source: d.source } : {}, ...holder ? { holder } : {} };
+  });
+}
+function framelessLines(board) {
+  return framelessDiagrams(board).map(({ key, source, holder }) => `Diagram ${key}${source ? ` (${source})` : ""} is still registered, but its frame is gone from the board${holder ? ` \u2014 files held by ${displayName(holder.agent)}` : ""}: ${holder ? "its holder redraws it from the file, or drops the entry" : "redraw it from the file, or drop the entry"} \u2014 PATCH /api/boards/${board.id} {"meta":{"diagrams":{"${key}":null}}}${holder ? " (only the holder may)" : ""}`);
+}
 function settingsLines(meta3) {
   const out = [];
   const c = contextOf(meta3);
@@ -40566,7 +40579,7 @@ function outline(board, opts = {}) {
   const out = [];
   if (!opts.bare) {
     out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`);
-    const settings = settingsLines(board.meta);
+    const settings = [...settingsLines(board.meta), ...framelessLines(board)];
     if (settings.length)
       out.push(...settings, "");
   }
@@ -51954,7 +51967,7 @@ import os4 from "node:os";
 import path7 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.25.0";
+var VERSION = "0.26.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -61481,7 +61494,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.25.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.26.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -61763,6 +61776,7 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       ...s.handover ? handoverLines(s.handover) : [],
       ...s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done \u2014 things to confirm with someone else, not questions to you (canvas_todo lists them)`] : [],
       ...s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} \u2014 the person's own words: the holder judges each in its thread, then applies it or says why not`] : [],
+      ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ""} is still registered, but its frame is gone from the board${f.holder ? ` \u2014 files held by ${displayName(f.holder)}` : ""}: ${f.holder ? "its holder redraws it from the file, or drops the entry" : "redraw it from the file, or drop the entry"} \u2014 PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? " (only the holder may)" : ""}`),
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
     ].join("\n"));
@@ -62298,7 +62312,7 @@ function summaryText(board, only, o) {
   if (ctx)
     out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ""}: ${short2(ctx.text, 300)}`);
   const r2 = responderOf(board.meta);
-  out.push(`Answered by: ${responderLabel(r2)}`);
+  out.push(`Answered by: ${responderLabel(r2)}`, ...framelessLines(board));
   const threadsOf = (set2) => {
     const roots = set2.filter((c) => c.type === "comment" && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c));
     const all = Object.values(board.items).filter((c) => c.type === "comment");
@@ -64330,6 +64344,8 @@ function startServer(opts = {}) {
       // TODOs still open, and the person's draft annotations waiting for the holder of the files (docs/canvas.md)
       todos: todoCounts(b2),
       drafts: openDrafts(b2).length,
+      // diagrams the board still registers whose frame is gone (removed over /ops or on the page)
+      frameless: framelessDiagrams(viewOf(g2, b2)).map(({ key, source, holder }) => ({ key, ...source ? { source } : {}, ...holder ? { holder: holder.agent } : {} })),
       suggestion,
       ...suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? "asked" : "holder" } : {},
       agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w2) => sameAgent(w2, name)), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),

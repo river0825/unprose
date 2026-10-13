@@ -7,7 +7,7 @@
 // agent. The default local agent (studio, or a local session without a name) is `agent`; people write it as
 // `@studio`.
 import { annotationOf, isAnnotationDraft, todoOf } from './annotations.js'
-import { diagramOf, type Board, type Change, type Item, type Op } from './model.js'
+import { diagramFrameId, diagramOf, diagramSpecOf, type Board, type Change, type Item, type Op } from './model.js'
 
 /** The default local agent: studio, or a local session without UNPROSE_AGENT_NAME. */
 export const LOCAL_AGENT = 'agent'
@@ -968,6 +968,30 @@ export function addressedTo(board: Board, change: Change, me: string): boolean {
     if (toResponder()) return true
   }
   return false
+}
+
+/**
+ * The diagrams the board still registers (`meta.diagrams`) whose frame is gone from it — removed over `/ops` or on the
+ * page. The entry keeps its holder and file snapshot (the Files tab, canvas_files, the redraw guard) until the holder
+ * redraws the frame from the file or drops the entry (PATCH /api/boards/:id `{ meta: { diagrams: { <key>: null } } }`).
+ */
+export function framelessDiagrams(board: Pick<Board, 'meta' | 'items'>): Array<{ key: string; source?: string; holder?: FileHolder }> {
+  const diagrams = board.meta?.diagrams as Record<string, { source?: unknown; holder?: unknown }> | undefined
+  if (!diagrams || typeof diagrams !== 'object') return []
+  const framed = new Set(Object.values(board.items).map((it) => diagramSpecOf(it)?.key).filter((k): k is string => !!k))
+  return Object.entries(diagrams)
+    .filter(([key]) => !framed.has(key) && !board.items[diagramFrameId(key)])
+    .map(([key, d]) => {
+      const holder = holderIn(d)
+      return { key, ...(str(d?.source) ? { source: d.source as string } : {}), ...(holder ? { holder } : {}) }
+    })
+}
+
+/** One line per frameless diagram, for agents: what is left of it and the two ways out. */
+export function framelessLines(board: Pick<Board, 'id' | 'meta' | 'items'>): string[] {
+  return framelessDiagrams(board).map(({ key, source, holder }) =>
+    `Diagram ${key}${source ? ` (${source})` : ''} is still registered, but its frame is gone from the board${holder ? ` — files held by ${displayName(holder.agent)}` : ''}: ${holder ? 'its holder redraws it from the file, or drops the entry' : 'redraw it from the file, or drop the entry'} — PATCH /api/boards/${board.id} {"meta":{"diagrams":{"${key}":null}}}${holder ? ' (only the holder may)' : ''}`,
+  )
 }
 
 /** One line per board setting, for agents: the context, who answers, who holds which files (no paths). */

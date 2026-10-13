@@ -29,6 +29,8 @@ export interface PlayState {
   frameId: string
   /** the screen item on view */
   screen: string
+  /** the screen play was started on — the screen of the item right-clicked → Play; Restart goes back to it (else the first) */
+  start?: string
   /** the screens left behind, oldest first (Back pops the last) */
   history: string[]
   /** the select whose options are open */
@@ -132,21 +134,35 @@ export function canPlay(board: Board, frameId: string): boolean {
   return buildPlay(board, frameId).screens.length > 0
 }
 
-/** Play asked for on a frame, before the page has looked at the board: no screen yet (`reconcilePlay` picks the first). */
-export function emptyPlay(frameId: string): PlayState {
-  return { frameId, screen: '', history: [], typed: {}, picked: {}, checked: {}, tab: {} }
+/**
+ * Play asked for on a frame, before the page has looked at the board: on `screen` when one is given (the screen of
+ * what was right-clicked), else no screen yet — `reconcilePlay` picks the first, or the first when `screen` is gone.
+ */
+export function emptyPlay(frameId: string, screen?: string): PlayState {
+  return { frameId, screen: screen ?? '', ...(screen ? { start: screen } : {}), history: [], typed: {}, picked: {}, checked: {}, tab: {} }
 }
 
-/** Where play starts: the first screen, untouched. */
-export function startPlay(model: PlayModel): PlayState | undefined {
-  const first = model.screens[0]
-  if (!first) return undefined
-  return { ...emptyPlay(model.frameId), screen: first.id }
+/** The screen play starts on: `from` when it is one of the frame's screens, else the first. */
+export function startScreen(model: PlayModel, from?: string): string | undefined {
+  return model.screens.find((x) => x.id === from)?.id ?? model.screens[0]?.id
+}
+
+/** Where play starts: `from` (a screen of the frame) or the first screen, untouched. */
+export function startPlay(model: PlayModel, from?: string): PlayState | undefined {
+  const at = startScreen(model, from)
+  if (!at) return undefined
+  return { ...emptyPlay(model.frameId, at === from ? at : undefined), screen: at }
 }
 
 /** The screen a click on `id` leads to, if any. */
 export function gotoTarget(model: PlayModel, id: string): string | undefined {
   return model.gotoOf.get(id)
+}
+
+/** The screen a click on `id` leads to, with its name — what Option+click and the menu's "Click → …" follow outside Play. */
+export function clickTarget(model: PlayModel, id: string): PlayScreen | undefined {
+  const to = model.gotoOf.get(id)
+  return to ? model.screens.find((x) => x.id === to) : undefined
 }
 
 /** Follow a goto: the current screen goes on the way back; nothing happens when already there. */
@@ -161,9 +177,9 @@ export function playBack(s: PlayState): PlayState {
   return { ...s, screen: s.history[s.history.length - 1], history: s.history.slice(0, -1), open: undefined }
 }
 
-/** Restart: the first screen, everything typed, picked and toggled forgotten. */
+/** Restart: the screen play started on (else the first), everything typed, picked and toggled forgotten. */
 export function playRestart(model: PlayModel, s: PlayState): PlayState {
-  return startPlay(model) ?? s
+  return startPlay(model, s.start) ?? s
 }
 
 /** Open a select's options (closing any other), or close them. */
@@ -195,9 +211,11 @@ export function reconcilePlay(model: PlayModel, s: PlayState): PlayState | undef
   const ids = new Set(model.screens.map((x) => x.id))
   if (!ids.size) return undefined
   const history = s.history.filter((h) => ids.has(h))
-  if (ids.has(s.screen)) return history.length === s.history.length ? s : { ...s, history }
+  // the screen it started on is gone: Restart goes to the first
+  const kept = s.start && !ids.has(s.start) ? (({ start: _gone, ...rest }) => rest)(s) : s
+  if (ids.has(s.screen)) return history.length === s.history.length && kept === s ? s : { ...kept, history }
   const back = history.pop()
-  return { ...s, screen: back ?? model.screens[0].id, history, open: undefined }
+  return { ...kept, screen: back ?? model.screens[0].id, history, open: undefined }
 }
 
 export type PlayStatus = 'current' | 'other'

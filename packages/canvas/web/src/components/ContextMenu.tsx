@@ -33,6 +33,8 @@ interface Props {
   onPlayStory?: () => void
   /** a UI-mock frame (or an element in one): operate its screens — goto buttons, selects, tabs, fields (docs/diagrams.md §6c "Play") */
   onPlayMock?: () => void
+  /** a UI mock element a click leads from: do that click — the view goes to the screen it leads to (Option+click does the same) */
+  onClickThrough?: { screen: string; run: () => void }
   /** the layout lock (docs/diagrams.md "What a redraw keeps"): absent for comments and wires */
   lock?: { locked: boolean; frame: boolean; byFrame: boolean }
   onToggleLock?: (id: string) => void
@@ -42,7 +44,7 @@ interface Props {
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, onCopyLink, canColor, askEnabled, onPlayStory, onPlayMock, lock, onToggleLock, onAnnotate, onTodo }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, onCopyLink, canColor, askEnabled, onPlayStory, onPlayMock, onClickThrough, lock, onToggleLock, onAnnotate, onTodo }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -168,6 +170,14 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
           Play
           <span aria-hidden="true" className="sub-arrow">
             ▶
+          </span>
+        </button>
+      )}
+      {onClickThrough && (
+        <button role="menuitem" onClick={act(onClickThrough.run)} title="Do what a click on it does: the view goes to that screen (⌥ click; ⌥ ← comes back)">
+          Click → {onClickThrough.screen}
+          <span aria-hidden="true" className="sub-arrow">
+            ⌥ click
           </span>
         </button>
       )}

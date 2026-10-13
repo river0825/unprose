@@ -5,7 +5,7 @@
 // the whole screen, never zoomed in past 100 %.
 import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { currentScreen, playBack, playRestart, type PlayModel, type PlayState } from '../diagrams/uiPlay'
+import { currentScreen, playBack, playRestart, startScreen, type PlayModel, type PlayState } from '../diagrams/uiPlay'
 import { play } from '../flow/uiPlay'
 import './replay.css'
 
@@ -22,7 +22,7 @@ const STOP = 'M6 6l12 12M18 6L6 18'
 export function PlayBar({ model, state, title }: { model: PlayModel; state: PlayState; title: string }) {
   const flow = useReactFlow()
   const screen = currentScreen(model, state)
-  const atStart = !state.history.length && state.screen === model.screens[0]?.id
+  const atStart = !state.history.length && state.screen === startScreen(model, state.start)
   const barRef = useRef<HTMLDivElement>(null)
 
   // keys, while it plays (the board's own keys are off meanwhile; a mocked field keeps its own typing)
@@ -97,7 +97,7 @@ export function PlayBar({ model, state, title }: { model: PlayModel; state: Play
           {at} / {n}
         </span>
         <span className="replay-buttons">
-          <button type="button" className="ghost icon" onClick={() => play.set(playRestart(model, state))} disabled={atStart && !Object.keys(state.typed).length && !Object.keys(state.picked).length && !Object.keys(state.checked).length && !Object.keys(state.tab).length} aria-label="Restart" title="Restart on the first screen (Home)">
+          <button type="button" className="ghost icon" onClick={() => play.set(playRestart(model, state))} disabled={atStart && !Object.keys(state.typed).length && !Object.keys(state.picked).length && !Object.keys(state.checked).length && !Object.keys(state.tab).length} aria-label="Restart" title={state.start && state.start !== model.screens[0]?.id ? `Restart on ${model.screens.find((x) => x.id === state.start)?.name ?? 'the screen you started on'} (Home)` : 'Restart on the first screen (Home)'}>
             <Icon d={RESTART} />
           </button>
           <button type="button" className="ghost icon" onClick={() => play.set(playBack(state))} disabled={!state.history.length} aria-label="Back" title="Back to the screen before (←)">

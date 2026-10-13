@@ -41,6 +41,7 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       ['Arrow keys', 'Nudge the selection 10 px'],
       ['Shift Arrow keys', 'Nudge 50 px'],
       ['Right-click or long-press', 'Item menu (also Annotate… and Add TODO…)'],
+      ['⌥ click', 'On a UI mock element a click leads from: do that click — the view goes to its screen (⌥ ← comes back); the item menu says Click → <screen>'],
       ['Shift F10', 'Item menu for the selected item'],
       ['Delete or Backspace', 'Delete the selection'],
     ],

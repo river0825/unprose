@@ -5,7 +5,7 @@ import { isAnnotationCard, isAnnotationDraft } from './annotations.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
 import { isTodo, todoCounts } from './todos.js'
 import { containmentTree, frameKeys, isContainer, itemsInFrame, KIND_LABEL, outline, pendingTag, resolveFrame, rootOf, short, withThreads, byPos, descendants } from './outline.js'
-import { contextOf, displayName, holdersOf, responderLabel, responderOf } from './routing.js'
+import { contextOf, displayName, framelessLines, holdersOf, responderLabel, responderOf } from './routing.js'
 
 export type ReadFormat = 'outline' | 'json' | 'summary'
 
@@ -191,7 +191,7 @@ function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions
   const ctx = contextOf(board.meta)
   if (ctx) out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ''}: ${short(ctx.text, 300)}`)
   const r = responderOf(board.meta)
-  out.push(`Answered by: ${responderLabel(r)}`)
+  out.push(`Answered by: ${responderLabel(r)}`, ...framelessLines(board))
   const threadsOf = (set: Item[]) => {
     // annotation cards and TODOs are not conversations: counted apart
     const roots = set.filter((c) => c.type === 'comment' && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c))

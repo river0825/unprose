@@ -18,6 +18,8 @@ export interface BoardSettings {
   /** TODOs open and done, and the person's draft annotations waiting for the holder (docs/canvas.md "TODOs", "Annotations") */
   todos?: { open: number; done: number }
   drafts?: number
+  /** diagrams still registered whose frame is gone from the board; `holder` is the agent holding their files */
+  frameless?: Array<{ key: string; source?: string; holder?: string }>
   /** a responder the person may confirm: one an agent asked for ('asked', by suggestionBy), or the sole file holder ('holder') */
   suggestion?: string
   suggestionBy?: string | null

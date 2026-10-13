@@ -803,6 +803,13 @@ The frame panel shows **"Files: team-notes · held by codex-b · last applied 3 
 remote and (on the canvas machine) *on mbp-b (…/src/team-notes)*. `canvas_read_board`'s outline lists each
 diagram's holder (no paths).
 
+**A diagram whose frame is gone** — removed over `/ops`, or deleted on the page — stays registered in
+`meta.diagrams` (its holder, its file snapshot: the Files tab, `canvas_files` and the redraw guard still see it).
+`canvas_read_board` (outline and summary) and `canvas_context` say so, one line per diagram (`GET …/settings` →
+`frameless: [{ key, source?, holder? }]`): *Diagram shop-ui (design/shop.ui.yaml) is still registered, but its frame
+is gone from the board — files held by codex-b: its holder redraws it from the file, or drops the entry — PATCH
+/api/boards/:id {"meta":{"diagrams":{"shop-ui":null}}} (only the holder may)*.
+
 **A board an agent draws from its files is answered by it**: when `awd design draw` / `graph --canvas` / `design_draw`
 create the board (`POST /api/boards { answeredBy: 'me' }`), a *named* agent becomes its responder. The default local
 agent leaves the default. Boards that exist are never changed — the UI only suggests.
@@ -1332,7 +1339,8 @@ the board). Each looks different and has its own switch (`web/src/flow/notesView
     (muted, with their answer), *None* no TODO; the panel still lists them.
   What you open this way is forgotten when a mode changes. A UI mock has one more, on its frame header and in its
   panel: **Clickable** (**Shift+G**, `awd.canvas.clickable`) outlines every element a click leads from and tags it
-  `→ <screen>` (docs/diagrams.md §6c "Clickable").
+  `→ <screen>` (docs/diagrams.md §6c "Clickable"); ⌥ click on such an element (or its menu's **Click → <screen>**)
+  takes the view to that screen.
 - **A finished proposal folds by itself.** A proposal thread (a root from `canvas_propose_edit` — id `prop_…` — one
   carrying `data.discuss.edit`, or your draft annotation) that the holder answered with *Applied to <file>*
   (`--applied`; the reply's id starts `applied.`) — or that you declined with the Decline button — is drawn as a quiet
