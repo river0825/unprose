@@ -1075,6 +1075,13 @@ button.ui-pin:focus-visible {
 .ui-add {
   margin-top: 10px;
 }
+/* the frame panel's Clickable list (components/Clickable.tsx), by screen */
+.ui-click-group h4 {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
 .ui-add-types {
   display: flex;
   flex-wrap: wrap;
@@ -1123,6 +1130,69 @@ button.ui-pin:focus-visible {
 }
 .ui-tab.ui-live-act:hover {
   color: var(--u-ink);
+}
+
+/* Clickable (flow/clickableView.ts; docs/diagrams.md §6c): an element a click leads from — a hairline in the link
+   colour just outside its edge with the faintest wash, and a small tag naming the screen it goes to. Canvas chrome,
+   not the mock's: in the canvas's tokens whatever the mock's theme. Siblings of the box, so nothing about its size or
+   layout changes and a box that clips its content does not cut them; the outline takes no clicks, the tag only its
+   tooltip (a click on it is a click on the element's node). */
+.ui-click-ring {
+  position: absolute;
+  inset: -3px;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--marker) 55%, transparent);
+  /* the mock's corner radius (UiNode hands it over), 3 px further out */
+  border-radius: calc(var(--u-radius, 8px) + 3px);
+  background: color-mix(in srgb, var(--marker) 5%, transparent);
+  pointer-events: none;
+}
+/* the tag: in the corner group, left of the element's pins (the group lines them up); a long name is cut short in its
+   words (diagrams/uiClickable.ts), not by CSS, so Copy as image — which fixes each box at its drawn width — shows it whole */
+.ui-click-tag {
+  flex: none;
+  box-sizing: border-box;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--marker) 40%, var(--rule));
+  background: var(--paper);
+  color: var(--marker);
+  font: 500 10px/14px var(--font-ui);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+/* a tag alone: inside the corner rather than centred on it, and a little higher, off the element's words */
+.ui-pin-corner.tag-only {
+  top: -10px;
+  right: 4px;
+}
+.ui-pin-corner.tag-only.beside-finding {
+  right: 14px;
+}
+/* Play's hint: a click that led nowhere flashes what on the screen on view leads somewhere */
+.ui-click-ring.ui-click-flash {
+  border-color: var(--marker);
+  background: color-mix(in srgb, var(--marker) 10%, transparent);
+  animation: ui-click-flash 900ms var(--ease) forwards;
+}
+@keyframes ui-click-flash {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-click-ring.ui-click-flash {
+    animation: none;
+  }
+}
+/* the switch on a UI-mock frame's header, beside Play */
+.frame-title .clickable-toggle[aria-pressed='false'] {
+  color: var(--ink-3);
 }
 .ui-live-input {
   all: unset;

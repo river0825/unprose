@@ -18,7 +18,7 @@ Unprose to discuss designs with a person on a shared canvas.
 - **Edits on the canvas are proposals** (a dragged wire, text edited in the source dialog, a proposed
   story). Discuss them in the comment thread first, then apply them to the file and redraw.
 - **Annotations say what an item is for** (`annotations: [{ on, text }]` in every kind's file, numbered cards on the
-  board — docs/diagrams.md §2b). The person's *draft annotation* is their own words, a proposal to the holder: judge it
+  board — docs/diagrams.md §2b); where a UI mock click goes is `goto` / `flows`, not a "Click → …" note. The person's *draft annotation* is their own words, a proposal to the holder: judge it
   (true to the design? contradicts the file or another annotation? says what the item is for?) and reply in its
   thread; if sound, apply it at once (base check, lint, redraw `--applied <thread>`) — they wrote it, that is consent;
   if not, say why and wait (docs/canvas.md → Annotations).

@@ -211,11 +211,28 @@ export interface RedrawResult {
   keptLayout: Set<string>
 }
 
-/** A numbered card a file's annotation (or a UI mock / wireframe note) drew — not a draft, not one written on the board. */
-function isFileAnnotationCard(it: BoardItem): boolean {
+/**
+ * A note the file drew — a numbered card from a file annotation or a UI mock / wireframe note, or a UI mock screen's
+ * own note (unnumbered, `<key>.note.<screen>`) — not a draft, not one written on the board.
+ */
+function isFileNote(it: BoardItem, prefix: string): boolean {
   if (it.type !== 'comment' || it.role !== 'note') return false
   const a = annotationOf(it as never)
-  return calloutOf(it as never) !== undefined && !a?.draft && !a?.board
+  return (calloutOf(it as never) !== undefined || it.id.startsWith(`${prefix}note.`)) && !a?.draft && !a?.board
+}
+
+/** Ids of the comments someone answered: the root of every reply, following `target` through comments. */
+function repliedTo(board: Record<string, BoardItem>): Set<string> {
+  const out = new Set<string>()
+  for (const c of Object.values(board)) {
+    if (c.type !== 'comment') continue
+    const seen = new Set([c.id])
+    for (let t = c.target as string | undefined; t && board[t]?.type === 'comment' && !seen.has(t); t = board[t].target as string | undefined) {
+      seen.add(t)
+      out.add(t)
+    }
+  }
+  return out
 }
 
 const label = (it: BoardItem | undefined): string => {
@@ -308,12 +325,21 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
     return !isRedrawNote(o.note) && drawers.size > 0 && !drawers.has(o.by ?? '')
   }
   const foreign = new Set<string>()
+  const answered = repliedTo(board)
   for (const it of Object.values(board)) {
     if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id)) continue
-    // comments stay (threads are the person's), but for the numbered annotation cards the file drew: gone from the file, gone
-    if (!it.id.startsWith(scope.prefix) || (it.type === 'comment' && !isFileAnnotationCard(it))) continue
+    // comments stay (threads are the person's), but for the notes the file drew: gone from the file, gone
+    if (!it.id.startsWith(scope.prefix) || (it.type === 'comment' && !isFileNote(it, scope.prefix))) continue
     if (byHand(it)) {
       foreign.add(it.id)
+      continue
+    }
+    // ... unless someone answered it: the discussion stays, as a thread about the same item — no number, no pin
+    if (it.type === 'comment' && answered.has(it.id)) {
+      if (calloutOf(it as never) === undefined && !it.data?.annotation) continue // kept as a thread by an earlier redraw
+      // null, not left out: the canvas merges a comment's data, and null is how a key goes (routing.ts stampRouting)
+      ops.push({ kind: 'update', id: it.id, patch: { data: { ...it.data, callout: null, callouts: null, annotation: null } } })
+      plan.updated.push({ id: it.id, label: label(it), why: 'no longer in the file; it has replies, so it stays as a thread (no number)' })
       continue
     }
     ops.push({ kind: 'remove', id: it.id })

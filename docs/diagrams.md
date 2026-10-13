@@ -80,7 +80,8 @@ decides each item's fate like this:
 | Drawn from the file, **deleted by the person** (a wire or an item — a policy → command wire, a sticky) | the file's, **marked deleted** (`data.pending: { kind: 'remove', deleted: 'wire' \| 'item', by: 'user' }`), drawn struck | kept | **yes — that is the point**: while the file still has it the redraw keeps it removed (never redrawn as it was) and lists it as "kept removed"; once the file drops it, it goes for good and the mark with it |
 | The **frame** itself | title from the file | kept if moved or locked; else grows to fit (never shrinks) | never |
 | A **proposal** of this drawing (`data.pending`: a dragged wire, edited words, a proposed story) | left exactly as it is | left as it is | removed once the file explains it (then the drawn element replaces it) |
-| **Comments** (any id) | kept | kept | never |
+| A **note the file drew** — a numbered annotation card, a UI mock / wireframe note, a UI mock screen's own note | from the file | kept if moved; else from the file | **yes** — renamed or removed element, a note moved to another element, an annotation dropped; **unless someone answered it**: then it stays as a thread about the same item, with no number and no pin (the preview lists it as updated: "it has replies") |
+| **Comments** (any other) | kept | kept | never |
 | **Foreign items in the frame** — another id (the person's sticky, a card another agent added with `canvas_add_items`/`canvas_apply`) | kept | kept | **never**: listed as "not from this file (kept)" in the preview |
 | An item with this file's id prefix that **the person added**, or **another agent added by hand** (a change that was not a redraw, by an agent that never redrew this frame) | kept | kept | **never** — treated as foreign |
 | Items of **other frames** on the board, and their proposals | untouched | untouched | never |
@@ -206,7 +207,8 @@ annotations:
 - **Lint**: an `on` that names nothing is an error — `annotations[2]: on "refnd" matches nothing in this diagram, so its
   card is not drawn — name …, e.g. paid, placed, …` — and the draw leaves that card out.
 - **Redraw**: content and numbers follow the file; a card the person moved stays where they put it; a card whose
-  annotation left the file goes.
+  annotation left the file goes — so does a UI mock screen's own note, and a note whose element was renamed or that
+  moved to another element — unless someone replied to it: then the discussion stays, as a thread without a number.
 - **From the canvas**: the person writes an annotation on an item as a *draft* — a proposal to the agent holding the
   file, with the edit that adds one entry here. The holder judges it and, when it is sound, applies it at once (the
   person wrote it); otherwise it says why in the thread (docs/canvas.md "Annotations").
@@ -616,9 +618,15 @@ flows: [{ from: boards/studio, to: new-board, label: open }]
   another one was applied; edits are made in the text, so comments, flow style and every other line stay.
 - **Lint** (`awd design lint`, offline): the schema with unknown fields, plus `goto` / `flows` to screens that do
   not exist, table rows whose cell count differs from the columns, unknown icons, children under an element that
-  cannot hold them, ids used twice in a screen, product text that reads like a design note (above). After a draw,
-  `canvas_check_layout` adds the geometry: a comment that covers a screen or an element (`comment-covers`), a
-  comment outside the frame its target is in (`comment-outside`). **The board shows the same findings**: the drawing puts each on the
+  cannot hold them, ids used twice in a screen, product text that reads like a design note (above), and a note that
+  only says where a click goes (rule `ui-note-says-where-a-click-goes`: "Click → Settings", "Tap: opens the editor",
+  "點擊 → 設定" — an element's `note` or a file annotation on an element, naming a screen by its name or id): write
+  `goto: <screen>` instead and keep only the rest of the note — info; one that repeats the element's `goto` / flow:
+  drop it — info; one that names another screen than its `goto`: a warning. This one is the lint's alone (how the
+  file is written, not the design): the board does not mark it. After a draw,
+  `canvas_check_layout` adds the geometry: a comment that covers a screen, an element or another card
+  (`comment-covers`), a comment outside the frame its target is in (`comment-outside`). **The board shows the same
+  findings** (but for the click notes): the drawing puts each on the
   element it is about (`data.ui.findings`; a `stack` / `row` / `grid`'s go to what holds it, a flow's to the first
   screen) — a small ! (warning) or i (info) mark on the element, "N to check" on the frame, and the list in the
   frame's panel under *Checks*: a click moves the board to the element and flashes it, the › opens its details.
@@ -649,9 +657,28 @@ header, in the frame's side panel, or from the right-click menu of the frame or 
   affected. While it plays, nothing in the frame is dragged, resized, wired or edited — a double-click edits no
   words, Delete proposes nothing, the right-click menu stays closed — and the board's edit keys wait. A redraw
   while it plays keeps the screen on view when it still exists, else goes back to one that does.
+- **Where a click leads nowhere**, the screen's clickable elements light up for a moment (a heading, text, a badge,
+  the empty screen — not a field, select or tabs): the Figma hotspot hint, whatever the Clickable switch says.
 - *Not (yet):* buttons without a `goto` (they do nothing), a navbar or sidebar item that leads to a screen,
   typed text that changes what another screen shows, a radio group where one choice clears the others,
   presenting to everyone on the board at once.
+
+### Clickable
+
+Where every click leads, at a glance — for the developer reading the mock, without a "Click → Settings" note per
+button: **Clickable** on a UI-mock frame's header (after Play), *Show clickable* in the frame's panel, or **Shift+G**.
+
+- **What it reads** is what Play follows: an element's `goto`, a `flows` entry that starts from it, a card / section /
+  navbar that leads somewhere. Each gets a thin outline and a small tag `→ <screen name>` at its top-right corner,
+  beside its numbered pins (never on them). Inside a card that leads somewhere only the card is tagged — unless
+  something in it leads to another screen. A whole screen, a flow from a whole screen and a `goto` to a screen that
+  does not exist are not tagged.
+- **The frame's panel lists them** — *Clickable (n)*, by screen in the frame's order, `<element> → <screen>`; a click
+  takes the board to the element and flashes it, › opens it.
+- **A way of looking**: for this viewer, every UI mock on the board, remembered in this browser
+  (`awd.canvas.clickable`); nothing is stored. Copy as image draws it; while a frame plays, Play's own look wins there.
+- **So write where a click goes as `goto` / `flows`, never as a note** — lint flags a note that only says it
+  (`ui-note-says-where-a-click-goes`, above); keep notes for why an element is there.
 
 ## 7. Board triggers point at a frame key
 

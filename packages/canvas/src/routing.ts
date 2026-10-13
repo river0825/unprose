@@ -851,6 +851,8 @@ export function stampRouting(board: Board, ops: Op[], known: string[], now: stri
       const textChanged = op.patch.text !== undefined && op.patch.text !== cur.text
       if (!textChanged && !op.patch.data) return op
       const base: Data = { ...(cur.data ?? {}), ...((op.patch.data as Data | undefined) ?? {}) }
+      // `null` removes a key (a redraw taking the number off a note someone answered)
+      for (const [k, v] of Object.entries(base)) if (v === null) delete base[k]
       // the stored routing keys stay unless the text changes
       for (const k of ROUTING_KEYS) {
         if (cur.data?.[k] !== undefined) base[k] = cur.data[k]

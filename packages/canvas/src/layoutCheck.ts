@@ -345,6 +345,8 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
   // The paper (a diagram frame, a lane) is where a comment sits, never what it covers; a UI-mock screen is the product.
   const paper = (it: Item) => it.type === 'frame' || it.type === 'lane'
   const coverable = Object.values(shown.items).filter((it) => it.type !== 'arrow' && it.type !== 'comment' && !paper(it) && it.w > 8 && it.h > 8)
+  // the comments drawn where they are stored: not a reply (drawn inside its thread)
+  const cards = Object.values(shown.items).filter((it) => it.type === 'comment' && it.w > 8 && it.h > 8 && shown.items[it.target ?? '']?.type !== 'comment')
   const uiScreenOf = (it: Item): Item | undefined => {
     const seen = new Set<string>()
     for (let cur: Item | undefined = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : undefined) {
@@ -376,6 +378,22 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
       const leaves = covered.filter((o) => !isContainer(o.it))
       const worst = (leaves.length ? leaves : covered).reduce((a, b) => (a.ox * a.oy >= b.ox * b.oy ? a : b))
       push({ kind: 'comment-covers', message: `${label} covers ${names}${more} (${r(worst.ox)}×${r(worst.oy)} px on ${nameOf(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) })
+    }
+    // ... or on another card: the later one in reading order is the finding (two at the very same spot: by id), so
+    // each pair is told once
+    const stacked = cards
+      .filter((o) => o.id !== c.id && (byReading(o, c) || (o.id < c.id ? -1 : 1)) < 0)
+      .map((o) => ({ o, ox: Math.min(c.x + c.w, o.x + o.w) - Math.max(c.x, o.x), oy: Math.min(c.y + c.h, o.y + o.h) - Math.max(c.y, o.y) }))
+      .filter((s) => s.ox > OVERLAP_TOL && s.oy > OVERLAP_TOL)
+    if (stacked.length) {
+      const names = stacked.slice(0, 3).map((s) => `comment "${short(s.o.text, 24)}"`).join(', ')
+      const more = stacked.length > 3 ? ` and ${stacked.length - 3} more` : ''
+      push({
+        kind: 'comment-covers',
+        message: `${label} lies on ${names}${more} (${r(stacked[0].ox)}×${r(stacked[0].oy)} px)`,
+        suggestion: `move one of them onto free paper, or add it without x/y so the canvas places it; a note the file no longer has goes with a redraw of its diagram`,
+        others: stacked.map((s) => s.o.id),
+      })
     }
     // a draft annotation waits in the column right of the frame until the holder draws it from the file
     if (!t || !info?.frameId || isAnnotationDraft(c)) continue

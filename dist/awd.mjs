@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.24.0";
+    VERSION2 = "0.25.0";
   }
 });
 
@@ -59026,6 +59026,64 @@ function checkUiMock(raw) {
   }
   return out;
 }
+function clickNoteTarget(note, screens) {
+  const word = CLICK_WORD.exec(note);
+  if (!word)
+    return void 0;
+  let rest = note.slice(word[0].length);
+  let led = false;
+  for (let m2 = LEADS.exec(rest); m2?.[0]; m2 = LEADS.exec(rest)) {
+    rest = rest.slice(m2[0].length);
+    led = true;
+  }
+  if (!led)
+    return void 0;
+  rest = rest.replace(/^the\s+/i, "").replace(/^["'「『]/u, "");
+  let best;
+  for (const s of screens)
+    for (const key of [s.name, s.id]) {
+      if (!key || !rest.toLowerCase().startsWith(key.toLowerCase()))
+        continue;
+      const after = rest.slice(key.length);
+      if (/[A-Za-z0-9]$/.test(key) && /^[A-Za-z0-9]/.test(after))
+        continue;
+      if (!best || key.length > best.len)
+        best = { screen: s.id, len: key.length, after };
+    }
+  if (!best)
+    return void 0;
+  const left = best.after.replace(/^["'」』]/u, "").replace(/^\s*(?:screen|page)(?![A-Za-z])|^(?:畫面|頁面|頁)/iu, "").replace(/^[\s.。,，;；:：)）]+/u, "").trim();
+  return { screen: best.screen, rest: left };
+}
+function clickNoteFindings(raw) {
+  const m2 = normalizeUiMock(raw);
+  const els = new Map(m2.screens.flatMap((s) => walkUi(s.body)).map((e) => [e.ref, e]));
+  const flowTo = new Map(m2.flows.filter((f) => els.has(f.from)).map((f) => [f.from, f.to]));
+  const said = (e, text3, where) => {
+    const click = clickNoteTarget(text3, m2.screens);
+    if (!click)
+      return [];
+    const goes = e.goto ?? flowTo.get(e.ref);
+    const how = e.goto ? "goto" : "a flow";
+    const head = `${CLICK_NOTE_RULE}: ${where} "${shortText(text3)}"`;
+    if (!goes)
+      return [{ severity: "info", element: e.ref, message: `${head} says where a click goes: write \`goto: ${click.screen}\` on the element \u2014 the navigate arrow, Play and the Clickable view read it \u2014 and ${click.rest ? "keep only the rest as the note" : "drop the note"}` }];
+    if (goes === click.screen)
+      return [{ severity: "info", element: e.ref, message: `${head} repeats where it goes (${how}: ${goes}): ${click.rest ? "keep only the rest" : "drop it"} \u2014 the Clickable view shows it` }];
+    return [{ severity: "warning", element: e.ref, message: `${head} says a click goes to ${click.screen}, but ${how} leads to ${goes}` }];
+  };
+  const out = [];
+  for (const e of els.values())
+    if (e.note)
+      out.push(...said(e, e.note, "note"));
+  const annotations = raw.annotations ?? [];
+  for (const a of annotations) {
+    const e = typeof a.on === "string" ? els.get(a.on) : void 0;
+    if (e && typeof a.text === "string")
+      out.push(...said(e, a.text, `annotation on ${a.on}`));
+  }
+  return out;
+}
 function lintUiMock(raw) {
   const m2 = normalizeUiMock(raw);
   const where = /* @__PURE__ */ new Map();
@@ -59078,7 +59136,7 @@ function attachUiFindings(items, raw) {
     return { ...it, data: { ...it.data, ui: mine ? { ...rest, findings: mine } : rest } };
   });
 }
-var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, listItem, cell, tableRow, UI_GUTTER, isUiScreen, UI_CALLOUT, uiNodeSchema, uiMockSchema, DEFAULT_ACCENT, WIDE2, HEADING, BUTTON, FIELD, HUG, STRETCH, isDrawnContainer, isLayout, titleH, NOTE_WORDS, NOTE_WORDS_CJK, NOTE_WORD_RE, NOTE_RULE, NOTE_RULE_MESSAGE, shortText, uiPathText;
+var UI_LAYOUT, UI_BOXES, UI_LEAVES, UI_TYPES, UI_ICONS, UI_DEVICES, tone, size, listItem, cell, tableRow, UI_GUTTER, isUiScreen, UI_CALLOUT, uiNodeSchema, uiMockSchema, DEFAULT_ACCENT, WIDE2, HEADING, BUTTON, FIELD, HUG, STRETCH, isDrawnContainer, isLayout, titleH, NOTE_WORDS, NOTE_WORDS_CJK, NOTE_WORD_RE, NOTE_RULE, NOTE_RULE_MESSAGE, CLICK_NOTE_RULE, CLICK_WORD, LEADS, shortText, uiPathText;
 var init_uiMock = __esm({
   "packages/canvas/dist/diagrams/uiMock.js"() {
     init_zod();
@@ -59276,6 +59334,9 @@ var init_uiMock = __esm({
     NOTE_WORD_RE = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${NOTE_WORDS.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
     NOTE_RULE = "ui-text-reads-like-a-note";
     NOTE_RULE_MESSAGE = "reads like a design note, not product text: move it to `note` (on the element, the item or the row), and keep the product words here";
+    CLICK_NOTE_RULE = "ui-note-says-where-a-click-goes";
+    CLICK_WORD = /^\s*(?:click(?:ing|ed)?|tap(?:ping|ped)?|press(?:ing|ed)?|點擊|點選|點按|點|按下|按)(?:\s+(?:on\s+)?(?:it|this|here))?\s*/iu;
+    LEADS = /^(?:[→⇒➜➔>:：=\-]+|(?:goes|go|leads|navigates|takes\s+you|opens?|to|into)(?![A-Za-z])|前往|跳轉到?|跳到|進入|開啟|打開|到|至)\s*/iu;
     shortText = (s, n = 48) => {
       const t = s.replace(/\s+/g, " ").trim();
       return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
@@ -62004,7 +62065,7 @@ function lintDesignContent(d) {
     return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
   const notes = annotationFindings(d.kind, parsed.data, d.key);
   if (d.kind === "ui-mock")
-    return [...lintUiMock(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
+    return [...[...lintUiMock(d.content), ...clickNoteFindings(d.content)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
   if (d.kind !== "event-storming")
     return [...unknown2, ...notes];
   return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page })), ...notes];
@@ -62198,11 +62259,24 @@ function originsOf(changes) {
 function redrawInputs(changes) {
   return { placed: placedByUser(changes.filter((c2) => c2.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
 }
-function isFileAnnotationCard(it) {
+function isFileNote(it, prefix) {
   if (it.type !== "comment" || it.role !== "note")
     return false;
   const a = annotationOf(it);
-  return calloutOf(it) !== void 0 && !a?.draft && !a?.board;
+  return (calloutOf(it) !== void 0 || it.id.startsWith(`${prefix}note.`)) && !a?.draft && !a?.board;
+}
+function repliedTo(board) {
+  const out = /* @__PURE__ */ new Set();
+  for (const c2 of Object.values(board)) {
+    if (c2.type !== "comment")
+      continue;
+    const seen = /* @__PURE__ */ new Set([c2.id]);
+    for (let t = c2.target; t && board[t]?.type === "comment" && !seen.has(t); t = board[t].target) {
+      seen.add(t);
+      out.add(t);
+    }
+  }
+  return out;
 }
 function same(a, b2) {
   if (a === b2)
@@ -62289,13 +62363,21 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
     return !isRedrawNote(o.note) && drawers.size > 0 && !drawers.has(o.by ?? "");
   };
   const foreign = /* @__PURE__ */ new Set();
+  const answered = repliedTo(board);
   for (const it of Object.values(board)) {
     if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id))
       continue;
-    if (!it.id.startsWith(scope.prefix) || it.type === "comment" && !isFileAnnotationCard(it))
+    if (!it.id.startsWith(scope.prefix) || it.type === "comment" && !isFileNote(it, scope.prefix))
       continue;
     if (byHand(it)) {
       foreign.add(it.id);
+      continue;
+    }
+    if (it.type === "comment" && answered.has(it.id)) {
+      if (calloutOf(it) === void 0 && !it.data?.annotation)
+        continue;
+      ops.push({ kind: "update", id: it.id, patch: { data: { ...it.data, callout: null, callouts: null, annotation: null } } });
+      plan.updated.push({ id: it.id, label: label(it), why: "no longer in the file; it has replies, so it stays as a thread (no number)" });
       continue;
     }
     ops.push({ kind: "remove", id: it.id });
@@ -70622,7 +70704,7 @@ ${CLOSE}`
         arg: { name: "screen", hint: "<screen or page>", description: 'The screen to mock, e.g. "the board list page"' },
         fallback: "the screen we are discussing \u2014 ask me which one",
         body: `Mock {arg} as real-looking UI on the Unprose canvas (a UI mock frame, like a Figma frame).
-Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` that says what an item is for and why it is there, or what is still an open question (on the screen, an element, a list item or a table row \u2014 a design annotation, drawn as a numbered pin on that item and a card with the same number beside the screen, never on the product; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on buttons that lead to another screen. When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
+Write design/<name>.ui.yaml (docs/diagrams.md \xA76c): screens at a device size (desktop, tablet or phone), each a tree of components \u2014 navbar, sidebar, section, card, row, grid, heading, text, button, input, select, table, list, stat, tabs, badge, alert, image \u2026 \u2014 with a stable \`id\` on every element we will talk about, real copy instead of lorem ipsum, a \`note\` that says what an item is for and why it is there, or what is still an open question (on the screen, an element, a list item or a table row \u2014 a design annotation, drawn as a numbered pin on that item and a card with the same number beside the screen, never on the product; never write TBD / sample / proposal into the product text, lint flags it), \`sample: true\` on made-up content, and \`goto: <screen>\` on every element that leads to another screen (that is where a click goes \u2014 never a "Click \u2192 \u2026" note: the navigate arrows, Play and the Clickable view read goto, lint flags such notes). When a story map exists, trace each screen to the stories it shows (rel: shows). Check it with design_lint and draw it with design_draw.
 When I edit words on the board they show as proposals with a diff; apply one only after we agree.
 ${CLOSE}`
       },
@@ -79695,7 +79777,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.24.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.25.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {

@@ -11,6 +11,7 @@ import type { ItemNode } from '../boardToFlow'
 import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { play, usePlay } from '../uiPlay'
+import { clickHint } from '../clickableView'
 import { cornerCallouts, itemCallout, itemNote, rowCallout, rowNote } from '../notesView'
 import { Rims, Shell } from './index'
 import { CalloutPin, MarkRow, useMarks } from './Marks'
@@ -218,6 +219,8 @@ interface Live {
   setTab: (i: number) => void
 }
 const stopAll = { onPointerDown: stop, onMouseDown: stop, onClick: stop, onDoubleClick: stop, onKeyDown: stop }
+/** Elements operated while playing (typed into, opened, switched): a click on them is never "nowhere". */
+const OPERATED_HERE = new Set(['input', 'textarea', 'select', 'search', 'tabs'])
 function stop(e: { stopPropagation: () => void }) {
   e.stopPropagation()
 }
@@ -625,7 +628,9 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
     live?.goto ? 'ui-live-act' : '',
   ]
   const toggles = live && (u.type === 'checkbox' || u.type === 'radio' || u.type === 'toggle')
-  const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : undefined
+  // a click that leads nowhere (not a field, a select or tabs: those have a job of their own) flashes what on this
+  // screen does lead somewhere, the way a prototype shows its hotspots
+  const onClick = live?.goto ? () => play.step((s) => playGoto(s, live.goto!)) : toggles ? () => live.toggle(Boolean(u.checked)) : live && !OPERATED_HERE.has(u.type) ? clickHint.show : undefined
   // the pin whose card is pointed at (BoardPage: only this element's node gets a new `calloutLit`)
   const lit = data.calloutLit
   // the annotation pins, drafts and TODOs on this element (flow/annotationsView.ts): the cards' texts for the pins'
@@ -634,13 +639,23 @@ export function UiNode({ data, selected }: NodeProps<ItemNode>) {
   const noteCtx = useMemo(() => ({ elementId: item.id, playing, lit, noteOf: (n: number) => marks?.marks.pins.find((p) => p.n === n)?.text }), [item.id, playing, lit, marks])
   const corners = cornerCallouts(u)
   const extra = marks ? <MarkRow marks={marks.marks} lit={marks.lit} numbered={false} playing={playing} className="ui-pin-marks" /> : null
+  // Clickable (flow/clickableView.ts): where a click on it leads, as a tag left of its pins — the corner group lines
+  // them up, so a tag never sits on a pin
+  const click = data.click
+  const tag = click?.tag ? (
+    <span className="ui-click-tag" title={`A click leads to ${click.name}`}>
+      {click.tag}
+    </span>
+  ) : null
   return (
     <>
     {u.sample === true ? <SampleStripe phone={u.type === 'screen' && u.device === 'phone'} /> : null}
-    {corners.length || extra ? (
+    {click ? <span className={`ui-click-ring ${click.hint ? 'ui-click-flash' : ''}`} style={style} aria-hidden="true" /> : null}
+    {corners.length || extra || tag ? (
       // the element's (or the screen's) own callouts: on its top-right corner, half outside, a sibling of the box so a
       // clipping box does not cut them
-      <span className={`ui-pin-corner ${findings.length ? 'beside-finding' : ''}`}>
+      <span className={`ui-pin-corner ${findings.length ? 'beside-finding' : ''} ${tag && !corners.length && !extra ? 'tag-only' : ''}`}>
+        {tag}
         {extra}
         {corners.map((n) => (
           <CalloutPin key={n} n={n} note={corners.length === 1 ? (u.note ?? noteCtx.noteOf(n)) : noteCtx.noteOf(n)} elementId={item.id} playing={playing} lit={lit === n} />

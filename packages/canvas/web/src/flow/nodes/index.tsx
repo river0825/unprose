@@ -8,6 +8,7 @@ import { EditableText } from '../EditableText'
 import { useEdit } from '../EditContext'
 import { PlayStoryButton } from '../../components/ReplayBar'
 import { PlayMockButton } from '../../components/PlayBar'
+import { ClickableButton } from '../../components/Clickable'
 import { CheckOffField } from '../../components/CheckOff'
 import { SCALES_FONT, fontOf } from '../font'
 import { draftStatus } from '../annotationsView'
@@ -245,7 +246,12 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
           </span>
         ) : null}
         {data.diagram?.kind === 'domain-story' ? <PlayStoryButton frameId={item.id} compact /> : null}
-        {data.diagram?.kind === 'ui-mock' ? <PlayMockButton frameId={item.id} compact /> : null}
+        {data.diagram?.kind === 'ui-mock' ? (
+          <>
+            <PlayMockButton frameId={item.id} compact />
+            <ClickableButton />
+          </>
+        ) : null}
       </div>
     </Shell>
   )

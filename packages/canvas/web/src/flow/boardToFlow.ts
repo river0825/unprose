@@ -9,6 +9,7 @@ import { planWires } from '../../../src/wireGeometry'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
 import type { CommentShown } from './notesView'
 import type { ItemMarks } from './annotationsView'
+import type { ClickOn } from './clickableView'
 import { calloutOf, isAnnotationDraft, todoOf } from '../../../src/annotations'
 
 /** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
@@ -41,6 +42,8 @@ export type ItemNode = Node<
     /** the card whose marker on this item is lit (its card is pointed at), and that marker's number for a UI mock element */
     markLit?: string
     calloutLit?: number
+    /** Clickable (flow/clickableView.ts): this UI mock element leads to another screen — its outline and tag */
+    click?: ClickOn
   },
   Item['type'] | 'dsIcon'
 >

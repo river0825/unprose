@@ -152,7 +152,7 @@ test('comments: a drawn UI mock has none on its screens; a note moved onto the s
   assert.equal(checkLayout(far, { frame: 'home-ui' }).counts['comment-outside'], 1)
   assert.ok(layoutLines(checkLayout(far), far).some((l) => l.startsWith('- [comment-outside] comment "late reply"')))
   // outside a UI mock: a comment beside a sticky on the lane is fine, one on the sticky covers it, with a generic fix
-  const es = board([frame('diagram.a', 'a'), item({ id: 's1', type: 'sticky', x: 40, y: 40, text: 'one', parent: 'diagram.a' }), item({ id: 'c2', type: 'comment', x: 212, y: 40, w: 220, h: 80, text: 'beside', target: 's1' }), item({ id: 'c3', type: 'comment', x: 60, y: 60, w: 220, h: 80, text: 'on it', target: 's1' })])
+  const es = board([frame('diagram.a', 'a'), item({ id: 's1', type: 'sticky', x: 40, y: 40, text: 'one', parent: 'diagram.a' }), item({ id: 'c2', type: 'comment', x: 300, y: 40, w: 220, h: 80, text: 'beside', target: 's1' }), item({ id: 'c3', type: 'comment', x: 60, y: 60, w: 220, h: 80, text: 'on it', target: 's1' })])
   const esCovers = of(es, 'comment-covers')
   assert.deepEqual(esCovers.map((f) => f.id), ['c3'])
   assert.equal(esCovers[0].message, 'comment "on it" on sticky "one" covers sticky "one" (140×80 px on sticky "one")')

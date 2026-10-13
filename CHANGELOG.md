@@ -6,6 +6,33 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-10-13
+
+### Added
+- **Clickable — where every click leads, at a glance** (docs/diagrams.md §6c "Clickable"). A UI mock's frame header
+  has a **Clickable** switch after Play (also in the frame's panel, and **Shift+G**): every element a click leads from
+  — its `goto`, a `flows` entry, a card that leads somewhere — gets a thin outline and a small `→ <screen>` tag, and the
+  frame's panel lists them all by screen; a click on a row takes you to the element. It reads what Play follows, so a
+  developer sees every clickable item without a "Click → Settings" note on each. Per viewer, nothing stored; Copy as
+  image draws it.
+- **Play shows its hotspots**: a click on something that leads nowhere lights up the screen's clickable elements for a
+  moment.
+- **Lint: a note that only says where a click goes** (`ui-note-says-where-a-click-goes`): "Click → Settings",
+  "Tap: opens the editor", "點擊 → 設定" — write `goto: <screen>` instead; a note that repeats its `goto` can go; one that
+  names another screen than its `goto` is a warning. Told by `awd design lint` / `design_lint` only, not marked on the
+  board.
+
+### Fixed
+- **A redraw leaves no stale notes behind.** A UI mock screen's own note now goes when the file drops it, like the
+  numbered cards; a note someone replied to is no longer deleted under its replies — it stays as a thread about the same
+  item, without a number.
+- **The layout check sees a card lying on another card** (a stale note stacked on live ones, two at the very same
+  spot) — `canvas_check_layout` and the frame panel's *Layout*.
+
+### Changed
+- **`null` in a comment update's `data` removes that key** (`POST /api/boards/:id/ops`): the canvas merges a comment's
+  data, so leaving a key out never took it away — the same convention as `PATCH /api/boards/:id` for `meta`.
+
 ## [0.24.0] — 2026-10-12
 
 ### Added
@@ -911,7 +938,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/river0825/unprose/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/river0825/unprose/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/river0825/unprose/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/river0825/unprose/compare/v0.21.0...v0.22.0

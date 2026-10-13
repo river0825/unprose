@@ -58,6 +58,7 @@ const GROUPS: Array<{ title: string; rows: Array<[string, string]> }> = [
       ['Shift+N', 'Comments: all → folded into markers → none (a proposal that was applied folds into a ✓ by itself; click it to read)'],
       ['Shift+A', 'Annotations: numbered pins and cards → pins only (click one for its card) → none'],
       ['Shift+T', 'TODOs: open → all (done ones muted) → none'],
+      ['Shift+G', 'Clickable: outline every UI mock element a click leads from, tagged with its screen (also on a UI mock’s header, beside Play) — on / off'],
       ['?', 'This list'],
     ],
   },

@@ -688,6 +688,64 @@ export function checkUiMock(raw: UiMockContent): UiFinding[] {
   return out
 }
 
+// A note that only says where a click goes (rule `ui-note-says-where-a-click-goes`): "Click → Settings", "Tap: opens the
+// editor", "點擊 → 設定". The file says that with `goto` (or a flow), which the navigate arrows, Play and the Clickable
+// view all read — so the gutter keeps the notes that say why. Told by `awd design lint` only, never marked on the board:
+// it is about how the file is written, not about the design.
+export const CLICK_NOTE_RULE = 'ui-note-says-where-a-click-goes'
+const CLICK_WORD = /^\s*(?:click(?:ing|ed)?|tap(?:ping|ped)?|press(?:ing|ed)?|點擊|點選|點按|點|按下|按)(?:\s+(?:on\s+)?(?:it|this|here))?\s*/iu
+const LEADS = /^(?:[→⇒➜➔>:：=\-]+|(?:goes|go|leads|navigates|takes\s+you|opens?|to|into)(?![A-Za-z])|前往|跳轉到?|跳到|進入|開啟|打開|到|至)\s*/iu
+
+/** The screen a "Click → <screen>" note leads to (by its name or id) and what else the note says, else undefined. */
+export function clickNoteTarget(note: string, screens: ReadonlyArray<{ id: string; name: string }>): { screen: string; rest: string } | undefined {
+  const word = CLICK_WORD.exec(note)
+  if (!word) return undefined
+  let rest = note.slice(word[0].length)
+  let led = false
+  for (let m = LEADS.exec(rest); m?.[0]; m = LEADS.exec(rest)) {
+    rest = rest.slice(m[0].length)
+    led = true
+  }
+  if (!led) return undefined
+  rest = rest.replace(/^the\s+/i, '').replace(/^["'「『]/u, '')
+  let best: { screen: string; len: number; after: string } | undefined
+  for (const s of screens)
+    for (const key of [s.name, s.id]) {
+      if (!key || !rest.toLowerCase().startsWith(key.toLowerCase())) continue
+      const after = rest.slice(key.length)
+      if (/[A-Za-z0-9]$/.test(key) && /^[A-Za-z0-9]/.test(after)) continue // "Settings" is not "Settingsbar"
+      if (!best || key.length > best.len) best = { screen: s.id, len: key.length, after }
+    }
+  if (!best) return undefined
+  const left = best.after.replace(/^["'」』]/u, '').replace(/^\s*(?:screen|page)(?![A-Za-z])|^(?:畫面|頁面|頁)/iu, '').replace(/^[\s.。,，;；:：)）]+/u, '').trim()
+  return { screen: best.screen, rest: left }
+}
+
+/** The `ui-note-says-where-a-click-goes` findings: element notes and file annotations about an element. */
+export function clickNoteFindings(raw: UiMockContent): UiFinding[] {
+  const m = normalizeUiMock(raw)
+  const els = new Map(m.screens.flatMap((s) => walkUi(s.body)).map((e) => [e.ref, e]))
+  const flowTo = new Map(m.flows.filter((f) => els.has(f.from)).map((f) => [f.from, f.to]))
+  const said = (e: UiEl, text: string, where: string): UiFinding[] => {
+    const click = clickNoteTarget(text, m.screens)
+    if (!click) return []
+    const goes = e.goto ?? flowTo.get(e.ref)
+    const how = e.goto ? 'goto' : 'a flow'
+    const head = `${CLICK_NOTE_RULE}: ${where} "${shortText(text)}"`
+    if (!goes) return [{ severity: 'info', element: e.ref, message: `${head} says where a click goes: write \`goto: ${click.screen}\` on the element — the navigate arrow, Play and the Clickable view read it — and ${click.rest ? 'keep only the rest as the note' : 'drop the note'}` }]
+    if (goes === click.screen) return [{ severity: 'info', element: e.ref, message: `${head} repeats where it goes (${how}: ${goes}): ${click.rest ? 'keep only the rest' : 'drop it'} — the Clickable view shows it` }]
+    return [{ severity: 'warning', element: e.ref, message: `${head} says a click goes to ${click.screen}, but ${how} leads to ${goes}` }]
+  }
+  const out: UiFinding[] = []
+  for (const e of els.values()) if (e.note) out.push(...said(e, e.note, 'note'))
+  const annotations = (raw as { annotations?: Array<{ on?: unknown; text?: unknown }> }).annotations ?? []
+  for (const a of annotations) {
+    const e = typeof a.on === 'string' ? els.get(a.on) : undefined
+    if (e && typeof a.text === 'string') out.push(...said(e, a.text, `annotation on ${a.on}`))
+  }
+  return out
+}
+
 const shortText = (s: string, n = 48) => {
   const t = s.replace(/\s+/g, ' ').trim()
   return t.length > n ? t.slice(0, n - 1) + '…' : t

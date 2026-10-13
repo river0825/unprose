@@ -19,7 +19,8 @@ and annotate, and a rule set that keeps it honest:
 - **Canvas edits are proposals.** A wire the person drags, text they edit in the source dialog, a story
   the tool proposes — discuss it in the thread, then apply it to the file.
 - **Annotations and TODOs.** An annotation says what an item is for: `annotations: [{ on, text }]` in any kind's file,
-  drawn as numbered cards beside the drawing (docs/diagrams.md §2b). The person's *draft annotation* (`drafted an
+  drawn as numbered cards beside the drawing (docs/diagrams.md §2b). Where a UI mock click goes is `goto` / `flows`,
+  never a "Click → …" note (the Clickable view shows every element that leads somewhere). The person's *draft annotation* (`drafted an
   annotation … — a proposal to <you>`) is their own words: judge it — true to the design? contradicts the file or
   another annotation? says what the item is for? — and reply in its thread in a sentence or two; if it is sound, apply
   it right away (the edit adds one `annotations:` entry: check `base`, apply, lint, redraw with `--applied <thread>`) —

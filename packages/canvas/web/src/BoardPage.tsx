@@ -72,6 +72,8 @@ import { useViewHistory } from './flow/useViewHistory'
 import { PlayBar } from './components/PlayBar'
 import { applyPlay, play, playFrameOf, usePlay } from './flow/uiPlay'
 import { buildPlay, reconcilePlay } from './diagrams/uiPlay'
+import { boardClickTags, clickTags, uiMockFrames, type ClickTag } from './diagrams/uiClickable'
+import { applyClickable, clickable, clickHint, clickLooks, useClickable, useClickHint, type ClickOn } from './flow/clickableView'
 
 const GRID: [number, number] = [10, 10]
 const MULTI_SELECT_KEYS = ['Meta', 'Control', 'Shift']
@@ -109,6 +111,7 @@ const snap = (n: number) => Math.round(n / 10) * 10
 const NO_PULSE: ReadonlySet<string> = new Set()
 const NO_COMMENTS: ReadonlyMap<string, CommentShown> = new Map()
 const NO_MARKS: ReadonlyMap<string, ItemMarks> = new Map()
+const NO_CLICK_TAGS: ReadonlyMap<string, ClickTag> = new Map()
 const sameShown = (a: ReadonlyMap<string, CommentShown>, b: ReadonlyMap<string, CommentShown>) => {
   if (a.size !== b.size) return false
   for (const [k, v] of a) if (b.get(k) !== v) return false
@@ -384,6 +387,24 @@ function BoardInner({ id }: { id: string }) {
     if (replayView) play.stop()
   }, [replayView?.frameId])
   useEffect(() => () => play.stop(), [id])
+  // the screen on view while a mock plays: a click on the paper inside it led nowhere (Play's hint, below)
+  const playScreen = useRef<Item | undefined>(undefined)
+  playScreen.current = playOn.current && playState ? laid?.items[playState.screen] : undefined
+
+  // Clickable (flow/clickableView.ts): every UI mock element a click leads from, outlined and tagged with its screen,
+  // for this viewer only; in the frame being played Play's own look wins — its hint flashes the screen's hotspots
+  // for a moment after a click that led nowhere, whether the switch is on or not
+  const clickOn = useClickable()
+  const hinting = useClickHint()
+  const allClickTags = useMemo(() => (clickOn && laid ? boardClickTags(laid) : NO_CLICK_TAGS), [clickOn, laid])
+  const hintIds = useMemo(() => {
+    if (!hinting || !laid || !playModel || !playState) return undefined
+    return [...clickTags(laid, playModel).keys()].filter((i) => playModel.screenOf.get(i) === playState.screen)
+  }, [hinting, laid, playModel, playState?.screen])
+  const playedFrame = playState && playModel?.screens.length ? playModel.screenOf : undefined
+  const clickLook = useMemo(() => clickLooks(allClickTags, { on: clickOn, played: playedFrame, hint: hintIds }), [allClickTags, clickOn, playedFrame, hintIds])
+  const clickCache = useRef(new WeakMap<ItemNode, { look: ClickOn; out: ItemNode }>())
+  const viewNodes = useMemo(() => applyClickable(playedUi.nodes, clickLook, clickCache.current), [playedUi.nodes, clickLook])
 
   // ---- rubber band (flow/bandSelect.ts): a band drawn inside a frame selects the items in it, not the frame; Shift adds
   const rf = useStoreApi()
@@ -1210,6 +1231,7 @@ function BoardInner({ id }: { id: string }) {
       } else if (e.key === 'N') store.toast(`Comments: ${NOTES_MODE_NAMES[cycleNotes()].toLowerCase()}`)
       else if (e.key === 'A') store.toast(`Annotations: ${ANNOTATIONS_MODE_NAMES[cycleAnnotations()].toLowerCase()}`)
       else if (e.key === 'T') store.toast(`TODOs: ${TODOS_MODE_NAMES[cycleTodos()].toLowerCase()}`)
+      else if (e.key === 'G') store.toast(`Clickable: ${clickable.toggle() ? 'on' : 'off'}${board && !uiMockFrames(board).length ? ' (this board has no UI mock)' : ''}`)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -1247,9 +1269,15 @@ function BoardInner({ id }: { id: string }) {
         e.preventDefault()
         if (sel[0]) live.current.openMenu(sel[0].id, e.clientX, e.clientY)
       },
-      onPaneClick: () => {
+      onPaneClick: (e: React.MouseEvent) => {
         setEditingId(null)
         if (live.current.tool === 'comment') setTool('select')
+        // while a mock plays, the paper of the screen on view (its empty area lets the click through) leads nowhere
+        const s = playScreen.current
+        if (s) {
+          const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }, { snapToGrid: false })
+          if (p.x >= s.x && p.x <= s.x + s.w && p.y >= s.y && p.y <= s.y + s.h) clickHint.show()
+        }
       },
     }),
     [],
@@ -1351,7 +1379,7 @@ function BoardInner({ id }: { id: string }) {
         <EditContext.Provider value={editApi}>
         <WireBadgeContext.Provider value={toggleBadge}>
           <ReactFlow
-            nodes={playedUi.nodes}
+            nodes={viewNodes}
             edges={playedUi.edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}

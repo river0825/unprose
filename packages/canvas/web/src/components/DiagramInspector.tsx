@@ -22,6 +22,7 @@ import { HolderLine } from './BoardAgents'
 import { FrameHandover } from './Handover'
 import { PlayStoryButton } from './ReplayBar'
 import { PlayMockButton } from './PlayBar'
+import { ClickableList, ClickableToggle } from './Clickable'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
@@ -75,13 +76,17 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
         </p>
       ) : null}
       {diagram.kind === 'ui-mock' ? (
-        <p className="dg-replay">
-          <PlayMockButton frameId={diagram.frame.id} /> <span className="muted">operate the screens: goto buttons, selects, tabs, fields</span>
-        </p>
+        <>
+          <p className="dg-replay">
+            <PlayMockButton frameId={diagram.frame.id} /> <span className="muted">operate the screens: goto buttons, selects, tabs, fields</span>
+          </p>
+          <ClickableToggle />
+        </>
       ) : null}
       <FreezeToggle board={board} diagramKey={diagram.key} />
       {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
       <LayoutFindings board={board} diagramKey={diagram.key} onSelect={onSelect} />
+      {diagram.kind === 'ui-mock' ? <ClickableList board={board} frameId={diagram.frame.id} onSelect={onSelect} /> : null}
     </section>
   )
 }
