@@ -15,6 +15,7 @@ import { agentLabel, agentOf, displayName, handleOf, handoverFroms, handoverLine
 import { adoptToken, saveToken, savedToken } from './credentials.js'
 import { aboutText, isTodo, newTodo, TodoError, todoDoneOps, todoLines, todoReopenOp } from './todos.js'
 import { userAgent } from './version.js'
+import { hiddenFramesLine } from './hidden.js'
 
 const kindEnum = z.enum(diagramKinds as [DiagramKind, ...DiagramKind[]])
 
@@ -38,7 +39,7 @@ export const ANNOTATIONS_HELP = `Annotations say what an item is for; they live 
 
 const TODO_HELP = `A TODO marks something still to be confirmed with someone outside the board (the PM, legal, the backend team) — a note, not a question to you: never answer one yourself. It lives on the board only and wakes no agent when written. Whoever finds out checks it off (the person, or an agent); checked off with an answer, the answer is posted as a reply in its thread and goes to the board's "Answered by" agent, which decides whether the design changes and proposes that as usual; checked off without an answer it notifies nobody.`
 
-const READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame → lane / column / screen / group → items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed …], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`
+const READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame → lane / column / screen / group → items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed …], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). A frame the person hid (its contents are not drawn) is one line saying how many items it holds; includeHidden: true lists them too. To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] })
 
@@ -134,7 +135,7 @@ export function helpText(o: { designTools: boolean; prompts: string[]; canvas: s
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? 'this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)' : 'local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)'}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     '- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects',
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu, Hide contents / Show contents of a frame (canvas_read_board lists a hidden frame as one line; includeHidden: true lists what it holds). Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     '',
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ''}. Docs: https://github.com/river0825/unprose`,
     `Annotations: ${ANNOTATIONS_HELP}`,
@@ -181,7 +182,7 @@ export interface McpOptions {
 
 export function createMcpServer(client = new CanvasClient(), opts: McpOptions = {}): McpServer {
   const server = new McpServer(
-    { name: 'unprose', version: '0.26.0' },
+    { name: 'unprose', version: '0.27.0' },
     { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound — they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` },
   )
   let extra: { designTools?: boolean; prompts?: string[] } = {}
@@ -268,10 +269,11 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
         limit: z.number().int().min(1).max(1000).optional().describe('json: items per page (default 200); outline: lines per page'),
         cursor: z.string().optional().describe('the next cursor a previous answer gave'),
         maxChars: z.number().int().min(2000).max(200000).optional().describe('size cap of the answer (default 40000 characters)'),
+        includeHidden: z.boolean().optional().describe('also list what hidden frames hold (the person hid their contents on the board; by default each is one line saying how many items it holds)'),
       },
     },
-    async ({ id, format, frame, types, ids, text: q, fields, limit, cursor, maxChars }) => {
-      const r = await client.read(id, { format, frame, types, ids, text: q, fields, limit, cursor, maxChars })
+    async ({ id, format, frame, types, ids, text: q, fields, limit, cursor, maxChars, includeHidden }) => {
+      const r = await client.read(id, { format, frame, types, ids, text: q, fields, limit, cursor, maxChars, includeHidden })
       return text(r.text)
     },
   )
@@ -425,7 +427,8 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     async ({ id, ids, frame, note }) => {
       const r = await client.focus(id, { ids, frame, note })
       const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...(frame ? { frame } : {}) })
-      return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now — send the person this link instead: ${link}`)
+      const hidden = r.hidden?.length ? `\nNote: ${r.hidden.map((f) => `"${f.title}"`).join(', ')} ${r.hidden.length === 1 ? 'is a hidden frame' : 'are hidden frames'} (the person hid the contents): their page shows ${r.hidden.length === 1 ? 'it' : 'them'} collapsed instead of what you asked for — ask them to Show it if they should look inside` : ''
+      return text((r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now — send the person this link instead: ${link}`) + hidden)
     },
   )
 
@@ -472,7 +475,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
     async ({ id, frame, limit }) => {
       const r = await client.layout(id, frame, limit ?? 60)
       const lines = (r as { lines?: string[] }).lines
-      if (!r.findings.length) return text(`layout of ${frame ? `frame ${frame}` : 'the board'}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ''} checked — nothing overlaps, collides, is cut off or out of place.`)
+      if (!r.findings.length) return text(`layout of ${frame ? `frame ${frame}` : 'the board'}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ''} checked${r.hidden ? ` (${r.hidden} in hidden frames not checked)` : ''} — nothing overlaps, collides, is cut off or out of place.`)
       return text((lines ?? r.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} — ${f.suggestion}`)).join('\n'))
     },
   )
@@ -527,6 +530,7 @@ export function createMcpServer(client = new CanvasClient(), opts: McpOptions = 
           ...(s.handover ? handoverLines(s.handover) : []),
           ...(s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done — things to confirm with someone else, not questions to you (canvas_todo lists them)`] : []),
           ...(s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} — the person's own words: the holder judges each in its thread, then applies it or says why not`] : []),
+          ...hiddenFramesLine(s.hidden ?? []),
           ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ''} is still registered, but its frame is gone from the board${f.holder ? ` — files held by ${displayName(f.holder)}` : ''}: ${f.holder ? 'its holder redraws it from the file, or drops the entry' : 'redraw it from the file, or drop the entry'} — PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? ' (only the holder may)' : ''}`),
           `Agents here: ${agents || '(none seen yet)'}${s.you ? ` — you are ${s.you}` : ''}`,
           `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`,

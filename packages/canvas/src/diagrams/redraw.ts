@@ -89,7 +89,7 @@ const sameWire = (drawn: BoardItem, want: WireEnd) => {
 }
 
 /** `data` keys that say how an item is shown or read, not what it means — a redraw keeps them. */
-const PRESENTATION = ['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend', 'lock', 'lockedBy']
+const PRESENTATION = ['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend', 'lock', 'lockedBy', 'hidden']
 function withPresentation(drawn: BoardItem, was: BoardItem): BoardItem {
   const kept = Object.fromEntries(PRESENTATION.filter((k) => was.data && k in was.data).map((k) => [k, was.data![k]]))
   return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn
@@ -120,8 +120,8 @@ export function isResolved(p: Pending, drawn: BoardItem[], itemId?: string): boo
 }
 
 /**
- * The ops that make the board match the drawing: add/update every drawn item (keeping the
- * geometry of items the person placed or locked), remove template items the drawing no longer has, and
+ * The ops that make the board match the drawing: add every drawn item the board lacks, update those that differ (keeping
+ * the geometry of items the person placed or locked), remove template items the drawing no longer has, and
  * leave a wire the person edited exactly as they left it until the files explain it.
  */
 export function planRedraw(board: Record<string, BoardItem>, drawn: BoardItem[], placed: Set<string>, scope: RedrawScope = { prefix: SCOPE }): TemplateOp[] {
@@ -178,6 +178,64 @@ export interface RedrawInputs {
 /** From the board's whole change log (every author): what the person placed and who added what. */
 export function redrawInputs(changes: LoggedChange[]): Required<RedrawInputs> {
   return { placed: placedByUser(changes.filter((c) => c.author === 'user') as UserChange[]), origins: originsOf(changes), removed: removedByUser(changes) }
+}
+
+// ── The same, folded change by change (the canvas keeps it per board: GET /api/boards/:id/redraw-inputs) ──
+
+export const emptyRedrawInputs = (): Required<RedrawInputs> => ({ placed: new Set(), origins: new Map(), removed: new Map() })
+
+/**
+ * `redrawInputs` one slice of the log at a time, oldest first: folding the log in any number of slices gives what
+ * `redrawInputs` gives for the whole of it. Mutates and returns `acc`.
+ */
+export function foldRedrawInputs(acc: Required<RedrawInputs>, changes: LoggedChange[]): Required<RedrawInputs> {
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      if (op.kind === 'update') {
+        if (ch.author === 'user' && op.id && op.patch && GEOMETRY.some((k) => k in op.patch!)) acc.placed.add(op.id)
+      } else if (op.kind === 'add' && op.item?.id) {
+        acc.origins.set(op.item.id, { author: ch.author ?? 'agent', ...(ch.by ? { by: ch.by } : {}), ...(ch.note ? { note: ch.note } : {}) })
+        acc.removed.delete(op.item.id)
+      } else if (op.kind === 'remove' && op.id && ch.author === 'user') acc.removed.set(op.id, ch.ts ? { at: ch.ts } : {})
+    }
+  return acc
+}
+
+/**
+ * Redraw inputs as JSON, compact for a board of thousands of items: each distinct origin once (`origins`), and each
+ * item's index into them (`originOf`); `removed` as `[id, at?]`.
+ */
+export interface RedrawInputsJson {
+  placed: string[]
+  origins: ItemOrigin[]
+  originOf: Record<string, number>
+  removed: Array<[string] | [string, string]>
+}
+
+export function redrawInputsToJson(r: Required<RedrawInputs>): RedrawInputsJson {
+  const origins: ItemOrigin[] = []
+  const index = new Map<string, number>()
+  const originOf: Record<string, number> = {}
+  for (const [id, o] of r.origins) {
+    const key = JSON.stringify([o.author, o.by ?? null, o.note ?? null])
+    let i = index.get(key)
+    if (i === undefined) index.set(key, (i = origins.push(o) - 1))
+    originOf[id] = i
+  }
+  return { placed: [...r.placed], origins, originOf, removed: [...r.removed].map(([id, v]) => (v.at ? [id, v.at] : [id])) }
+}
+
+/** Back from JSON (a canvas's answer: anything missing or malformed reads as empty). */
+export function redrawInputsFromJson(j: Partial<RedrawInputsJson> | undefined): Required<RedrawInputs> {
+  const out = emptyRedrawInputs()
+  for (const id of Array.isArray(j?.placed) ? j.placed : []) if (typeof id === 'string') out.placed.add(id)
+  const table = Array.isArray(j?.origins) ? j.origins : []
+  for (const [id, i] of Object.entries(j?.originOf && typeof j.originOf === 'object' ? j.originOf : {})) {
+    const o = table[i]
+    if (o && typeof o.author === 'string') out.origins.set(id, { author: o.author, ...(o.by ? { by: o.by } : {}), ...(o.note ? { note: o.note } : {}) })
+  }
+  for (const e of Array.isArray(j?.removed) ? j.removed : []) if (Array.isArray(e) && typeof e[0] === 'string') out.removed.set(e[0], typeof e[1] === 'string' ? { at: e[1] } : {})
+  return out
 }
 
 export interface PlanLine { id: string; label: string; why?: string }
@@ -248,7 +306,11 @@ function same(a: unknown, b: unknown): boolean {
   const kb = Object.keys(b as object).filter((k) => (b as Record<string, unknown>)[k] !== undefined)
   return ka.length === kb.length && ka.every((k) => same((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]))
 }
-const changedKeys = (patch: Record<string, unknown>, was: BoardItem) => Object.keys(patch).filter((k) => !IGNORED.has(k) && !same(patch[k], was[k]))
+/** A comment's `data` after an update: the canvas merges it into the stored one, null removing a key (routing.ts stampRouting). */
+const mergedData = (was: unknown, patch: unknown): unknown =>
+  patch && typeof patch === 'object' ? Object.fromEntries(Object.entries({ ...(was as object | undefined), ...patch }).filter(([, v]) => v !== null)) : patch
+const changedKeys = (patch: Record<string, unknown>, was: BoardItem) =>
+  Object.keys(patch).filter((k) => !IGNORED.has(k) && !same(k === 'data' && was.type === 'comment' ? mergedData(was.data, patch.data) : patch[k], was[k]))
 const lockOf = (board: Record<string, BoardItem>, id: string) => layoutLock(board as never, id)
 const KEPT_REMOVED = 'you deleted it — the file still has it; propose the file change?'
 
@@ -306,8 +368,13 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
     const op: TemplateOp = { kind: 'update', id: d.id, patch }
     const final = keep ? keepUserLayout([op], new Set([d.id]))[0] : op
     const changed = changedKeys(final.patch ?? {}, was)
-    if (changed.length) plan.updated.push({ id: d.id, label: label(was), why: changed.join(', ') })
-    else plan.unchanged++
+    if (!changed.length) {
+      // no op: it would only restamp updatedBy / updatedAt (thousands of ops, each logged with its `before`, for a big
+      // UI mock) — and make the person's undo of their own move say the agent changed it since
+      plan.unchanged++
+      continue
+    }
+    plan.updated.push({ id: d.id, label: label(was), why: changed.join(', ') })
     updates.push(final)
   }
   // stale: items of this drawing the file no longer has. An item the person added — or another agent added by hand —

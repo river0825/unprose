@@ -23,6 +23,7 @@ import { FrameHandover } from './Handover'
 import { PlayStoryButton } from './ReplayBar'
 import { PlayMockButton } from './PlayBar'
 import { ClickableList, ClickableToggle } from './Clickable'
+import { isHiddenFrame } from '../../../src/hidden'
 
 const nameOf = (it: Item | undefined) => (it?.text ?? it?.id ?? 'missing').split('\n')[0].slice(0, 60)
 
@@ -40,6 +41,8 @@ function ItemLink({ it, onSelect }: { it: Item | undefined; onSelect: (id: strin
 export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { board: Board; diagram: DiagramInfo & { frame: Item }; onSelect: (id: string) => void; onOpenFile: (path: string) => void }) {
   const findings = useFrameFindings(board, diagram.frame, diagram.key, diagram.level, diagram.source, diagram.kind)
   const count = membersOf(board, diagram.frame.id).length
+  // its contents are not drawn (docs/canvas.md "Hiding a frame"): nothing to play, check or click through
+  const hidden = isHiddenFrame(diagram.frame)
   return (
     <section className="dg-panel" aria-label="Diagram">
       <div className="insp-head">
@@ -70,12 +73,13 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
       <HolderLine holder={holderOfItem(board, diagram.frame)}>
         <FrameHandover board={board} diagramKey={diagram.key} />
       </HolderLine>
-      {diagram.kind === 'domain-story' ? (
+      {hidden ? <p className="muted">Its contents are hidden on the board, for everyone: Show on the frame (or right-click it → Show contents) draws them again.</p> : null}
+      {!hidden && diagram.kind === 'domain-story' ? (
         <p className="dg-replay">
           <PlayStoryButton frameId={diagram.frame.id} /> <span className="muted">sentence by sentence, as in Egon.io</span>
         </p>
       ) : null}
-      {diagram.kind === 'ui-mock' ? (
+      {!hidden && diagram.kind === 'ui-mock' ? (
         <>
           <p className="dg-replay">
             <PlayMockButton frameId={diagram.frame.id} /> <span className="muted">operate the screens: goto buttons, selects, tabs, fields</span>
@@ -83,10 +87,14 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
           <ClickableToggle />
         </>
       ) : null}
-      <FreezeToggle board={board} diagramKey={diagram.key} />
-      {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
-      <LayoutFindings board={board} diagramKey={diagram.key} onSelect={onSelect} />
-      {diagram.kind === 'ui-mock' ? <ClickableList board={board} frameId={diagram.frame.id} onSelect={onSelect} /> : null}
+      {hidden ? null : (
+        <>
+          <FreezeToggle board={board} diagramKey={diagram.key} />
+          {FINDING_KINDS.has(diagram.kind) ? <Findings findings={findings} board={board} onSelect={onSelect} kind={diagram.kind} /> : null}
+          <LayoutFindings board={board} diagramKey={diagram.key} onSelect={onSelect} />
+          {diagram.kind === 'ui-mock' ? <ClickableList board={board} frameId={diagram.frame.id} onSelect={onSelect} /> : null}
+        </>
+      )}
     </section>
   )
 }

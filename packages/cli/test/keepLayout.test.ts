@@ -38,10 +38,12 @@ test('a redraw removes template items the drawing no longer has, never comments 
     'wf.c2': { id: 'wf.c2', type: 'comment' },
     s1: { id: 's1', type: 'sticky' },
   }
-  const ops = planRedraw(board, [block('a'), block('b')], new Set())
+  const ops = planRedraw(board, [block('a', { text: 'a, renamed' }), block('b')], new Set())
   assert.deepEqual(ops.filter((o) => o.kind === 'remove').map((o) => o.id).sort(), ['wf.arrow.old', 'wf.node.gone'])
   assert.deepEqual(ops.filter((o) => o.kind === 'add').map((o) => o.item!.id), ['wf.node.b'])
   assert.deepEqual(ops.filter((o) => o.kind === 'update').map((o) => o.id), ['wf.node.a'])
+  // drawn as the board has it: nothing to update
+  assert.deepEqual(planRedraw(board, [block('a'), block('b')], new Set()).filter((o) => o.kind === 'update'), [])
 })
 
 test('an unresolved pending wire is left exactly as the person left it', () => {
@@ -70,7 +72,7 @@ test('a proposed removal holds until the event is gone from the files; a drawn u
   const gone = planRedraw({ 'wf.arrow.ab': w }, [], new Set())
   assert.deepEqual(gone, [{ kind: 'remove', id: 'wf.arrow.ab' }])
   const plain = wire('wf.arrow.ab', 'a', 'b', 'a.done', { data: { event: { event: 'a.done', from: 'a', to: 'b' }, bend: { x: 3 }, seenBy: ['user'] } })
-  const [op] = planRedraw({ 'wf.arrow.ab': plain }, [wire('wf.arrow.ab', 'a', 'b', 'a.done')], new Set())
+  const [op] = planRedraw({ 'wf.arrow.ab': plain }, [wire('wf.arrow.ab', 'a', 'b', 'a.done', { label: 'a.done, relabelled' })], new Set())
   assert.deepEqual((op.patch as { data: unknown }).data, { event: { event: 'a.done', from: 'a', to: 'b' }, bend: { x: 3 }, seenBy: ['user'] })
 })
 

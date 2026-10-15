@@ -30,6 +30,7 @@ import { SidePanel } from './components/SidePanel'
 import { EditContext, type EditApi } from './flow/EditContext'
 import { absolutePosition, boardToFlow, containerAt, isContainer, threadOf, threadRoot, type ItemNode } from './flow/boardToFlow'
 import { alignKanban, snapColumns } from './flow/kanbanAlign'
+import { drawnBoard, drawnTargets, hiddenOp, hiddenToast, isHiddenFrame } from './flow/hiddenFrames'
 import { bandSelection, rectBetween, type BandNode } from './flow/bandSelect'
 import { SCALES_FONT, scaledFont } from './flow/font'
 import { edgeTypes } from './flow/ItemEdge'
@@ -232,8 +233,9 @@ function BoardInner({ id }: { id: string }) {
     if (draftComment && editingId !== draftComment.id) setDraftComment(null)
   }, [draftComment, editingId])
   const shown = useMemo(() => (board && draftComment ? { ...board, items: { ...board.items, [draftComment.id]: draftComment } } : board), [board, draftComment])
-  // kanban columns line up and grow to hold their cards, as shown (flow/kanbanAlign.ts); geometry for drags and resizes is read from this too
-  const laid = useMemo(() => (shown ? alignKanban(shown) : shown), [shown])
+  // kanban columns line up and grow to hold their cards, as shown (flow/kanbanAlign.ts); what a hidden frame holds is not
+  // drawn at all, the frame collapsed to its header (flow/hiddenFrames.ts); geometry for drags, drops and resizes is read from this too
+  const laid = useMemo(() => (shown ? drawnBoard(alignKanban(shown)) : shown), [shown])
   // the agent-change wash (pulse) is laid over the nodes below (shownNodes), so its coming and going (1.2 s later)
   // does not rebuild the whole flow graph — only the washed nodes change
   // how each thread is drawn, computed once per change (flow/notesView.ts); the same Map while it says the same, so
@@ -293,7 +295,7 @@ function BoardInner({ id }: { id: string }) {
   // "show it on the board" from a panel link: the view moves there and the item flashes for a moment
   const [flashIds, setFlashIds] = useState<string[]>([])
   const hasTraces = useMemo(() => (board ? Object.values(board.items).some((it) => it.type === 'arrow' && it.role === 'trace') : false), [board])
-  const traceBadges = useMemo(() => (board && hasTraces && traceView.badges ? traceCounts(board, traceView) : undefined), [board, hasTraces, traceView])
+  const traceBadges = useMemo(() => (laid && hasTraces && traceView.badges ? traceCounts(laid, traceView) : undefined), [laid, hasTraces, traceView])
   // the elements pointing at which changes what is drawn: an end of a trace while the trace view follows the
   // selection (faded / selected / bundled), and a domain story's work objects; a hover anywhere else is not tracked,
   // so it does not re-render the board (the view would come out the same)
@@ -472,10 +474,21 @@ function BoardInner({ id }: { id: string }) {
     },
     [flow, views],
   )
+  // a jump to something a hidden frame holds lands on that frame, collapsed, and says so (flow/hiddenFrames.ts)
+  const throughHidden = useCallback(
+    (ids: string[]) => {
+      if (!board) return ids
+      const t = drawnTargets(board, ids)
+      if (t.hiddenIn.length) store.toast(hiddenToast(t.hiddenIn))
+      return t.ids
+    },
+    [board, store],
+  )
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reveal = useCallback(
-    (ids: string[]) => {
+    (asked: string[]) => {
       if (!board) return
+      const ids = throughHidden(asked)
       // a wire is shown by its two ends; a block by itself
       const nodesOf = ids.flatMap((i) => (board.items[i]?.type === 'arrow' ? [board.items[i].from, board.items[i].to].filter((x): x is string => !!x) : [i]))
       locate(nodesOf)
@@ -483,7 +496,7 @@ function BoardInner({ id }: { id: string }) {
       if (flashTimer.current) clearTimeout(flashTimer.current)
       flashTimer.current = setTimeout(() => setFlashIds([]), 1600)
     },
-    [board, locate],
+    [board, locate, throughHidden],
   )
 
   // Option+click (or the menu's "Click → …") on a UI mock element a click leads from, outside Play: do that click — the view
@@ -508,7 +521,7 @@ function BoardInner({ id }: { id: string }) {
   // No ids = a legacy board's whole diagram → fit everything.
   const goTo = useCallback(
     (ids: string[]) => {
-      const known = ids.filter((i) => board?.items[i])
+      const known = throughHidden(ids.filter((i) => board?.items[i]))
       views.mark()
       if (!known.length) {
         flow.fitView({ padding: 0.15, duration: 300 })
@@ -517,7 +530,7 @@ function BoardInner({ id }: { id: string }) {
       select(known)
       flow.fitView({ nodes: known.map((i) => ({ id: i })), padding: 0.2, duration: 350, maxZoom: 1.2 })
     },
-    [board, flow, select, views],
+    [board, flow, select, views, throughHidden],
   )
   const goToRequest = useCallback(
     (r: FocusRequest) => {
@@ -626,13 +639,14 @@ function BoardInner({ id }: { id: string }) {
       if (kind === 'sticky') item = makeItem({ type: 'sticky', x: snap(c.x - 60 + jitter), y: snap(c.y - 60 + jitter), w: 120, h: 120, color, text: '' })
       else if (kind === 'text') item = makeItem({ type: 'text', x: snap(c.x - 80 + jitter), y: snap(c.y - 14 + jitter), w: 200, h: 32, text: '' })
       else item = makeItem({ type: 'frame', x: snap(c.x - 200 + jitter), y: snap(c.y - 140 + jitter), w: 400, h: 280, text: 'Frame' })
-      const parent = kind !== 'frame' ? containerAt(board, item.x + item.w / 2, item.y + item.h / 2, item.id) : undefined
+      // the board as drawn: the empty paper a collapsed frame used to cover is not inside it
+      const parent = kind !== 'frame' ? containerAt(laid ?? board, item.x + item.w / 2, item.y + item.h / 2, item.id) : undefined
       if (parent) item.parent = parent.id
       void commit([{ kind: 'add', item }], `added a ${kind}`)
       select([item.id])
       setEditingId(item.id)
     },
-    [board, centre, color, commit, select],
+    [board, laid, centre, color, commit, select],
   )
 
   const addComment = useCallback(
@@ -752,7 +766,9 @@ function BoardInner({ id }: { id: string }) {
   const revealCard = useCallback(
     (cardId: string, o: { toggle?: boolean; center?: boolean } = {}) => {
       const c = board?.items[cardId]
-      if (!c) return
+      if (!board || !c) return
+      // a card about something a hidden frame holds is not drawn: go to the frame
+      if (drawnTargets(board, [cardId]).hiddenIn.length) return goTo([cardId])
       const todo = todoOf(c)
       const onDemand = isAnnotation(c) ? annotationsMode !== 'all' : todo ? !todoVisible(todo, todosMode) : false
       if (onDemand && o.toggle && expandedNotes.has(cardId)) {
@@ -780,7 +796,7 @@ function BoardInner({ id }: { id: string }) {
         flashTimer.current = setTimeout(() => setFlashIds([]), 1600)
       }
     },
-    [board, annotationsMode, todosMode, expandedNotes, select, flow, views],
+    [board, annotationsMode, todosMode, expandedNotes, select, flow, views, goTo],
   )
   const [markInput, setMarkInput] = useState<MarkInputState | null>(null)
   const closeMarkInput = useCallback(() => setMarkInput(null), [])
@@ -897,7 +913,7 @@ function BoardInner({ id }: { id: string }) {
     async (ids: string[]) => {
       const root = wrapRef.current?.querySelector<HTMLElement>('.react-flow')
       if (!board || !root || !ids.length) return
-      const { nodes, edges } = captureIds(board, ids)
+      const { nodes, edges } = captureIds(laid ?? board, ids)
       if (!nodes.size) return
       const bounds = flow.getNodesBounds([...nodes])
       try {
@@ -907,7 +923,7 @@ function BoardInner({ id }: { id: string }) {
         store.toast(`Could not make an image: ${err instanceof Error ? err.message : String(err)}`, 'error')
       }
     },
-    [board, flow, store],
+    [board, laid, flow, store],
   )
 
   const undoWire = useCallback(
@@ -985,6 +1001,18 @@ function BoardInner({ id }: { id: string }) {
       void commit([{ kind: 'update', id: iid, patch }], c ? `moved '${(it.text ?? it.type).slice(0, 40)}' into '${c.text ?? c.type}'` : `took '${(it.text ?? it.type).slice(0, 40)}' out of its lane`)
     },
     [board, commit],
+  )
+
+  // hide a frame's contents or show them again (docs/canvas.md "Hiding a frame"): an ordinary, undoable change everyone sees
+  const setHidden = useCallback(
+    (iid: string, hide: boolean) => {
+      const it = board?.items[iid]
+      if (!it || it.type !== 'frame' || isHiddenFrame(it) === hide) return
+      void commit([hiddenOp(it, hide)], `${hide ? 'hid' : 'showed'} the contents of '${(it.text ?? 'a frame').slice(0, 40)}'`)
+      // what was selected inside it is not drawn any more
+      if (hide) select([iid])
+    },
+    [board, commit, select],
   )
 
   const recolor = useCallback(
@@ -1125,6 +1153,7 @@ function BoardInner({ id }: { id: string }) {
       const r = responderName(responderOf(board?.meta))
       return r ? displayName(r) : undefined
     },
+    setHidden,
   }
   const latest = useRef(actions)
   latest.current = actions
@@ -1151,6 +1180,7 @@ function BoardInner({ id }: { id: string }) {
       reopenTodo: (iid) => latest.current.reopenTodo(iid),
       holderOf: (draftId) => latest.current.holderOf(draftId),
       answeredBy: () => latest.current.answeredBy(),
+      setHidden: (iid, hide) => latest.current.setHidden(iid, hide),
       uiRemoved,
     }),
     [editingId, tool, uiRemoved],
@@ -1317,17 +1347,21 @@ function BoardInner({ id }: { id: string }) {
       } else if (it) {
         // a comment or a card opens for this viewer, whatever the switches say (a reply's link opens its thread)
         const root = it.type === 'comment' ? (threadRoot(board, it.id) ?? it) : it
+        // something a hidden frame holds is not drawn: the link goes to the frame
+        if (drawnTargets(board, [root.id]).hiddenIn.length) return goTo([root.id])
         if (root.type === 'comment') {
           setExpandedNotes((prev) => new Set(prev).add(root.id))
           cardWhenDrawn.current = root.id
         }
         select([root.id])
-        flow.setCenter(root.x + root.w / 2, root.y + root.h / 2, { zoom: 1 })
+        // where it is drawn (a hidden frame: its strip)
+        const at = laid?.items[root.id] ?? root
+        flow.setCenter(at.x + at.w / 2, at.y + at.h / 2, { zoom: 1 })
       } else {
         flow.fitView({ padding: 0.15 })
       }
     }, 30)
-  }, [board, derived.nodes.length, flow, select, goTo])
+  }, [board, laid, derived.nodes.length, flow, select, goTo])
 
   // double-click on empty paper → sticky at the cursor, in edit mode
   const onWrapDoubleClick = useCallback(
@@ -1521,7 +1555,8 @@ function BoardInner({ id }: { id: string }) {
           onAnchoredComment={(target, text, anchor, discuss) => void addComment(target, text, { anchor, ...(discuss ? { discuss: { model: discuss.model, about: [target], ...(discuss.edit ? { edit: discuss.edit } : {}) } } : {}) })}
           onEditText={(iid, text) => (board.items[iid]?.type === 'arrow' ? commitLabel(iid, text) : editApi.commitText(iid, text))}
           onMoveToContainer={moveToContainer}
-          onLocate={(ids) => {
+          onLocate={(asked) => {
+            const ids = throughHidden(asked)
             locate(ids)
             select(ids)
           }}
@@ -1532,9 +1567,12 @@ function BoardInner({ id }: { id: string }) {
           onReopenTodo={reopenTodo}
           onShowMark={(cid) => revealCard(cid, { center: true })}
           onSelect={(sid) => {
+            // something a hidden frame holds is not drawn: go to the frame instead
+            if (sid && drawnTargets(board, [sid]).hiddenIn.length) return goTo([sid])
             select(sid ? [sid] : [])
             if (sid) {
-              const it = board.items[sid]
+              // where it is drawn (a hidden frame: its strip)
+              const it = laid?.items[sid] ?? board.items[sid]
               // a wire has no place of its own on the board: show its two ends
               if (it?.type === 'arrow') locate([it.from, it.to].filter((x): x is string => !!x))
               else if (it) {
@@ -1568,8 +1606,11 @@ function BoardInner({ id }: { id: string }) {
           }}
           canColor={COLOURABLE.has(menuItem.type)}
           askEnabled={store.agentWatching}
-          onPlayStory={replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
-          onPlayMock={playFrameOf(board, menuItem) ? () => play.start(playFrameOf(board, menuItem)!, playScreenOf(board, menuItem)) : undefined}
+          // a hidden frame's story or screens are not drawn: nothing to play
+          onPlayStory={!isHiddenFrame(menuItem) && replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}
+          onPlayMock={!isHiddenFrame(menuItem) && playFrameOf(board, menuItem) ? () => play.start(playFrameOf(board, menuItem)!, playScreenOf(board, menuItem)) : undefined}
+          hidden={menuItem.type === 'frame' ? isHiddenFrame(menuItem) : undefined}
+          onToggleHidden={(iid) => setHidden(iid, !isHiddenFrame(board.items[iid]))}
           onClickThrough={((to) => (to ? { screen: to.name, run: () => clickThrough(to) } : undefined))(clickTargetOf(board, menuItem))}
           lock={menuItem.type === 'comment' || menuItem.type === 'arrow' ? undefined : { locked: ownLock(menuItem), frame: menuItem.type === 'frame', byFrame: !ownLock(menuItem) && layoutLock(board.items, menuItem.id) === 'frame' }}
           onToggleLock={(iid) => {

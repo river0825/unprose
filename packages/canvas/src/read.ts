@@ -1,7 +1,9 @@
 // Reading a board at agent scale (docs/canvas.md "Reading big boards"): filters (a frame, types, ids, a text),
 // three formats (outline, json, summary), pages (`limit` / `cursor`) and a hard size cap that says what it left
-// out and how to get it. Pure — the server, the MCP tool and the CLI all use it.
+// out and how to get it; what a hidden frame holds only when asked for (`includeHidden`). Pure — the server, the MCP
+// tool and the CLI all use it.
 import { isAnnotationCard, isAnnotationDraft } from './annotations.js'
+import { hiddenFrameList, hiddenFramesLine, hiddenOf, hiddenTotal, itemCount, withoutHidden, type Hidden, type HiddenView } from './hidden.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
 import { isTodo, todoCounts } from './todos.js'
 import { containmentTree, frameKeys, isContainer, itemsInFrame, KIND_LABEL, outline, pendingTag, resolveFrame, rootOf, short, withThreads, byPos, descendants } from './outline.js'
@@ -32,6 +34,8 @@ export interface ReadOptions {
   cursor?: string
   /** size cap in characters (default 40 000, at most 200 000) */
   maxChars?: number
+  /** list what hidden frames hold too (docs/canvas.md "Hiding a frame"); by default a hidden frame is one line */
+  includeHidden?: boolean
 }
 
 export class ReadError extends Error {
@@ -96,6 +100,15 @@ export function selectIds(board: Board, o: Pick<ReadOptions, 'frame' | 'types' |
   return set
 }
 
+/** A frame or ids filter that names only what hidden frames hold: say so, and how to read it anyway. */
+function askedForHidden(board: Board, h: Hidden, o: ReadOptions): void {
+  const where = (id: string) => `the hidden frame "${short(board.items[h.frameOf.get(id)!]?.text, 60)}"`
+  const f = o.frame ? resolveFrame(board, o.frame) : undefined
+  if (f && f !== 'board' && h.ids.has(f.id)) throw new ReadError(404, `frame "${o.frame}" is inside ${where(f.id)} — the person hid its contents; pass includeHidden: true to read it`)
+  const asked = (o.ids ?? []).filter((id) => board.items[id])
+  if (asked.length && asked.every((id) => h.ids.has(id))) throw new ReadError(404, `${asked.length === 1 ? `item "${asked[0]}" is` : `items ${asked.map((a) => `"${a}"`).join(', ')} are`} inside ${where(asked[0])} — the person hid its contents; pass includeHidden: true to read ${asked.length === 1 ? 'it' : 'them'}`)
+}
+
 const cap = (o: ReadOptions) => Math.min(HARD_MAX_CHARS, Math.max(2_000, o.maxChars ?? DEFAULT_MAX_CHARS))
 
 /** `<seq>:<offset>` — a cursor from an older board state still works, it just says so. */
@@ -131,15 +144,20 @@ function pick(it: Item, fields: string[] | undefined): Partial<Item> {
 }
 
 /** Read a board: see ReadOptions. Throws ReadError for an unknown frame / ids or a bad cursor. */
-export function readBoard(board: Board, o: ReadOptions = {}): ReadResult {
+export function readBoard(stored: Board, o: ReadOptions = {}): ReadResult {
   const format = o.format ?? 'outline'
+  // what hidden frames hold is left out unless asked for: each hidden frame is one line saying so
+  const h = hiddenOf(stored)
+  const hidden: HiddenView = { list: hiddenFrameList(stored, h), listed: !!o.includeHidden }
+  if (h && !o.includeHidden) askedForHidden(stored, h, o)
+  const board = o.includeHidden ? stored : withoutHidden(stored, h)
   const only = selectIds(board, o)
   const matched = only ? only.size : Object.keys(board.items).length
-  if (format === 'summary') return { format, text: summaryText(board, only, o), matched, seq: board.seq }
+  if (format === 'summary') return { format, text: summaryText(board, only, hidden), matched, seq: board.seq }
   const max = cap(o)
   const { offset, stale } = parseCursor(o.cursor, board.seq)
   const staleNote = stale ? ` (the board changed since that cursor — seq ${board.seq} now; re-read from the start if things look off)` : ''
-  const filters = FILTER_KEYS.filter((k) => o[k] !== undefined).map((k) => `${k}: ${JSON.stringify(o[k])}`)
+  const filters = [...FILTER_KEYS.filter((k) => o[k] !== undefined).map((k) => `${k}: ${JSON.stringify(o[k])}`), ...(o.includeHidden ? ['includeHidden: true'] : [])]
   const again = (next: string) => `canvas_read_board({ id: "${board.id}", format: "${format}"${filters.length ? `, ${filters.join(', ')}` : ''}, cursor: "${next}" })`
 
   if (format === 'json') {
@@ -159,13 +177,13 @@ export function readBoard(board: Board, o: ReadOptions = {}): ReadResult {
     const nextCursor = left > 0 ? `${board.seq}:${i}` : undefined
     const more = left > 0 ? `${left} more item(s) of ${order.length} not shown${size > max * 0.9 ? ` (size cap ${max} characters)` : ''} — next page: ${again(nextCursor!)}; narrow with frame / types / ids / text, or fewer fields (fields: ["id","type","role","text","x","y","w","h","parent"])${staleNote}` : stale ? `last page${staleNote}` : undefined
     const metaKeys = Object.keys(board.meta ?? {})
-    const head = { id: board.id, title: board.title, kind: board.kind, seq: board.seq, matched: order.length, from: offset, shown: page.length, ...(nextCursor ? { nextCursor } : {}), ...(metaKeys.length ? { meta: `keys ${metaKeys.join(', ')} — canvas_context for the context and holders, canvas_files for the files` } : {}) }
+    const head = { id: board.id, title: board.title, kind: board.kind, seq: board.seq, matched: order.length, from: offset, shown: page.length, ...(nextCursor ? { nextCursor } : {}), ...(metaKeys.length ? { meta: `keys ${metaKeys.join(', ')} — canvas_context for the context and holders, canvas_files for the files` } : {}), ...(hidden.list.length ? { hidden: hiddenFramesLine(hidden.list, hidden.listed)[0] } : {}) }
     const text = `${JSON.stringify(head)}\n${page.map((p) => JSON.stringify(p)).join('\n')}${more ? `\n${more}` : ''}`
     return { format, text, matched: order.length, items: page, ...(nextCursor ? { nextCursor } : {}), ...(more ? { more } : {}), seq: board.seq }
   }
 
   // outline: lines, paged by line offset and the size cap
-  const full = outline(board, only ? { only, bare: false } : {}).split('\n')
+  const full = outline(board, { ...(only ? { only, bare: false } : {}), hidden }).split('\n')
   const limit = o.limit && o.limit > 0 ? o.limit : Infinity
   const lines: string[] = []
   let size = 0
@@ -184,14 +202,15 @@ export function readBoard(board: Board, o: ReadOptions = {}): ReadResult {
 }
 
 /** A short overview: per diagram frame its kind, file, holder, how many of each element, threads and proposals. */
-function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions): string {
+function summaryText(board: Board, only: Set<string> | undefined, hidden: HiddenView): string {
   const tree = containmentTree(board)
   const items = Object.values(board.items).filter((i) => !only || only.has(i.id))
-  const out: string[] = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${Object.keys(board.items).length} items${only ? `, ${items.length} matched` : ''})`]
+  const out: string[] = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${Object.keys(board.items).length} items${hiddenTotal(hidden)}${only ? `, ${items.length} matched` : ''})`]
   const ctx = contextOf(board.meta)
   if (ctx) out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ''}: ${short(ctx.text, 300)}`)
   const r = responderOf(board.meta)
-  out.push(`Answered by: ${responderLabel(r)}`, ...framelessLines(board))
+  out.push(`Answered by: ${responderLabel(r)}`, ...framelessLines(board), ...hiddenFramesLine(hidden.list, hidden.listed))
+  const hiddenItems = new Map(hidden.list.map((f) => [f.id, f.items]))
   const threadsOf = (set: Item[]) => {
     // annotation cards and TODOs are not conversations: counted apart
     const roots = set.filter((c) => c.type === 'comment' && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c))
@@ -225,7 +244,8 @@ function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions
     const t = threadsOf(inside)
     const pend = inside.filter((i) => i.type !== 'comment' && pendingTag(i)).length
     out.push('', `## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short(f.text, 60)}" — frame: "${spec.key}"${spec.source ? ` · ${spec.source}` : ''}${holder ? ` · files held by ${displayName(holder.holder.agent)}` : ''}  #${f.id}`)
-    out.push(`  ${inside.length} items: ${counts(inside) || '—'}`)
+    if (hiddenItems.has(f.id)) out.push(`  hidden on the board: ${itemCount(hiddenItems.get(f.id)!)}${hidden.listed ? '' : ' not counted here (includeHidden: true counts them)'}`)
+    if (!hiddenItems.has(f.id) || hidden.listed) out.push(`  ${inside.length} items: ${counts(inside) || '—'}`)
     const lanes = (tree.children.get(f.id) ?? []).filter(isContainer).sort(byPos)
     if (lanes.length) out.push(`  ${lanes.length} ${lanes[0].role === 'column' ? 'columns' : 'lanes / groups'}: ${lanes.slice(0, 12).map((l) => `${short(l.text, 24) || l.id}${l.role === 'column' ? ` (${(tree.children.get(l.id) ?? []).length})` : ''}`).join(' · ')}${lanes.length > 12 ? ' · …' : ''}`)
     out.push(`  ${t.threads} comment thread(s)${t.waiting ? `, ${t.waiting} waiting for an answer` : ''}${t.proposals ? `, ${t.proposals} edit proposal(s)` : ''}${pend ? ` · ${pend} proposed element(s)` : ''}${notes(t)}`)
@@ -238,6 +258,5 @@ function summaryText(board: Board, only: Set<string> | undefined, o: ReadOptions
   const todos = todoCounts(board)
   if (todos.open || todos.done) out.push('', `TODOs: ${todos.open} open, ${todos.done} done — to confirm with someone else, not questions to you (canvas_todo lists them)`)
   out.push('', `Next: canvas_read_board with frame: "<key>" (outline of one diagram), types / text / ids to narrow, format: "json" with fields for geometry; canvas_snapshot to see it; canvas_check_layout for overlaps and clipped text.`)
-  void o
   return out.join('\n')
 }

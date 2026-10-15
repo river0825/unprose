@@ -2,7 +2,7 @@
 // threads are "about" the selected items, and what to call an item in a chip.
 import type { Board, Item } from '../../../src/model'
 import { calloutOf } from '../../../src/annotations'
-import { threadOf } from '../flow/boardToFlow'
+import { threads } from '../flow/boardToFlow'
 import { detailOf, discussOf } from './detail'
 
 export interface Chat {
@@ -40,10 +40,12 @@ export function chatSelection(board: Board, ids: string[]): Item[] {
  */
 export function allChats(board: Board): Chat[] {
   const out: Chat[] = []
+  // every thread at once: threadOf per root would walk every comment again for each of them
+  const all = threads(board)
   for (const it of Object.values(board.items)) {
     if (it.type !== 'comment') continue
     if (it.target && board.items[it.target]?.type === 'comment') continue // a reply, not a root
-    const messages = threadOf(board, it.id).filter((m) => m.id === it.id || m.text?.trim())
+    const messages = (all.get(it.id) ?? [it]).filter((m) => m.id === it.id || m.text?.trim())
     // an annotation card explains its item; it is a chat only once somebody replied to it
     if (calloutOf(it) !== undefined && messages.length === 1) continue
     const ask = discussOf(it)

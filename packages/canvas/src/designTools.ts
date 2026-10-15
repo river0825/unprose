@@ -7,7 +7,7 @@ import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CanvasClient } from './client.js'
 import { designFromObject, findingLine, frameOf, lintDesignContent, proposalOps, withDesignFindings, yamlCommentHint, type DesignFile } from './diagrams/designFile.js'
-import { explainRedraw, planLines, redrawInputs, type BoardItem, type LoggedChange } from './diagrams/redraw.js'
+import { explainRedraw, planLines, type BoardItem } from './diagrams/redraw.js'
 import { proposeStories } from './diagrams/proposeStories.js'
 import { proposeFromDomainStory } from './diagrams/proposeFromDomainStory.js'
 import { DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY, WHICH_DIAGRAM, tellBack } from './diagrams/guidance.js'
@@ -55,10 +55,10 @@ async function planDesignRedraw(client: CanvasClient, d: DesignFile, name: strin
   const drawn = withDesignFindings(d, r.items as unknown as BoardItem[])
   const current = await client.getBoard(boardId)
   const items = current.items as unknown as Record<string, BoardItem>
-  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
-  const { changes } = await client.changes(boardId, 0)
+  // from the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const inputs = await client.redrawInputs(boardId)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf({ items }, d.key)
-  const res = explainRedraw(items, drawn, redrawInputs(changes as unknown as LoggedChange[]), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && items[frame.id] ? { frame: frame.id } : {}) })
+  const res = explainRedraw(items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && items[frame.id] ? { frame: frame.id } : {}) })
   return { ...res, current, unresolved: r.unresolvedTraces ?? [] }
 }
 

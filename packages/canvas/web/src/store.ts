@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Board, Change, Item, Op, WsMessage } from '../../src/model'
+import type { Board, BriefChange, Change, Item, Op, WsMessage } from '../../src/model'
 import { applyOps, isBookkeeping } from '../../src/model'
-import { api, asArray, connectBoard } from './api'
+import { api, connectBoard } from './api'
 
 export interface Toast {
   id: number
@@ -32,7 +32,8 @@ export interface BoardStore {
   /** The latest "look here" request (canvas_focus / POST /focus); null once gone to or dismissed. */
   focusRequest: FocusRequest | null
   clearFocus: () => void
-  changes: Change[]
+  /** newest first: live changes whole, those read on load trimmed for the list (BriefChange — never applied) */
+  changes: Array<Change | BriefChange>
   toasts: Toast[]
   /** ids of items the agent touched recently, for the highlight wash */
   pulse: Set<string>
@@ -95,7 +96,7 @@ export function useBoard(id: string): BoardStore {
   const [agentSeen, setAgentSeen] = useState<Record<string, string>>({})
   const [storageError, setStorageError] = useState<string | null>(null)
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null)
-  const [changes, setChanges] = useState<Change[]>([])
+  const [changes, setChanges] = useState<Array<Change | BriefChange>>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [pulse, setPulse] = useState<Set<string>>(new Set())
   const [undoStack, setUndoStack] = useState<StackEntry[]>([])
@@ -156,13 +157,13 @@ export function useBoard(id: string): BoardStore {
     setError(null)
     setUndoStack([])
     setRedoStack([])
-    Promise.all([api.getBoard(id), api.changes(id, 0).catch(() => [] as Change[])])
+    // the Changes tab lists the latest 300, trimmed (the server drops bookkeeping); live ones arrive whole
+    Promise.all([api.getBoard(id), api.recentChanges(id).catch(() => [] as BriefChange[])])
       .then(([b, cs]) => {
         if (cancelled) return
-        const list = asArray(cs, 'changes')
         seqRef.current = b.seq
         setBoard(b)
-        setChanges(list.filter((c) => !isBookkeeping(c)).sort((a, z) => z.seq - a.seq).slice(0, 300))
+        setChanges(cs.sort((a, z) => z.seq - a.seq))
       })
       .catch((e: Error) => !cancelled && setError(e.message))
 
@@ -181,9 +182,9 @@ export function useBoard(id: string): BoardStore {
           if (m.board.seq > seqRef.current) {
             seqRef.current = m.board.seq
             setBoard(m.board)
-            api.changes(id, 0).then((cs) => {
+            api.recentChanges(id).then((cs) => {
               if (cancelled) return
-              setChanges(asArray(cs, 'changes').filter((c) => !isBookkeeping(c)).sort((a, z) => z.seq - a.seq).slice(0, 300))
+              setChanges(cs.sort((a, z) => z.seq - a.seq))
             }).catch(() => undefined)
           }
         } else if (m.type === 'change') {

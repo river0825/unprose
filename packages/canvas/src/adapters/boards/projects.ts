@@ -10,6 +10,7 @@ import path from 'node:path'
 import { newId, type Author, type Board, type Change } from '../../model.js'
 import { NotFound, PERSONAL_PROJECT, ProjectInUse, type CreateBoardInput, type ProjectBoards, type ProjectInfo } from '../../ports/boardRepository.js'
 import { BoardRepositoryBase } from './base.js'
+import { ChangeLogFiles } from './changeLog.js'
 import { defaultBoardsDir } from './location.js'
 
 /** The registry of projects, kept next to the personal boards (a dotfile, never read as a board). */
@@ -49,6 +50,7 @@ export class ProjectsBoardRepository extends BoardRepositoryBase implements Proj
   private registered: Registered[] = []
   /** Which directory stores each board. */
   private dirOf = new Map<string, string>()
+  private logs = new ChangeLogFiles()
 
   constructor(dir = defaultBoardsDir()) {
     super()
@@ -123,6 +125,9 @@ export class ProjectsBoardRepository extends BoardRepositoryBase implements Proj
     if (!fs.existsSync(path.join(to, `${boardId}.json`))) throw new Error(`could not write ${boardId}.json into ${to}`)
     this.dirOf.set(boardId, to)
     for (const f of [path.join(from, `${boardId}.json`), log]) if (fs.existsSync(f)) fs.unlinkSync(f)
+    // the copy is another file: index it afresh when it is first read
+    this.logs.forget(log)
+    this.logs.forget(path.join(to, `${boardId}${LOG}`))
     return board
   }
 
@@ -147,22 +152,17 @@ export class ProjectsBoardRepository extends BoardRepositoryBase implements Proj
   }
 
   protected appendLog(change: Change): void {
-    fs.appendFileSync(path.join(this.dirFor(change.boardId), `${change.boardId}${LOG}`), JSON.stringify(change) + '\n')
+    this.logs.append(this.logPath(change.boardId), change)
   }
 
-  protected readLog(id: string): Change[] {
-    const p = path.join(this.dirFor(id), `${id}${LOG}`)
-    if (!fs.existsSync(p)) return []
-    return fs
-      .readFileSync(p, 'utf8')
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => JSON.parse(l) as Change)
+  protected readLog(id: string, since?: number): Change[] {
+    return this.logs.read(this.logPath(id), since)
   }
 
   protected remove(id: string): void {
     const dir = this.dirFor(id)
-    for (const p of [path.join(dir, `${id}.json`), path.join(dir, `${id}${LOG}`)]) if (fs.existsSync(p)) fs.unlinkSync(p)
+    for (const p of [path.join(dir, `${id}.json`), this.logPath(id)]) if (fs.existsSync(p)) fs.unlinkSync(p)
+    this.logs.forget(this.logPath(id))
     this.dirOf.delete(id)
   }
 
@@ -178,6 +178,10 @@ export class ProjectsBoardRepository extends BoardRepositoryBase implements Proj
 
   private dirFor(id: string): string {
     return this.dirOf.get(id) ?? this.dir
+  }
+
+  private logPath(id: string): string {
+    return path.join(this.dirFor(id), `${id}${LOG}`)
   }
 
   private dirForProject(projectId: string): string {

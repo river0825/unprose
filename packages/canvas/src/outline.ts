@@ -1,9 +1,10 @@
 // The board as text an agent can read (docs/canvas.md "Reading big boards"): a containment tree — diagram frame →
 // lane / column / screen / group → items — in reading order, with each item's comment threads, pending proposals,
 // each diagram's annotations (numbered cards, not threads) and wires, and the board's TODOs. Pure; `read.ts` filters,
-// paginates and caps it.
+// paginates, caps it and leaves out what hidden frames hold.
 import { annotationOf, calloutOf, isAnnotationCard, isAnnotationDraft } from './annotations.js'
 import { circled } from './diagrams/domainStory.js'
+import { hiddenFramesLine, hiddenTotal, isHiddenFrame, itemCount, type HiddenView } from './hidden.js'
 import { diagramSpecOf, type Board, type Item } from './model.js'
 import { displayName, framelessLines, holdersOf, isSettledThread, proposalHolderOf, settingsLines, threadOf } from './routing.js'
 import { aboutText, isTodo, todoLines } from './todos.js'
@@ -74,13 +75,13 @@ export function containmentTree(board: Pick<Board, 'items'>): Tree {
     for (let cur: string | undefined = cand, guard = 0; cur && guard < 200; guard++, cur = parent.get(cur)) if (cur === ancestor) return true
     return false
   }
-  // 2. geometry for the rest
+  // 2. geometry for the rest — a hidden frame holds only what names it (hidden.ts): what lies on its box is on open paper
   for (const it of items) {
     if (parent.has(it.id)) continue
     if (diagramSpecOf(it)) continue
     let best: Item | undefined
     for (const c of containers) {
-      if (c.id === it.id || !inside(it, c)) continue
+      if (c.id === it.id || isHiddenFrame(c) || !inside(it, c)) continue
       if (isContainer(it) && c.w * c.h <= it.w * it.h) continue
       if (isUnder(c.id, it.id)) continue
       if (!best || c.w * c.h < best.w * best.h) best = c
@@ -192,6 +193,8 @@ export interface OutlineOptions {
   replies?: number
   /** leave out the board header and settings (a filtered page) */
   bare?: boolean
+  /** the hidden frames (docs/canvas.md "Hiding a frame"), and whether what they hold is on this board anyway */
+  hidden?: HiddenView
 }
 
 /**
@@ -239,10 +242,17 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   for (const r of roots) if (r.target && board.items[r.target]) threadsOn.set(r.target, [...(threadsOn.get(r.target) ?? []), r])
 
   const out: string[] = []
+  const hidden = opts.hidden ?? { list: [], listed: true }
   if (!opts.bare) {
-    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`)
-    const settings = [...settingsLines(board.meta), ...framelessLines(board)]
+    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items${hiddenTotal(hidden)})`)
+    const settings = [...settingsLines(board.meta), ...framelessLines(board), ...hiddenFramesLine(hidden.list, hidden.listed)]
     if (settings.length) out.push(...settings, '')
+  }
+  // a hidden frame says so on its own line, and how many items it holds when they are not listed
+  const hiddenTag = (c: Item): string | undefined => {
+    if (!isHiddenFrame(c)) return undefined
+    const n = hidden.list.find((f) => f.id === c.id)?.items
+    return n === undefined ? 'hidden on the board' : `hidden on the board: ${itemCount(n)}${hidden.listed ? '' : ' not listed (includeHidden: true lists them)'}`
   }
   const printed = new Set<string>()
   const maxReplies = opts.replies ?? 3
@@ -357,7 +367,7 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
     if (spec) {
       const n = descendants(tree, c.id).size
       const holder = holdersOf(board.meta).find((h) => h.key === spec.key)
-      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ''].filter(Boolean)
+      const bits = [`key ${spec.key}`, spec.source, spec.level, hiddenTag(c) ?? `${n} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ''].filter(Boolean)
       out.push(`${indent}## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short(c.text, 60)}" — ${bits.join(' · ')}  #${c.id}`)
     } else {
       const role = c.type === 'ui' ? String((c.data?.ui as { type?: string } | undefined)?.type ?? 'ui') : (c.role ?? c.type)
@@ -367,6 +377,8 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
       if (pend) f.push(pend)
       const notes = cardsOn.get(c.id)
       if (notes?.length) f.push(`annotation ${notes.map(num).join('')}`)
+      const hid = hiddenTag(c)
+      if (hid) f.push(hid)
       out.push(`${indent}## ${role}: ${short(c.text, 80) || '(untitled)'}${f.length ? ` [${f.join('; ')}]` : ''}  #${c.id}`)
     }
     for (const t of threadsOn.get(c.id) ?? []) thread(t, `${indent}    `)

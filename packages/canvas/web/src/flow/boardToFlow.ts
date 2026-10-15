@@ -3,7 +3,7 @@ import { ownLock, type Board, type Item } from '../../../src/model'
 import { KANBAN_GAP, KANBAN_HEADER, stackCards } from './kanbanAlign'
 import { KIND_NAMES, diagramData } from '../diagrams/frame'
 import { findingCount } from '../diagrams/findings'
-import { autoSides, planSides, type Box } from './route'
+import { autoSides, planSides, planWindow, type Box } from './route'
 import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
 import { planWires } from '../../../src/wireGeometry'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
@@ -11,6 +11,7 @@ import type { CommentShown } from './notesView'
 import type { ItemMarks } from './annotationsView'
 import type { ClickOn } from './clickableView'
 import { calloutOf, isAnnotationDraft, todoOf } from '../../../src/annotations'
+import { isHiddenFrame } from '../../../src/hidden'
 
 /** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
 export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
@@ -156,6 +157,15 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
   const catchAllIds = catchAll.show ? new Map() : catchAllWires(board)
   const badges = wireBadges(board, catchAllIds, catchAll.expanded)
   const collapsed = (id: string) => catchAllIds.has(id) && !catchAll.expanded.has(id)
+  // cards per kanban column, counted once (not a pass over every item per column)
+  let cardCount: Map<string, number> | undefined
+  const cardsIn = (id: string) => {
+    if (!cardCount) {
+      cardCount = new Map()
+      for (const c of items) if (c.type === 'card' && c.parent !== undefined) cardCount.set(c.parent, (cardCount.get(c.parent) ?? 0) + 1)
+    }
+    return cardCount.get(id) ?? 0
+  }
 
   const push = (it: Item) => {
     if (visited.has(it.id)) return
@@ -182,7 +192,7 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
       // a kanban card must be able to leave its column; drag-stop re-parents it by where it lands
       extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
-      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? items.filter((c) => c.type === 'card' && c.parent === it.id).length : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}), ...(mine ? { marks: mine } : {}) },
+      data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? cardsIn(it.id) : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}), ...(mine ? { marks: mine } : {}) },
       ...nodeClass(it),
       // a frame, lane, column or screen moves by its title bar or border; a drag on its body draws a selection box (docs/canvas.md)
       ...(passThrough(it) ? { dragHandle: `.${DRAG_HANDLE}` } : {}),
@@ -287,25 +297,115 @@ function wireSides(it: Item, byId: Board['items'], stacked: Map<string, { x: num
 }
 
 type PlannedSides = (it: Item, a: Box, b: Box) => { fromSide: string; toSide: string }
+type Obstacle = Box & { id: string }
 
-// planSides for the last board geometry: a wire's sides depend only on its two end boxes and the other boxes on
-// the board, so while none of those moved (a text edit, a comment, a wash) the last answer is given again instead
-// of trying every pair of sides for every wire against every box. One board is shown at a time, so one memo.
-let lastPlan: { geometry: string; sides: Map<string, { fromSide: string; toSide: string }> } | undefined
+// planSides per wire, from the last pass: a wire's sides depend only on its two end boxes and the other boxes in
+// planSides' window around them (route.ts planWindow), in board order. So a wire keeps its last answer while no box
+// that moved, resized, came or went since (at its old place or its new one) is in its window: a text edit or a
+// comment re-plans nothing, a move or an add only the wires near it. One board is shown at a time: the memo holds
+// the obstacles of the last pass that planned and the sides of the wires it planned.
+type Sides = { fromSide: string; toSide: string }
+let lastPass: { boxes: Obstacle[]; sides: Map<string, Sides> } = { boxes: [], sides: new Map() }
 
-/** planSides over `boxes()`, answered from the memo while the geometry is the one it was built on. */
-function sidesMemo(boxes: () => Array<Box & { id: string }>): PlannedSides {
-  let plan: NonNullable<typeof lastPlan> | undefined
+/** planSides over `boxes()`, answered from the last pass for a wire whose window has not changed since. */
+function sidesMemo(boxes: () => Obstacle[]): PlannedSides {
+  const prev = lastPass
+  let pass: typeof lastPass | undefined
+  let changed: ReturnType<typeof changesSince> | undefined
+  let inWindow: ((a: Box, b: Box) => Obstacle[]) | undefined
   return (it, a, b) => {
-    if (!plan) {
-      const all = boxes()
-      const geometry = all.map((c) => `${c.id}:${c.x},${c.y},${c.w},${c.h}`).join(';')
-      plan = lastPlan?.geometry === geometry ? lastPlan : (lastPlan = { geometry, sides: new Map() })
-    }
+    pass ??= lastPass = { boxes: boxes(), sides: new Map() }
     const key = `${it.from}>${it.to}|${a.x},${a.y},${a.w},${a.h}|${b.x},${b.y},${b.w},${b.h}`
-    let out = plan.sides.get(key)
-    if (!out) plan.sides.set(key, (out = planSides(a, b, boxes().filter((c) => c.id !== it.from && c.id !== it.to))))
+    const seen = pass.sides.get(key)
+    if (seen) return seen
+    const was = prev.sides.get(key)
+    // planSides keeps the boxes in the window but the wire's own two, in board order: given just those
+    const out = was && !(changed ??= changesSince(prev.boxes, pass.boxes))(a, b) ? was : planSides(a, b, (inWindow ??= planWindows(pass.boxes))(a, b).filter((c) => c.id !== it.from && c.id !== it.to))
+    pass.sides.set(key, out)
     return out
+  }
+}
+
+/**
+ * Whether anything that changed between two passes' obstacles stands in a wire's window: a box that moved, resized,
+ * came or went, at its old place and at its new one. When the boxes that stayed are no longer in the same order,
+ * every window counts as changed: planSides is given its boxes in board order, and ties go to the first.
+ */
+function changesSince(before: Obstacle[], now: Obstacle[]): (a: Box, b: Box) => boolean {
+  const at = new Map(before.map((c, i) => [c.id, i]))
+  const kept = new Set<string>()
+  const moved: Obstacle[] = []
+  let last = -1
+  for (const c of now) {
+    const i = at.get(c.id)
+    const o = i === undefined ? undefined : before[i]
+    if (!o || o.x !== c.x || o.y !== c.y || o.w !== c.w || o.h !== c.h) {
+      moved.push(c)
+      continue
+    }
+    if (i! < last) return () => true
+    last = i!
+    kept.add(c.id)
+  }
+  for (const o of before) if (!kept.has(o.id)) moved.push(o)
+  if (!moved.length) return () => false
+  const near = planWindows(moved)
+  return (a, b) => near(a, b).length > 0
+}
+
+/** Grid cell side for finding a wire's window, in px; cells are numbered only within ±LIMIT (±268 M px). */
+const CELL = 256
+const LIMIT = 1 << 20
+
+/** The cells a range from p to q covers, or undefined when that is not within the grid. */
+function cellRange(p: number, q: number): [number, number] | undefined {
+  const [i, j] = [Math.floor(Math.min(p, q) / CELL), Math.floor(Math.max(p, q) / CELL)]
+  return Math.abs(i) < LIMIT && Math.abs(j) < LIMIT ? [i, j] : undefined
+}
+
+/**
+ * The boxes of `all` in planSides' window around two boxes (route.ts planWindow), in the order of `all`, found
+ * through a uniform grid instead of a pass over every box per wire. A box over many cells (or off the grid) is
+ * tested for every window. A box the window test keeps overlaps the window's range on each axis, so it is in one
+ * of the cells the window covers.
+ */
+export function planWindows<B extends Box>(all: B[]): (a: Box, b: Box) => B[] {
+  const cells = new Map<number, number[]>()
+  const always: number[] = []
+  const key = (gx: number, gy: number) => gx * 2 * LIMIT + gy
+  // the cells holding boxes
+  let [gx0, gx1, gy0, gy1] = [Infinity, -Infinity, Infinity, -Infinity]
+  all.forEach((c, i) => {
+    const [xs, ys] = [cellRange(c.x, c.x + c.w), cellRange(c.y, c.y + c.h)]
+    if (!xs || !ys || (xs[1] - xs[0] + 1) * (ys[1] - ys[0] + 1) > 64) return void always.push(i)
+    ;[gx0, gx1, gy0, gy1] = [Math.min(gx0, xs[0]), Math.max(gx1, xs[1]), Math.min(gy0, ys[0]), Math.max(gy1, ys[1])]
+    for (let gx = xs[0]; gx <= xs[1]; gx++)
+      for (let gy = ys[0]; gy <= ys[1]; gy++) {
+        const list = cells.get(key(gx, gy))
+        if (list) list.push(i)
+        else cells.set(key(gx, gy), [i])
+      }
+  })
+  const mark = new Uint32Array(all.length)
+  let stamp = 0
+  return (a, b) => {
+    const w = planWindow(a, b)
+    const [xs, ys] = [cellRange(w.x1, w.x2), cellRange(w.y1, w.y2)]
+    // a window off the grid, or over an eighth of it or more (or no grid at all): one pass over every box is quicker
+    if (!xs || !ys || !cells.size) return all.filter((c) => w.has(c))
+    const [x0, x1, y0, y1] = [Math.max(xs[0], gx0), Math.min(xs[1], gx1), Math.max(ys[0], gy0), Math.min(ys[1], gy1)]
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) * 8 > (gx1 - gx0 + 1) * (gy1 - gy0 + 1)) return all.filter((c) => w.has(c))
+    stamp++
+    const found = always.filter((i) => w.has(all[i]))
+    for (let gx = x0; gx <= x1; gx++)
+      for (let gy = y0; gy <= y1; gy++)
+        for (const i of cells.get(key(gx, gy)) ?? []) {
+          if (mark[i] === stamp) continue
+          mark[i] = stamp
+          if (w.has(all[i])) found.push(i)
+        }
+    const order = new Uint32Array(found).sort()
+    return Array.from(order, (i) => all[i])
   }
 }
 
@@ -371,11 +471,11 @@ export function absolutePosition(board: Board, id: string, rel: { x: number; y: 
   return parent ? { x: rel.x + parent.x, y: rel.y + parent.y } : rel
 }
 
-/** Smallest container whose bounds contain the point, excluding `self` and its descendants. */
+/** Smallest container whose bounds contain the point, excluding `self` and its descendants — and a hidden frame (nothing dropped in it would be drawn). */
 export function containerAt(board: Board, x: number, y: number, self: string): Item | undefined {
   let best: Item | undefined
   for (const it of Object.values(board.items)) {
-    if (it.id === self || !isContainer(it)) continue
+    if (it.id === self || !isContainer(it) || isHiddenFrame(it)) continue
     if (isDescendant(board, it.id, self)) continue
     if (x >= it.x && y >= it.y && x <= it.x + it.w && y <= it.y + it.h) {
       if (!best || it.w * it.h < best.w * best.h) best = it

@@ -1,6 +1,7 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { useRef, useState, type ReactNode } from 'react'
 import { ownLock, type ColorToken, type Item } from '../../../../src/model'
+import { hiddenCountOf } from '../../../../src/hidden'
 import type { ItemNode } from '../boardToFlow'
 import { annotationOf, calloutOf, isAnnotationDraft, todoOf, type TodoMark } from '../../../../src/annotations'
 import { CommentBadge, ThreadBody, ThreadReplies } from '../CommentThread'
@@ -230,8 +231,10 @@ export function TextNode({ data, selected }: NodeProps<ItemNode>) {
 export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse } = data
   const edit = useEdit()
+  // a hidden frame is drawn collapsed to this strip: what it holds is not drawn (docs/canvas.md "Hiding a frame")
+  const hidden = hiddenCountOf(item)
   return (
-    <Shell item={item} pulse={pulse} selected={selected} resizable className="frame" handles={false}>
+    <Shell item={item} pulse={pulse} selected={selected} resizable={hidden === undefined} className={hidden === undefined ? 'frame' : 'frame frame-hidden'} handles={false}>
       <Rims />
       <div className="frame-title drag-handle">
         {data.diagram ? (
@@ -240,19 +243,45 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
           </span>
         ) : null}
         {edit.editingId === item.id ? <Text item={item} /> : item.text}
-        {data.diagram?.findings ? (
+        {hidden === undefined && data.diagram?.findings ? (
           <span className="dg-findings-count" title={data.diagram.kind === 'ui-mock' ? 'awd design lint findings — select the frame to see them' : 'Grammar findings — select the frame to see them'}>
             {data.diagram.findings} to check
           </span>
         ) : null}
-        {data.diagram?.kind === 'domain-story' ? <PlayStoryButton frameId={item.id} compact /> : null}
-        {data.diagram?.kind === 'ui-mock' ? (
+        {/* a hidden frame's story or screens are not drawn: nothing to play */}
+        {hidden === undefined && data.diagram?.kind === 'domain-story' ? <PlayStoryButton frameId={item.id} compact /> : null}
+        {hidden === undefined && data.diagram?.kind === 'ui-mock' ? (
           <>
             <PlayMockButton frameId={item.id} compact />
             <ClickableButton />
           </>
         ) : null}
       </div>
+      {hidden !== undefined ? (
+        <div className="frame-hidden-bar drag-handle">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+            <path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z" />
+            <path d="M3 13L13 3" />
+          </svg>
+          <span>
+            {hidden.toLocaleString('en')} {hidden === 1 ? 'item' : 'items'} hidden
+          </span>
+          <button
+            type="button"
+            // `replay-play`: the header's control look, and Copy as image leaves it out (flow/copyImage.ts)
+            className="ghost replay-play frame-show nodrag"
+            onPointerDown={stop}
+            onDoubleClick={stop}
+            onClick={(e) => {
+              e.stopPropagation()
+              edit.setHidden?.(item.id, false)
+            }}
+            title="Draw what this frame holds again (for everyone on the board)"
+          >
+            Show
+          </button>
+        </div>
+      ) : null}
     </Shell>
   )
 }

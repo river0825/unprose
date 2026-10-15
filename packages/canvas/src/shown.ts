@@ -5,7 +5,8 @@
 // them grows to fit — except what a layout lock keeps in place (docs/diagrams.md "What a redraw keeps"). Pure: it
 // returns the board as it is shown, and the moves that make a dropped column snap into place. Nothing here shrinks
 // what the person made bigger. Shared by the web (flow/kanbanAlign.ts), the server-side snapshot, the outline and
-// the layout check, so all of them agree on where a card really is.
+// the layout check, so all of them agree on where a card really is. What a hidden frame holds is not drawn (hidden.ts).
+import { drawnBoard, isHiddenFrame } from './hidden.js'
 import { layoutLock, ownLock, type Board, type Item } from './model.js'
 
 export const KANBAN_HEADER = 44
@@ -152,9 +153,9 @@ export function snapColumns(before: Board, after: Board, touched: string[]): Arr
   return out
 }
 
-/** The board as the web draws it (today: kanban alignment; the only place stored and drawn geometry differ). */
+/** The board as the web draws it: kanban alignment, then hidden frames collapsed without what they hold (hidden.ts). */
 export function shownBoard(board: Board): Board {
-  return alignKanban(board)
+  return drawnBoard(alignKanban(board))
 }
 
 /** Items whose drawn box differs from the stored one, with both boxes and why. */
@@ -163,8 +164,8 @@ export function shownDifferences(board: Board): Array<{ id: string; stored: Pick
   if (shown === board) return []
   const out: Array<{ id: string; stored: Pick<Item, 'x' | 'y' | 'w' | 'h'>; shown: Pick<Item, 'x' | 'y' | 'w' | 'h'>; why: string }> = []
   for (const it of Object.values(board.items)) {
-    // a locked item is drawn where it is stored (the layout lock); never "drawn elsewhere"
-    if (layoutLock(board.items, it.id)) continue
+    // a locked item is drawn where it is stored (the layout lock); never "drawn elsewhere" — nor is a hidden frame (collapsed)
+    if (layoutLock(board.items, it.id) || isHiddenFrame(it)) continue
     const s = shown.items[it.id]
     if (!s || (s.x === it.x && s.y === it.y && s.w === it.w && s.h === it.h)) continue
     const why =

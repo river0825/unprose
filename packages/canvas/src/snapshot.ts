@@ -3,9 +3,11 @@
 // theme tokens, no CSS variables, no external references), close enough to what the page draws: frames, lanes,
 // kanban columns and cards (at the stacked position the page shows, src/shown.ts), stickies with wrapped text
 // (src/textMetrics.ts), wireframe primitives, UI mock elements, Domain Storytelling pictograms, wires with
-// arrowheads and labels, folded comment badges, annotation cards with their numbered pins, TODOs as check boxes.
+// arrowheads and labels, folded comment badges, annotation cards with their numbered pins, TODOs as check boxes; a
+// hidden frame collapsed, without what it holds (src/hidden.ts).
 // A rasterizer (resvg) can turn it into a PNG; that is the driving side's job.
 import { calloutOf, isAnnotationCard, todoOf } from './annotations.js'
+import { hiddenCountOf, hiddenOf, itemCount } from './hidden.js'
 import { UI_CALLOUT } from './diagrams/uiMock.js'
 import type { Board, ColorToken, Item } from './model.js'
 import { shownBoard } from './shown.js'
@@ -292,8 +294,10 @@ function drawFrame(c: Ctx, it: Item): string {
   const bx = boxOf(it)
   const ds = it.data?.ds === 'group'
   const parts: string[] = []
+  // a hidden frame, collapsed: a solid strip saying how much it holds (as the page draws it)
+  const hidden = hiddenCountOf(it)
   if (ds) parts.push(rect(bx, `fill="none" stroke="${p.ink3}" stroke-width="1.6" stroke-dasharray="6 5"`, 18))
-  else parts.push(rect(bx, `fill="${p.chrome}" fill-opacity="0.45" stroke="${p.rule2}" stroke-width="1"`, 4))
+  else parts.push(rect(bx, `fill="${p.chrome}"${hidden === undefined ? ' fill-opacity="0.45"' : ''} stroke="${p.rule2}" stroke-width="1"`, 4))
   if (c.text && it.text) {
     const spec = it.data?.diagram as { kind?: string } | undefined
     let x = bx.x
@@ -306,6 +310,7 @@ function drawFrame(c: Ctx, it: Item): string {
     }
     parts.push(`<text x="${n(x)}" y="${n(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc(oneLine(it.text, Math.max(bx.w + 400, 200), 13.5, 600))}</text>`)
   }
+  if (c.text && hidden !== undefined) parts.push(`<text x="${n(bx.x + 12)}" y="${n(bx.y + bx.h / 2 + 4)}" font-size="12.5" fill="${p.ink3}">${itemCount(hidden)} hidden</text>`)
   return parts.join('')
 }
 
@@ -777,6 +782,33 @@ function drawItem(c: Ctx, it: Item): string {
 
 // ── the snapshot ─────────────────────────────────────────────────────────────
 
+/**
+ * A frame or items asked for that a hidden frame holds are not drawn: the collapsed frame stands in for them, and a
+ * note says so (docs/canvas.md "Hiding a frame"). A hidden frame drawn says it is hidden too.
+ */
+function hiddenAsked(board: Board, opts: SnapshotOptions, notes: string[]): SnapshotOptions {
+  const h = hiddenOf(board)
+  if (!h) return opts
+  const name = (id: string) => `"${(board.items[id]?.text ?? id).split('\n')[0].slice(0, 60)}"`
+  const out = { ...opts }
+  const stand = new Set<string>()
+  if (opts.frame) {
+    const f = board.items[opts.frame] ?? board.items[`diagram.${opts.frame}`]
+    const by = f ? h.frameOf.get(f.id) : undefined
+    if (by) {
+      out.frame = by
+      stand.add(by)
+    } else if (f && h.frames.has(f.id)) stand.add(f.id)
+  }
+  if (opts.ids?.length) {
+    out.ids = [...new Set(opts.ids.map((id) => h.frameOf.get(id) ?? id))]
+    for (const id of opts.ids) if (h.frameOf.has(id) || h.frames.has(id)) stand.add(h.frameOf.get(id) ?? id)
+  }
+  if (!opts.frame && !opts.ids?.length) for (const id of h.frames.keys()) stand.add(id)
+  for (const id of stand) notes.push(`${name(id)} is a hidden frame (the person hid its contents): drawn collapsed, its ${itemCount(h.frames.get(id) ?? 0)} left out`)
+  return out
+}
+
 export function renderSnapshot(board: Board, opts: SnapshotOptions = {}): Snapshot {
   if (opts.theme !== undefined && opts.theme !== 'light' && opts.theme !== 'dark') throw new SnapshotError(400, "theme must be 'light' or 'dark'")
   if (opts.scale !== undefined && !(Number.isFinite(opts.scale) && opts.scale > 0 && opts.scale <= 4)) throw new SnapshotError(400, 'scale must be a number above 0 and at most 4')
@@ -786,9 +818,9 @@ export function renderSnapshot(board: Board, opts: SnapshotOptions = {}): Snapsh
   const maxPx = Math.min(SNAPSHOT_MAX_PX, Math.round(opts.maxPx ?? DEFAULT_MAX_PX))
   if ((opts.maxPx ?? 0) > SNAPSHOT_MAX_PX) notes.push(`maxPx is at most ${SNAPSHOT_MAX_PX}`)
   const pad = Math.max(0, Math.min(200, opts.pad ?? 24))
-  // the board as the page draws it (kanban cards stacked in their columns)
+  // the board as the page draws it (kanban cards stacked in their columns, hidden frames collapsed)
   const b = shownBoard(board)
-  const sel = select(b, opts)
+  const sel = select(b, hiddenAsked(board, opts, notes))
   const region = sel.region
   const vw = region.w + pad * 2
   const vh = region.h + pad * 2

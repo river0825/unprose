@@ -53,8 +53,9 @@ and annotate, and a rule set that keeps it honest:
 
 ## Tools
 
-- **Big boards**: `canvas_read_board` with `format: "summary"` first, then `frame: "<key>"`, `types`, `text`; `canvas_diff`
-  with `summary: true` / `frame` / `from` / `kinds`. Answers are capped and give the next `cursor` — never grep a saved dump.
+- **Big boards**: `canvas_read_board` with `format: "summary"` first, then `frame: "<key>"`, `types`, `text` (a frame the
+  person hid is one line; `includeHidden: true` lists what it holds); `canvas_diff` with `summary: true` / `frame` /
+  `from` / `kinds`. Answers are capped and give the next `cursor` — never grep a saved dump.
 - **Look at what you drew** before asking the person to: `canvas_snapshot { id, frame }` (an image) and
   `canvas_check_layout { id, frame }` (overlaps, cut-off text, oversized stickies, cards drawn elsewhere than stored).
 

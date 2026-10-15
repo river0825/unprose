@@ -14,8 +14,9 @@ export class MemoryBoardRepository extends BoardRepositoryBase {
     if (!this.logs.has(change.boardId)) this.logs.set(change.boardId, [])
     this.logs.get(change.boardId)!.push(change)
   }
-  protected readLog(id: string): Change[] {
-    return (this.logs.get(id) ?? []).slice()
+  protected readLog(id: string, since?: number): Change[] {
+    const log = this.logs.get(id) ?? []
+    return since === undefined ? log.slice() : log.filter((c) => c.seq > since)
   }
   protected remove(id: string): void {
     this.logs.delete(id)

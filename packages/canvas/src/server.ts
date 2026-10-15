@@ -21,7 +21,8 @@ import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, sha1, stampAttribution, type ProposalInput } from './proposals.js'
 import { openDrafts, todoCounts } from './todos.js'
-import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
+import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type BriefChange, type BriefOp, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
+import { emptyRedrawInputs, foldRedrawInputs, redrawInputsToJson, type LoggedChange, type RedrawInputs } from './diagrams/redraw.js'
 import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, framelessDiagrams, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
 import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, stampTodos, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
@@ -34,6 +35,7 @@ import { handleMcp } from './remoteMcp.js'
 // agent-scale reading, snapshots, layout check, local approval (docs/canvas.md "Reading big boards")
 import { CHANGE_KINDS, diffSummary, filterChanges, pageLines, type ChangeFilter, type ChangeKind } from './diff.js'
 import { readBoard, ReadError, type ReadFormat, type ReadOptions } from './read.js'
+import { hiddenFrameList, hiddenOf } from './hidden.js'
 import { renderSnapshot, SnapshotError } from './snapshot.js'
 import { checkLayout, layoutLines, LayoutError } from './layoutCheck.js'
 import { svgToPng } from './raster.js'
@@ -357,6 +359,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       drafts: openDrafts(b).length,
       // diagrams the board still registers whose frame is gone (removed over /ops or on the page)
       frameless: framelessDiagrams(viewOf(g, b)).map(({ key, source, holder }) => ({ key, ...(source ? { source } : {}), ...(holder ? { holder: holder.agent } : {}) })),
+      // frames the person hid the contents of (docs/canvas.md "Hiding a frame")
+      hidden: hiddenFrameList(b),
       suggestion,
       ...(suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? 'asked' : 'holder' } : {}),
       agents: knownAgents(b.id, g)
@@ -445,6 +449,23 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     const ops = author === 'agent' ? [] : agentSeenOps(store.get(id)!, changes, name)
     if (ops.length) store.apply(id, ops, 'agent', 'seen', name)
     return store.get(id)!
+  }
+
+  /**
+   * What a redraw needs from a board's whole change log (diagrams/redraw.ts), kept per board and folded on from the seq
+   * it was last read at — so a redraw from another machine downloads that, not the log.
+   */
+  const redrawCache = new Map<string, { createdAt: string; seq: number; inputs: Required<RedrawInputs> }>()
+  const redrawInputsOf = (b: Board) => {
+    let c = redrawCache.get(b.id)
+    // a board deleted and made again under its id has a new log
+    if (!c || c.createdAt !== b.createdAt || c.seq > b.seq) c = { createdAt: b.createdAt, seq: 0, inputs: emptyRedrawInputs() }
+    if (c.seq < b.seq) {
+      foldRedrawInputs(c.inputs, store.changes(b.id, { since: c.seq }) as unknown as LoggedChange[])
+      c.seq = b.seq
+    }
+    redrawCache.set(b.id, c)
+    return { seq: c.seq, ...redrawInputsToJson(c.inputs) }
   }
 
   // ---- Handing over the files behind diagrams (docs/canvas.md "Handing over the files") ----
@@ -902,7 +923,10 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           }
           return json(res, 200, { board: viewOf(grant, store.updateBoard(id, patch)) })
         }
-        if (method === 'DELETE') return json(res, 200, { deleted: store.delete(id) })
+        if (method === 'DELETE') {
+          redrawCache.delete(id)
+          return json(res, 200, { deleted: store.delete(id) })
+        }
         throw new HttpError(405, 'method not allowed')
       }
 
@@ -967,14 +991,27 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         if (!ids.length && !frame) throw new HttpError(400, 'give ids and/or frame')
         const note = (body.note as string | undefined)?.trim().slice(0, 500) || undefined
         const msg: FocusMessage = { type: 'focus', ids, ...(frame ? { frame } : {}), ...(note ? { note } : {}), author, ...(who.by ? { by: who.by } : {}), at: new Date().toISOString() }
-        return json(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg })
+        // what a hidden frame holds is not drawn: the page goes to that frame, collapsed, instead (docs/canvas.md "Hiding a frame")
+        const h = hiddenOf(board)
+        const hidden = h ? hiddenFrameList(board, h).filter((f) => ids.some((i) => h.frameOf.get(i) === f.id)) : []
+        return json(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg, ...(hidden.length ? { hidden } : {}) })
       }
       if (sub === 'changes' && method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0)
         const f = authorFilter(req, grant, url.searchParams.get('author'))
         const cf = changeFilterOf(url)
-        const changes = agentScale(() => (cf ? filterChanges(store.get(id)!, store.changes(id, { since, ...f }), cf) : store.changes(id, { since, ...f })))
-        return json(res, 200, { changes, seq: store.get(id)!.seq })
+        const read = (from: number) => agentScale(() => (cf ? filterChanges(store.get(id)!, store.changes(id, { since: from, ...f }), cf) : store.changes(id, { since: from, ...f })))
+        // ?last=N: the latest N that are not bookkeeping, read from the log's tail; ?brief=1: trimmed for a list (the page's Changes tab)
+        const last = numParam(url, 'last')
+        const changes = last === undefined ? read(since) : lastChanges(store.get(id)!.seq, Number.isFinite(since) ? since : 0, last, read)
+        return json(res, 200, { changes: boolParam(url, 'brief') ? changes.map(briefChange) : changes, seq: store.get(id)!.seq })
+      }
+      // what a redraw needs from the whole log (who placed, added and deleted what) — not the log (docs/canvas.md "HTTP API")
+      if (sub === 'redraw-inputs' && method === 'GET') return json(res, 200, redrawInputsOf(store.get(id)!))
+      // the board's meta as GET /api/boards/:id shows it, without the items
+      if (sub === 'meta' && method === 'GET') {
+        const view = viewOf(grant, store.get(id)!)
+        return json(res, 200, { id: view.id, seq: view.seq, meta: view.meta ?? null })
       }
       if (sub === 'diff' && method === 'GET') {
         // ?frame= &from= &kinds= &summary=1 &last= &limit= &cursor= &maxChars= (docs/canvas.md "Reading big boards")
@@ -1492,6 +1529,7 @@ function readOptionsOf(url: URL): ReadOptions {
     limit: numParam(url, 'limit'),
     cursor: url.searchParams.get('cursor') || undefined,
     maxChars: numParam(url, 'maxChars'),
+    includeHidden: boolParam(url, 'includeHidden') || undefined,
   }
 }
 
@@ -1505,6 +1543,44 @@ function changeFilterOf(url: URL): ChangeFilter | undefined {
   if (bad?.length) throw new HttpError(400, `kinds must be among ${CHANGE_KINDS.join(', ')} (not ${bad.join(', ')})`)
   if (!frame && !from && !kinds) return undefined
   return { frame, from, kinds: kinds as ChangeKind[] | undefined }
+}
+
+/**
+ * `?last=N` on changes: the last N after `since` that are not bookkeeping, without reading the whole log — since
+ * `seq - k`, k growing until N of them are there or the read reaches `since`.
+ */
+function lastChanges(seq: number, since: number, last: number, read: (since: number) => Change[]): Change[] {
+  const n = Math.floor(last)
+  if (!(n >= 1)) throw new HttpError(400, 'last must be 1 or more')
+  for (let k = n * 2; ; k *= 4) {
+    const from = Math.max(since, seq - k)
+    const got = read(from).filter((c) => !isBookkeeping(c))
+    if (got.length >= n || from <= since) return got.slice(-n)
+  }
+}
+
+/** `?brief=1` on changes: each change as a list shows it (model.ts BriefChange) — a big redraw is megabytes in full. */
+const BRIEF_OPS = 50
+/** stamps every update carries: never what changed */
+const STAMPS = new Set(['id', 'createdBy', 'updatedBy', 'updatedAt'])
+const keysOnly = (o: object) => Object.fromEntries(Object.keys(o).filter((k) => !STAMPS.has(k)).map((k) => [k, null] as const))
+const briefText = (t: string | undefined) => (t === undefined ? {} : { text: t.length > 80 ? `${t.slice(0, 79)}…` : t })
+function briefChange(c: Change): BriefChange {
+  const { ops: all, before: was, meta, ...rest } = c
+  const ops = all.slice(0, BRIEF_OPS).map((op): BriefOp => {
+    if (op.kind === 'add') return { kind: 'add', item: { id: op.item.id, type: op.item.type, ...(op.item.role ? { role: op.item.role } : {}), ...briefText(op.item.text) } }
+    if (op.kind === 'update') return { kind: 'update', id: op.id, patch: keysOnly(op.patch) }
+    return { kind: 'remove', id: op.id }
+  })
+  // the name of what a listed remove took — the board no longer has it
+  const before: BriefChange['before'] = {}
+  for (const op of ops) {
+    if (op.kind !== 'remove' || !(op.id in was)) continue
+    const b = was[op.id]
+    before[op.id] = b ? { id: b.id, type: b.type, ...briefText(b.text) } : null
+  }
+  // a settings change keeps the names of the keys it set (a handover's carries the files)
+  return { ...rest, ...(meta ? { meta: keysOnly(meta) } : {}), ops, before, opCount: all.length, itemCount: new Set(all.map((op) => (op.kind === 'add' ? op.item.id : op.id))).size }
 }
 
 /** The pure readers throw their own errors with a status; answer them as HTTP errors. */

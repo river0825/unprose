@@ -94,8 +94,9 @@ remove it from the file** (a chat request carrying the proposal, as for wire pro
 from the file]`. A deletion made another way (over the API, or by an older page) is found in the change log and the
 redraw puts the mark back instead of the item. Whoever holds the file removes the subscription / element after the
 person agrees; the next redraw then removes the struck item. Presentation data (read receipts, wire sides and
-bends, the lock itself) survives every redraw. Nothing a redraw writes goes back into the file: layout lives on the
-board only.
+bends, the lock itself, a frame's hidden contents — docs/canvas.md "Hiding a frame") survives every redraw: a hidden
+frame stays hidden, and what the redraw adds to it is hidden with it. Nothing a redraw writes goes back into the file:
+layout lives on the board only.
 
 **Lock.** The person right-clicks an item → **Lock position** (a frame: **Lock layout**, which locks the frame and
 everything inside it); a small lock shows at its corner and it can no longer be dragged or resized until **Unlock**.

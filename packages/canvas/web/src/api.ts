@@ -1,4 +1,4 @@
-import type { Author, Board, Change, Op, WsMessage } from '../../src/model'
+import type { Author, Board, BriefChange, Change, Op, WsMessage } from '../../src/model'
 
 async function json<T>(res: Response): Promise<T> {
   // signed out (or never signed in) from elsewhere: the app asks who it is again and shows the sign-in screen
@@ -50,10 +50,14 @@ export const api = {
     })
       .then((r) => json<{ board: Board }>(r))
       .then((b) => b.board),
-  changes: (id: string, since = 0) =>
-    fetch(`/api/boards/${encodeURIComponent(id)}/changes?since=${since}`).then((r) =>
-      json<Change[] | { changes: Change[] }>(r),
-    ),
+  /** The latest `last` changes that are not bookkeeping, trimmed for the Changes tab — a redraw of a big diagram is megabytes in full. */
+  recentChanges: (id: string, last = 300) =>
+    fetch(`/api/boards/${encodeURIComponent(id)}/changes?last=${last}&brief=1`)
+      .then((r) => json<{ changes: BriefChange[] }>(r))
+      .then((r) => r.changes),
+  /** The board's meta without its items (the files snapshot is set after a redraw's ops: inspector/useFreshMeta.ts). */
+  boardMeta: (id: string) =>
+    fetch(`/api/boards/${encodeURIComponent(id)}/meta`).then((r) => json<{ id: string; seq: number; meta: Board['meta'] | null }>(r)),
   postOps: (id: string, ops: Op[], note?: string, author: Author = 'user') =>
     fetch(`/api/boards/${encodeURIComponent(id)}/ops`, {
       method: 'POST',

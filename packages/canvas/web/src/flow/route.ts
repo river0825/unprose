@@ -11,15 +11,76 @@ const PAD = 6
 
 /** Does an axis-aligned segment pass through the box (shrunk a little, so grazing an edge is fine)? */
 export function hits(s: Seg, b: Box): boolean {
-  const [x1, x2] = s.x1 < s.x2 ? [s.x1, s.x2] : [s.x2, s.x1]
-  const [y1, y2] = s.y1 < s.y2 ? [s.y1, s.y2] : [s.y2, s.y1]
-  return x2 > b.x + 2 && x1 < b.x + b.w - 2 && y2 > b.y + 2 && y1 < b.y + b.h - 2
+  // the ends in order without building arrays: this runs for every box on every route planSides tries
+  const xUp = s.x1 < s.x2
+  const yUp = s.y1 < s.y2
+  return (xUp ? s.x2 : s.x1) > b.x + 2 && (xUp ? s.x1 : s.x2) < b.x + b.w - 2 && (yUp ? s.y2 : s.y1) > b.y + 2 && (yUp ? s.y1 : s.y2) < b.y + b.h - 2
 }
 
 const count = (segs: Seg[], boxes: Box[]) => {
   let n = 0
-  for (const b of boxes) if (segs.some((s) => hits(s, b))) n++
+  for (const b of boxes)
+    for (const s of segs)
+      if (hits(s, b)) {
+        n++
+        break
+      }
   return n
+}
+
+// Counting every candidate against every box is quadratic: a wire from a UI-mock element has hundreds of
+// boxes in its span and two candidates per box. But a three-run route moves only its middle run, so the
+// candidates at which it crosses one box form at most three open intervals (one per run, read off `hits`),
+// which merge into at most two disjoint ones. With every box's intervals as two sorted lists of ends, the
+// boxes crossed at v are #{lo < v} − #{hi ≤ v}: two binary searches per candidate. Same counts, n log n.
+type Spans = { lo: number[]; hi: number[] }
+
+/** Add the open interval (lo, hi) unless it is empty; a NaN end makes it empty, as a NaN makes `hits` false. */
+const within = (s: Spans, lo: number, hi: number) => {
+  if (lo < hi) (s.lo.push(lo), s.hi.push(hi))
+}
+
+/** How many of the sorted `xs` are below `v` (or equal to it, with `orEqual`). */
+function below(xs: Float64Array, v: number, orEqual: boolean): number {
+  let l = 0
+  let h = xs.length
+  while (l < h) {
+    const m = (l + h) >> 1
+    if (xs[m] < v || (orEqual && xs[m] === v)) l = m + 1
+    else h = m
+  }
+  return l
+}
+
+/** The number of intervals containing v, for finite v (the intervals of one box are disjoint, so: boxes). */
+function counter(s: Spans): (v: number) => number {
+  const lo = new Float64Array(s.lo).sort()
+  const hi = new Float64Array(s.hi).sort()
+  return (v) => below(lo, v, false) - below(hi, v, true)
+}
+
+/**
+ * For bestTurn: how many of `between` the route sx,sy → cx → tx,ty crosses, by cx (sx + 4 < cx < tx − 4).
+ * The first run (y = sy, sx → cx) hits a box for cx > l, the middle one (x = cx) for l < cx < r, the last
+ * one (y = ty, cx → tx) for cx < r — each when the rest of `hits` holds, which does not depend on cx.
+ */
+function turnCounter(sx: number, sy: number, tx: number, ty: number, between: Box[]): (cx: number) => number {
+  const s: Spans = { lo: [], hi: [] }
+  const [y1, y2] = sy < ty ? [sy, ty] : [ty, sy]
+  for (const b of between) {
+    const l = b.x + 2, r = b.x + b.w - 2, t = b.y + 2, u = b.y + b.h - 2
+    const first = sx < r && sy > t && sy < u
+    const middle = y2 > t && y1 < u
+    const last = tx > l && ty > t && ty < u
+    // the middle run's (l, r) lies inside either end run's interval
+    if (first && last) {
+      if (l < r) within(s, -Infinity, Infinity)
+      else (within(s, -Infinity, r), within(s, l, Infinity))
+    } else if (first) within(s, l, Infinity)
+    else if (last) within(s, -Infinity, r)
+    else if (middle) within(s, l, r)
+  }
+  return counter(s)
 }
 
 /**
@@ -37,22 +98,53 @@ export function bestTurn(sx: number, sy: number, tx: number, ty: number, boxes: 
     if (b.x - 16 > sx + 8) cands.add(b.x - 16)
     if (b.x + b.w + 16 < tx - 8) cands.add(b.x + b.w + 16)
   }
+  const crossed = turnCounter(sx, sy, tx, ty, between)
   let best = prefer
   let bestN = Infinity
   for (const cx of cands) {
     if (cx <= sx + 4 || cx >= tx - 4) continue
-    const n = count(
-      [
-        { x1: sx, y1: sy, x2: cx, y2: sy },
-        { x1: cx, y1: sy, x2: cx, y2: ty },
-        { x1: cx, y1: ty, x2: tx, y2: ty },
-      ],
-      between,
-    )
+    const n = Number.isFinite(cx)
+      ? crossed(cx)
+      : count(
+          [
+            { x1: sx, y1: sy, x2: cx, y2: sy },
+            { x1: cx, y1: sy, x2: cx, y2: ty },
+            { x1: cx, y1: ty, x2: tx, y2: ty },
+          ],
+          between,
+        )
     if (n < bestN || (n === bestN && Math.abs(cx - prefer) < Math.abs(best - prefer))) ((best = cx), (bestN = n))
   }
   return best
 }
+
+/**
+ * For bestLoop: how many of `span` the loop sx,sy → (sx, y) → (tx, y) → tx,ty crosses, by y. A vertical
+ * run from y0 to y hits a box whose x-range holds it for every y when y0 is inside the box, for y beyond
+ * its top (y > t) when y0 is above it, for y before its bottom (y < u) when y0 is below; the run along
+ * (x1 → x2) hits for t < y < u.
+ */
+function loopCounter(sx: number, sy: number, tx: number, ty: number, x1: number, x2: number, boxes: Box[]): (y: number) => number {
+  const s: Spans = { lo: [], hi: [] }
+  const [h1, h2] = x1 < x2 ? [x1, x2] : [x2, x1]
+  for (const c of boxes) {
+    const l = c.x + 2, r = c.x + c.w - 2, t = c.y + 2, u = c.y + c.h - 2
+    const v = upDown(sx, sy, l, r, t, u) | upDown(tx, ty, l, r, t, u)
+    // 3 is one end inside the box (then t < u) or one above and one below it: every y, unless the box is thinner than the shrink
+    if (v === 3) {
+      if (t < u) within(s, -Infinity, Infinity)
+      else (within(s, -Infinity, u), within(s, t, Infinity))
+    } else if (v === 1) within(s, t, Infinity)
+    else if (v === 2) within(s, -Infinity, u)
+    // the run along: its (t, u) lies inside any of the above
+    else if (h2 > l && h1 < r) within(s, t, u)
+  }
+  return counter(s)
+}
+
+/** The y a vertical run at x from y0 hits the box (l, r, t, u) for: 0 none, 1 y > t (y0 above it), 2 y < u (below it), 3 every y (inside it). */
+const upDown = (x: number, y0: number, l: number, r: number, t: number, u: number) =>
+  !(x > l && x < r) ? 0 : y0 > t && y0 < u ? 3 : y0 < u ? 1 : y0 > t ? 2 : 0
 
 /**
  * A loop that leaves one box and comes back into another behind it (a fix round going back to build):
@@ -72,15 +164,18 @@ export function bestLoop(a: Box, b: Box, boxes: Box[], min: number, as = 0, bs =
     const ty = side === 'bottom' ? b.y + b.h : b.y
     const edge = side === 'bottom' ? Math.max(sy, ty) + min : Math.min(sy, ty) - min
     const ys = [edge, ...span.map((c) => (side === 'bottom' ? c.y + c.h + 14 : c.y - 14))].filter((y) => (side === 'bottom' ? y >= edge : y <= edge))
+    const crossed = loopCounter(sx, sy, tx, ty, x1, x2, span)
     for (const y of ys) {
-      const n = count(
-        [
-          { x1: sx, y1: sy, x2: sx, y2: y },
-          { x1, y1: y, x2, y2: y },
-          { x1: tx, y1: ty, x2: tx, y2: y },
-        ],
-        span,
-      )
+      const n = Number.isFinite(y)
+        ? crossed(y)
+        : count(
+            [
+              { x1: sx, y1: sy, x2: sx, y2: y },
+              { x1, y1: y, x2, y2: y },
+              { x1: tx, y1: ty, x2: tx, y2: y },
+            ],
+            span,
+          )
       const len = Math.abs(y - sy) + Math.abs(y - ty)
       if (!best || n < best.n || (n === best.n && len < bestLen)) ((best = { side, y, sx, sy, tx, ty, n }), (bestLen = len))
     }
@@ -152,11 +247,18 @@ export function crossings(pts: Point[], boxes: Box[]): number {
  * - the same vertical side on both (bottom → bottom, top → top): a loop under or over both (bestLoop).
  */
 export function routeOf(a: Box, b: Box, from: Side, to: Side, boxes: Box[], ports: { s?: number; t?: number } = {}): Point[] | undefined {
+  return route(a, b, from, to, boxes, ports, () => bestLoop(a, b, boxes, 22, ports.s, ports.t))
+}
+
+type Loop = ReturnType<typeof bestLoop>
+
+/** routeOf with its loop under or over both boxes given: planSides tries bottom → bottom and top → top on one loop. */
+function route(a: Box, b: Box, from: Side, to: Side, boxes: Box[], ports: { s?: number; t?: number }, loop: () => Loop): Point[] | undefined {
   const s = anchor(a, from, ports.s)
   const t = anchor(b, to, ports.t)
   if (from === to) {
     if (isHorizontal(from)) return undefined
-    const l = bestLoop(a, b, boxes, 22, ports.s, ports.t)
+    const l = loop()
     if (l.side !== from) return undefined
     return [{ x: l.sx, y: l.sy }, { x: l.sx, y: l.y }, { x: l.tx, y: l.y }, { x: l.tx, y: l.ty }]
   }
@@ -192,24 +294,38 @@ const PAIRS: Array<[Side, Side]> = [
 export const routeLength = (pts: Point[]) => pts.slice(1).reduce((n, p, i) => n + Math.abs(p.x - pts[i].x) + Math.abs(p.y - pts[i].y), 0)
 
 /**
+ * The only boxes planSides looks at: those overlapping the bounds of the wire's two boxes, 200 px around
+ * (`has`). boardToFlow keeps a wire's sides while the boxes in its window stay put.
+ */
+export function planWindow(a: Box, b: Box): { x1: number; y1: number; x2: number; y2: number; has: (c: Box) => boolean } {
+  const [x1, x2] = [Math.min(a.x, b.x) - 200, Math.max(a.x + a.w, b.x + b.w) + 200]
+  const [y1, y2] = [Math.min(a.y, b.y) - 200, Math.max(a.y + a.h, b.y + b.h) + 200]
+  return { x1, y1, x2, y2, has: (c) => c.x + c.w > x1 && c.x < x2 && c.y + c.h > y1 && c.y < y2 }
+}
+
+/**
  * Which sides a wire leaves and enters by when nobody chose them: every pair of sides (and a loop over or
  * under) is tried and the route that crosses the fewest boxes wins, then the shortest. The facing pair
  * (autoSides) wins any near tie (40 px), so a wire only changes sides when that clears a box or saves
- * real length. `boxes` are the other boxes on the board (not the wire's own two).
+ * real length. `boxes` are the other boxes on the board (not the wire's own two); only those in
+ * planWindow count, and the routes (routeOf, crossings) are given only those.
  */
 export function planSides(a: Box, b: Box, boxes: Box[]): { fromSide: Side; toSide: Side; n: number } {
   const auto = autoSides(a, b) as { fromSide: Side; toSide: Side }
-  const [x1, x2] = [Math.min(a.x, b.x) - 200, Math.max(a.x + a.w, b.x + b.w) + 200]
-  const [y1, y2] = [Math.min(a.y, b.y) - 200, Math.max(a.y + a.h, b.y + b.h) + 200]
-  const near = boxes.filter((c) => c.x + c.w > x1 && c.x < x2 && c.y + c.h > y1 && c.y < y2)
+  const { has } = planWindow(a, b)
+  const near = boxes.filter((c) => has(c))
   let best: { fromSide: Side; toSide: Side; n: number } | undefined
   let bestScore = Infinity
   // going back along the same row, a straight left → right wire would lie on top of the forward wire
   // between the same two boxes (build → test, test → build): such a wire loops under or over instead
   const rowsOverlap = b.y < a.y + a.h && a.y < b.y + b.h
-  for (const [from, to] of [[auto.fromSide, auto.toSide] as [Side, Side], ...PAIRS]) {
+  // each pair once: the facing pair first (tried again it would score the same, and only a lower score wins), and
+  // bottom → bottom and top → top on the one loop (bestLoop tries under and over both)
+  let loop: Loop | undefined
+  const loopOnce = () => (loop ??= bestLoop(a, b, near, 22))
+  for (const [from, to] of [[auto.fromSide, auto.toSide] as [Side, Side], ...PAIRS.filter(([f, t]) => f !== auto.fromSide || t !== auto.toSide)]) {
     if (rowsOverlap && from === 'left' && to === 'right') continue
-    const pts = routeOf(a, b, from, to, near)
+    const pts = route(a, b, from, to, near, {}, loopOnce)
     if (!pts) continue
     const n = crossings(pts, near)
     const isAuto = from === auto.fromSide && to === auto.toSide

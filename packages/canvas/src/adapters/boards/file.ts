@@ -1,15 +1,18 @@
 // BoardRepository adapter: a directory. `<id>.json` is the snapshot,
 // `<id>.changes.ndjson` the append-only log — the log is the truth, the
 // snapshot a rebuildable projection (like the runtime's event store).
+// The log is read through an index, so a read since N reads only its tail (changeLog.ts).
 
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Board, Change } from '../../model.js'
 import { BoardRepositoryBase } from './base.js'
+import { ChangeLogFiles } from './changeLog.js'
 import { defaultBoardsDir } from './location.js'
 
 export class FileBoardRepository extends BoardRepositoryBase {
   readonly dir: string
+  private logs = new ChangeLogFiles()
 
   constructor(dir = defaultBoardsDir()) {
     super()
@@ -55,20 +58,15 @@ export class FileBoardRepository extends BoardRepositoryBase {
   }
 
   protected appendLog(change: Change): void {
-    fs.appendFileSync(this.logPath(change.boardId), JSON.stringify(change) + '\n')
+    this.logs.append(this.logPath(change.boardId), change)
   }
 
-  protected readLog(id: string): Change[] {
-    const p = this.logPath(id)
-    if (!fs.existsSync(p)) return []
-    return fs
-      .readFileSync(p, 'utf8')
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => JSON.parse(l) as Change)
+  protected readLog(id: string, since?: number): Change[] {
+    return this.logs.read(this.logPath(id), since)
   }
 
   protected remove(id: string): void {
     for (const p of [this.snapshotPath(id), this.logPath(id)]) if (fs.existsSync(p)) fs.unlinkSync(p)
+    this.logs.forget(this.logPath(id))
   }
 }

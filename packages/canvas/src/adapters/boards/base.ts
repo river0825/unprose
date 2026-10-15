@@ -38,8 +38,8 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   protected abstract persist(board: Board): void
   /** Append one change to the board's log. */
   protected abstract appendLog(change: Change): void
-  /** Every change of a board, in order. */
-  protected abstract readLog(id: string): Change[]
+  /** The changes of a board with seq > `since` (every change without it), in order — so a file need only read its tail. */
+  protected abstract readLog(id: string, since?: number): Change[]
   /** Forget a board's snapshot and log. */
   protected abstract remove(id: string): void
 
@@ -181,7 +181,7 @@ export abstract class BoardRepositoryBase implements BoardRepository {
   changes(id: string, q: ChangesQuery = {}): Change[] {
     if (!this.boards.has(id)) throw new NotFound(`board ${id} not found`)
     const since = q.since ?? 0
-    return this.readLog(id).filter((c) => c.seq > since && (!q.author || c.author === q.author) && (!q.match || q.match(c)))
+    return this.readLog(id, since).filter((c) => c.seq > since && (!q.author || c.author === q.author) && (!q.match || q.match(c)))
   }
 
   subscribe(id: string, fn: ChangeListener): () => void {

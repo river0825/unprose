@@ -67,7 +67,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `unprose_help` | – | what Unprose can do — the diagrams, the tools, the comment loop, the ways to start — for the agent to pass on in the person's language; also the canvas URL and version |
 | `canvas_list_boards` | – | id, kind, seq, item count, title, url per board |
 | `canvas_create_board` | `title, kind, content, meta?` | render the template and create the board → id, url, seq |
-| `canvas_read_board` | `id, format: outline\|json\|summary, frame?, types?, ids?, text?, fields?, limit?, cursor?, maxChars?` | `outline` (default): text grouped by diagram frame → lane / column / screen / group → items, with threads, proposals, each diagram's [annotations](#annotations) and wires, then the [TODOs](#todos); `summary`: counts per frame; `json`: items with ids and geometry, one per line. Filters, pages and a size cap (40 000 characters by default) — [Reading big boards](#reading-big-boards) |
+| `canvas_read_board` | `id, format: outline\|json\|summary, frame?, types?, ids?, text?, fields?, limit?, cursor?, maxChars?, includeHidden?` | `outline` (default): text grouped by diagram frame → lane / column / screen / group → items, with threads, proposals, each diagram's [annotations](#annotations) and wires, then the [TODOs](#todos); `summary`: counts per frame; `json`: items with ids and geometry, one per line. Filters, pages and a size cap (40 000 characters by default) — [Reading big boards](#reading-big-boards). A [hidden frame](#hiding-a-frame) is one line; `includeHidden: true` lists what it holds |
 | `canvas_apply` | `id, ops[], note?` | raw ops as the agent: `add {item}`, `update {id, patch}`, `remove {id}`; and the layout lock: `lock {id}` / `lock {frame: '<diagram key>'}` / `unlock …` set or clear `data.lock: 'layout'` (redraws and the kanban auto-layout never move a locked item; a locked frame keeps everything in it — docs/diagrams.md "What a redraw keeps"). An agent may unlock only what an agent locked |
 | `canvas_add_items` | `id, kind?, content, at?, scope?, note?` | render a template onto an existing board; deterministic ids mean re-rendering the same content updates in place |
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
@@ -169,6 +169,7 @@ canvas_read_board({ id, frame: "studio-kanban" })
 | `text` | a case-insensitive substring of the text, label or id |
 | `fields` | json: which fields, e.g. `["id","role","text","x","y","w","h","parent"]`, `"data.ui"` |
 | `limit` · `cursor` · `maxChars` | json: items per page (default 200); outline: lines per page; the next page; the size cap |
+| `includeHidden` | also what [hidden frames](#hiding-a-frame) hold (by default each is one line with its item count) |
 
 **The outline** groups by diagram frame → lane / column / screen / group → items, in reading order (a kanban column's
 cards in the order they stack). Containment is `parent` when it names an item, else the smallest container holding
@@ -215,7 +216,9 @@ their header and the cards where they stack (`src/shown.ts`, the same code the p
 colours with wrapped text (`src/textMetrics.ts`, the stylesheet's sizes and paddings) and role labels, cards, text,
 wireframe primitives, UI mock elements, Domain Storytelling pictograms with numbered activities, wires with arrowheads
 and labels (traces dotted, proposals dashed), comment badges with their message count, [annotation](#annotations) cards
-with their number and the same number pinned on the item, [TODOs](#todos) as check boxes (ticked when done). The region is the frame's box,
+with their number and the same number pinned on the item, [TODOs](#todos) as check boxes (ticked when done), a
+[hidden frame](#hiding-a-frame) collapsed with its item count (asked for, what it holds draws the collapsed frame, with a
+note). The region is the frame's box,
 the union of `ids` (a container brings its contents), or the whole board; it is scaled down to fit `maxPx` (at most
 4000) with a note saying so. Colours are literal (no CSS variables), so any SVG rasterizer can draw it.
 
@@ -299,6 +302,7 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | Draw from structured content / raw ops | edit by hand | `awd-canvas render` (print only), `card add/move` | `canvas_create_board`, `canvas_add_items`, `canvas_apply` | same |
 | **Redraw preview** (what a redraw keeps/removes; no writes) | – | `awd design draw --dry-run`, `awd graph --canvas --dry-run` | `design_draw { dryRun: true }` | `design_draw { dryRun: true }` |
 | **Lock layout** (`data.lock: 'layout'` — redraws and the kanban layout never move it; docs/diagrams.md "What a redraw keeps") | context menu *Lock position* / frame *Lock layout*; a lock badge | – | `canvas_apply` ops `{kind:'lock', id \| frame}` / `unlock` (unlocks only agents' locks) | same |
+| **Hide a frame's contents** (`data.hidden: true` — [Hiding a frame](#hiding-a-frame)) | frame context menu *Hide contents* / *Show contents*, *Show* on the collapsed frame | – | `canvas_read_board` lists them only with `includeHidden: true` | same |
 | Lint a diagram file | – | `awd design lint` | `design_lint { file }` | `design_lint { name, content }` |
 | Read the files behind a board | Files tab, source dialog | the files themselves | `canvas_files` | `canvas_files` |
 | Propose an edit to a file | edit text in the source dialog, drag a wire, UI-mock text edits | – | `canvas_propose_edit` | `canvas_propose_edit` (the only way to change a file) |
@@ -920,13 +924,15 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | DELETE | `/api/projects/:id` | `?force=1` | `{ removed, moved }` — forget a project (its files stay); `409` while it stores boards unless `force` (they move to personal); this machine only |
 | POST | `/api/boards/:id/move` | `{ project } \| { projectRoot }` | `{ board, project }` — move the snapshot and log into that project; this machine only |
 | GET | `/api/boards/:id` | | `{ board }` |
+| GET | `/api/boards/:id/meta` | | `{ id, seq, meta }` — the board's `meta` exactly as `GET /api/boards/:id` shows this caller (holders' machine and root only on this machine), without the items; `meta: null` when it has none. The page re-reads it after a redraw (the files snapshot) |
 | PUT | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — replaces meta whole (older clients; prefer PATCH), except a diagram (or the workflow) another agent holds: left out, it is kept |
 | PATCH | `/api/boards/:id` | `{ title?, meta? }` | `{ board }` — merges: each top-level meta key given replaces that key (`null` removes it); `meta.diagrams` merges per diagram key (an entry replaces that diagram's, `null` removes it). Settings keys are ignored (they change through `/settings` and `/handover`); holders are stamped from the caller. `409` when the caller would take over, change or drop a diagram / the workflow whose files another agent holds ([the guard](#file-holders)) |
 | DELETE | `/api/boards/:id` | | `{ deleted }` |
 | POST | `/api/boards/:id/ops` | `{ author: 'agent'\|'user', ops: Op[], note? }` | `{ seq, change }` (atomic batch) |
-| GET | `/api/boards/:id/changes` | `?since=N&author=&frame=&from=&kinds=` | `{ changes: Change[], seq }` — `frame` / `from` / `kinds` keep only the ops that pass ([Reading big boards](#reading-big-boards)) |
+| GET | `/api/boards/:id/changes` | `?since=N&author=&frame=&from=&kinds=&last=N&brief=1` | `{ changes: Change[], seq }` — `frame` / `from` / `kinds` keep only the ops that pass ([Reading big boards](#reading-big-boards)); `last=N`: only the latest N after those filters that are not read receipts, read from the end of the log (not the whole of it); `brief=1`: each change trimmed for a list (`BriefChange`, never applied) — at most 50 ops, an add as `{ id, type, role?, text? }` (text cut at 80), an update with the keys it set (values `null`, not `id` / `createdBy` / `updatedBy` / `updatedAt`), a remove as is, a settings change's `meta` as its keys, `before` only for what those removes took (`{ id, type, text? }`), plus `opCount` and `itemCount`. The page's Changes tab reads `?last=300&brief=1` |
+| GET | `/api/boards/:id/redraw-inputs` | | `{ seq, placed, origins, originOf, removed }` — what a redraw needs from the whole log (docs/diagrams.md "What a redraw keeps"): the items the person moved or resized (`placed`), who added each item (`originOf`: item id → index into `origins`, each distinct `{ author, by?, note? }` once), what the person deleted and nobody added back (`removed`: `[id, at?]`). Kept per board and brought up to date from where it was, so `awd design draw`, `design_draw` and `awd graph --canvas` from another machine download this, not the log; same access as `changes`. A canvas without it answers `404` and they read `changes?since=0` as before |
 | GET | `/api/boards/:id/diff` | `?since=N&author=&frame=&from=&kinds=&summary=1&last=&limit=&cursor=&maxChars=&moves=each` | `{ lines: string[], count, total, from, seq, nextCursor?, more?, summary? }` — a page of lines under the size cap (40 000 characters by default); with `summary=1`, `summary` (counts by who × kind × frame + the last lines) and no lines |
-| GET | `/api/boards/:id/read` | `?format=outline\|json\|summary&frame=&types=&ids=&text=&fields=&limit=&cursor=&maxChars=&items=1` | `{ format, text, matched, seq, nextCursor?, more? }` (`items=1`: also the json page as an array) |
+| GET | `/api/boards/:id/read` | `?format=outline\|json\|summary&frame=&types=&ids=&text=&fields=&limit=&cursor=&maxChars=&includeHidden=1&items=1` | `{ format, text, matched, seq, nextCursor?, more? }` (`items=1`: also the json page as an array) |
 | GET | `/api/boards/:id/snapshot` | `?frame=&ids=&scale=&maxPx=&theme=light\|dark&format=png\|svg` | `image/png` (resvg) or `image/svg+xml`; header `x-unprose-snapshot: { width, height, scale, items, region, notes, renderer }` (non-ASCII as `\u` escapes) |
 | GET | `/api/boards/:id/layout` | `?frame=&limit=` | `{ findings: [{ id, kind, message, suggestion, others?, frame? }], counts, checked, frame?, lines }` |
 | POST | `/api/approve` | `{ code, scope?: 'read', name?, board? }` | `{ status, approved: { name, via, scope, ip }, audit, seq? }` — the local agent only (`canvas_approve`); `403` for tokens, sessions, browsers and anything not from loopback, `404` an unknown code, `429` after ten wrong ones |
@@ -1237,6 +1243,25 @@ Like Miro, FigJam and tldraw, a container moves by its edge and its inside is pa
 Technically: a container's React Flow node lets pointer events through (`pointer-events: none`) except on its title bar,
 border strips and resize handles (class `drag-handle`, also the node's `dragHandle`), so a press on its body reaches the
 pane and starts React Flow's selection box. The items inside are their own nodes and keep their events.
+
+## Hiding a frame
+
+A frame nobody uses any more — an old UI mock with thousands of elements, say — can be folded away: right-click it →
+**Hide contents**. Everything it holds (by `parent`, at any depth, nested frames included), the wires with an end in it
+and the comment threads about any of that are no longer drawn, for everyone on the board; the frame stays as a strip
+with its title, its diagram badge, "N items hidden" and **Show**. **Show** (or right-click → **Show contents**) draws
+them again at the size the frame had. A big board is fast again too, since what is hidden is not drawn at all.
+
+- It is one ordinary change: `data.hidden: true` on the frame item — undoable (⌘Z), in the change log, and kept by a
+  redraw (docs/diagrams.md "What a redraw keeps"). The frame keeps its stored size; only the drawing is collapsed (to at most 640 px wide, so Fit still shows the board).
+- A hidden frame moves like any frame, carrying what it holds. Nothing is dropped into it: an item dropped on the strip,
+  or on the paper the frame used to cover, stays outside it. A thread on the frame itself still shows.
+- Going to something inside it — a panel link, Go to…, a `?focus=` link, `canvas_focus` — goes to the collapsed frame
+  and says it is in the hidden frame; `?frame=<key>` of the frame shows the collapsed frame. Play is not offered.
+- Agents: `canvas_read_board` (outline, summary, json) lists a hidden frame as one line with its item count and leaves
+  out what it holds, unless `includeHidden: true`; the outline header and `canvas_context` name the hidden frames;
+  `canvas_check_layout` does not check what is hidden; `canvas_snapshot` draws the frame collapsed. `canvas_wait` /
+  `canvas_diff` say "hid its contents" / "showed its contents again". `GET /api/boards/:id` is the whole board.
 
 ## Wires
 

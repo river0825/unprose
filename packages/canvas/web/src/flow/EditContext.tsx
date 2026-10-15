@@ -54,6 +54,8 @@ export interface EditApi {
   /** who a draft annotation is for (the holder of its file), and who answers the board (Answered by), as people read them */
   holderOf?: (draftId: string) => string | undefined
   answeredBy?: () => string | undefined
+  /** hide a frame's contents or show them again (docs/canvas.md "Hiding a frame"): a change on the board, for everyone */
+  setHidden?: (id: string, hide: boolean) => void
 }
 
 export const EditContext = createContext<EditApi>({

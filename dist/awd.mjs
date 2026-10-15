@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.26.0";
+    VERSION2 = "0.27.0";
   }
 });
 
@@ -36815,539 +36815,6 @@ var init_routing = __esm({
     named = (k2) => `\xAB${k2.title ?? k2.key}\xBB`;
     list = (names) => names.join(", ");
     agentOf = (it) => it.createdBy === "agent" ? str2(it.data?.by) ?? LOCAL_AGENT : void 0;
-  }
-});
-
-// packages/canvas/dist/client.js
-function canvasOrigin(url2) {
-  const u3 = new URL(url2.trim());
-  const cut = u3.pathname.search(/\/(b|api|docs)(\/|$)/);
-  const prefix = (cut >= 0 ? u3.pathname.slice(0, cut) : u3.pathname).replace(/\/+$/, "");
-  return `${u3.origin}${prefix}`;
-}
-async function probeCanvas(base, timeoutMs = 4e3, token, component = "mcp") {
-  try {
-    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: { "user-agent": userAgent(component), ...token ? { authorization: `Bearer ${token}` } : {} } });
-    if (res.status === 403) {
-      const why = (await res.json().catch(() => ({}))).error;
-      return { ok: false, reason: why ? `HTTP 403: ${why}` : `HTTP 403 \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request` };
-    }
-    if (res.status === 401) {
-      const why = (await res.json().catch(() => ({}))).error;
-      return { ok: false, auth: true, reason: token ? `the token was refused: ${why ?? "HTTP 401"}` : "this canvas wants an access token for requests from elsewhere (UNPROSE_TOKEN)" };
-    }
-    if (!res.ok)
-      return { ok: false, reason: `HTTP ${res.status} ${res.statusText}` };
-    const body = await res.json().catch(() => void 0);
-    if (!body || typeof body !== "object")
-      return { ok: false, reason: "the answer is not the canvas API (is this the canvas URL?)" };
-    return { ok: true };
-  } catch (e) {
-    const err = e;
-    return { ok: false, reason: err.name === "TimeoutError" ? `no answer within ${timeoutMs / 1e3}s` : err.cause?.code ?? err.message };
-  }
-}
-function addQuery(q2, extra) {
-  for (const [k2, v2] of Object.entries(extra ?? {})) {
-    if (v2 === void 0 || v2 === false || Array.isArray(v2) && !v2.length || v2 === "")
-      continue;
-    q2.set(k2, Array.isArray(v2) ? v2.join(",") : v2 === true ? "1" : String(v2));
-  }
-}
-var CanvasClient;
-var init_client2 = __esm({
-  "packages/canvas/dist/client.js"() {
-    init_routing();
-    init_credentials3();
-    init_version2();
-    CanvasClient = class {
-      baseUrl;
-      /** What board links start with. */
-      publicUrl;
-      token;
-      agentName;
-      component;
-      /** Said instead of the canvas's 401 while this agent is not connected yet (the pairing code to type). */
-      authHint;
-      /** Called on a 401 (e.g. to start pairing again). */
-      onAuthNeeded;
-      constructor(baseUrl = process.env.AWD_CANVAS_URL ?? "http://localhost:4400", opts = {}) {
-        this.baseUrl = canvasOrigin(baseUrl);
-        this.publicUrl = opts.publicUrl ? canvasOrigin(opts.publicUrl) : this.baseUrl;
-        this.token = opts.token ?? (process.env.UNPROSE_TOKEN || savedToken(this.baseUrl) || void 0);
-        this.agentName = opts.agentName ?? (process.env.UNPROSE_AGENT_NAME || void 0);
-        this.component = opts.component ?? "client";
-      }
-      /** Use this token from now on (the device flow hands one over while the MCP server runs). */
-      setToken(token) {
-        this.token = token;
-      }
-      /** The token this client sends (the MCP server hands it to the design tools and subprocesses). */
-      get currentToken() {
-        return this.token;
-      }
-      get hasToken() {
-        return !!this.token;
-      }
-      /** The headers every call carries: who is calling (User-Agent), and the token or the local agent's name. */
-      headers() {
-        return { "user-agent": userAgent(this.component), ...this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { "x-unprose-agent": this.agentName } : {} };
-      }
-      async req(method, p, body, signal) {
-        let res;
-        try {
-          res = await fetch(this.baseUrl + p, {
-            method,
-            headers: { ...this.headers(), ...body !== void 0 ? { "content-type": "application/json" } : {} },
-            body: body !== void 0 ? JSON.stringify(body) : void 0,
-            ...signal ? { signal } : {}
-          });
-        } catch (e) {
-          if (signal?.aborted)
-            throw e;
-          throw new Error(`canvas server not reachable at ${this.baseUrl} \u2014 start it with \`awd-canvas serve\` (${e.message})`);
-        }
-        const text3 = await res.text();
-        let data = text3;
-        try {
-          data = JSON.parse(text3);
-        } catch {
-        }
-        if (res.status === 401) {
-          const hint = this.authHint;
-          this.onAuthNeeded?.();
-          if (hint)
-            throw new Error(hint);
-        }
-        if (!res.ok) {
-          const msg = data?.error;
-          if (res.status === 403 && !msg)
-            throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request`);
-          throw new Error(msg ?? `${res.status} ${res.statusText}`);
-        }
-        return data;
-      }
-      /** Boards, optionally only those of one project (a project id, or 'personal'). */
-      listBoards(project) {
-        const q2 = project ? `?project=${encodeURIComponent(project)}` : "";
-        return this.req("GET", `/api/boards${q2}`).then((r) => r.boards);
-      }
-      createBoard(input2) {
-        return this.req("POST", "/api/boards", input2).then((r) => r.board);
-      }
-      /**
-       * The board titled `title`, else a new one — decided by the canvas in one step, so two agents drawing at once get the
-       * same board (docs/canvas.md "Projects": the same project first, then the personal space, then any board you see).
-       */
-      boardByTitle(input2) {
-        return this.req("POST", "/api/boards", { ...input2, author: "agent", reuse: "title" });
-      }
-      projects() {
-        return this.req("GET", "/api/projects").then((r) => r.projects);
-      }
-      /** Register the project at `root` on this canvas (only accepted from the canvas's own machine). */
-      registerProject(root) {
-        return this.req("POST", "/api/projects", { root }).then((r) => r.project);
-      }
-      /** Move a board (snapshot + log) into a project: a project id or, from this machine, `{ projectRoot }`. */
-      moveBoard(id, to) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/move`, to);
-      }
-      getBoard(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}`).then((r) => r.board);
-      }
-      outline(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/outline`);
-      }
-      apply(id, ops, author = "agent", note) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/ops`, { author, ops, note });
-      }
-      template(id, kind, content, at3, scope, frame) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at3, scope, ...frame ? { frame } : {} });
-      }
-      /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
-      updateBoard(id, patch) {
-        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
-      }
-      /**
-       * Merge into the board's meta (PATCH /api/boards/:id): only the keys given change (null removes one);
-       * `meta.diagrams` merges per diagram key — so two agents drawing different diagrams never overwrite each other.
-       */
-      patchBoard(id, patch) {
-        return this.req("PATCH", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
-      }
-      changes(id, since = 0, author) {
-        const q2 = new URLSearchParams({ since: String(since) });
-        if (author)
-          q2.set("author", author);
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/changes?${q2}`);
-      }
-      /** `extra`: frame, from (names), kinds, summary, last, limit, cursor, maxChars (docs/canvas.md "Reading big boards"). */
-      diff(id, since, author, extra) {
-        const q2 = new URLSearchParams({ since: String(since) });
-        if (author)
-          q2.set("author", author);
-        addQuery(q2, extra);
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/diff?${q2}`);
-      }
-      /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
-      /**
-       * `opts.signal` aborts the wait (the server then frees its watcher slot); `untilMention` wakes only on what addresses
-       * this agent personally; `contextOnce` asks the server to send the board context only when this agent has not seen it.
-       */
-      async wait(id, since, timeoutMs, author, quietMs, wake, listen, extra, opts = {}) {
-        const q2 = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) });
-        addQuery(q2, extra);
-        if (author)
-          q2.set("author", author);
-        if (quietMs !== void 0)
-          q2.set("quiet", String(quietMs));
-        if (wake)
-          q2.set("wake", wake);
-        if (listen === "all")
-          q2.set("to", "all");
-        if (opts.untilMention)
-          q2.set("until", "mention");
-        if (opts.contextOnce)
-          q2.set("context", "changed");
-        const r = await this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`, void 0, opts.signal);
-        if (typeof r !== "object" || r === null || typeof r.seq !== "number")
-          throw new Error(r?.error ?? "the canvas gave no answer to the wait");
-        return r;
-      }
-      /** Who answers the board, its context note, who holds the files, the agents it knows. */
-      settings(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/settings`);
-      }
-      /**
-       * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of
-       * diagram `key` ('workflow' for a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds
-       * them, nobody does yet, or the canvas is too old to say).
-       */
-      async redrawRefusal(id, key, o = {}) {
-        const s = await this.settings(id).catch(() => void 0);
-        if (!s || !Array.isArray(s.holders))
-          return void 0;
-        const me = s.you ?? LOCAL_AGENT;
-        const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
-        return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
-      }
-      /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
-      setSettings(id, patch, author = "agent") {
-        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author });
-      }
-      // ---- Handing over the files (docs/canvas.md "Handing over the files"); only the person starts one ----
-      /** The open handover on a board, and who holds the files of each diagram. */
-      handover(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/handover`);
-      }
-      /** As the agent handing files over: its diagrams (or only `keys`) are ready to be taken, as the board has them now. */
-      handoverReady(id, o = {}) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/ready`, { ...o, author: "agent" });
-      }
-      /** As the agent receiving them: take the files over (once every one is ready); `repo` / `remote` say where you keep them. */
-      handoverAccept(id, o = {}) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/accept`, { ...o, author: "agent" });
-      }
-      /** Decline (either side of it): the files stay where they are. */
-      handoverCancel(id, o = {}) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: "agent" });
-      }
-      /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
-      sendFeedback(input2) {
-        return this.req("POST", "/api/feedback", input2);
-      }
-      /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
-      feedback() {
-        return this.req("GET", "/api/feedback").then((r) => r.feedback);
-      }
-      /** Kanban: column moves since `since` (structured; see cardMoves). */
-      cardMoves(id, since) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/cards?since=${since}`);
-      }
-      addCard(id, card) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/cards`, card);
-      }
-      moveCard(id, cardId2, column, author = "agent", note) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId2)}/move`, { column, author, note });
-      }
-      /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
-      focus(id, target, author = "agent") {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author });
-      }
-      /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
-      files(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
-      }
-      file(id, path24) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path24)}`).then((r) => r.file);
-      }
-      /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
-      propose(id, input2) {
-        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input2, author: "agent" });
-      }
-      // ---- Agent-scale reading, seeing the board, the layout check, local approval (docs/canvas.md "Reading big boards") ----
-      /** A board read with filters, a format and a size cap (`GET /api/boards/:id/read`). */
-      read(id, o = {}) {
-        const q2 = new URLSearchParams();
-        addQuery(q2, o);
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/read?${q2}`);
-      }
-      /** The layout findings of a board or one frame. */
-      layout(id, frame, limit2) {
-        const q2 = new URLSearchParams();
-        addQuery(q2, { frame, limit: limit2 });
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/layout?${q2}`);
-      }
-      /** A server-side render: PNG bytes when the canvas can rasterize, else the SVG text; `info` says what is in it. */
-      async snapshot(id, o = {}) {
-        const q2 = new URLSearchParams();
-        addQuery(q2, o);
-        let res;
-        try {
-          res = await fetch(`${this.baseUrl}/api/boards/${encodeURIComponent(id)}/snapshot?${q2}`, { headers: this.headers() });
-        } catch (e) {
-          throw new Error(`canvas server not reachable at ${this.baseUrl} \u2014 start it with \`awd-canvas serve\` (${e.message})`);
-        }
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          if (res.status === 401 && this.authHint)
-            throw new Error(this.authHint);
-          throw new Error(body.error ?? `${res.status} ${res.statusText}`);
-        }
-        const mime = (res.headers.get("content-type") ?? "").split(";")[0];
-        let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [], renderer: void 0 };
-        try {
-          info = { ...info, ...JSON.parse(res.headers.get("x-unprose-snapshot") ?? "{}") };
-        } catch {
-        }
-        if (mime === "image/png")
-          return { mime, png: Buffer.from(await res.arrayBuffer()), info };
-        return { mime, svg: await res.text(), info };
-      }
-      /** Approve a pairing code as the local agent (only a canvas on this machine accepts it). */
-      approve(code, o = {}) {
-        return this.req("POST", "/api/approve", { code, ...o });
-      }
-      /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
-      boardUrl(id, at3 = {}) {
-        const q2 = new URLSearchParams();
-        if (at3.frame)
-          q2.set("frame", at3.frame);
-        if (at3.focus)
-          q2.set("focus", at3.focus);
-        const qs = q2.toString();
-        return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
-      }
-    };
-  }
-});
-
-// packages/cli/dist/projects.js
-var projects_exports = {};
-__export(projects_exports, {
-  boardByTitle: () => boardByTitle,
-  canvasApi: () => canvasApi,
-  canvasBase: () => canvasBase,
-  canvasHeaders: () => canvasHeaders2,
-  cmdBoards: () => cmdBoards,
-  cmdProjects: () => cmdProjects,
-  holderInfo: () => holderInfo,
-  redrawRefusal: () => redrawRefusal,
-  registerProject: () => registerProject
-});
-import fs12 from "node:fs";
-import os3 from "node:os";
-import path13 from "node:path";
-import { execFileSync } from "node:child_process";
-function canvasHeaders2(env = process.env, base) {
-  return canvasHeaders(base ?? env.AWD_CANVAS_URL ?? "http://localhost:4400", "cli", env);
-}
-function canvasBase(flag, env = process.env) {
-  const raw = flag || env.AWD_CANVAS_URL || "http://localhost:4400";
-  try {
-    return canvasOrigin(raw);
-  } catch {
-    return raw.replace(/\/+$/, "");
-  }
-}
-function canvasApi(base) {
-  return async (method, p, body) => {
-    const res = await fetch(base + p, { method, headers: { "content-type": "application/json", ...canvasHeaders2(process.env, base) }, body: body === void 0 ? void 0 : JSON.stringify(body) });
-    const text3 = await res.text();
-    if (!res.ok) {
-      let msg = text3.slice(0, 300);
-      try {
-        msg = JSON.parse(text3).error ?? msg;
-      } catch {
-        if (res.status === 403)
-          msg = `not the canvas's answer \u2014 something in front of it (Cloudflare?) refused the request`;
-      }
-      throw new Error(`${method} ${p} \u2192 ${res.status} ${msg}`);
-    }
-    return text3 ? JSON.parse(text3) : {};
-  };
-}
-function holderInfo(root) {
-  let remote;
-  try {
-    remote = execFileSync("git", ["-C", root, "remote", "get-url", "origin"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3e3 }).trim() || void 0;
-  } catch {
-  }
-  return { machine: os3.hostname().replace(/\.local$/, ""), root, repo: path13.basename(root), ...remote ? { remote: remote.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1") } : {} };
-}
-async function redrawRefusal(api, boardId, key, o = {}) {
-  let s;
-  try {
-    s = await api("GET", `/api/boards/${encodeURIComponent(boardId)}/settings`);
-  } catch {
-    return void 0;
-  }
-  if (!Array.isArray(s.holders))
-    return void 0;
-  const me = s.you ?? "agent";
-  const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
-  return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
-}
-async function registerProject(api, root) {
-  try {
-    return (await api("POST", "/api/projects", { root: path13.resolve(root) })).project.id;
-  } catch {
-    return void 0;
-  }
-}
-async function boardByTitle(api, title, kind, project, match = () => true, sameKind = false) {
-  const { boards } = await api("GET", "/api/boards");
-  const found = pickBoardByTitle(boards, title, project, match);
-  const note = ambiguityNote(title, found);
-  if (note)
-    console.warn(`\u26A0 ${note}`);
-  if (found.board)
-    return found.board;
-  const made = await api("POST", "/api/boards", { title, kind, ...project ? { project } : {}, answeredBy: "me", reuse: sameKind ? "title+kind" : "title" });
-  return made.board;
-}
-async function cmdProjects(args2, flags2) {
-  const [sub] = args2;
-  let ref2 = args2[1];
-  const forceWord = typeof flags2.force === "string" && !["true", "false", "1", "0"].includes(flags2.force) ? flags2.force : void 0;
-  if (forceWord && !ref2)
-    ref2 = forceWord;
-  const base = canvasBase(typeof flags2.canvas === "string" ? flags2.canvas : void 0);
-  const api = canvasApi(base);
-  const { projects } = await api("GET", "/api/projects");
-  if (sub === "list" || sub === "ls") {
-    for (const p2 of projects)
-      console.log(`${p2.id}	${p2.boards} board(s)	${p2.personal ? "(personal space)" : p2.root ?? p2.name}`);
-    return true;
-  }
-  if (sub !== "remove" && sub !== "rm" || !ref2) {
-    console.error("usage: awd projects remove <project dir | project id> [--force] [--canvas URL]   \xB7   awd projects list");
-    return false;
-  }
-  const abs = path13.resolve(ref2);
-  const real = fs12.existsSync(abs) ? fs12.realpathSync(abs) : abs;
-  const p = projects.find((x2) => !x2.personal && (x2.id === ref2 || x2.root === abs || x2.root === real));
-  if (!p) {
-    console.error(`no project ${ref2} on ${base} (projects: ${projects.filter((x2) => !x2.personal).map((x2) => `${x2.id}${x2.root ? ` = ${x2.root}` : ""}`).join(", ") || "none"})`);
-    return false;
-  }
-  const force = flags2.force === true || flags2.force === "true" || flags2.force === "1" || !!forceWord;
-  try {
-    const r = await api("DELETE", `/api/projects/${encodeURIComponent(p.id)}${force ? "?force=1" : ""}`);
-    console.log(`removed project ${r.removed.id}${p.root ? ` (${p.root} \u2014 its files stay)` : ""}${r.moved.length ? `; moved ${r.moved.length} board(s) to the personal space: ${r.moved.join(", ")}` : ""}`);
-    return true;
-  } catch (e) {
-    console.error(e.message);
-    return false;
-  }
-}
-async function cmdBoards(args2, flags2) {
-  const [sub, ref2] = args2;
-  const to = typeof flags2.to === "string" ? flags2.to : void 0;
-  if (sub !== "move" || !ref2 || !to) {
-    console.error("usage: awd boards move <board id | title:\u2026> --to <project dir> [--canvas URL]");
-    return false;
-  }
-  const base = canvasBase(typeof flags2.canvas === "string" ? flags2.canvas : void 0);
-  const api = canvasApi(base);
-  let id = ref2;
-  if (ref2.startsWith("title:")) {
-    const title = ref2.slice(6).trim();
-    const hits = (await api("GET", "/api/boards")).boards.filter((b2) => b2.title === title);
-    if (hits.length !== 1) {
-      console.error(hits.length ? `${hits.length} boards are titled "${title}" \u2014 pass the board id (${hits.map((b2) => `${b2.id} [${b2.project ?? "personal"}]`).join(", ")})` : `no board titled "${title}"`);
-      return false;
-    }
-    id = hits[0].id;
-  }
-  const r = await api("POST", `/api/boards/${encodeURIComponent(id)}/move`, { projectRoot: path13.resolve(to) });
-  console.log(`moved ${r.board} into project ${r.project} (${path13.join(path13.resolve(to), ".unprose", "boards")}); the URL ${base}/b/${r.board} is unchanged`);
-  console.log(`commit ${path13.join(".unprose", "boards", `${r.board}.json`)} with the project (the change log stays local)`);
-  return true;
-}
-var init_projects = __esm({
-  "packages/cli/dist/projects.js"() {
-    init_credentials3();
-    init_boardLookup();
-    init_client2();
-    init_routing();
-  }
-});
-
-// packages/cli/dist/applied.js
-import { execFileSync as execFileSync2 } from "node:child_process";
-import fs13 from "node:fs";
-import path14 from "node:path";
-function appliedMessage(o) {
-  const first = (o.note ?? "").split("\n").map((l) => l.trim()).find(Boolean);
-  return [`Apply canvas proposal to ${o.file}`, "", ...first ? [first.slice(0, 200), ""] : [], `Proposed by ${o.by ?? "the person"}; agreed by the person in ${o.link}`, ""].join("\n");
-}
-async function afterApplied(api, o) {
-  const env = o.env ?? process.env;
-  const notes = [];
-  const { board } = await api("GET", `/api/boards/${encodeURIComponent(o.boardId)}`);
-  const c2 = board.items[o.thread];
-  if (!c2 || c2.type !== "comment")
-    return { notes: [`no comment ${o.thread} on board ${o.boardId} \u2014 nothing answered, nothing committed`] };
-  const edit = c2.data?.discuss?.edit;
-  const proposed = typeof edit?.file === "string" ? edit.file : void 0;
-  const file2 = proposed && fs13.existsSync(path14.join(o.root, proposed)) ? proposed : o.fallbackFile;
-  const link = `${o.base}/b/${encodeURIComponent(o.boardId)}?focus=${encodeURIComponent(o.thread)}`;
-  let commit;
-  let pushed = false;
-  if (env.UNPROSE_APPLY_COMMIT === "1") {
-    try {
-      const top = fs13.realpathSync(git(o.root, ["rev-parse", "--show-toplevel"]));
-      if (top !== fs13.realpathSync(o.root))
-        throw new Error(`${o.root} is not the top of its git repo (${top})`);
-      git(o.root, ["add", "--", file2]);
-      git(o.root, ["commit", "-m", appliedMessage({ file: file2, note: c2.text, by: typeof edit?.by === "string" ? edit.by : void 0, link }), "--", file2]);
-      commit = git(o.root, ["rev-parse", "--short", "HEAD"]);
-      notes.push(`committed ${file2} as ${commit}`);
-      if (env.UNPROSE_APPLY_PUSH === "1") {
-        try {
-          git(o.root, ["push"]);
-          pushed = true;
-          notes.push("pushed");
-        } catch (e) {
-          notes.push(`push failed: ${firstLine(e)}`);
-        }
-      }
-    } catch (e) {
-      notes.push(`not committed: ${firstLine(e)}`);
-    }
-  }
-  const text3 = `Applied to ${file2}${commit ? ` \u2014 committed ${commit}${pushed ? " and pushed" : ""}` : ""}. Redrawn from the file.`;
-  const { ops } = await api("POST", `/api/boards/${encodeURIComponent(o.boardId)}/template`, { kind: "freeform", content: { items: [{ id: `applied.${Date.now().toString(36)}`, type: "comment", text: text3, target: o.thread }] } });
-  await api("POST", `/api/boards/${encodeURIComponent(o.boardId)}/ops`, { author: "agent", ops, note: `applied ${o.thread}` });
-  return { file: file2, ...commit ? { commit } : {}, pushed, notes };
-}
-var git, firstLine;
-var init_applied = __esm({
-  "packages/cli/dist/applied.js"() {
-    git = (root, args2) => execFileSync2("git", ["-C", root, ...args2], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 6e4 }).trim();
-    firstLine = (e) => String(e.stderr || e.message || e).split("\n").find((l) => l.trim()) ?? "failed";
   }
 });
 
@@ -58031,6 +57498,773 @@ var init_eventStorming = __esm({
   }
 });
 
+// packages/canvas/dist/templates/esTimeline.js
+function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
+  const isEvent = new Set(timeline);
+  const ids = nodes.map((n) => n.id);
+  const known = new Set(ids);
+  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
+  const succ = new Map(ids.map((id) => [id, []]));
+  const pred = new Map(ids.map((id) => [id, []]));
+  const add = (a, b2) => {
+    if (!known.has(a) || !known.has(b2) || a === b2 || succ.get(a).includes(b2))
+      return;
+    succ.get(a).push(b2);
+    pred.get(b2).push(a);
+  };
+  for (const [a, b2] of edges)
+    add(a, b2);
+  const back = /* @__PURE__ */ new Set();
+  const t = opts.time;
+  if (t) {
+    for (const a of ids)
+      for (const b2 of succ.get(a))
+        if (t.has(a) && t.has(b2) && t.get(a) > t.get(b2))
+          back.add(`${a}>${b2}`);
+  }
+  const byTime = (x2, y2) => (t?.get(x2) ?? Infinity) - (t?.get(y2) ?? Infinity);
+  const starts = ids.filter((id) => pred.get(id).every((p) => back.has(`${p}>${id}`)));
+  const state = /* @__PURE__ */ new Map();
+  const visit2 = (id) => {
+    state.set(id, 1);
+    for (const s of succ.get(id)) {
+      if (back.has(`${id}>${s}`))
+        continue;
+      if (state.get(s) === 1)
+        back.add(`${id}>${s}`);
+      else if (!state.has(s))
+        visit2(s);
+    }
+    state.set(id, 2);
+  };
+  for (const id of [...[...starts].sort(byTime), ...ids])
+    if (!state.has(id))
+      visit2(id);
+  const againId = opts.againId ?? againIdOf;
+  const again = [];
+  const retarget = /* @__PURE__ */ new Map();
+  const count = /* @__PURE__ */ new Map();
+  for (const a of [...ids]) {
+    for (const b2 of [...succ.get(a)]) {
+      if (!back.has(`${a}>${b2}`))
+        continue;
+      const n = count.get(b2) ?? 0;
+      count.set(b2, n + 1);
+      const id = againId(b2, n);
+      const band = bandOf.get(a);
+      again.push({ id, of: b2, after: a, band });
+      retarget.set(`${a}>${b2}`, id);
+      ids.push(id);
+      known.add(id);
+      bandOf.set(id, band);
+      succ.set(id, []);
+      pred.set(id, []);
+      add(a, id);
+    }
+  }
+  const forward = (a, b2) => !back.has(`${a}>${b2}`);
+  const reaches = (from, to) => {
+    const seen = /* @__PURE__ */ new Set();
+    const stack = [from];
+    while (stack.length) {
+      const x2 = stack.pop();
+      if (x2 === to)
+        return true;
+      if (seen.has(x2))
+        continue;
+      seen.add(x2);
+      for (const s of succ.get(x2))
+        if (forward(x2, s))
+          stack.push(s);
+    }
+    return false;
+  };
+  const causal = /* @__PURE__ */ new Set();
+  for (const [a, list3] of succ)
+    for (const b2 of list3)
+      causal.add(`${a}>${b2}`);
+  const events = timeline.filter((e) => known.has(e));
+  for (let i = 1; i < events.length; i++) {
+    const [a, b2] = [events[i - 1], events[i]];
+    if (siblings(a, b2) || reaches(b2, a))
+      continue;
+    add(a, b2);
+  }
+  const order = topo(ids, succ, forward);
+  const rank = /* @__PURE__ */ new Map();
+  for (const id of order)
+    rank.set(id, Math.max(0, ...pred.get(id).filter((p) => forward(p, id)).map((p) => rank.get(p) + 1)));
+  for (const id of [...order].reverse()) {
+    if (isEvent.has(id))
+      continue;
+    const next = succ.get(id).filter((s) => forward(id, s)).map((s) => rank.get(s));
+    if (next.length)
+      rank.set(id, Math.max(rank.get(id), Math.min(...next) - 1));
+  }
+  const reach = /* @__PURE__ */ new Map();
+  for (const id of [...order].reverse())
+    reach.set(id, Math.max(rank.get(id), ...succ.get(id).filter((s) => forward(id, s)).map((s) => reach.get(s) ?? rank.get(s))));
+  const ancestors = /* @__PURE__ */ new Map();
+  const ancestorsOf = (id) => {
+    const hit = ancestors.get(id);
+    if (hit)
+      return hit;
+    const out = /* @__PURE__ */ new Set();
+    ancestors.set(id, out);
+    for (const p of pred.get(id)) {
+      if (!causal.has(`${p}>${id}`) || !forward(p, id))
+        continue;
+      out.add(p);
+      for (const x2 of ancestorsOf(p))
+        out.add(x2);
+    }
+    return out;
+  };
+  const branchOfFork = (a, s) => {
+    if (causal.has(`${a}>${s}`))
+      return false;
+    const mine = /* @__PURE__ */ new Set([a, ...ancestorsOf(a)]);
+    return pred.get(s).some((p) => causal.has(`${p}>${s}`) && forward(p, s) && !row.has(p) && [p, ...ancestorsOf(p)].some((x2) => mine.has(x2)));
+  };
+  const taken = /* @__PURE__ */ new Set();
+  const row = /* @__PURE__ */ new Map();
+  const place2 = (id, want) => {
+    if (row.has(id))
+      return;
+    let r = want;
+    while (taken.has(`${bandOf.get(id)}|${rank.get(id)}|${r}`))
+      r++;
+    row.set(id, r);
+    taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r}`);
+    const next = succ.get(id).filter((s) => forward(id, s) && !branchOfFork(id, s));
+    const pos = new Map(next.map((s, i) => [s, i]));
+    next.sort((x2, y2) => reach.get(y2) - reach.get(x2) || pos.get(x2) - pos.get(y2));
+    for (const s of next)
+      place2(s, r);
+  };
+  for (const id of order)
+    if (pred.get(id).every((p) => !forward(p, id)))
+      place2(id, 0);
+  for (const id of ids)
+    place2(id, 0);
+  return { rank, row, again, retarget };
+}
+function topo(ids, succ, forward) {
+  const indeg = new Map(ids.map((id) => [id, 0]));
+  for (const a of ids)
+    for (const b2 of succ.get(a))
+      if (forward(a, b2))
+        indeg.set(b2, indeg.get(b2) + 1);
+  const queue = ids.filter((id) => indeg.get(id) === 0);
+  const out = [];
+  while (queue.length) {
+    const id = queue.shift();
+    out.push(id);
+    for (const s of succ.get(id)) {
+      if (!forward(id, s))
+        continue;
+      indeg.set(s, indeg.get(s) - 1);
+      if (indeg.get(s) === 0)
+        queue.push(s);
+    }
+  }
+  return out;
+}
+function branchSiblings(m2) {
+  return (a, b2) => m2.commands.some((k2) => k2.produces.includes(a) && k2.produces.includes(b2));
+}
+var againIdOf;
+var init_esTimeline = __esm({
+  "packages/canvas/dist/templates/esTimeline.js"() {
+    againIdOf = (of, n) => n ? `${of}.again-${n + 1}` : `${of}.again`;
+  }
+});
+
+// packages/canvas/dist/templates/util.js
+import { createHash as createHash2 } from "node:crypto";
+function shortHash(s) {
+  return createHash2("sha1").update(s).digest("hex").slice(0, 6);
+}
+function stableId(scope, role, name) {
+  const base = slugify2(name) || "item";
+  return `${scope}.${role}.${base}-${shortHash(`${scope}|${role}|${name}`)}`;
+}
+function make(o, now) {
+  const author = o.author ?? "agent";
+  const item = {
+    id: o.id,
+    type: o.type,
+    x: Math.round(o.x),
+    y: Math.round(o.y),
+    w: Math.round(o.w),
+    h: Math.round(o.h),
+    createdBy: author,
+    updatedBy: author,
+    updatedAt: now
+  };
+  if (o.text !== void 0)
+    item.text = o.text;
+  if (o.color)
+    item.color = o.color;
+  if (o.role)
+    item.role = o.role;
+  if (o.parent)
+    item.parent = o.parent;
+  if (o.from)
+    item.from = o.from;
+  if (o.to)
+    item.to = o.to;
+  if (o.label !== void 0)
+    item.label = o.label;
+  if (o.target)
+    item.target = o.target;
+  if (o.order !== void 0)
+    item.order = o.order;
+  if (o.data)
+    item.data = o.data;
+  return item;
+}
+function arrowId(scope, from, to, key) {
+  return `${scope}.arrow.${shortHash(`${from}->${to}${key ? `:${key}` : ""}`)}`;
+}
+function arrow(scope, from, to, now, label2, role, extra = {}) {
+  return make({ id: arrowId(scope, from, to, extra.key), type: "arrow", x: 0, y: 0, w: 0, h: 0, from, to, label: label2, role, color: "grey", ...extra.data ? { data: extra.data } : {} }, now);
+}
+function fit(container, children, pad = PAD, header = LANE_HEADER) {
+  if (children.length === 0)
+    return container;
+  const minX = Math.min(...children.map((c2) => c2.x));
+  const minY = Math.min(...children.map((c2) => c2.y));
+  const maxX = Math.max(...children.map((c2) => c2.x + c2.w));
+  const maxY = Math.max(...children.map((c2) => c2.y + c2.h));
+  return {
+    ...container,
+    x: Math.min(container.x, minX - pad),
+    y: Math.min(container.y, minY - pad - header),
+    w: Math.max(container.w, maxX + pad - Math.min(container.x, minX - pad)),
+    h: Math.max(container.h, maxY + pad - Math.min(container.y, minY - pad - header))
+  };
+}
+function offsetAll(items, at3) {
+  if (!at3 || at3.x === 0 && at3.y === 0)
+    return items;
+  return items.map((i) => i.type === "arrow" ? i : { ...i, x: i.x + at3.x, y: i.y + at3.y });
+}
+var STICKY_W, STICKY_H, SMALL_W, SMALL_H, GAP, PAD, LANE_HEADER;
+var init_util2 = __esm({
+  "packages/canvas/dist/templates/util.js"() {
+    init_ids2();
+    init_ids2();
+    STICKY_W = 160;
+    STICKY_H = 110;
+    SMALL_W = 120;
+    SMALL_H = 80;
+    GAP = 30;
+    PAD = 40;
+    LANE_HEADER = 44;
+  }
+});
+
+// packages/canvas/dist/templates/event-storming.js
+function renderEventStorming(raw, opts = {}) {
+  const m2 = normalizeEventStorming(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "es";
+  const itemId = (role, element) => `${scope}.${role}.${element}`;
+  const detailed = m2.level !== "big-picture";
+  const aggOf = /* @__PURE__ */ new Map();
+  if (m2.level === "software" && m2.aggregates.length) {
+    for (const e of m2.events)
+      if (e.aggregate)
+        aggOf.set(e.id, e.aggregate);
+    for (const k2 of m2.commands) {
+      const a = k2.aggregate ?? k2.produces.map((e) => aggOf.get(e)).find(Boolean);
+      if (a) {
+        aggOf.set(k2.id, a);
+        for (const e of k2.produces)
+          if (!aggOf.has(e))
+            aggOf.set(e, a);
+      }
+    }
+    for (const p of m2.policies) {
+      const a = p.when.map((e) => aggOf.get(e)).find(Boolean);
+      if (a)
+        aggOf.set(p.id, a);
+    }
+    for (const r of m2.readModels) {
+      const a = r.informs.map((x2) => aggOf.get(x2)).find(Boolean);
+      if (a)
+        aggOf.set(r.id, a);
+    }
+  }
+  const laneKeys = m2.lanes.map((name, i) => `lane:${i}:${name}`);
+  const timelineBand = (lane) => m2.lanes.length ? laneKeys[lane] : "timeline";
+  const eventById = new Map(m2.events.map((e) => [e.id, e]));
+  const bandOfEvent = (id) => {
+    if (!id)
+      return timelineBand(0);
+    const a = aggOf.get(id);
+    return a ? `agg:${a}` : timelineBand(eventById.get(id)?.lane ?? 0);
+  };
+  const personText = (id) => m2.people.find((p) => p.id === id)?.text ?? id;
+  const systemText = (id) => m2.systems.find((s) => s.id === id)?.text ?? id;
+  const systemRole = (id) => m2.systems.find((s) => s.id === id)?.external ? "external" : "system";
+  const nodes = [];
+  const edges = [];
+  const systemOcc = /* @__PURE__ */ new Map();
+  const nodeOf = /* @__PURE__ */ new Map();
+  const inlineRm = /* @__PURE__ */ new Set();
+  const ev = (id) => itemId("event", id);
+  for (const e of m2.events) {
+    nodes.push({ id: ev(e.id), band: bandOfEvent(e.id) });
+    nodeOf.set(e.id, ev(e.id));
+  }
+  if (detailed) {
+    for (const k2 of m2.commands) {
+      const via = m2.policies.find((p) => p.then.includes(k2.id))?.when[0];
+      const band = aggOf.has(k2.id) ? `agg:${aggOf.get(k2.id)}` : bandOfEvent(k2.produces[0] ?? via);
+      const cmd2 = itemId("command", k2.id);
+      nodes.push({ id: cmd2, band });
+      nodeOf.set(k2.id, cmd2);
+      let last = cmd2;
+      if (k2.system) {
+        const sys = itemId("system", `${k2.system}.${k2.id}`);
+        systemOcc.set(`${k2.system}|${k2.id}`, sys);
+        nodes.push({ id: sys, band });
+        edges.push([cmd2, sys]);
+        last = sys;
+      }
+      for (const e of k2.produces)
+        edges.push([last, ev(e)]);
+    }
+    for (const p of m2.policies) {
+      const po = itemId("policy", p.id);
+      nodes.push({ id: po, band: aggOf.has(p.id) ? `agg:${aggOf.get(p.id)}` : bandOfEvent(p.when[0]) });
+      nodeOf.set(p.id, po);
+      for (const e of p.when)
+        edges.push([ev(e), po]);
+      for (const k2 of p.then)
+        edges.push([po, itemId("command", k2)]);
+    }
+    for (const r of m2.readModels) {
+      const cmds = r.informs.filter((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
+      if (!cmds.length)
+        continue;
+      const rm = itemId("read-model", r.id);
+      const updates = r.updatedBy.filter((e) => eventById.has(e));
+      const band = aggOf.has(r.id) ? `agg:${aggOf.get(r.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : nodes.find((n) => n.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0);
+      nodes.push({ id: rm, band });
+      nodeOf.set(r.id, rm);
+      inlineRm.add(r.id);
+      for (const e of updates)
+        edges.push([ev(e), rm]);
+      for (const k2 of cmds)
+        edges.push([rm, itemId("command", k2)]);
+    }
+  }
+  const raisers = [];
+  for (const s of m2.systems) {
+    for (const e of s.raises) {
+      if (!eventById.has(e) || systemOcc.has(`${s.id}|${e}`))
+        continue;
+      const id = itemId("system", `${s.id}.${e}`);
+      systemOcc.set(`${s.id}|${e}`, id);
+      raisers.push({ id, system: s.id, event: e });
+      if (detailed) {
+        nodes.push({ id, band: bandOfEvent(e) });
+        edges.push([id, ev(e)]);
+      }
+    }
+  }
+  const timeline = m2.events.map((e) => ev(e.id));
+  let rank;
+  let row;
+  let again = [];
+  let retarget = /* @__PURE__ */ new Map();
+  if (detailed) {
+    const siblings = branchSiblings(m2);
+    ({ rank, row, again, retarget } = placeFlow(nodes, edges, timeline, (a, b2) => siblings(a.slice(scope.length + 7), b2.slice(scope.length + 7)), { time: flowTimes(m2, itemId, systemOcc, inlineRm) }));
+    nodes.push(...again.map((a) => ({ id: a.id, band: a.band })));
+    const minRank = /* @__PURE__ */ new Map();
+    for (const n of nodes)
+      if (n.band.startsWith("agg:"))
+        minRank.set(n.band, Math.min(minRank.get(n.band) ?? Infinity, rank.get(n.id)));
+    for (const n of nodes)
+      if (minRank.has(n.band))
+        rank.set(n.id, rank.get(n.id) - minRank.get(n.band));
+  } else {
+    rank = /* @__PURE__ */ new Map();
+    row = /* @__PURE__ */ new Map();
+    const perBand = /* @__PURE__ */ new Map();
+    for (const e of m2.events) {
+      const band = bandOfEvent(e.id);
+      const col = band.startsWith("agg:") ? (perBand.set(band, (perBand.get(band) ?? -1) + 1), perBand.get(band)) : m2.events.filter((x2) => !aggOf.has(x2.id)).indexOf(e);
+      rank.set(ev(e.id), col);
+      row.set(ev(e.id), 0);
+    }
+  }
+  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
+  const at3 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
+  const atElement = (element) => {
+    const n = element ? nodeOf.get(element) : void 0;
+    return n && rank.has(n) ? at3(n) : void 0;
+  };
+  const slots = [];
+  const slot = (s) => slots.push({ ...s, data: s.data ?? {} });
+  const rmWhere = /* @__PURE__ */ new Map();
+  const personAt = /* @__PURE__ */ new Map();
+  const personSlot = (person, where, anchor2) => {
+    const key = `${where.band}|${where.rank}|${where.row}|${person}`;
+    if (personAt.has(key))
+      return personAt.get(key);
+    const id = itemId("person", `${person}.${anchor2}`);
+    personAt.set(key, id);
+    slot({ ...where, strip: "person", id, role: "person", text: personText(person), color: ES_COLORS.person, w: SMALL_W, h: SMALL_H, data: { element: person, occurrence: true, for: anchor2 } });
+    return id;
+  };
+  for (const e of m2.events) {
+    slot({
+      ...at3(ev(e.id)),
+      strip: "main",
+      id: ev(e.id),
+      role: "event",
+      text: e.text,
+      color: ES_COLORS.event,
+      w: e.pivotal ? PIVOTAL_W : STICKY_W,
+      h: e.pivotal ? PIVOTAL_H : STICKY_H,
+      order: e.order,
+      data: { element: e.id, pivotal: e.pivotal, ...e.time ? { time: e.time } : {}, ...e.recurring ? { recurring: true } : {}, ...e.aggregate ? { aggregate: e.aggregate } : {}, ...e.traces.length ? { traces: e.traces } : {} }
+    });
+    const commandHasPerson = detailed && m2.commands.some((k2) => k2.by && k2.produces.includes(e.id));
+    if (e.person && !commandHasPerson)
+      personSlot(e.person, at3(ev(e.id)), e.id);
+  }
+  if (detailed) {
+    for (const k2 of m2.commands) {
+      const cmd2 = itemId("command", k2.id);
+      slot({ ...at3(cmd2), strip: "main", id: cmd2, role: "command", text: k2.text, color: ES_COLORS.command, w: STICKY_W, h: STICKY_H, data: { element: k2.id, produces: k2.produces, ...k2.aggregate ? { aggregate: k2.aggregate } : {}, ...k2.traces.length ? { traces: k2.traces } : {} } });
+      if (k2.by)
+        personSlot(k2.by, at3(cmd2), k2.id);
+      const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
+      if (sys && k2.system)
+        slot({ ...at3(sys), strip: "main", id: sys, role: systemRole(k2.system), text: systemText(k2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: k2.system, occurrence: true, for: k2.id } });
+    }
+    for (const p of m2.policies) {
+      const po = itemId("policy", p.id);
+      slot({ ...at3(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
+    }
+    for (const r of m2.readModels) {
+      const rm = itemId("read-model", r.id);
+      const lastUpdate = r.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
+      const inline = inlineRm.has(r.id) && rank.has(rm);
+      const where = inline ? at3(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
+      nodeOf.set(r.id, rm);
+      rmWhere.set(r.id, where);
+      slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r.id, updatedBy: r.updatedBy, informs: r.informs, ...r.traces.length ? { traces: r.traces } : {} } });
+    }
+  }
+  for (const x2 of raisers) {
+    if (detailed)
+      slot({ ...at3(x2.id), strip: "main", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
+    else
+      slot({ ...at3(ev(x2.event)), strip: "below", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
+  }
+  for (const a of again) {
+    const orig = slots.find((s) => s.id === a.of);
+    if (!orig)
+      continue;
+    slot({ ...at3(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } });
+    const k2 = orig.role === "command" ? m2.commands.find((c2) => c2.id === orig.data.element) : void 0;
+    if (k2?.by)
+      personSlot(k2.by, at3(a.id), a.id.slice(`${scope}.command.`.length));
+  }
+  if (detailed) {
+    for (const r of m2.readModels) {
+      const where = rmWhere.get(r.id);
+      if (!where)
+        continue;
+      for (const x2 of r.informs) {
+        if (m2.kindOf.get(x2) !== "person")
+          continue;
+        const later = [...personAt.keys()].some((key) => {
+          const parts2 = key.split("|");
+          const [band, rk, person] = [parts2.slice(0, -3).join("|"), Number(parts2[parts2.length - 3]), parts2[parts2.length - 1]];
+          return person === x2 && rk >= where.rank && (band === where.band || !band.startsWith("agg:") && !where.band.startsWith("agg:"));
+        });
+        if (!later)
+          personSlot(x2, where, r.id);
+      }
+    }
+  }
+  for (const ms of m2.milestones) {
+    const where = atElement(ms.before) ?? { band: timelineBand(0), rank: 0, row: 0 };
+    slot({ ...where, strip: "milestone", id: itemId("milestone", ms.id), role: "milestone", text: ms.text, color: ES_COLORS.milestone, w: SMALL_W, h: MILESTONE_H, data: { element: ms.id, before: ms.before } });
+  }
+  const noteWhere = /* @__PURE__ */ new Map();
+  const note = (role, id, text3, on, i, color, data = {}) => {
+    const where = (on ? noteWhere.get(on) ?? atElement(on) : void 0) ?? { band: timelineBand(0), rank: i, row: 0 };
+    noteWhere.set(id, where);
+    slot({ ...where, strip: "note", id: itemId(role, id), role, text: text3, color, w: SMALL_W, h: SMALL_H, data: { element: id, on, ...data } });
+  };
+  m2.hotspots.forEach((h, i) => note("hotspot", h.id, h.text, h.on, i, ES_COLORS.hotspot, { rotate: -8, ...h.kind ? { kind: h.kind } : {} }));
+  m2.opportunities.forEach((o, i) => note("opportunity", o.id, o.text, o.on, i, ES_COLORS.opportunity));
+  m2.values.forEach((v2, i) => note("value", v2.id, `${v2.sign === "+" ? "+" : "\u2212"} ${v2.currency ? `${v2.currency}: ` : ""}${v2.text}`, v2.on, i, v2.sign === "+" ? ES_COLORS["value+"] : ES_COLORS["value-"], { sign: v2.sign }));
+  m2.votes.forEach((v2, i) => note("vote", v2.id, `\u2191 ${v2.count}`, v2.on, i, ES_COLORS.vote, { count: v2.count }));
+  const items = [];
+  const layoutBand = (band) => {
+    const inBand = slots.filter((s) => s.band === band);
+    const depth = /* @__PURE__ */ new Map();
+    const unit = /* @__PURE__ */ new Map();
+    const perCell = /* @__PURE__ */ new Map();
+    for (const s of inBand) {
+      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
+      const k2 = (perCell.get(cell2) ?? 0) + 1;
+      perCell.set(cell2, k2);
+      const key = `${s.row}|${s.strip}`;
+      depth.set(key, Math.max(depth.get(key) ?? 0, k2));
+      unit.set(key, Math.max(unit.get(key) ?? STRIP_H[s.strip], s.h));
+    }
+    const rows = Math.max(0, ...inBand.map((s) => s.row + 1));
+    const top = /* @__PURE__ */ new Map();
+    let y3 = 0;
+    for (let r = 0; r < rows; r++) {
+      for (const st of STRIPS) {
+        const key = `${r}|${st}`;
+        top.set(key, y3);
+        const n = depth.get(key) ?? 0;
+        if (n)
+          y3 += n * unit.get(key) + (n - 1) * STACK + GAP;
+      }
+      y3 += GAP;
+    }
+    const placed = /* @__PURE__ */ new Map();
+    const positioned = inBand.map((s) => {
+      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
+      const k2 = placed.get(cell2) ?? 0;
+      placed.set(cell2, k2 + 1);
+      const key = `${s.row}|${s.strip}`;
+      const dx = s.rank * COL + Math.max(0, (STICKY_W - s.w) / 2);
+      return { s, dx, dy: top.get(key) + k2 * (unit.get(key) + STACK) };
+    });
+    return { positioned, height: Math.max(y3 - GAP * 2, STICKY_H) + PAD };
+  };
+  const eventRank = (id) => id && !aggOf.has(id) ? rank.get(ev(id)) : void 0;
+  const timelineRanks = m2.events.filter((e) => !aggOf.has(e.id)).map((e) => rank.get(ev(e.id)));
+  const lastRank = Math.max(0, ...timelineRanks);
+  const phaseBars = m2.phases.map((ph) => {
+    const members2 = m2.events.filter((e) => e.phase === ph.id).map((e) => eventRank(e.id)).filter((r) => r !== void 0);
+    const from = eventRank(ph.from) ?? (members2.length ? Math.min(...members2) : 0);
+    const to2 = eventRank(ph.to) ?? (members2.length ? Math.max(...members2) : lastRank);
+    return { ph, from: Math.min(from, to2), to: Math.max(from, to2) };
+  });
+  const phaseRows = [];
+  const phaseRowOf = phaseBars.map((b2) => {
+    let r = phaseRows.findIndex((pr) => pr.every((o) => b2.to < o.from || b2.from > o.to));
+    if (r < 0)
+      r = phaseRows.push([]) - 1;
+    phaseRows[r].push(b2);
+    return r;
+  });
+  const PHASE_H = 32;
+  const phasesH = phaseRows.length ? phaseRows.length * (PHASE_H + STACK) + GAP : 0;
+  phaseBars.forEach((b2, i) => {
+    items.push(make({ id: itemId("phase", b2.ph.id), type: "text", x: PAD + b2.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b2.to - b2.from) * COL + STICKY_W, h: PHASE_H, text: b2.ph.text, role: "phase", color: ES_COLORS.phase, data: { element: b2.ph.id, from: b2.ph.from, to: b2.ph.to, header: "column" } }, now));
+  });
+  const timelineBands = m2.lanes.length ? laneKeys : ["timeline"];
+  const laneIds = /* @__PURE__ */ new Map();
+  const laneSlug = /* @__PURE__ */ new Set();
+  m2.lanes.forEach((name, i) => {
+    let sl = slugify2(name) || "lane";
+    for (let n = 2; laneSlug.has(sl); n++)
+      sl = `${slugify2(name) || "lane"}-${n}`;
+    laneSlug.add(sl);
+    laneIds.set(laneKeys[i], itemId("lane", sl));
+  });
+  const itemOf = /* @__PURE__ */ new Map();
+  const bandTop = /* @__PURE__ */ new Map();
+  const bandH = /* @__PURE__ */ new Map();
+  let y2 = PAD + phasesH;
+  for (const band of timelineBands) {
+    const laid = layoutBand(band);
+    const top = y2 + (m2.lanes.length ? LANE_HEADER : 0);
+    bandTop.set(band, top);
+    bandH.set(band, laid.height);
+    for (const { s, dx, dy } of laid.positioned) {
+      const it = make({ id: s.id, type: "sticky", x: PAD + dx, y: top + dy, w: s.w, h: s.h, text: s.text, color: s.color, role: s.role, parent: laneIds.get(band), order: s.order, data: s.data }, now);
+      items.push(it);
+      itemOf.set(s.id, it);
+    }
+    y2 = top + laid.height + (m2.lanes.length ? GAP : 0);
+  }
+  for (const e of m2.events.filter((e2) => e2.pivotal && !aggOf.has(e2.id))) {
+    const band = bandOfEvent(e.id);
+    const r = rank.get(ev(e.id)) ?? 0;
+    items.push(make({ id: itemId("pivotal", e.id), type: "text", x: PAD + r * COL - (COL - STICKY_W) / 2 - 2, y: bandTop.get(band) - (m2.lanes.length ? LANE_HEADER / 2 : 0), w: 4, h: bandH.get(band), text: "", role: "pivotal", color: "grey", parent: laneIds.get(band), data: { for: ev(e.id), element: e.id } }, now));
+  }
+  const width = PAD * 2 + lastRank * COL + PIVOTAL_W;
+  const laneItems = m2.lanes.map((name, i) => {
+    const key = laneKeys[i];
+    const base = make({ id: laneIds.get(key), type: "lane", x: 0, y: bandTop.get(key) - LANE_HEADER, w: width, h: bandH.get(key) + LANE_HEADER, text: name, role: "lane", color: "grey", order: i, data: { header: "row" } }, now);
+    return fit(base, items.filter((it) => it.parent === base.id), PAD, LANE_HEADER);
+  });
+  const laneW = Math.max(width, ...laneItems.map((l) => l.x + l.w));
+  const lanes = laneItems.map((l) => ({ ...l, x: 0, w: laneW }));
+  let bottom = y2;
+  const aggFrames = [];
+  const aggBands = m2.aggregates.filter((a) => [...aggOf.values()].includes(a.id)).map((a) => `agg:${a.id}`);
+  if (aggBands.length) {
+    let x2 = PAD;
+    const top = bottom + GAP * 2 + LANE_HEADER;
+    for (const band of aggBands) {
+      const a = m2.aggregates.find((g2) => `agg:${g2.id}` === band);
+      const frameId = itemId("aggregate-frame", a.id);
+      const agSticky = make({ id: itemId("aggregate", a.id), type: "sticky", x: x2, y: top, w: STICKY_W, h: SMALL_H, text: a.text, color: ES_COLORS.aggregate, role: "aggregate", parent: frameId, data: { element: a.id } }, now);
+      const inside = [agSticky];
+      for (const { s, dx, dy } of layoutBand(band).positioned) {
+        const it = make({ id: s.id, type: "sticky", x: x2 + dx, y: top + SMALL_H + GAP + dy, w: s.w, h: s.h, text: s.text, color: s.color, role: s.role, parent: frameId, order: s.order, data: s.data }, now);
+        inside.push(it);
+        itemOf.set(s.id, it);
+      }
+      const frame = fit(make({ id: frameId, type: "frame", x: x2, y: top, w: 0, h: 0, text: `\xABaggregate\xBB ${a.text}`, role: "aggregate", color: "pale-yellow", data: { element: a.id } }, now), inside, GAP / 2, LANE_HEADER / 2);
+      aggFrames.push(frame);
+      items.push(...inside);
+      x2 = frame.x + frame.w + GAP;
+    }
+    bottom = Math.max(bottom, ...aggFrames.map((f) => f.y + f.h));
+  }
+  if (m2.definitions.length) {
+    const dy = bottom + GAP;
+    m2.definitions.forEach((d, i) => items.push(make({ id: itemId("definition", d.id), type: "sticky", x: PAD + i * (STICKY_W + GAP), y: dy, w: STICKY_W, h: STICKY_H, text: `${d.term}: ${d.text}`, role: "definition", color: ES_COLORS.definition, data: { element: d.id, term: d.term } }, now)));
+    bottom = dy + STICKY_H;
+  }
+  if (m2.legend)
+    bottom = legend(m2, items, scope, bottom, now);
+  const arrows = [];
+  const has2 = (id) => itemOf.has(id);
+  const to = (from, target) => retarget.get(`${from}>${target}`) ?? target;
+  if (detailed) {
+    for (const k2 of m2.commands) {
+      const cmd2 = itemId("command", k2.id);
+      const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
+      if (sys)
+        arrows.push(arrow(scope, cmd2, to(cmd2, sys), now, void 0, "handles"));
+      k2.produces.forEach((e, i) => {
+        const target = to(sys ?? cmd2, ev(e));
+        if (!has2(target))
+          return;
+        arrows.push(arrow(scope, sys ?? cmd2, target, now, void 0, "produces", i ? { data: { branch: i } } : {}));
+      });
+    }
+    for (const p of m2.policies) {
+      const po = itemId("policy", p.id);
+      for (const e of p.when)
+        if (has2(ev(e)))
+          arrows.push(arrow(scope, ev(e), to(ev(e), po), now, "whenever", "triggers"));
+      for (const k2 of p.then)
+        arrows.push(arrow(scope, po, to(po, itemId("command", k2)), now, "then", "triggers"));
+    }
+    for (const r of m2.readModels) {
+      const rm = itemId("read-model", r.id);
+      const rmX = itemOf.get(rm)?.x ?? 0;
+      for (const e of r.updatedBy)
+        if (has2(ev(e)))
+          arrows.push(arrow(scope, ev(e), to(ev(e), rm), now, void 0, "updates"));
+      for (const x2 of r.informs) {
+        const occurrences = [...personAt.entries()].filter(([key]) => key.endsWith(`|${x2}`)).map(([, id]) => itemOf.get(id)).filter((it) => Boolean(it));
+        const person = occurrences.filter((it) => it.x >= rmX).sort((a, b2) => a.x - b2.x)[0] ?? occurrences.sort((a, b2) => b2.x - a.x)[0];
+        const target = m2.kindOf.get(x2) === "command" ? to(rm, itemId("command", x2)) : person?.id;
+        if (target && has2(target))
+          arrows.push(arrow(scope, rm, target, now, "informs", "informs"));
+      }
+    }
+  }
+  for (const [key, id] of systemOcc) {
+    const [sys, anchor2] = key.split("|");
+    if (m2.kindOf.get(anchor2) === "event" && has2(ev(anchor2)) && has2(id))
+      arrows.push(arrow(scope, id, to(id, ev(anchor2)), now, void 0, "raises", { data: { system: sys } }));
+  }
+  return offsetAll([...lanes, ...aggFrames, ...items, ...arrows], opts.at);
+}
+function flowTimes(m2, itemId, systemOcc, inlineRm) {
+  const t = /* @__PURE__ */ new Map();
+  const idx = new Map(m2.events.map((e, i) => [e.id, i]));
+  for (const e of m2.events)
+    t.set(itemId("event", e.id), idx.get(e.id));
+  const policyT = /* @__PURE__ */ new Map();
+  for (const p of m2.policies) {
+    const when2 = p.when.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    if (when2.length)
+      policyT.set(p.id, Math.max(...when2) + 0.25);
+    if (policyT.has(p.id))
+      t.set(itemId("policy", p.id), policyT.get(p.id));
+  }
+  const commandT = /* @__PURE__ */ new Map();
+  for (const k2 of m2.commands) {
+    const produced = k2.produces.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    const by = m2.policies.filter((p) => p.then.includes(k2.id) && policyT.has(p.id)).map((p) => policyT.get(p.id));
+    const at3 = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : void 0;
+    if (at3 === void 0)
+      continue;
+    commandT.set(k2.id, at3);
+    t.set(itemId("command", k2.id), at3);
+  }
+  for (const [key, id] of systemOcc) {
+    const anchor2 = key.slice(key.indexOf("|") + 1);
+    if (commandT.has(anchor2))
+      t.set(id, commandT.get(anchor2) + 0.2);
+    else if (idx.has(anchor2))
+      t.set(id, idx.get(anchor2) - 0.3);
+  }
+  for (const r of m2.readModels) {
+    if (!inlineRm.has(r.id))
+      continue;
+    const updates = r.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    const cmds = r.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
+    const at3 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
+    if (at3 !== void 0)
+      t.set(itemId("read-model", r.id), at3);
+  }
+  return t;
+}
+function legend(m2, items, scope, bottom, now) {
+  const used = /* @__PURE__ */ new Set();
+  for (const it of items) {
+    if (it.role === "value")
+      used.add(it.data?.sign === "-" ? "value-" : "value+");
+    else if (it.role === "external")
+      used.add("system");
+    else if (it.role && it.role in ES_COLORS)
+      used.add(it.role);
+  }
+  if (m2.aggregates.length && m2.level === "software")
+    used.add("aggregate");
+  const kinds = Object.keys(ES_COLORS).filter((k2) => used.has(k2));
+  if (!kinds.length)
+    return bottom;
+  const y2 = bottom + GAP;
+  items.push(make({ id: `${scope}.legend-title.legend`, type: "text", x: PAD, y: y2, w: 400, h: 28, text: "Legend \u2014 Introducing EventStorming (p.314)", role: "legend-title", color: "white" }, now));
+  const LEGEND_W = 150;
+  kinds.forEach((k2, i) => items.push(make({ id: `${scope}.legend.${k2}`, type: "sticky", x: PAD + i * (LEGEND_W + GAP / 2), y: y2 + 36, w: LEGEND_W, h: 60, text: ES_LEGEND[k2], role: "legend", color: ES_COLORS[k2], data: { for: k2 } }, now)));
+  return y2 + 36 + 60;
+}
+var COL, PIVOTAL_W, PIVOTAL_H, MILESTONE_H, STACK, STRIPS, STRIP_H;
+var init_event_storming = __esm({
+  "packages/canvas/dist/templates/event-storming.js"() {
+    init_eventStorming();
+    init_ids2();
+    init_esTimeline();
+    init_util2();
+    init_eventStorming();
+    COL = STICKY_W + 96;
+    PIVOTAL_W = STICKY_W + 16;
+    PIVOTAL_H = STICKY_H + 24;
+    MILESTONE_H = 50;
+    STACK = GAP / 2;
+    STRIPS = ["milestone", "read-model", "person", "main", "below", "note"];
+    STRIP_H = { milestone: MILESTONE_H, "read-model": STICKY_H, person: SMALL_H, main: STICKY_H, below: STICKY_H, note: SMALL_H };
+  }
+});
+
 // packages/canvas/dist/diagrams/userStoryMap.js
 function normalizeUserStoryMap(raw) {
   const c2 = userStoryMapSchema.parse(raw);
@@ -58086,368 +58320,158 @@ var init_userStoryMap = __esm({
   }
 });
 
-// packages/canvas/dist/diagrams/dsIcons.js
-function parseDsIcon(svg2) {
-  if (typeof svg2 !== "string" || !svg2.trim() || svg2.length > DS_ICON_MAX_CHARS)
-    return void 0;
-  const box = /<svg\b[^>]*>/i.exec(svg2)?.[0];
-  const vb = box ? (attrsOf(box).viewBox ?? "").split(/[\s,]+/).map(Number) : [];
-  const viewBox = vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0 ? [vb[0], vb[1], vb[2], vb[3]] : [0, 0, 24, 24];
-  const shapes = [];
-  for (const m2 of svg2.matchAll(/<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>/gi)) {
-    const tag = m2[1].toLowerCase();
-    const given = attrsOf(m2[2]);
-    const attrs = {};
-    for (const [name, ok] of Object.entries(SHAPES2[tag]))
-      if (given[name] !== void 0 && ok.test(given[name]))
-        attrs[name] = given[name];
-    if (!REQUIRED[tag].every((name) => attrs[name] !== void 0))
-      continue;
-    shapes.push({ tag, attrs });
-    if (shapes.length >= DS_ICON_MAX_SHAPES)
-      break;
-  }
-  return shapes.length ? { viewBox, shapes } : void 0;
+// packages/canvas/dist/templates/user-story-map.js
+function renderUserStoryMap(raw, opts = {}) {
+  const m2 = normalizeUserStoryMap(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "usm";
+  const itemId = (role, element) => `${scope}.${role}.${element}`;
+  const items = [];
+  const rowActivity = PAD;
+  const rowStep = rowActivity + STICKY_H + GAP;
+  const rowStoriesStart = rowStep + CARD_H + GAP + LANE_HEADER;
+  let col = 0;
+  const stepCols = [];
+  m2.activities.forEach((a, ai) => {
+    const startCol = col;
+    a.steps.forEach((s) => stepCols.push({ id: s.id, text: s.text, col: col++, stories: s.stories }));
+    if (a.steps.length === 0)
+      col++;
+    const span = Math.max(col - startCol, 1);
+    items.push(make({ id: itemId("activity", a.id), type: "sticky", x: PAD + startCol * COL2, y: rowActivity, w: span * COL2 - GAP / 2, h: STICKY_H, text: a.text, color: "blue", role: "activity", order: ai, data: { element: a.id, header: "column" } }, now));
+  });
+  stepCols.forEach((s, i) => {
+    items.push(make({ id: itemId("step", s.id), type: "sticky", x: PAD + s.col * COL2, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: "yellow", role: "step", order: i, data: { element: s.id, header: "column" } }, now));
+  });
+  const width = PAD * 2 + Math.max(col, 1) * COL2;
+  let y2 = rowStoriesStart;
+  const lanes = [];
+  const laneSlugs = /* @__PURE__ */ new Set();
+  m2.releases.forEach((rel, ri) => {
+    let slug3 = slugify2(rel) || "release";
+    for (let n = 2; laneSlugs.has(slug3); n++)
+      slug3 = `${slugify2(rel) || "release"}-${n}`;
+    laneSlugs.add(slug3);
+    const laneId = itemId("release", slug3);
+    const laneStories = [];
+    let maxRows = 0;
+    stepCols.forEach((s) => {
+      const inRel = s.stories.filter((st) => st.release === rel);
+      maxRows = Math.max(maxRows, inRel.length);
+      inRel.forEach((st, k2) => {
+        const data = { element: st.id, release: rel, step: s.id };
+        if (st.acceptance.length)
+          data.acceptance = st.acceptance;
+        if (st.traces.length)
+          data.traces = st.traces;
+        laneStories.push(make({ id: itemId("story", st.id), type: "card", x: PAD + s.col * COL2, y: y2 + k2 * (CARD_H + GAP / 2), w: CARD_W, h: CARD_H, text: st.text, color: "white", role: "story", parent: laneId, order: k2, data }, now));
+      });
+    });
+    const laneH = Math.max(maxRows, 1) * (CARD_H + GAP / 2) + PAD;
+    const lane = make({ id: laneId, type: "lane", x: 0, y: y2 - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: "release", color: "grey", order: ri, data: { release: rel, header: "row" } }, now);
+    lanes.push(fit(lane, laneStories, PAD / 2, LANE_HEADER));
+    items.push(...laneStories);
+    y2 += laneH + LANE_HEADER + GAP / 2;
+  });
+  lanes.forEach((lane, i) => {
+    if (i === 0)
+      return;
+    const prev = lanes[i - 1];
+    const y3 = (prev.y + prev.h + lane.y) / 2 - 2;
+    items.push(make({ id: `${lane.id.replace(".release.", ".release-cut.")}`, type: "text", x: 0, y: y3, w: width, h: 4, text: "", role: "release-cut", color: "grey", data: { release: lane.data?.release } }, now));
+  });
+  return offsetAll([...lanes, ...items], opts.at);
 }
-function dsGlyphTransform(g2) {
-  const [x2, y2, w2, h] = g2.viewBox;
-  if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
-    return void 0;
-  const s = 24 / Math.max(w2, h);
-  const r = (v2) => Math.round(v2 * 1e3) / 1e3;
-  return `translate(${r((24 - w2 * s) / 2)} ${r((24 - h * s) / 2)}) scale(${r(s)}) translate(${r(-x2)} ${r(-y2)})`;
-}
-function dsGlyphMarkup(g2) {
-  const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
-  const t = dsGlyphTransform(g2);
-  return t ? `<g transform="${t}">${body}</g>` : body;
-}
-var DS_ICON_MAX_CHARS, DS_ICON_MAX_SHAPES, NUM, PATH, POINTS, SHAPES2, REQUIRED, attrsOf;
-var init_dsIcons = __esm({
-  "packages/canvas/dist/diagrams/dsIcons.js"() {
-    DS_ICON_MAX_CHARS = 4e3;
-    DS_ICON_MAX_SHAPES = 40;
-    NUM = /^-?(\d+\.?\d*|\.\d+)$/;
-    PATH = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,+\-eE]+$/;
-    POINTS = /^[\s\d.,+\-eE]+$/;
-    SHAPES2 = {
-      path: { d: PATH },
-      circle: { cx: NUM, cy: NUM, r: NUM },
-      ellipse: { cx: NUM, cy: NUM, rx: NUM, ry: NUM },
-      rect: { x: NUM, y: NUM, width: NUM, height: NUM, rx: NUM, ry: NUM },
-      line: { x1: NUM, y1: NUM, x2: NUM, y2: NUM },
-      polyline: { points: POINTS },
-      polygon: { points: POINTS }
-    };
-    REQUIRED = { path: ["d"], circle: ["r"], ellipse: ["rx", "ry"], rect: ["width", "height"], line: ["x2"], polyline: ["points"], polygon: ["points"] };
-    attrsOf = (text3) => {
-      const out = {};
-      for (const m2 of text3.matchAll(/([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
-        out[m2[1]] = (m2[2] ?? m2[3] ?? "").trim();
-      return out;
-    };
+var CARD_W, CARD_H, COL2;
+var init_user_story_map = __esm({
+  "packages/canvas/dist/templates/user-story-map.js"() {
+    init_userStoryMap();
+    init_ids2();
+    init_util2();
+    init_userStoryMap();
+    CARD_W = 150;
+    CARD_H = 90;
+    COL2 = CARD_W + GAP / 2;
   }
 });
 
-// packages/canvas/dist/diagrams/domainStoryReview.js
-function reviewDomainStory(m2) {
-  const out = [];
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  const unsaid = [!m2.scope.granularity && "granularity (coarse-, medium- or fine-grained)", !m2.scope.time && "time (as-is or to-be)", !m2.scope.purity && "purity (pure or digitalized)"].filter(Boolean);
-  if (unsaid.length)
-    out.push({ rule: "scope-missing", severity: "info", message: `the scope does not say its ${unsaid.join(", ")} \u2014 readers judge every sentence by it (how much detail, today or the future, with or without software), so decide it before telling the story`, page: QUICK_START });
-  const inStory = (id) => m2.sentences.some((s) => s.actor === id || s.to.includes(id));
-  const systems = m2.actors.filter((a) => a.kind === "system" && inStory(a.id));
-  if (m2.scope.purity === "pure" && systems.length)
-    out.push({ rule: "scope-purity", severity: "warning", element: systems[0].id, message: `the scope says pure, but ${systems.map((a) => `"${a.text}"`).join(", ")} ${systems.length > 1 ? "are software systems" : "is a software system"} \u2014 a story with software systems is digitalized; change the scope, or tell who does this work`, page: QUICK_START });
-  if (m2.scope.purity === "digitalized" && !systems.length)
-    out.push({ rule: "scope-purity", severity: "info", message: "the scope says digitalized, but no actor is a software system (kind: system) \u2014 a story without software systems is pure", page: QUICK_START });
-  const acting = m2.actors.filter((a) => inStory(a.id));
-  const [first, second] = acting;
-  if (m2.sentences.length >= 4 && acting.length === 2 && first.kind === "system" !== (second.kind === "system") && acting.every((a) => m2.sentences.some((s) => s.actor === a.id)))
-    out.push({ rule: "request-response", severity: "info", message: `every sentence is between "${first.text}" and "${second.text}" \u2014 a user and a system answering each other reads like a screen flow, which a mock-up shows better; a domain story models intent: what is the user after, who else is involved, and how does the system help? Each activity should push the story forward`, page: BOOK_STYLE });
-  const told = m2.sentences.filter((s) => s.objectText);
-  for (const s of m2.sentences) {
-    const words = [s.verb, s.objectText ?? "", s.toLabel ?? ""];
-    if (words.some((w2) => CONDITIONAL_EN.test(w2) || CONDITIONAL_CJK.test(w2)))
-      out.push({ rule: "conditional", severity: "info", element: s.id, message: `${num(s.seq)} "${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}" reads like a choice \u2014 a domain story is one concrete example: tell the usual case here, put the variation in a note, and give an alternative that matters a story of its own`, page: QUICK_START });
-    if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
-      out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
-  }
-  const negative = m2.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ""} ${s.note ?? ""}`));
-  if (m2.sentences.length >= 3 && negative.length * 2 >= m2.sentences.length)
-    out.push({ rule: "negative-story", severity: "info", element: negative[0].id, message: `${negative.length} of ${m2.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(" ")}) \u2014 a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE });
-  for (const s of m2.sentences) {
-    if (DATE.test(s.verb))
-      out.push({ rule: "date-in-verb", severity: "info", element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date \u2014 the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START });
-  }
-  const variants = /* @__PURE__ */ new Map();
-  for (const s of told) {
-    const first2 = (s.objectText ?? "").trim().split(/[\s／/·|]+/)[0]?.toLowerCase();
-    if (first2 && first2.length >= 2)
-      variants.set(first2, /* @__PURE__ */ new Set([...variants.get(first2) ?? [], s.objectText.trim()]));
-  }
-  for (const [first2, names2] of variants)
-    if (names2.size >= 3)
-      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n) => `"${n}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
-  const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
-  if (told.length >= 4 && names.size === told.length)
-    out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
-  const kinds = new Set(told.map((s) => s.objectKind));
-  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
-    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
-  const icons = m2.icons ?? {};
-  for (const [icon, svg2] of Object.entries(icons)) {
-    if (!parseDsIcon(svg2))
-      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
-  }
-  for (const o of m2.workObjects) {
-    if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
-      out.push({ rule: "icon-unknown", severity: "info", element: o.id, message: `"${o.text}": no icon named "${o.kind}" \u2014 it is drawn as a document; use a built-in kind or draw "${o.kind}" under \`icons:\``, page: EGON_HOWTO });
-  }
-  return out;
-}
-var QUICK_START, EGON_HOWTO, BOOK_STYLE, BUILT_IN_OBJECT_ICONS, parts, OUTCOME_EN, OUTCOME_CJK, CONDITIONAL_EN, CONDITIONAL_CJK, NEGATIVE, DATE, num;
-var init_domainStoryReview = __esm({
-  "packages/canvas/dist/diagrams/domainStoryReview.js"() {
-    init_dsIcons();
-    QUICK_START = "domainstorytelling.org/quick-start-guide";
-    EGON_HOWTO = "egon.io/howto";
-    BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"';
-    BUILT_IN_OBJECT_ICONS = /* @__PURE__ */ new Set(["document", "thing", "digital", "folder", "call", "email", "conversation", "info", "message", "information"]);
-    parts = (text3) => text3.split(/\s*[/／·|｜\n]\s*/).map((p) => p.trim()).filter(Boolean);
-    OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|completed|confirmed|done)$/i;
-    OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
-    CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
-    CONDITIONAL_CJK = /如果|否則|或者|還是/;
-    NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
-    DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
-    num = (n) => `#${n}`;
-  }
-});
-
-// packages/canvas/dist/diagrams/domainStory.js
-function normalizeDomainStory(raw) {
-  const c2 = domainStorySchema.parse(raw);
+// packages/canvas/dist/templates/user-journey.js
+function renderUserJourney(raw, opts = {}) {
+  const c2 = userJourneySchema.parse(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "uj";
+  const id = (role, name) => stableId(scope, role, name);
+  const items = [];
+  const labelW = 130;
+  const x0 = PAD + labelW + GAP;
   const alloc = idAllocator();
-  const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
-  const actors = c2.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
-  const workObjects = c2.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
-  const unresolved = [];
-  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
-  const actorRef = (ref2, element, field) => {
-    const hit = find(actors, ref2);
-    if (hit)
-      return hit.id;
-    unresolved.push({ element, field, ref: ref2 });
-    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
-    actors.push(added);
-    return added.id;
-  };
-  let next = 1;
-  const sentences = c2.sentences.map((s) => {
-    const seq = s.seq ?? next;
-    next = Math.max(next, seq + 1);
-    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
-    const declared = s.object ? find(workObjects, s.object) : void 0;
-    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
-    return {
-      id,
-      seq,
-      actor: actorRef(s.actor, id, "actor"),
-      verb: s.verb,
-      ...declared ? { object: declared.id } : {},
-      ...s.object ? { objectText: declared?.text ?? s.object } : {},
-      objectKind: declared?.kind ?? "document",
-      to: to.map((r) => actorRef(r, id, "to")),
-      ...s.toLabel ? { toLabel: s.toLabel } : {},
-      ...s.note ? { note: s.note } : {},
-      traces: s.traces ?? []
-    };
+  const stageEl = c2.stages.map((s) => alloc(void 0, s.text, "stage"));
+  items.push(make({ id: id("persona", c2.persona), type: "text", x: PAD, y: PAD, w: labelW + c2.stages.length * COL3, h: 40, text: `Persona: ${c2.persona}`, role: "persona", color: "white" }, now));
+  const facets = [
+    { key: "actions", label: "Actions", color: "white" },
+    { key: "touchpoints", label: "Touchpoints", color: "blue" },
+    { key: "pains", label: "Pain points", color: "red" },
+    { key: "opportunities", label: "Opportunities", color: "green" }
+  ];
+  const maxRows = (key) => Math.max(1, ...c2.stages.map((s) => s[key].length));
+  let y2 = PAD + 40 + GAP;
+  c2.stages.forEach((s, i) => {
+    items.push(make({ id: id("stage", s.text), type: "sticky", x: x0 + i * COL3, y: y2, w: STICKY_W, h: 70, text: s.text, color: "yellow", role: "stage", order: i, data: { element: stageEl[i] } }, now));
   });
-  const elementRef = (ref2, element, field) => {
-    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
-    if (!hit)
-      unresolved.push({ element, field, ref: ref2 });
-    return hit;
-  };
-  const groups = c2.groups.map((g2) => {
-    const id = alloc(g2.id, g2.text, "group");
-    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
-  });
-  const annotations = c2.annotations.flatMap((a, i) => {
-    const id = alloc(a.id, `note-${i + 1}`, "note");
-    const on = elementRef(a.on, id, "on");
-    return on ? [{ id, on, text: a.text }] : [];
-  });
-  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
-}
-function readSentence(m2, s) {
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
-  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
-}
-function circled(n) {
-  return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
-}
-function displayWidth(text3) {
-  let n = 0;
-  for (const ch of text3)
-    n += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
-  return n;
-}
-function checkDomainStory(content) {
-  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
-  const out = [];
-  for (const u3 of m2.unresolved)
-    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
-  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
-  for (const s of m2.sentences) {
-    if (s.to.includes(s.actor)) {
-      const others = s.to.filter((r) => r !== s.actor);
-      out.push({
-        rule: "self-receiver",
-        severity: "warning",
-        element: s.id,
-        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
-        page: QUICK_START2
+  y2 += 70 + GAP;
+  const drawFacet = (f) => {
+    const rows = maxRows(f.key);
+    const rowId = id("row", f.label);
+    items.push(make({ id: rowId, type: "text", x: PAD, y: y2, w: labelW, h: 40, text: f.label, role: "row-label", color: "grey" }, now));
+    c2.stages.forEach((s, i) => {
+      s[f.key].forEach((t, k2) => {
+        items.push(make({ id: id(f.key.replace(/s$/, ""), `${s.text}/${t}`), type: "sticky", x: x0 + i * COL3, y: y2 + k2 * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ""), data: { stage: s.text, element: alloc(`${stageEl[i]}/${slugify2(t) || f.key.replace(/s$/, "")}`, t) } }, now));
       });
-    }
-    if (!s.objectText)
-      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
-  }
-  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
-  seqs.forEach((n, i) => {
-    const expected = i === 0 ? 1 : seqs[i - 1] + 1;
-    if (n !== expected)
-      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START2 });
+    });
+    y2 += rows * ROW_H + GAP / 2;
+  };
+  drawFacet(facets[0]);
+  drawFacet(facets[1]);
+  const laneId = id("row", "Emotion");
+  items.push(make({ id: laneId, type: "lane", x: PAD, y: y2 - LANE_HEADER / 2, w: labelW + c2.stages.length * COL3 + GAP, h: EMOTION_H + LANE_HEADER, text: "Emotion", role: "emotion-lane", color: "grey" }, now));
+  const faces = ["\u{1F62B}", "\u{1F641}", "\u{1F610}", "\u{1F642}", "\u{1F604}"];
+  let prev;
+  c2.stages.forEach((s, i) => {
+    const level = s.emotion;
+    const ey = y2 + (2 - level) * 40;
+    const e = make({ id: id("emotion", s.text), type: "sticky", x: x0 + i * COL3 + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? "green" : level < 0 ? "red" : "yellow", role: "emotion", parent: laneId, data: { stage: s.text, emotion: level, element: alloc(`${stageEl[i]}/emotion`, "emotion") } }, now);
+    items.push(e);
+    if (prev)
+      items.push(arrow(scope, prev, e.id, now, void 0, "emotion-curve"));
+    prev = e.id;
   });
-  for (const n of seqs) {
-    const same2 = m2.sentences.filter((s) => s.seq === n);
-    if (same2.length > 1)
-      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
-  }
-  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
-  for (let i = 0; i < m2.groups.length; i++)
-    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
-      const [a, b2] = [m2.groups[i], m2.groups[j2]];
-      const sa = new Set(a.members);
-      const sb = new Set(b2.members);
-      const shared = [...sa].filter((x2) => sb.has(x2));
-      if (!shared.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
-        continue;
-      out.push({
-        rule: "groups-overlap",
-        severity: "warning",
-        element: b2.id,
-        message: `groups "${a.text}" and "${b2.text}" share ${shared.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
-        page: QUICK_START2
-      });
-    }
-  for (const n of m2.annotations) {
-    const w2 = displayWidth(n.text);
-    if (w2 > NOTE_RECOMMENDED)
-      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
-  }
-  for (const o of m2.workObjects) {
-    if (!m2.sentences.some((s) => s.object === o.id))
-      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START2 });
-  }
-  for (const a of m2.actors) {
-    if (!m2.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
-      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START2 });
-    if (!DS_ACTOR_KINDS.includes(a.kind))
-      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START2 });
-  }
-  out.push(...reviewDomainStory(m2));
-  return out;
+  y2 += EMOTION_H + LANE_HEADER;
+  drawFacet(facets[2]);
+  drawFacet(facets[3]);
+  return offsetAll(items, opts.at);
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named2, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
-var init_domainStory = __esm({
-  "packages/canvas/dist/diagrams/domainStory.js"() {
+var userJourneySchema, COL3, ROW_H, EMOTION_H;
+var init_user_journey = __esm({
+  "packages/canvas/dist/templates/user-journey.js"() {
     init_zod();
     init_ids2();
-    init_dsIcons();
-    init_domainStoryReview();
-    DS_ACTOR_KINDS = ["person", "group", "system"];
-    DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
-    named2 = () => external_exports.union([
-      external_exports.string(),
-      external_exports.object({
-        id: external_exports.string().optional(),
-        text: external_exports.string().min(1),
-        /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
-        kind: external_exports.string().optional()
-      })
-    ]);
-    domainStorySchema = external_exports.object({
-      scope: external_exports.object({
-        granularity: external_exports.enum(DS_GRANULARITY).optional(),
-        time: external_exports.enum(["as-is", "to-be"]).optional(),
-        purity: external_exports.enum(["pure", "digitalized"]).optional()
-      }).optional(),
-      actors: external_exports.array(named2()).min(1),
-      workObjects: external_exports.array(named2()).default([]),
-      sentences: external_exports.array(external_exports.object({
-        id: external_exports.string().optional(),
-        /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
-        seq: external_exports.number().int().positive().optional(),
-        /** The actor who acts (id or text). */
-        actor: external_exports.string().min(1),
-        /** The activity, a verb from the domain language. */
-        verb: external_exports.string().min(1),
-        /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
-        object: external_exports.string().optional(),
-        /** The actor(s) the work object goes to. */
-        to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
-        /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
-        toLabel: external_exports.string().optional(),
-        note: external_exports.string().optional(),
-        traces: external_exports.array(traceSchema).optional()
+    init_util2();
+    userJourneySchema = external_exports.object({
+      persona: external_exports.string(),
+      stages: external_exports.array(external_exports.object({
+        text: external_exports.string(),
+        actions: external_exports.array(external_exports.string()).default([]),
+        touchpoints: external_exports.array(external_exports.string()).default([]),
+        emotion: external_exports.number().int().min(-2).max(2).default(0),
+        pains: external_exports.array(external_exports.string()).default([]),
+        opportunities: external_exports.array(external_exports.string()).default([])
       })).min(1),
-      groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
-      annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
-      /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
-      icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
-      /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
-      layout: external_exports.object({
-        spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
-        /** horizontal pitch of the actor grid in px (overrides the spacing's) */
-        gapX: external_exports.number().min(240).max(2e3).optional(),
-        /** vertical pitch of the actor grid in px */
-        gapY: external_exports.number().min(180).max(2e3).optional()
-      }).optional()
+      /** What a stage or a sticky is for (docs/diagrams.md "Annotations"): numbered cards below the journey. */
+      annotations: annotationsSchema.optional()
     });
-    QUICK_START2 = "domainstorytelling.org/quick-start-guide";
-    NOTE_RECOMMENDED = 120;
-  }
-});
-
-// packages/canvas/dist/diagrams/guidance.js
-function tellBack(content) {
-  let m2;
-  try {
-    m2 = normalizeDomainStory(content);
-  } catch {
-    return [];
-  }
-  const lines = [...m2.sentences].sort((a, b2) => a.seq - b2.seq).map((s) => `  ${readSentence(m2, s)}`);
-  return [
-    "The grammar and the drawing are checked; whether this is the right diagram and a true story is not. Tell it back \u2014 did the person say this, or did you guess?",
-    ...lines
-  ];
-}
-var WHICH_DIAGRAM, DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY;
-var init_guidance = __esm({
-  "packages/canvas/dist/diagrams/guidance.js"() {
-    init_domainStory();
-    WHICH_DIAGRAM = `Which diagram for which content:
-- what happens over time, how the system reacts, what does NOT happen and why \u2192 EventStorming (events, policies, hotspots)
-- one concrete case of who does what with what, and hands it to whom \u2192 domain story (one scenario, no conditions, no "not")
-- a rule, an invariant, a comparison ("only once per contact", "A vs B") \u2192 a definition / policy / hotspot sticky, or a note \u2014 not a story
-- scope and order of delivery \u2192 story map; the work \u2192 kanban; one page \u2192 wireframe / UI mock; a persona's feelings \u2192 journey`;
-    DOMAIN_STORY_METHOD = `A domain story tells ONE concrete case as sentences the person would say aloud: actor \u2014 verb \u2014 work object \u2014 to actor. State its scope (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized) and keep every sentence at that level. Actors are the people, groups and systems that act, named by role, each once; the same thing keeps the same name every time it comes back (its state may change). It has no "if", no "or", no "does not": what does not happen is a note on the sentence that would have happened ("variation: already sent \u2192 \u2462 does not happen"), the case the story tells is a note on the whole story ("assumption: Casey matches for the first time"), and the rule itself lives in an EventStorming policy or a story map's acceptance \u2014 never a story of its own. Do not guess who acts or what they want \u2014 ask; then tell the story back sentence by sentence before you call it done.`;
-    LAYOUT_NEVER_THE_STORY = "When pictograms or labels collide, change the layout (layout.spacing, groups, a split into scenarios) \u2014 never the story: an actor or a sentence is not dropped to make the picture fit.";
+    COL3 = STICKY_W + GAP;
+    ROW_H = 90;
+    EMOTION_H = 5 * 40 + GAP;
   }
 });
 
@@ -59345,1306 +59369,6 @@ var init_uiMock = __esm({
   }
 });
 
-// packages/canvas/dist/diagrams/grammar.js
-function checkEventStorming(content) {
-  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
-  const out = [];
-  for (const u3 of m2.unresolved)
-    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no element`, page: "p.202" });
-  const detailed = m2.level !== "big-picture";
-  if (detailed) {
-    for (const k2 of m2.commands) {
-      if (!k2.system)
-        out.push({ rule: "command-without-system", severity: "warning", element: k2.id, message: `"${k2.text}": no system between the command and its event`, page: "p.202" });
-      if (!k2.produces.length)
-        out.push({ rule: "command-without-event", severity: "warning", element: k2.id, message: `"${k2.text}" produces no event \u2014 the path is not complete`, page: "p.199" });
-      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r) => r.informs.includes(k2.id));
-      if (!triggered)
-        out.push({ rule: "command-without-trigger", severity: "info", element: k2.id, message: `"${k2.text}": nobody issues it \u2014 add a person or a policy`, page: "p.216" });
-    }
-    for (const p of m2.policies) {
-      if (!p.when.length)
-        out.push({ rule: "policy-without-event", severity: "warning", element: p.id, message: `"${p.text}": whenever \u2026 what? no event`, page: "p.222" });
-      if (!p.then.length)
-        out.push({ rule: "policy-without-command", severity: "warning", element: p.id, message: `"${p.text}": \u2026 then what? no command`, page: "p.222" });
-    }
-    const produced = new Set(m2.commands.flatMap((k2) => k2.produces));
-    const raised = new Set(m2.systems.flatMap((s) => s.raises));
-    m2.events.forEach((e, i) => {
-      if (i === 0 || produced.has(e.id) || raised.has(e.id) || e.time || e.person)
-        return;
-      out.push({ rule: "event-without-source", severity: "info", element: e.id, message: `"${e.text}": where does it come from? a command, a system, time or a policy`, page: "p.208" });
-    });
-    for (const r of m2.readModels) {
-      if (!r.informs.length)
-        out.push({ rule: "read-model-unused", severity: "warning", element: r.id, message: `"${r.text}" informs no person or command`, page: "p.231" });
-    }
-    if (m2.level === "process") {
-      for (const e of m2.events.filter((e2) => e2.pivotal))
-        out.push({ rule: "pivotal-on-process", severity: "info", element: e.id, message: `"${e.text}": pivotal events sort a big picture; a process board follows one flow`, page: "p.82, p.197" });
-    }
-  }
-  if (m2.level === "software") {
-    for (const a of m2.aggregates) {
-      const owns = m2.commands.some((k2) => k2.aggregate === a.id) || m2.events.some((e) => e.aggregate === a.id);
-      if (!owns)
-        out.push({ rule: "aggregate-without-behaviour", severity: "info", element: a.id, message: `aggregate "${a.text}" handles no command and raises no event`, page: "p.260" });
-    }
-  }
-  if (m2.hotspots.length) {
-    out.push({ rule: "open-hotspots", severity: "info", message: `${m2.hotspots.length} open hotspot${m2.hotspots.length === 1 ? "" : "s"} \u2014 a process is done when this reaches zero`, page: "p.199, p.203" });
-  }
-  return out;
-}
-var init_grammar = __esm({
-  "packages/canvas/dist/diagrams/grammar.js"() {
-    init_eventStorming();
-  }
-});
-
-// packages/canvas/dist/diagrams/proposeStories.js
-function segments(m2) {
-  const order = m2.events.map((e) => e.id);
-  const at3 = (id) => id ? order.indexOf(id) : -1;
-  const phased = m2.phases.filter((p) => p.from || p.to);
-  if (phased.length) {
-    return phased.map((p) => {
-      const from = Math.max(at3(p.from), 0);
-      const to = p.to ? at3(p.to) : order.length - 1;
-      return { id: p.id, text: p.text, events: order.slice(from, to + 1) };
-    });
-  }
-  const out = [];
-  let current = [];
-  for (const e of m2.events) {
-    current.push(e.id);
-    if (e.pivotal) {
-      out.push({ id: e.id, text: e.text, events: current });
-      current = [];
-    }
-  }
-  if (current.length) {
-    const last = m2.events.find((e) => e.id === current[current.length - 1]);
-    out.push({ id: last.id, text: out.length ? `After: ${out[out.length - 1].text}` : "Flow", events: current });
-  }
-  return out;
-}
-function proposeStories(content, opts) {
-  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
-  const existing = opts.existing ? normalizeUserStoryMap(opts.existing) : void 0;
-  const traced = new Set(existing?.activities.flatMap((a) => a.steps.flatMap((s) => s.stories.flatMap((st) => st.traces.map((t) => t.from)))) ?? []);
-  const activityByText = new Map(existing?.activities.map((a) => [a.text, a.id]) ?? []);
-  const stepByText = new Map(existing?.activities.flatMap((a) => a.steps.map((s) => [s.text, s.id])) ?? []);
-  const person = (id) => id ? m2.people.find((p) => p.id === id)?.text : void 0;
-  const eventText = (id) => m2.events.find((e) => e.id === id)?.text ?? id;
-  const ref2 = (id) => `${opts.esKey}/${id}`;
-  const segs = segments(m2);
-  const segOf = (eventId) => segs.find((s) => eventId && s.events.includes(eventId)) ?? segs[segs.length - 1];
-  const candidates = [];
-  if (m2.commands.length) {
-    const pos = (k2) => Math.min(...k2.produces.map((e) => m2.events.findIndex((x2) => x2.id === e)).filter((i) => i >= 0), Number.MAX_SAFE_INTEGER);
-    const commands = [...m2.commands].sort((a, b2) => pos(a) - pos(b2));
-    for (const k2 of commands) {
-      if (traced.has(ref2(k2.id)))
-        continue;
-      const seg = segOf(k2.produces[0]);
-      const who = person(k2.by) ?? person(m2.policies.find((p) => p.then.includes(k2.id))?.person);
-      const shown = m2.readModels.filter((r) => r.informs.includes(k2.id) || k2.by !== void 0 && r.informs.includes(k2.by));
-      candidates.push({
-        id: `from-${k2.id}`,
-        text: who ? `As ${who}, I ${lowerFirst(k2.text)}` : k2.text,
-        acceptance: [...k2.produces.map((e) => `Event: ${eventText(e)}`), ...shown.map((r) => `Shows: ${r.text}`)],
-        traces: [{ from: ref2(k2.id), rel: "derived-from" }],
-        activity: { id: activityByText.get(seg.text) ?? seg.id, text: seg.text },
-        step: { id: stepByText.get(k2.text) ?? k2.id, text: k2.text },
-        person: who,
-        source: { kind: "command", id: k2.id }
-      });
-    }
-  } else {
-    for (const e of m2.events.filter((e2) => e2.person)) {
-      if (traced.has(ref2(e.id)))
-        continue;
-      const seg = segOf(e.id);
-      const who = person(e.person);
-      candidates.push({
-        id: `from-${e.id}`,
-        text: `As ${who}: ${e.text}`,
-        acceptance: [`Event: ${e.text}`],
-        traces: [{ from: ref2(e.id), rel: "derived-from" }],
-        activity: { id: activityByText.get(seg.text) ?? seg.id, text: seg.text },
-        step: { id: stepByText.get(e.text) ?? e.id, text: e.text },
-        person: who,
-        source: { kind: "event", id: e.id }
-      });
-    }
-  }
-  const activities = [];
-  for (const cnd of candidates) {
-    let a = activities.find((x2) => x2.id === cnd.activity.id);
-    if (!a)
-      activities.push(a = { id: cnd.activity.id, text: cnd.activity.text, steps: [] });
-    let s = a.steps.find((x2) => x2.id === cnd.step.id);
-    if (!s)
-      a.steps.push(s = { id: cnd.step.id, text: cnd.step.text, stories: [] });
-    s.stories.push({ id: cnd.id, text: cnd.text, acceptance: cnd.acceptance, traces: cnd.traces });
-  }
-  return { candidates, activities };
-}
-var lowerFirst;
-var init_proposeStories = __esm({
-  "packages/canvas/dist/diagrams/proposeStories.js"() {
-    init_eventStorming();
-    init_userStoryMap();
-    lowerFirst = (s) => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
-  }
-});
-
-// packages/canvas/dist/diagrams/egon.js
-function fromEgon(file2) {
-  const warnings = [];
-  const root = file2;
-  const story = Array.isArray(root) ? { businessObjects: root.filter((o) => o.type) } : root.domainStory ?? (typeof root.dst === "string" ? JSON.parse(root.dst) : root.dst) ?? {};
-  const objs = Array.isArray(story) ? story : story.businessObjects ?? [];
-  if (!objs.length)
-    throw new Error("no domain story found (expected { domainStory: { businessObjects: [...] } })");
-  const byId = new Map(objs.map((o) => [o.id, o]));
-  const alloc = idAllocator();
-  const ours = /* @__PURE__ */ new Map();
-  const actors = objs.filter((o) => o.type.startsWith(ACTOR)).map((o, i) => {
-    const icon = o.type.slice(ACTOR.length) || "Person";
-    const text3 = (o.name ?? "").trim() || `${icon} ${i + 1}`;
-    const id = alloc(void 0, text3, "actor");
-    ours.set(o.id, id);
-    return { id, text: text3, kind: lowerIcon(icon) };
-  });
-  const workObjects = objs.filter((o) => o.type.startsWith(OBJECT)).map((o, i) => {
-    const icon = o.type.slice(OBJECT.length) || "Document";
-    const text3 = (o.name ?? "").trim() || `${icon.toLowerCase()} ${i + 1}`;
-    const id = alloc(void 0, text3, "object");
-    ours.set(o.id, id);
-    return { id, text: text3, kind: lowerIcon(icon) };
-  });
-  const isActor = (id) => !!id && byId.get(id)?.type.startsWith(ACTOR);
-  const isObject2 = (id) => !!id && byId.get(id)?.type.startsWith(OBJECT);
-  const activities = objs.filter((o) => o.type === "domainStory:activity");
-  const starts = activities.filter((a) => isActor(a.source)).sort((a, b2) => (a.number ?? Infinity) - (b2.number ?? Infinity));
-  let next = 1;
-  const sentences = starts.map((a) => {
-    const seq = typeof a.number === "number" && a.number > 0 ? a.number : next;
-    next = Math.max(next, seq + 1);
-    const verb = (a.name ?? "").trim() || "does";
-    const id = alloc(void 0, `${seq}-${verb}`, "sentence");
-    ours.set(a.id, id);
-    if (isObject2(a.target)) {
-      const onward = activities.filter((b2) => b2.source === a.target && isActor(b2.target));
-      const toLabel = onward.map((b2) => (b2.name ?? "").trim()).find(Boolean);
-      return { id, seq, actor: ours.get(a.source), verb, object: ours.get(a.target), ...onward.length ? { to: onward.map((b2) => ours.get(b2.target)) } : {}, ...toLabel ? { toLabel } : {} };
-    }
-    return { id, seq, actor: ours.get(a.source), verb, ...isActor(a.target) ? { to: [ours.get(a.target)] } : {} };
-  });
-  for (const a of activities)
-    if (!isActor(a.source) && !isObject2(a.source))
-      warnings.push(`activity ${a.id} starts at neither an actor nor a work object \u2014 skipped`);
-  const groups = objs.filter((o) => o.type === "domainStory:group").map((g2, i) => ({ id: alloc(void 0, (g2.name ?? "").trim() || `group ${i + 1}`, "group"), text: (g2.name ?? "").trim() || `Group ${i + 1}`, members: (g2.children ?? []).map((c2) => ours.get(c2)).filter((x2) => !!x2) }));
-  const annotations = objs.filter((o) => o.type === "domainStory:textAnnotation").flatMap((t) => {
-    const link = objs.find((c2) => c2.type === "domainStory:connection" && (c2.source === t.id || c2.target === t.id));
-    const other = link ? link.source === t.id ? link.target : link.source : void 0;
-    const on = other ? ours.get(other) : void 0;
-    if (!on) {
-      warnings.push(`annotation "${(t.text ?? "").slice(0, 40)}" is linked to nothing \u2014 skipped`);
-      return [];
-    }
-    return [{ on, text: t.text ?? "" }];
-  });
-  const s = story.scope ?? {};
-  const scope = { ...s.granularity ? { granularity: s.granularity } : {}, ...s.pointInTime ? { time: s.pointInTime } : {}, ...s.domainPurity ? { purity: s.domainPurity } : {} };
-  const content = {
-    ...Object.keys(scope).length ? { scope } : {},
-    actors,
-    workObjects,
-    sentences,
-    ...groups.length ? { groups } : {},
-    ...annotations.length ? { annotations } : {}
-  };
-  const meta3 = story;
-  return { content, ...meta3.title ? { title: meta3.title } : {}, ...meta3.description ? { description: meta3.description } : {}, warnings };
-}
-function toEgon(content, opts = {}) {
-  const m2 = normalizeDomainStory(content);
-  let n = 0;
-  const id = (p) => `${p}_${1e3 + ++n}`;
-  const objs = [];
-  const shapeOf = /* @__PURE__ */ new Map();
-  const COL4 = 250;
-  const at3 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
-  const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
-  const firstSeen = [];
-  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq))
-    for (const a of [s.actor, ...s.to])
-      if (!firstSeen.includes(a))
-        firstSeen.push(a);
-  for (const a of m2.actors)
-    if (!firstSeen.includes(a.id))
-      firstSeen.push(a.id);
-  firstSeen.forEach((aid, i) => {
-    const a = m2.actors.find((x2) => x2.id === aid);
-    const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at3(i, 0), pickedColor: "black" };
-    shapeOf.set(a.id, o);
-    objs.push(o);
-  });
-  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
-  const icons = { actors: new Set(m2.actors.map((a) => capIcon(a.kind))), workObjects: /* @__PURE__ */ new Set() };
-  for (const s of m2.sentences) {
-    const col = seqs.indexOf(s.seq);
-    const stack = m2.sentences.filter((x2) => x2.seq === s.seq).indexOf(s);
-    const actor = shapeOf.get(s.actor);
-    if (s.objectText) {
-      icons.workObjects.add(capIcon(s.objectKind));
-      const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at3(col, 1 + stack), pickedColor: "black" };
-      objs.push(wo);
-      shapeOf.set(s.id, wo);
-      objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
-      for (const r of s.to) {
-        const to = shapeOf.get(r);
-        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.toLabel ?? "", number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: "black" });
-      }
-    } else {
-      for (const r of s.to.length ? s.to : []) {
-        const to = shapeOf.get(r);
-        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: "black" });
-      }
-    }
-  }
-  for (const g2 of m2.groups) {
-    const members2 = g2.members.map((mid) => shapeOf.get(mid) ?? objs.find((o) => o.type.startsWith(OBJECT) && o.name === m2.workObjects.find((w2) => w2.id === mid)?.text)).filter((o) => !!o);
-    if (!members2.length)
-      continue;
-    const xs = members2.map((o) => o.x ?? 0);
-    const ys = members2.map((o) => o.y ?? 0);
-    objs.push({ id: id("shape"), type: "domainStory:group", name: g2.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members2.map((o) => o.id), pickedColor: "black" });
-  }
-  m2.annotations.forEach((a, i) => {
-    const target = shapeOf.get(a.on);
-    const t = { id: id("shape"), type: "domainStory:textAnnotation", text: a.text, x: 100 + i * COL4, y: 100 + (seqs.length ? 3 : 2) * 200, width: 150, height: 60 };
-    objs.push(t);
-    if (target)
-      objs.push({ id: id("connection"), type: "domainStory:connection", source: t.id, target: target.id, waypoints: [center(t), center(target)] });
-  });
-  const own2 = (icon) => {
-    const glyph = parseDsIcon(m2.icons?.[lowerIcon(icon)] ?? m2.icons?.[icon]);
-    return glyph ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${dsGlyphMarkup(glyph)}</svg>` : void 0;
-  };
-  const iconMap = (names) => Object.fromEntries([...names].map((k2) => [k2, own2(k2) ?? svg(k2)]));
-  return {
-    iconSet: { name: "unprose", actors: iconMap(icons.actors), workObjects: iconMap(icons.workObjects) },
-    domainStory: {
-      businessObjects: objs,
-      title: opts.title ?? "",
-      description: opts.description ?? "",
-      version: "4.0.0",
-      scope: { ...m2.scope.granularity ? { granularity: m2.scope.granularity } : {}, ...m2.scope.time ? { pointInTime: m2.scope.time } : {}, ...m2.scope.purity ? { domainPurity: m2.scope.purity } : {} }
-    }
-  };
-}
-var ACTOR, OBJECT, lowerIcon, capIcon, GLYPH, svg;
-var init_egon = __esm({
-  "packages/canvas/dist/diagrams/egon.js"() {
-    init_ids2();
-    init_domainStory();
-    init_dsIcons();
-    ACTOR = "domainStory:actor";
-    OBJECT = "domainStory:workObject";
-    lowerIcon = (icon) => icon.toLowerCase();
-    capIcon = (kind) => kind.charAt(0).toUpperCase() + kind.slice(1);
-    GLYPH = {
-      Person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/>',
-      Group: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5zM10 20c0-3 3-5 6-5s6 2 6 5z"/>',
-      System: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8v-2H8z"/>',
-      Document: '<path d="M6 2h8l4 4v16H6z"/>'
-    };
-    svg = (icon) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${GLYPH[icon] ?? '<rect x="4" y="4" width="16" height="16" rx="3"/>'}</svg>`;
-  }
-});
-
-// packages/canvas/dist/diagrams/proposeFromDomainStory.js
-function proposeFromDomainStory(content, opts) {
-  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
-  const existing = opts.existing ? normalizeUserStoryMap(opts.existing) : void 0;
-  const traced = new Set(existing?.activities.flatMap((a) => a.steps.flatMap((s) => s.stories.flatMap((st) => st.traces.map((t) => t.from)))) ?? []);
-  const activityByText = new Map(existing?.activities.map((a) => [a.text, a.id]) ?? []);
-  const stepByText = new Map(existing?.activities.flatMap((a) => a.steps.map((s) => [s.text, s.id])) ?? []);
-  const actor = (id) => m2.actors.find((a) => a.id === id);
-  const story = { id: "story", text: opts.storyName ?? opts.dsKey };
-  const candidates = [];
-  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq)) {
-    const who = actor(s.actor);
-    if (who.kind === "system")
-      continue;
-    const ref2 = `${opts.dsKey}/${s.id}`;
-    if (traced.has(ref2))
-      continue;
-    const receivers = s.to.map((r) => actor(r).text);
-    const group = m2.groups.find((g2) => g2.members.includes(s.id) || s.object && g2.members.includes(s.object) || g2.members.includes(s.actor)) ?? story;
-    candidates.push({
-      id: `from-${s.id}`,
-      text: `As ${who.text}, I ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${receivers.length ? ` ${s.toLabel ?? "to"} ${receivers.join(", ")}` : ""}`,
-      acceptance: [receivers.length && s.objectText ? `${s.objectText} reaches ${receivers.join(", ")}` : `Done: ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}`],
-      traces: [{ from: ref2, rel: "derived-from" }],
-      activity: { id: activityByText.get(group.text) ?? group.id, text: group.text },
-      step: { id: stepByText.get(who.text) ?? who.id, text: who.text },
-      person: who.text,
-      source: { kind: "sentence", id: s.id }
-    });
-  }
-  const activities = [];
-  for (const c2 of candidates) {
-    let a = activities.find((x2) => x2.id === c2.activity.id);
-    if (!a)
-      activities.push(a = { id: c2.activity.id, text: c2.activity.text, steps: [] });
-    let st = a.steps.find((x2) => x2.id === c2.step.id);
-    if (!st)
-      a.steps.push(st = { id: c2.step.id, text: c2.step.text, stories: [] });
-    st.stories.push({ id: c2.id, text: c2.text, acceptance: c2.acceptance, traces: c2.traces });
-  }
-  return { candidates, activities };
-}
-var init_proposeFromDomainStory = __esm({
-  "packages/canvas/dist/diagrams/proposeFromDomainStory.js"() {
-    init_domainStory();
-    init_userStoryMap();
-  }
-});
-
-// packages/canvas/dist/diagrams/goto.js
-var init_goto = __esm({
-  "packages/canvas/dist/diagrams/goto.js"() {
-    init_model();
-  }
-});
-
-// packages/canvas/dist/templates/esTimeline.js
-function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
-  const isEvent = new Set(timeline);
-  const ids = nodes.map((n) => n.id);
-  const known = new Set(ids);
-  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
-  const succ = new Map(ids.map((id) => [id, []]));
-  const pred = new Map(ids.map((id) => [id, []]));
-  const add = (a, b2) => {
-    if (!known.has(a) || !known.has(b2) || a === b2 || succ.get(a).includes(b2))
-      return;
-    succ.get(a).push(b2);
-    pred.get(b2).push(a);
-  };
-  for (const [a, b2] of edges)
-    add(a, b2);
-  const back = /* @__PURE__ */ new Set();
-  const t = opts.time;
-  if (t) {
-    for (const a of ids)
-      for (const b2 of succ.get(a))
-        if (t.has(a) && t.has(b2) && t.get(a) > t.get(b2))
-          back.add(`${a}>${b2}`);
-  }
-  const byTime = (x2, y2) => (t?.get(x2) ?? Infinity) - (t?.get(y2) ?? Infinity);
-  const starts = ids.filter((id) => pred.get(id).every((p) => back.has(`${p}>${id}`)));
-  const state = /* @__PURE__ */ new Map();
-  const visit2 = (id) => {
-    state.set(id, 1);
-    for (const s of succ.get(id)) {
-      if (back.has(`${id}>${s}`))
-        continue;
-      if (state.get(s) === 1)
-        back.add(`${id}>${s}`);
-      else if (!state.has(s))
-        visit2(s);
-    }
-    state.set(id, 2);
-  };
-  for (const id of [...[...starts].sort(byTime), ...ids])
-    if (!state.has(id))
-      visit2(id);
-  const againId = opts.againId ?? againIdOf;
-  const again = [];
-  const retarget = /* @__PURE__ */ new Map();
-  const count = /* @__PURE__ */ new Map();
-  for (const a of [...ids]) {
-    for (const b2 of [...succ.get(a)]) {
-      if (!back.has(`${a}>${b2}`))
-        continue;
-      const n = count.get(b2) ?? 0;
-      count.set(b2, n + 1);
-      const id = againId(b2, n);
-      const band = bandOf.get(a);
-      again.push({ id, of: b2, after: a, band });
-      retarget.set(`${a}>${b2}`, id);
-      ids.push(id);
-      known.add(id);
-      bandOf.set(id, band);
-      succ.set(id, []);
-      pred.set(id, []);
-      add(a, id);
-    }
-  }
-  const forward = (a, b2) => !back.has(`${a}>${b2}`);
-  const reaches = (from, to) => {
-    const seen = /* @__PURE__ */ new Set();
-    const stack = [from];
-    while (stack.length) {
-      const x2 = stack.pop();
-      if (x2 === to)
-        return true;
-      if (seen.has(x2))
-        continue;
-      seen.add(x2);
-      for (const s of succ.get(x2))
-        if (forward(x2, s))
-          stack.push(s);
-    }
-    return false;
-  };
-  const causal = /* @__PURE__ */ new Set();
-  for (const [a, list3] of succ)
-    for (const b2 of list3)
-      causal.add(`${a}>${b2}`);
-  const events = timeline.filter((e) => known.has(e));
-  for (let i = 1; i < events.length; i++) {
-    const [a, b2] = [events[i - 1], events[i]];
-    if (siblings(a, b2) || reaches(b2, a))
-      continue;
-    add(a, b2);
-  }
-  const order = topo(ids, succ, forward);
-  const rank = /* @__PURE__ */ new Map();
-  for (const id of order)
-    rank.set(id, Math.max(0, ...pred.get(id).filter((p) => forward(p, id)).map((p) => rank.get(p) + 1)));
-  for (const id of [...order].reverse()) {
-    if (isEvent.has(id))
-      continue;
-    const next = succ.get(id).filter((s) => forward(id, s)).map((s) => rank.get(s));
-    if (next.length)
-      rank.set(id, Math.max(rank.get(id), Math.min(...next) - 1));
-  }
-  const reach = /* @__PURE__ */ new Map();
-  for (const id of [...order].reverse())
-    reach.set(id, Math.max(rank.get(id), ...succ.get(id).filter((s) => forward(id, s)).map((s) => reach.get(s) ?? rank.get(s))));
-  const ancestors = /* @__PURE__ */ new Map();
-  const ancestorsOf = (id) => {
-    const hit = ancestors.get(id);
-    if (hit)
-      return hit;
-    const out = /* @__PURE__ */ new Set();
-    ancestors.set(id, out);
-    for (const p of pred.get(id)) {
-      if (!causal.has(`${p}>${id}`) || !forward(p, id))
-        continue;
-      out.add(p);
-      for (const x2 of ancestorsOf(p))
-        out.add(x2);
-    }
-    return out;
-  };
-  const branchOfFork = (a, s) => {
-    if (causal.has(`${a}>${s}`))
-      return false;
-    const mine = /* @__PURE__ */ new Set([a, ...ancestorsOf(a)]);
-    return pred.get(s).some((p) => causal.has(`${p}>${s}`) && forward(p, s) && !row.has(p) && [p, ...ancestorsOf(p)].some((x2) => mine.has(x2)));
-  };
-  const taken = /* @__PURE__ */ new Set();
-  const row = /* @__PURE__ */ new Map();
-  const place2 = (id, want) => {
-    if (row.has(id))
-      return;
-    let r = want;
-    while (taken.has(`${bandOf.get(id)}|${rank.get(id)}|${r}`))
-      r++;
-    row.set(id, r);
-    taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r}`);
-    const next = succ.get(id).filter((s) => forward(id, s) && !branchOfFork(id, s));
-    const pos = new Map(next.map((s, i) => [s, i]));
-    next.sort((x2, y2) => reach.get(y2) - reach.get(x2) || pos.get(x2) - pos.get(y2));
-    for (const s of next)
-      place2(s, r);
-  };
-  for (const id of order)
-    if (pred.get(id).every((p) => !forward(p, id)))
-      place2(id, 0);
-  for (const id of ids)
-    place2(id, 0);
-  return { rank, row, again, retarget };
-}
-function topo(ids, succ, forward) {
-  const indeg = new Map(ids.map((id) => [id, 0]));
-  for (const a of ids)
-    for (const b2 of succ.get(a))
-      if (forward(a, b2))
-        indeg.set(b2, indeg.get(b2) + 1);
-  const queue = ids.filter((id) => indeg.get(id) === 0);
-  const out = [];
-  while (queue.length) {
-    const id = queue.shift();
-    out.push(id);
-    for (const s of succ.get(id)) {
-      if (!forward(id, s))
-        continue;
-      indeg.set(s, indeg.get(s) - 1);
-      if (indeg.get(s) === 0)
-        queue.push(s);
-    }
-  }
-  return out;
-}
-function branchSiblings(m2) {
-  return (a, b2) => m2.commands.some((k2) => k2.produces.includes(a) && k2.produces.includes(b2));
-}
-var againIdOf;
-var init_esTimeline = __esm({
-  "packages/canvas/dist/templates/esTimeline.js"() {
-    againIdOf = (of, n) => n ? `${of}.again-${n + 1}` : `${of}.again`;
-  }
-});
-
-// packages/canvas/dist/templates/util.js
-import { createHash as createHash2 } from "node:crypto";
-function shortHash(s) {
-  return createHash2("sha1").update(s).digest("hex").slice(0, 6);
-}
-function stableId(scope, role, name) {
-  const base = slugify2(name) || "item";
-  return `${scope}.${role}.${base}-${shortHash(`${scope}|${role}|${name}`)}`;
-}
-function make(o, now) {
-  const author = o.author ?? "agent";
-  const item = {
-    id: o.id,
-    type: o.type,
-    x: Math.round(o.x),
-    y: Math.round(o.y),
-    w: Math.round(o.w),
-    h: Math.round(o.h),
-    createdBy: author,
-    updatedBy: author,
-    updatedAt: now
-  };
-  if (o.text !== void 0)
-    item.text = o.text;
-  if (o.color)
-    item.color = o.color;
-  if (o.role)
-    item.role = o.role;
-  if (o.parent)
-    item.parent = o.parent;
-  if (o.from)
-    item.from = o.from;
-  if (o.to)
-    item.to = o.to;
-  if (o.label !== void 0)
-    item.label = o.label;
-  if (o.target)
-    item.target = o.target;
-  if (o.order !== void 0)
-    item.order = o.order;
-  if (o.data)
-    item.data = o.data;
-  return item;
-}
-function arrowId(scope, from, to, key) {
-  return `${scope}.arrow.${shortHash(`${from}->${to}${key ? `:${key}` : ""}`)}`;
-}
-function arrow(scope, from, to, now, label2, role, extra = {}) {
-  return make({ id: arrowId(scope, from, to, extra.key), type: "arrow", x: 0, y: 0, w: 0, h: 0, from, to, label: label2, role, color: "grey", ...extra.data ? { data: extra.data } : {} }, now);
-}
-function fit(container, children, pad = PAD, header = LANE_HEADER) {
-  if (children.length === 0)
-    return container;
-  const minX = Math.min(...children.map((c2) => c2.x));
-  const minY = Math.min(...children.map((c2) => c2.y));
-  const maxX = Math.max(...children.map((c2) => c2.x + c2.w));
-  const maxY = Math.max(...children.map((c2) => c2.y + c2.h));
-  return {
-    ...container,
-    x: Math.min(container.x, minX - pad),
-    y: Math.min(container.y, minY - pad - header),
-    w: Math.max(container.w, maxX + pad - Math.min(container.x, minX - pad)),
-    h: Math.max(container.h, maxY + pad - Math.min(container.y, minY - pad - header))
-  };
-}
-function offsetAll(items, at3) {
-  if (!at3 || at3.x === 0 && at3.y === 0)
-    return items;
-  return items.map((i) => i.type === "arrow" ? i : { ...i, x: i.x + at3.x, y: i.y + at3.y });
-}
-var STICKY_W, STICKY_H, SMALL_W, SMALL_H, GAP, PAD, LANE_HEADER;
-var init_util2 = __esm({
-  "packages/canvas/dist/templates/util.js"() {
-    init_ids2();
-    init_ids2();
-    STICKY_W = 160;
-    STICKY_H = 110;
-    SMALL_W = 120;
-    SMALL_H = 80;
-    GAP = 30;
-    PAD = 40;
-    LANE_HEADER = 44;
-  }
-});
-
-// packages/canvas/dist/templates/event-storming.js
-function renderEventStorming(raw, opts = {}) {
-  const m2 = normalizeEventStorming(raw);
-  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
-  const scope = opts.scope ?? "es";
-  const itemId = (role, element) => `${scope}.${role}.${element}`;
-  const detailed = m2.level !== "big-picture";
-  const aggOf = /* @__PURE__ */ new Map();
-  if (m2.level === "software" && m2.aggregates.length) {
-    for (const e of m2.events)
-      if (e.aggregate)
-        aggOf.set(e.id, e.aggregate);
-    for (const k2 of m2.commands) {
-      const a = k2.aggregate ?? k2.produces.map((e) => aggOf.get(e)).find(Boolean);
-      if (a) {
-        aggOf.set(k2.id, a);
-        for (const e of k2.produces)
-          if (!aggOf.has(e))
-            aggOf.set(e, a);
-      }
-    }
-    for (const p of m2.policies) {
-      const a = p.when.map((e) => aggOf.get(e)).find(Boolean);
-      if (a)
-        aggOf.set(p.id, a);
-    }
-    for (const r of m2.readModels) {
-      const a = r.informs.map((x2) => aggOf.get(x2)).find(Boolean);
-      if (a)
-        aggOf.set(r.id, a);
-    }
-  }
-  const laneKeys = m2.lanes.map((name, i) => `lane:${i}:${name}`);
-  const timelineBand = (lane) => m2.lanes.length ? laneKeys[lane] : "timeline";
-  const eventById = new Map(m2.events.map((e) => [e.id, e]));
-  const bandOfEvent = (id) => {
-    if (!id)
-      return timelineBand(0);
-    const a = aggOf.get(id);
-    return a ? `agg:${a}` : timelineBand(eventById.get(id)?.lane ?? 0);
-  };
-  const personText = (id) => m2.people.find((p) => p.id === id)?.text ?? id;
-  const systemText = (id) => m2.systems.find((s) => s.id === id)?.text ?? id;
-  const systemRole = (id) => m2.systems.find((s) => s.id === id)?.external ? "external" : "system";
-  const nodes = [];
-  const edges = [];
-  const systemOcc = /* @__PURE__ */ new Map();
-  const nodeOf = /* @__PURE__ */ new Map();
-  const inlineRm = /* @__PURE__ */ new Set();
-  const ev = (id) => itemId("event", id);
-  for (const e of m2.events) {
-    nodes.push({ id: ev(e.id), band: bandOfEvent(e.id) });
-    nodeOf.set(e.id, ev(e.id));
-  }
-  if (detailed) {
-    for (const k2 of m2.commands) {
-      const via = m2.policies.find((p) => p.then.includes(k2.id))?.when[0];
-      const band = aggOf.has(k2.id) ? `agg:${aggOf.get(k2.id)}` : bandOfEvent(k2.produces[0] ?? via);
-      const cmd2 = itemId("command", k2.id);
-      nodes.push({ id: cmd2, band });
-      nodeOf.set(k2.id, cmd2);
-      let last = cmd2;
-      if (k2.system) {
-        const sys = itemId("system", `${k2.system}.${k2.id}`);
-        systemOcc.set(`${k2.system}|${k2.id}`, sys);
-        nodes.push({ id: sys, band });
-        edges.push([cmd2, sys]);
-        last = sys;
-      }
-      for (const e of k2.produces)
-        edges.push([last, ev(e)]);
-    }
-    for (const p of m2.policies) {
-      const po = itemId("policy", p.id);
-      nodes.push({ id: po, band: aggOf.has(p.id) ? `agg:${aggOf.get(p.id)}` : bandOfEvent(p.when[0]) });
-      nodeOf.set(p.id, po);
-      for (const e of p.when)
-        edges.push([ev(e), po]);
-      for (const k2 of p.then)
-        edges.push([po, itemId("command", k2)]);
-    }
-    for (const r of m2.readModels) {
-      const cmds = r.informs.filter((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
-      if (!cmds.length)
-        continue;
-      const rm = itemId("read-model", r.id);
-      const updates = r.updatedBy.filter((e) => eventById.has(e));
-      const band = aggOf.has(r.id) ? `agg:${aggOf.get(r.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : nodes.find((n) => n.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0);
-      nodes.push({ id: rm, band });
-      nodeOf.set(r.id, rm);
-      inlineRm.add(r.id);
-      for (const e of updates)
-        edges.push([ev(e), rm]);
-      for (const k2 of cmds)
-        edges.push([rm, itemId("command", k2)]);
-    }
-  }
-  const raisers = [];
-  for (const s of m2.systems) {
-    for (const e of s.raises) {
-      if (!eventById.has(e) || systemOcc.has(`${s.id}|${e}`))
-        continue;
-      const id = itemId("system", `${s.id}.${e}`);
-      systemOcc.set(`${s.id}|${e}`, id);
-      raisers.push({ id, system: s.id, event: e });
-      if (detailed) {
-        nodes.push({ id, band: bandOfEvent(e) });
-        edges.push([id, ev(e)]);
-      }
-    }
-  }
-  const timeline = m2.events.map((e) => ev(e.id));
-  let rank;
-  let row;
-  let again = [];
-  let retarget = /* @__PURE__ */ new Map();
-  if (detailed) {
-    const siblings = branchSiblings(m2);
-    ({ rank, row, again, retarget } = placeFlow(nodes, edges, timeline, (a, b2) => siblings(a.slice(scope.length + 7), b2.slice(scope.length + 7)), { time: flowTimes(m2, itemId, systemOcc, inlineRm) }));
-    nodes.push(...again.map((a) => ({ id: a.id, band: a.band })));
-    const minRank = /* @__PURE__ */ new Map();
-    for (const n of nodes)
-      if (n.band.startsWith("agg:"))
-        minRank.set(n.band, Math.min(minRank.get(n.band) ?? Infinity, rank.get(n.id)));
-    for (const n of nodes)
-      if (minRank.has(n.band))
-        rank.set(n.id, rank.get(n.id) - minRank.get(n.band));
-  } else {
-    rank = /* @__PURE__ */ new Map();
-    row = /* @__PURE__ */ new Map();
-    const perBand = /* @__PURE__ */ new Map();
-    for (const e of m2.events) {
-      const band = bandOfEvent(e.id);
-      const col = band.startsWith("agg:") ? (perBand.set(band, (perBand.get(band) ?? -1) + 1), perBand.get(band)) : m2.events.filter((x2) => !aggOf.has(x2.id)).indexOf(e);
-      rank.set(ev(e.id), col);
-      row.set(ev(e.id), 0);
-    }
-  }
-  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
-  const at3 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
-  const atElement = (element) => {
-    const n = element ? nodeOf.get(element) : void 0;
-    return n && rank.has(n) ? at3(n) : void 0;
-  };
-  const slots = [];
-  const slot = (s) => slots.push({ ...s, data: s.data ?? {} });
-  const rmWhere = /* @__PURE__ */ new Map();
-  const personAt = /* @__PURE__ */ new Map();
-  const personSlot = (person, where, anchor2) => {
-    const key = `${where.band}|${where.rank}|${where.row}|${person}`;
-    if (personAt.has(key))
-      return personAt.get(key);
-    const id = itemId("person", `${person}.${anchor2}`);
-    personAt.set(key, id);
-    slot({ ...where, strip: "person", id, role: "person", text: personText(person), color: ES_COLORS.person, w: SMALL_W, h: SMALL_H, data: { element: person, occurrence: true, for: anchor2 } });
-    return id;
-  };
-  for (const e of m2.events) {
-    slot({
-      ...at3(ev(e.id)),
-      strip: "main",
-      id: ev(e.id),
-      role: "event",
-      text: e.text,
-      color: ES_COLORS.event,
-      w: e.pivotal ? PIVOTAL_W : STICKY_W,
-      h: e.pivotal ? PIVOTAL_H : STICKY_H,
-      order: e.order,
-      data: { element: e.id, pivotal: e.pivotal, ...e.time ? { time: e.time } : {}, ...e.recurring ? { recurring: true } : {}, ...e.aggregate ? { aggregate: e.aggregate } : {}, ...e.traces.length ? { traces: e.traces } : {} }
-    });
-    const commandHasPerson = detailed && m2.commands.some((k2) => k2.by && k2.produces.includes(e.id));
-    if (e.person && !commandHasPerson)
-      personSlot(e.person, at3(ev(e.id)), e.id);
-  }
-  if (detailed) {
-    for (const k2 of m2.commands) {
-      const cmd2 = itemId("command", k2.id);
-      slot({ ...at3(cmd2), strip: "main", id: cmd2, role: "command", text: k2.text, color: ES_COLORS.command, w: STICKY_W, h: STICKY_H, data: { element: k2.id, produces: k2.produces, ...k2.aggregate ? { aggregate: k2.aggregate } : {}, ...k2.traces.length ? { traces: k2.traces } : {} } });
-      if (k2.by)
-        personSlot(k2.by, at3(cmd2), k2.id);
-      const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
-      if (sys && k2.system)
-        slot({ ...at3(sys), strip: "main", id: sys, role: systemRole(k2.system), text: systemText(k2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: k2.system, occurrence: true, for: k2.id } });
-    }
-    for (const p of m2.policies) {
-      const po = itemId("policy", p.id);
-      slot({ ...at3(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
-    }
-    for (const r of m2.readModels) {
-      const rm = itemId("read-model", r.id);
-      const lastUpdate = r.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
-      const inline = inlineRm.has(r.id) && rank.has(rm);
-      const where = inline ? at3(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
-      nodeOf.set(r.id, rm);
-      rmWhere.set(r.id, where);
-      slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r.id, updatedBy: r.updatedBy, informs: r.informs, ...r.traces.length ? { traces: r.traces } : {} } });
-    }
-  }
-  for (const x2 of raisers) {
-    if (detailed)
-      slot({ ...at3(x2.id), strip: "main", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
-    else
-      slot({ ...at3(ev(x2.event)), strip: "below", id: x2.id, role: systemRole(x2.system), text: systemText(x2.system), color: ES_COLORS.system, w: STICKY_W, h: STICKY_H, data: { element: x2.system, occurrence: true, for: x2.event } });
-  }
-  for (const a of again) {
-    const orig = slots.find((s) => s.id === a.of);
-    if (!orig)
-      continue;
-    slot({ ...at3(a.id), strip: orig.strip, id: a.id, role: orig.role, text: orig.text, color: orig.color, w: orig.w, h: orig.h, data: { element: orig.data.element, occurrence: true, repeats: a.of } });
-    const k2 = orig.role === "command" ? m2.commands.find((c2) => c2.id === orig.data.element) : void 0;
-    if (k2?.by)
-      personSlot(k2.by, at3(a.id), a.id.slice(`${scope}.command.`.length));
-  }
-  if (detailed) {
-    for (const r of m2.readModels) {
-      const where = rmWhere.get(r.id);
-      if (!where)
-        continue;
-      for (const x2 of r.informs) {
-        if (m2.kindOf.get(x2) !== "person")
-          continue;
-        const later = [...personAt.keys()].some((key) => {
-          const parts2 = key.split("|");
-          const [band, rk, person] = [parts2.slice(0, -3).join("|"), Number(parts2[parts2.length - 3]), parts2[parts2.length - 1]];
-          return person === x2 && rk >= where.rank && (band === where.band || !band.startsWith("agg:") && !where.band.startsWith("agg:"));
-        });
-        if (!later)
-          personSlot(x2, where, r.id);
-      }
-    }
-  }
-  for (const ms of m2.milestones) {
-    const where = atElement(ms.before) ?? { band: timelineBand(0), rank: 0, row: 0 };
-    slot({ ...where, strip: "milestone", id: itemId("milestone", ms.id), role: "milestone", text: ms.text, color: ES_COLORS.milestone, w: SMALL_W, h: MILESTONE_H, data: { element: ms.id, before: ms.before } });
-  }
-  const noteWhere = /* @__PURE__ */ new Map();
-  const note = (role, id, text3, on, i, color, data = {}) => {
-    const where = (on ? noteWhere.get(on) ?? atElement(on) : void 0) ?? { band: timelineBand(0), rank: i, row: 0 };
-    noteWhere.set(id, where);
-    slot({ ...where, strip: "note", id: itemId(role, id), role, text: text3, color, w: SMALL_W, h: SMALL_H, data: { element: id, on, ...data } });
-  };
-  m2.hotspots.forEach((h, i) => note("hotspot", h.id, h.text, h.on, i, ES_COLORS.hotspot, { rotate: -8, ...h.kind ? { kind: h.kind } : {} }));
-  m2.opportunities.forEach((o, i) => note("opportunity", o.id, o.text, o.on, i, ES_COLORS.opportunity));
-  m2.values.forEach((v2, i) => note("value", v2.id, `${v2.sign === "+" ? "+" : "\u2212"} ${v2.currency ? `${v2.currency}: ` : ""}${v2.text}`, v2.on, i, v2.sign === "+" ? ES_COLORS["value+"] : ES_COLORS["value-"], { sign: v2.sign }));
-  m2.votes.forEach((v2, i) => note("vote", v2.id, `\u2191 ${v2.count}`, v2.on, i, ES_COLORS.vote, { count: v2.count }));
-  const items = [];
-  const layoutBand = (band) => {
-    const inBand = slots.filter((s) => s.band === band);
-    const depth = /* @__PURE__ */ new Map();
-    const unit = /* @__PURE__ */ new Map();
-    const perCell = /* @__PURE__ */ new Map();
-    for (const s of inBand) {
-      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
-      const k2 = (perCell.get(cell2) ?? 0) + 1;
-      perCell.set(cell2, k2);
-      const key = `${s.row}|${s.strip}`;
-      depth.set(key, Math.max(depth.get(key) ?? 0, k2));
-      unit.set(key, Math.max(unit.get(key) ?? STRIP_H[s.strip], s.h));
-    }
-    const rows = Math.max(0, ...inBand.map((s) => s.row + 1));
-    const top = /* @__PURE__ */ new Map();
-    let y3 = 0;
-    for (let r = 0; r < rows; r++) {
-      for (const st of STRIPS) {
-        const key = `${r}|${st}`;
-        top.set(key, y3);
-        const n = depth.get(key) ?? 0;
-        if (n)
-          y3 += n * unit.get(key) + (n - 1) * STACK + GAP;
-      }
-      y3 += GAP;
-    }
-    const placed = /* @__PURE__ */ new Map();
-    const positioned = inBand.map((s) => {
-      const cell2 = `${s.rank}|${s.row}|${s.strip}`;
-      const k2 = placed.get(cell2) ?? 0;
-      placed.set(cell2, k2 + 1);
-      const key = `${s.row}|${s.strip}`;
-      const dx = s.rank * COL + Math.max(0, (STICKY_W - s.w) / 2);
-      return { s, dx, dy: top.get(key) + k2 * (unit.get(key) + STACK) };
-    });
-    return { positioned, height: Math.max(y3 - GAP * 2, STICKY_H) + PAD };
-  };
-  const eventRank = (id) => id && !aggOf.has(id) ? rank.get(ev(id)) : void 0;
-  const timelineRanks = m2.events.filter((e) => !aggOf.has(e.id)).map((e) => rank.get(ev(e.id)));
-  const lastRank = Math.max(0, ...timelineRanks);
-  const phaseBars = m2.phases.map((ph) => {
-    const members2 = m2.events.filter((e) => e.phase === ph.id).map((e) => eventRank(e.id)).filter((r) => r !== void 0);
-    const from = eventRank(ph.from) ?? (members2.length ? Math.min(...members2) : 0);
-    const to2 = eventRank(ph.to) ?? (members2.length ? Math.max(...members2) : lastRank);
-    return { ph, from: Math.min(from, to2), to: Math.max(from, to2) };
-  });
-  const phaseRows = [];
-  const phaseRowOf = phaseBars.map((b2) => {
-    let r = phaseRows.findIndex((pr) => pr.every((o) => b2.to < o.from || b2.from > o.to));
-    if (r < 0)
-      r = phaseRows.push([]) - 1;
-    phaseRows[r].push(b2);
-    return r;
-  });
-  const PHASE_H = 32;
-  const phasesH = phaseRows.length ? phaseRows.length * (PHASE_H + STACK) + GAP : 0;
-  phaseBars.forEach((b2, i) => {
-    items.push(make({ id: itemId("phase", b2.ph.id), type: "text", x: PAD + b2.from * COL, y: PAD + phaseRowOf[i] * (PHASE_H + STACK), w: (b2.to - b2.from) * COL + STICKY_W, h: PHASE_H, text: b2.ph.text, role: "phase", color: ES_COLORS.phase, data: { element: b2.ph.id, from: b2.ph.from, to: b2.ph.to, header: "column" } }, now));
-  });
-  const timelineBands = m2.lanes.length ? laneKeys : ["timeline"];
-  const laneIds = /* @__PURE__ */ new Map();
-  const laneSlug = /* @__PURE__ */ new Set();
-  m2.lanes.forEach((name, i) => {
-    let sl = slugify2(name) || "lane";
-    for (let n = 2; laneSlug.has(sl); n++)
-      sl = `${slugify2(name) || "lane"}-${n}`;
-    laneSlug.add(sl);
-    laneIds.set(laneKeys[i], itemId("lane", sl));
-  });
-  const itemOf = /* @__PURE__ */ new Map();
-  const bandTop = /* @__PURE__ */ new Map();
-  const bandH = /* @__PURE__ */ new Map();
-  let y2 = PAD + phasesH;
-  for (const band of timelineBands) {
-    const laid = layoutBand(band);
-    const top = y2 + (m2.lanes.length ? LANE_HEADER : 0);
-    bandTop.set(band, top);
-    bandH.set(band, laid.height);
-    for (const { s, dx, dy } of laid.positioned) {
-      const it = make({ id: s.id, type: "sticky", x: PAD + dx, y: top + dy, w: s.w, h: s.h, text: s.text, color: s.color, role: s.role, parent: laneIds.get(band), order: s.order, data: s.data }, now);
-      items.push(it);
-      itemOf.set(s.id, it);
-    }
-    y2 = top + laid.height + (m2.lanes.length ? GAP : 0);
-  }
-  for (const e of m2.events.filter((e2) => e2.pivotal && !aggOf.has(e2.id))) {
-    const band = bandOfEvent(e.id);
-    const r = rank.get(ev(e.id)) ?? 0;
-    items.push(make({ id: itemId("pivotal", e.id), type: "text", x: PAD + r * COL - (COL - STICKY_W) / 2 - 2, y: bandTop.get(band) - (m2.lanes.length ? LANE_HEADER / 2 : 0), w: 4, h: bandH.get(band), text: "", role: "pivotal", color: "grey", parent: laneIds.get(band), data: { for: ev(e.id), element: e.id } }, now));
-  }
-  const width = PAD * 2 + lastRank * COL + PIVOTAL_W;
-  const laneItems = m2.lanes.map((name, i) => {
-    const key = laneKeys[i];
-    const base = make({ id: laneIds.get(key), type: "lane", x: 0, y: bandTop.get(key) - LANE_HEADER, w: width, h: bandH.get(key) + LANE_HEADER, text: name, role: "lane", color: "grey", order: i, data: { header: "row" } }, now);
-    return fit(base, items.filter((it) => it.parent === base.id), PAD, LANE_HEADER);
-  });
-  const laneW = Math.max(width, ...laneItems.map((l) => l.x + l.w));
-  const lanes = laneItems.map((l) => ({ ...l, x: 0, w: laneW }));
-  let bottom = y2;
-  const aggFrames = [];
-  const aggBands = m2.aggregates.filter((a) => [...aggOf.values()].includes(a.id)).map((a) => `agg:${a.id}`);
-  if (aggBands.length) {
-    let x2 = PAD;
-    const top = bottom + GAP * 2 + LANE_HEADER;
-    for (const band of aggBands) {
-      const a = m2.aggregates.find((g2) => `agg:${g2.id}` === band);
-      const frameId = itemId("aggregate-frame", a.id);
-      const agSticky = make({ id: itemId("aggregate", a.id), type: "sticky", x: x2, y: top, w: STICKY_W, h: SMALL_H, text: a.text, color: ES_COLORS.aggregate, role: "aggregate", parent: frameId, data: { element: a.id } }, now);
-      const inside = [agSticky];
-      for (const { s, dx, dy } of layoutBand(band).positioned) {
-        const it = make({ id: s.id, type: "sticky", x: x2 + dx, y: top + SMALL_H + GAP + dy, w: s.w, h: s.h, text: s.text, color: s.color, role: s.role, parent: frameId, order: s.order, data: s.data }, now);
-        inside.push(it);
-        itemOf.set(s.id, it);
-      }
-      const frame = fit(make({ id: frameId, type: "frame", x: x2, y: top, w: 0, h: 0, text: `\xABaggregate\xBB ${a.text}`, role: "aggregate", color: "pale-yellow", data: { element: a.id } }, now), inside, GAP / 2, LANE_HEADER / 2);
-      aggFrames.push(frame);
-      items.push(...inside);
-      x2 = frame.x + frame.w + GAP;
-    }
-    bottom = Math.max(bottom, ...aggFrames.map((f) => f.y + f.h));
-  }
-  if (m2.definitions.length) {
-    const dy = bottom + GAP;
-    m2.definitions.forEach((d, i) => items.push(make({ id: itemId("definition", d.id), type: "sticky", x: PAD + i * (STICKY_W + GAP), y: dy, w: STICKY_W, h: STICKY_H, text: `${d.term}: ${d.text}`, role: "definition", color: ES_COLORS.definition, data: { element: d.id, term: d.term } }, now)));
-    bottom = dy + STICKY_H;
-  }
-  if (m2.legend)
-    bottom = legend(m2, items, scope, bottom, now);
-  const arrows = [];
-  const has2 = (id) => itemOf.has(id);
-  const to = (from, target) => retarget.get(`${from}>${target}`) ?? target;
-  if (detailed) {
-    for (const k2 of m2.commands) {
-      const cmd2 = itemId("command", k2.id);
-      const sys = k2.system ? systemOcc.get(`${k2.system}|${k2.id}`) : void 0;
-      if (sys)
-        arrows.push(arrow(scope, cmd2, to(cmd2, sys), now, void 0, "handles"));
-      k2.produces.forEach((e, i) => {
-        const target = to(sys ?? cmd2, ev(e));
-        if (!has2(target))
-          return;
-        arrows.push(arrow(scope, sys ?? cmd2, target, now, void 0, "produces", i ? { data: { branch: i } } : {}));
-      });
-    }
-    for (const p of m2.policies) {
-      const po = itemId("policy", p.id);
-      for (const e of p.when)
-        if (has2(ev(e)))
-          arrows.push(arrow(scope, ev(e), to(ev(e), po), now, "whenever", "triggers"));
-      for (const k2 of p.then)
-        arrows.push(arrow(scope, po, to(po, itemId("command", k2)), now, "then", "triggers"));
-    }
-    for (const r of m2.readModels) {
-      const rm = itemId("read-model", r.id);
-      const rmX = itemOf.get(rm)?.x ?? 0;
-      for (const e of r.updatedBy)
-        if (has2(ev(e)))
-          arrows.push(arrow(scope, ev(e), to(ev(e), rm), now, void 0, "updates"));
-      for (const x2 of r.informs) {
-        const occurrences = [...personAt.entries()].filter(([key]) => key.endsWith(`|${x2}`)).map(([, id]) => itemOf.get(id)).filter((it) => Boolean(it));
-        const person = occurrences.filter((it) => it.x >= rmX).sort((a, b2) => a.x - b2.x)[0] ?? occurrences.sort((a, b2) => b2.x - a.x)[0];
-        const target = m2.kindOf.get(x2) === "command" ? to(rm, itemId("command", x2)) : person?.id;
-        if (target && has2(target))
-          arrows.push(arrow(scope, rm, target, now, "informs", "informs"));
-      }
-    }
-  }
-  for (const [key, id] of systemOcc) {
-    const [sys, anchor2] = key.split("|");
-    if (m2.kindOf.get(anchor2) === "event" && has2(ev(anchor2)) && has2(id))
-      arrows.push(arrow(scope, id, to(id, ev(anchor2)), now, void 0, "raises", { data: { system: sys } }));
-  }
-  return offsetAll([...lanes, ...aggFrames, ...items, ...arrows], opts.at);
-}
-function flowTimes(m2, itemId, systemOcc, inlineRm) {
-  const t = /* @__PURE__ */ new Map();
-  const idx = new Map(m2.events.map((e, i) => [e.id, i]));
-  for (const e of m2.events)
-    t.set(itemId("event", e.id), idx.get(e.id));
-  const policyT = /* @__PURE__ */ new Map();
-  for (const p of m2.policies) {
-    const when2 = p.when.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
-    if (when2.length)
-      policyT.set(p.id, Math.max(...when2) + 0.25);
-    if (policyT.has(p.id))
-      t.set(itemId("policy", p.id), policyT.get(p.id));
-  }
-  const commandT = /* @__PURE__ */ new Map();
-  for (const k2 of m2.commands) {
-    const produced = k2.produces.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
-    const by = m2.policies.filter((p) => p.then.includes(k2.id) && policyT.has(p.id)).map((p) => policyT.get(p.id));
-    const at3 = produced.length ? Math.min(...produced) - 0.5 : by.length ? Math.min(...by) + 0.1 : void 0;
-    if (at3 === void 0)
-      continue;
-    commandT.set(k2.id, at3);
-    t.set(itemId("command", k2.id), at3);
-  }
-  for (const [key, id] of systemOcc) {
-    const anchor2 = key.slice(key.indexOf("|") + 1);
-    if (commandT.has(anchor2))
-      t.set(id, commandT.get(anchor2) + 0.2);
-    else if (idx.has(anchor2))
-      t.set(id, idx.get(anchor2) - 0.3);
-  }
-  for (const r of m2.readModels) {
-    if (!inlineRm.has(r.id))
-      continue;
-    const updates = r.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
-    const cmds = r.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
-    const at3 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
-    if (at3 !== void 0)
-      t.set(itemId("read-model", r.id), at3);
-  }
-  return t;
-}
-function legend(m2, items, scope, bottom, now) {
-  const used = /* @__PURE__ */ new Set();
-  for (const it of items) {
-    if (it.role === "value")
-      used.add(it.data?.sign === "-" ? "value-" : "value+");
-    else if (it.role === "external")
-      used.add("system");
-    else if (it.role && it.role in ES_COLORS)
-      used.add(it.role);
-  }
-  if (m2.aggregates.length && m2.level === "software")
-    used.add("aggregate");
-  const kinds = Object.keys(ES_COLORS).filter((k2) => used.has(k2));
-  if (!kinds.length)
-    return bottom;
-  const y2 = bottom + GAP;
-  items.push(make({ id: `${scope}.legend-title.legend`, type: "text", x: PAD, y: y2, w: 400, h: 28, text: "Legend \u2014 Introducing EventStorming (p.314)", role: "legend-title", color: "white" }, now));
-  const LEGEND_W = 150;
-  kinds.forEach((k2, i) => items.push(make({ id: `${scope}.legend.${k2}`, type: "sticky", x: PAD + i * (LEGEND_W + GAP / 2), y: y2 + 36, w: LEGEND_W, h: 60, text: ES_LEGEND[k2], role: "legend", color: ES_COLORS[k2], data: { for: k2 } }, now)));
-  return y2 + 36 + 60;
-}
-var COL, PIVOTAL_W, PIVOTAL_H, MILESTONE_H, STACK, STRIPS, STRIP_H;
-var init_event_storming = __esm({
-  "packages/canvas/dist/templates/event-storming.js"() {
-    init_eventStorming();
-    init_ids2();
-    init_esTimeline();
-    init_util2();
-    init_eventStorming();
-    COL = STICKY_W + 96;
-    PIVOTAL_W = STICKY_W + 16;
-    PIVOTAL_H = STICKY_H + 24;
-    MILESTONE_H = 50;
-    STACK = GAP / 2;
-    STRIPS = ["milestone", "read-model", "person", "main", "below", "note"];
-    STRIP_H = { milestone: MILESTONE_H, "read-model": STICKY_H, person: SMALL_H, main: STICKY_H, below: STICKY_H, note: SMALL_H };
-  }
-});
-
-// packages/canvas/dist/templates/user-story-map.js
-function renderUserStoryMap(raw, opts = {}) {
-  const m2 = normalizeUserStoryMap(raw);
-  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
-  const scope = opts.scope ?? "usm";
-  const itemId = (role, element) => `${scope}.${role}.${element}`;
-  const items = [];
-  const rowActivity = PAD;
-  const rowStep = rowActivity + STICKY_H + GAP;
-  const rowStoriesStart = rowStep + CARD_H + GAP + LANE_HEADER;
-  let col = 0;
-  const stepCols = [];
-  m2.activities.forEach((a, ai) => {
-    const startCol = col;
-    a.steps.forEach((s) => stepCols.push({ id: s.id, text: s.text, col: col++, stories: s.stories }));
-    if (a.steps.length === 0)
-      col++;
-    const span = Math.max(col - startCol, 1);
-    items.push(make({ id: itemId("activity", a.id), type: "sticky", x: PAD + startCol * COL2, y: rowActivity, w: span * COL2 - GAP / 2, h: STICKY_H, text: a.text, color: "blue", role: "activity", order: ai, data: { element: a.id, header: "column" } }, now));
-  });
-  stepCols.forEach((s, i) => {
-    items.push(make({ id: itemId("step", s.id), type: "sticky", x: PAD + s.col * COL2, y: rowStep, w: CARD_W, h: CARD_H, text: s.text, color: "yellow", role: "step", order: i, data: { element: s.id, header: "column" } }, now));
-  });
-  const width = PAD * 2 + Math.max(col, 1) * COL2;
-  let y2 = rowStoriesStart;
-  const lanes = [];
-  const laneSlugs = /* @__PURE__ */ new Set();
-  m2.releases.forEach((rel, ri) => {
-    let slug3 = slugify2(rel) || "release";
-    for (let n = 2; laneSlugs.has(slug3); n++)
-      slug3 = `${slugify2(rel) || "release"}-${n}`;
-    laneSlugs.add(slug3);
-    const laneId = itemId("release", slug3);
-    const laneStories = [];
-    let maxRows = 0;
-    stepCols.forEach((s) => {
-      const inRel = s.stories.filter((st) => st.release === rel);
-      maxRows = Math.max(maxRows, inRel.length);
-      inRel.forEach((st, k2) => {
-        const data = { element: st.id, release: rel, step: s.id };
-        if (st.acceptance.length)
-          data.acceptance = st.acceptance;
-        if (st.traces.length)
-          data.traces = st.traces;
-        laneStories.push(make({ id: itemId("story", st.id), type: "card", x: PAD + s.col * COL2, y: y2 + k2 * (CARD_H + GAP / 2), w: CARD_W, h: CARD_H, text: st.text, color: "white", role: "story", parent: laneId, order: k2, data }, now));
-      });
-    });
-    const laneH = Math.max(maxRows, 1) * (CARD_H + GAP / 2) + PAD;
-    const lane = make({ id: laneId, type: "lane", x: 0, y: y2 - LANE_HEADER, w: width, h: laneH + LANE_HEADER, text: rel, role: "release", color: "grey", order: ri, data: { release: rel, header: "row" } }, now);
-    lanes.push(fit(lane, laneStories, PAD / 2, LANE_HEADER));
-    items.push(...laneStories);
-    y2 += laneH + LANE_HEADER + GAP / 2;
-  });
-  lanes.forEach((lane, i) => {
-    if (i === 0)
-      return;
-    const prev = lanes[i - 1];
-    const y3 = (prev.y + prev.h + lane.y) / 2 - 2;
-    items.push(make({ id: `${lane.id.replace(".release.", ".release-cut.")}`, type: "text", x: 0, y: y3, w: width, h: 4, text: "", role: "release-cut", color: "grey", data: { release: lane.data?.release } }, now));
-  });
-  return offsetAll([...lanes, ...items], opts.at);
-}
-var CARD_W, CARD_H, COL2;
-var init_user_story_map = __esm({
-  "packages/canvas/dist/templates/user-story-map.js"() {
-    init_userStoryMap();
-    init_ids2();
-    init_util2();
-    init_userStoryMap();
-    CARD_W = 150;
-    CARD_H = 90;
-    COL2 = CARD_W + GAP / 2;
-  }
-});
-
-// packages/canvas/dist/templates/user-journey.js
-function renderUserJourney(raw, opts = {}) {
-  const c2 = userJourneySchema.parse(raw);
-  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
-  const scope = opts.scope ?? "uj";
-  const id = (role, name) => stableId(scope, role, name);
-  const items = [];
-  const labelW = 130;
-  const x0 = PAD + labelW + GAP;
-  const alloc = idAllocator();
-  const stageEl = c2.stages.map((s) => alloc(void 0, s.text, "stage"));
-  items.push(make({ id: id("persona", c2.persona), type: "text", x: PAD, y: PAD, w: labelW + c2.stages.length * COL3, h: 40, text: `Persona: ${c2.persona}`, role: "persona", color: "white" }, now));
-  const facets = [
-    { key: "actions", label: "Actions", color: "white" },
-    { key: "touchpoints", label: "Touchpoints", color: "blue" },
-    { key: "pains", label: "Pain points", color: "red" },
-    { key: "opportunities", label: "Opportunities", color: "green" }
-  ];
-  const maxRows = (key) => Math.max(1, ...c2.stages.map((s) => s[key].length));
-  let y2 = PAD + 40 + GAP;
-  c2.stages.forEach((s, i) => {
-    items.push(make({ id: id("stage", s.text), type: "sticky", x: x0 + i * COL3, y: y2, w: STICKY_W, h: 70, text: s.text, color: "yellow", role: "stage", order: i, data: { element: stageEl[i] } }, now));
-  });
-  y2 += 70 + GAP;
-  const drawFacet = (f) => {
-    const rows = maxRows(f.key);
-    const rowId = id("row", f.label);
-    items.push(make({ id: rowId, type: "text", x: PAD, y: y2, w: labelW, h: 40, text: f.label, role: "row-label", color: "grey" }, now));
-    c2.stages.forEach((s, i) => {
-      s[f.key].forEach((t, k2) => {
-        items.push(make({ id: id(f.key.replace(/s$/, ""), `${s.text}/${t}`), type: "sticky", x: x0 + i * COL3, y: y2 + k2 * ROW_H, w: STICKY_W, h: ROW_H - GAP / 2, text: t, color: f.color, role: f.key.replace(/s$/, ""), data: { stage: s.text, element: alloc(`${stageEl[i]}/${slugify2(t) || f.key.replace(/s$/, "")}`, t) } }, now));
-      });
-    });
-    y2 += rows * ROW_H + GAP / 2;
-  };
-  drawFacet(facets[0]);
-  drawFacet(facets[1]);
-  const laneId = id("row", "Emotion");
-  items.push(make({ id: laneId, type: "lane", x: PAD, y: y2 - LANE_HEADER / 2, w: labelW + c2.stages.length * COL3 + GAP, h: EMOTION_H + LANE_HEADER, text: "Emotion", role: "emotion-lane", color: "grey" }, now));
-  const faces = ["\u{1F62B}", "\u{1F641}", "\u{1F610}", "\u{1F642}", "\u{1F604}"];
-  let prev;
-  c2.stages.forEach((s, i) => {
-    const level = s.emotion;
-    const ey = y2 + (2 - level) * 40;
-    const e = make({ id: id("emotion", s.text), type: "sticky", x: x0 + i * COL3 + STICKY_W / 2 - 30, y: ey, w: 60, h: 40, text: faces[level + 2], color: level > 0 ? "green" : level < 0 ? "red" : "yellow", role: "emotion", parent: laneId, data: { stage: s.text, emotion: level, element: alloc(`${stageEl[i]}/emotion`, "emotion") } }, now);
-    items.push(e);
-    if (prev)
-      items.push(arrow(scope, prev, e.id, now, void 0, "emotion-curve"));
-    prev = e.id;
-  });
-  y2 += EMOTION_H + LANE_HEADER;
-  drawFacet(facets[2]);
-  drawFacet(facets[3]);
-  return offsetAll(items, opts.at);
-}
-var userJourneySchema, COL3, ROW_H, EMOTION_H;
-var init_user_journey = __esm({
-  "packages/canvas/dist/templates/user-journey.js"() {
-    init_zod();
-    init_ids2();
-    init_util2();
-    userJourneySchema = external_exports.object({
-      persona: external_exports.string(),
-      stages: external_exports.array(external_exports.object({
-        text: external_exports.string(),
-        actions: external_exports.array(external_exports.string()).default([]),
-        touchpoints: external_exports.array(external_exports.string()).default([]),
-        emotion: external_exports.number().int().min(-2).max(2).default(0),
-        pains: external_exports.array(external_exports.string()).default([]),
-        opportunities: external_exports.array(external_exports.string()).default([])
-      })).min(1),
-      /** What a stage or a sticky is for (docs/diagrams.md "Annotations"): numbered cards below the journey. */
-      annotations: annotationsSchema.optional()
-    });
-    COL3 = STICKY_W + GAP;
-    ROW_H = 90;
-    EMOTION_H = 5 * 40 + GAP;
-  }
-});
-
 // packages/canvas/dist/templates/annotations.js
 function annotationsIn(content) {
   const list3 = content?.annotations;
@@ -61251,6 +59975,343 @@ var init_kanban = __esm({
     COLUMN_GAP = 12;
     columnId = (scope, name) => stableId(scope, "column", name);
     cardId = (scope, idOrTitle) => `${scope}.card.${idOrTitle.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "card"}`;
+  }
+});
+
+// packages/canvas/dist/diagrams/dsIcons.js
+function parseDsIcon(svg2) {
+  if (typeof svg2 !== "string" || !svg2.trim() || svg2.length > DS_ICON_MAX_CHARS)
+    return void 0;
+  const box = /<svg\b[^>]*>/i.exec(svg2)?.[0];
+  const vb = box ? (attrsOf(box).viewBox ?? "").split(/[\s,]+/).map(Number) : [];
+  const viewBox = vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0 ? [vb[0], vb[1], vb[2], vb[3]] : [0, 0, 24, 24];
+  const shapes = [];
+  for (const m2 of svg2.matchAll(/<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>/gi)) {
+    const tag = m2[1].toLowerCase();
+    const given = attrsOf(m2[2]);
+    const attrs = {};
+    for (const [name, ok] of Object.entries(SHAPES2[tag]))
+      if (given[name] !== void 0 && ok.test(given[name]))
+        attrs[name] = given[name];
+    if (!REQUIRED[tag].every((name) => attrs[name] !== void 0))
+      continue;
+    shapes.push({ tag, attrs });
+    if (shapes.length >= DS_ICON_MAX_SHAPES)
+      break;
+  }
+  return shapes.length ? { viewBox, shapes } : void 0;
+}
+function dsGlyphTransform(g2) {
+  const [x2, y2, w2, h] = g2.viewBox;
+  if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
+    return void 0;
+  const s = 24 / Math.max(w2, h);
+  const r = (v2) => Math.round(v2 * 1e3) / 1e3;
+  return `translate(${r((24 - w2 * s) / 2)} ${r((24 - h * s) / 2)}) scale(${r(s)}) translate(${r(-x2)} ${r(-y2)})`;
+}
+function dsGlyphMarkup(g2) {
+  const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
+  const t = dsGlyphTransform(g2);
+  return t ? `<g transform="${t}">${body}</g>` : body;
+}
+var DS_ICON_MAX_CHARS, DS_ICON_MAX_SHAPES, NUM, PATH, POINTS, SHAPES2, REQUIRED, attrsOf;
+var init_dsIcons = __esm({
+  "packages/canvas/dist/diagrams/dsIcons.js"() {
+    DS_ICON_MAX_CHARS = 4e3;
+    DS_ICON_MAX_SHAPES = 40;
+    NUM = /^-?(\d+\.?\d*|\.\d+)$/;
+    PATH = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,+\-eE]+$/;
+    POINTS = /^[\s\d.,+\-eE]+$/;
+    SHAPES2 = {
+      path: { d: PATH },
+      circle: { cx: NUM, cy: NUM, r: NUM },
+      ellipse: { cx: NUM, cy: NUM, rx: NUM, ry: NUM },
+      rect: { x: NUM, y: NUM, width: NUM, height: NUM, rx: NUM, ry: NUM },
+      line: { x1: NUM, y1: NUM, x2: NUM, y2: NUM },
+      polyline: { points: POINTS },
+      polygon: { points: POINTS }
+    };
+    REQUIRED = { path: ["d"], circle: ["r"], ellipse: ["rx", "ry"], rect: ["width", "height"], line: ["x2"], polyline: ["points"], polygon: ["points"] };
+    attrsOf = (text3) => {
+      const out = {};
+      for (const m2 of text3.matchAll(/([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
+        out[m2[1]] = (m2[2] ?? m2[3] ?? "").trim();
+      return out;
+    };
+  }
+});
+
+// packages/canvas/dist/diagrams/domainStoryReview.js
+function reviewDomainStory(m2) {
+  const out = [];
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const unsaid = [!m2.scope.granularity && "granularity (coarse-, medium- or fine-grained)", !m2.scope.time && "time (as-is or to-be)", !m2.scope.purity && "purity (pure or digitalized)"].filter(Boolean);
+  if (unsaid.length)
+    out.push({ rule: "scope-missing", severity: "info", message: `the scope does not say its ${unsaid.join(", ")} \u2014 readers judge every sentence by it (how much detail, today or the future, with or without software), so decide it before telling the story`, page: QUICK_START });
+  const inStory = (id) => m2.sentences.some((s) => s.actor === id || s.to.includes(id));
+  const systems = m2.actors.filter((a) => a.kind === "system" && inStory(a.id));
+  if (m2.scope.purity === "pure" && systems.length)
+    out.push({ rule: "scope-purity", severity: "warning", element: systems[0].id, message: `the scope says pure, but ${systems.map((a) => `"${a.text}"`).join(", ")} ${systems.length > 1 ? "are software systems" : "is a software system"} \u2014 a story with software systems is digitalized; change the scope, or tell who does this work`, page: QUICK_START });
+  if (m2.scope.purity === "digitalized" && !systems.length)
+    out.push({ rule: "scope-purity", severity: "info", message: "the scope says digitalized, but no actor is a software system (kind: system) \u2014 a story without software systems is pure", page: QUICK_START });
+  const acting = m2.actors.filter((a) => inStory(a.id));
+  const [first, second] = acting;
+  if (m2.sentences.length >= 4 && acting.length === 2 && first.kind === "system" !== (second.kind === "system") && acting.every((a) => m2.sentences.some((s) => s.actor === a.id)))
+    out.push({ rule: "request-response", severity: "info", message: `every sentence is between "${first.text}" and "${second.text}" \u2014 a user and a system answering each other reads like a screen flow, which a mock-up shows better; a domain story models intent: what is the user after, who else is involved, and how does the system help? Each activity should push the story forward`, page: BOOK_STYLE });
+  const told = m2.sentences.filter((s) => s.objectText);
+  for (const s of m2.sentences) {
+    const words = [s.verb, s.objectText ?? "", s.toLabel ?? ""];
+    if (words.some((w2) => CONDITIONAL_EN.test(w2) || CONDITIONAL_CJK.test(w2)))
+      out.push({ rule: "conditional", severity: "info", element: s.id, message: `${num(s.seq)} "${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}" reads like a choice \u2014 a domain story is one concrete example: tell the usual case here, put the variation in a note, and give an alternative that matters a story of its own`, page: QUICK_START });
+    if (s.objectText && parts(s.objectText).some((p) => OUTCOME_EN.test(p) || OUTCOME_CJK.test(p)))
+      out.push({ rule: "work-object-outcome", severity: "info", element: s.id, message: `${num(s.seq)} work object "${s.objectText}" reads like an outcome, not something an actor creates, works with or hands over \u2014 name the thing ("validation result", "signed contract") and keep what happened to it in the verb or a note`, page: QUICK_START });
+  }
+  const negative = m2.sentences.filter((s) => NEGATIVE.test(`${s.verb} ${s.objectText ?? ""} ${s.note ?? ""}`));
+  if (m2.sentences.length >= 3 && negative.length * 2 >= m2.sentences.length)
+    out.push({ rule: "negative-story", severity: "info", element: negative[0].id, message: `${negative.length} of ${m2.sentences.length} sentences are about what does not happen (${negative.map((s) => num(s.seq)).join(" ")}) \u2014 a domain story has no symbol for that and every activity should push the story forward; what does not happen, and why, is an EventStorming timeline (events, policies, hotspots) or a note. Tell the case where it does happen here`, page: BOOK_STYLE });
+  for (const s of m2.sentences) {
+    if (DATE.test(s.verb))
+      out.push({ rule: "date-in-verb", severity: "info", element: s.id, message: `${num(s.seq)} verb "${s.verb}" carries a date \u2014 the sequence numbers already say what comes first; put the when in a note (our judgment, not a rule of the method)`, page: QUICK_START });
+  }
+  const variants = /* @__PURE__ */ new Map();
+  for (const s of told) {
+    const first2 = (s.objectText ?? "").trim().split(/[\s／/·|]+/)[0]?.toLowerCase();
+    if (first2 && first2.length >= 2)
+      variants.set(first2, /* @__PURE__ */ new Set([...variants.get(first2) ?? [], s.objectText.trim()]));
+  }
+  for (const [first2, names2] of variants)
+    if (names2.size >= 3)
+      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n) => `"${n}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
+  const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
+  if (told.length >= 4 && names.size === told.length)
+    out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
+  const kinds = new Set(told.map((s) => s.objectKind));
+  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
+    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
+  const icons = m2.icons ?? {};
+  for (const [icon, svg2] of Object.entries(icons)) {
+    if (!parseDsIcon(svg2))
+      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
+  }
+  for (const o of m2.workObjects) {
+    if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
+      out.push({ rule: "icon-unknown", severity: "info", element: o.id, message: `"${o.text}": no icon named "${o.kind}" \u2014 it is drawn as a document; use a built-in kind or draw "${o.kind}" under \`icons:\``, page: EGON_HOWTO });
+  }
+  return out;
+}
+var QUICK_START, EGON_HOWTO, BOOK_STYLE, BUILT_IN_OBJECT_ICONS, parts, OUTCOME_EN, OUTCOME_CJK, CONDITIONAL_EN, CONDITIONAL_CJK, NEGATIVE, DATE, num;
+var init_domainStoryReview = __esm({
+  "packages/canvas/dist/diagrams/domainStoryReview.js"() {
+    init_dsIcons();
+    QUICK_START = "domainstorytelling.org/quick-start-guide";
+    EGON_HOWTO = "egon.io/howto";
+    BOOK_STYLE = 'Domain Storytelling (Hofer & Schwentner), ch. 2 "Good Language Style"';
+    BUILT_IN_OBJECT_ICONS = /* @__PURE__ */ new Set(["document", "thing", "digital", "folder", "call", "email", "conversation", "info", "message", "information"]);
+    parts = (text3) => text3.split(/\s*[/／·|｜\n]\s*/).map((p) => p.trim()).filter(Boolean);
+    OUTCOME_EN = /\b(passed|failed|succeeded|rejected|approved|denied|completed|confirmed|done)$/i;
+    OUTCOME_CJK = /(未?通過|失敗|成功|完成)$/;
+    CONDITIONAL_EN = /\b(if|unless|otherwise|else|or)\b/i;
+    CONDITIONAL_CJK = /如果|否則|或者|還是/;
+    NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
+    DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
+    num = (n) => `#${n}`;
+  }
+});
+
+// packages/canvas/dist/diagrams/domainStory.js
+function normalizeDomainStory(raw) {
+  const c2 = domainStorySchema.parse(raw);
+  const alloc = idAllocator();
+  const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
+  const actors = c2.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const workObjects = c2.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
+  const unresolved = [];
+  const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
+  const actorRef = (ref2, element, field) => {
+    const hit = find(actors, ref2);
+    if (hit)
+      return hit.id;
+    unresolved.push({ element, field, ref: ref2 });
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    actors.push(added);
+    return added.id;
+  };
+  let next = 1;
+  const sentences = c2.sentences.map((s) => {
+    const seq = s.seq ?? next;
+    next = Math.max(next, seq + 1);
+    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
+    const declared = s.object ? find(workObjects, s.object) : void 0;
+    const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
+    return {
+      id,
+      seq,
+      actor: actorRef(s.actor, id, "actor"),
+      verb: s.verb,
+      ...declared ? { object: declared.id } : {},
+      ...s.object ? { objectText: declared?.text ?? s.object } : {},
+      objectKind: declared?.kind ?? "document",
+      to: to.map((r) => actorRef(r, id, "to")),
+      ...s.toLabel ? { toLabel: s.toLabel } : {},
+      ...s.note ? { note: s.note } : {},
+      traces: s.traces ?? []
+    };
+  });
+  const elementRef = (ref2, element, field) => {
+    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    if (!hit)
+      unresolved.push({ element, field, ref: ref2 });
+    return hit;
+  };
+  const groups = c2.groups.map((g2) => {
+    const id = alloc(g2.id, g2.text, "group");
+    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
+  });
+  const annotations = c2.annotations.flatMap((a, i) => {
+    const id = alloc(a.id, `note-${i + 1}`, "note");
+    const on = elementRef(a.on, id, "on");
+    return on ? [{ id, on, text: a.text }] : [];
+  });
+  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
+}
+function readSentence(m2, s) {
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
+  return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
+}
+function circled(n) {
+  return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
+}
+function displayWidth(text3) {
+  let n = 0;
+  for (const ch of text3)
+    n += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
+  return n;
+}
+function checkDomainStory(content) {
+  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
+  const out = [];
+  for (const u3 of m2.unresolved)
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
+  const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
+  for (const s of m2.sentences) {
+    if (s.to.includes(s.actor)) {
+      const others = s.to.filter((r) => r !== s.actor);
+      out.push({
+        rule: "self-receiver",
+        severity: "warning",
+        element: s.id,
+        message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}" goes to ${actorName(s.actor)} itself: ${s.objectText ? "the board draws its work object beside the actor and leaves out the arrow back" : "with no work object and no other receiver, nothing can be drawn for it"} \u2014 omit the redundant \`to: ${s.actor}\` (an internal step: actor \u2192 activity \u2192 work object)${others.length ? "" : ", or name the actor who really receives it"}`,
+        page: QUICK_START2
+      });
+    }
+    if (!s.objectText)
+      out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
+  }
+  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
+  seqs.forEach((n, i) => {
+    const expected = i === 0 ? 1 : seqs[i - 1] + 1;
+    if (n !== expected)
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START2 });
+  });
+  for (const n of seqs) {
+    const same2 = m2.sentences.filter((s) => s.seq === n);
+    if (same2.length > 1)
+      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+  }
+  const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
+  for (let i = 0; i < m2.groups.length; i++)
+    for (let j2 = i + 1; j2 < m2.groups.length; j2++) {
+      const [a, b2] = [m2.groups[i], m2.groups[j2]];
+      const sa = new Set(a.members);
+      const sb = new Set(b2.members);
+      const shared = [...sa].filter((x2) => sb.has(x2));
+      if (!shared.length || [...sa].every((x2) => sb.has(x2)) || [...sb].every((x2) => sa.has(x2)))
+        continue;
+      out.push({
+        rule: "groups-overlap",
+        severity: "warning",
+        element: b2.id,
+        message: `groups "${a.text}" and "${b2.text}" share ${shared.map((x2) => `"${name(x2)}"`).join(", ")}, so their outlines overlap \u2014 keep each shared element in one group, or make one group a sub-group (all of its members in the other; it is then drawn inside it)`,
+        page: QUICK_START2
+      });
+    }
+  for (const n of m2.annotations) {
+    const w2 = displayWidth(n.text);
+    if (w2 > NOTE_RECOMMENDED)
+      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
+  }
+  for (const o of m2.workObjects) {
+    if (!m2.sentences.some((s) => s.object === o.id))
+      out.push({ rule: "work-object-unused", severity: "warning", element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START2 });
+  }
+  for (const a of m2.actors) {
+    if (!m2.sentences.some((s) => s.actor === a.id || s.to.includes(a.id)))
+      out.push({ rule: "actor-unused", severity: "warning", element: a.id, message: `"${a.text}" neither acts nor receives anything`, page: QUICK_START2 });
+    if (!DS_ACTOR_KINDS.includes(a.kind))
+      out.push({ rule: "actor-kind-custom", severity: "info", element: a.id, message: `"${a.text}": kind "${a.kind}" is a custom icon \u2014 the method names person, group of people and software system`, page: QUICK_START2 });
+  }
+  out.push(...reviewDomainStory(m2));
+  return out;
+}
+var DS_ACTOR_KINDS, DS_GRANULARITY, named2, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
+var init_domainStory = __esm({
+  "packages/canvas/dist/diagrams/domainStory.js"() {
+    init_zod();
+    init_ids2();
+    init_dsIcons();
+    init_domainStoryReview();
+    DS_ACTOR_KINDS = ["person", "group", "system"];
+    DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
+    named2 = () => external_exports.union([
+      external_exports.string(),
+      external_exports.object({
+        id: external_exports.string().optional(),
+        text: external_exports.string().min(1),
+        /** actor: person | group | system; work object: document | thing | digital | … (custom icon names allowed) */
+        kind: external_exports.string().optional()
+      })
+    ]);
+    domainStorySchema = external_exports.object({
+      scope: external_exports.object({
+        granularity: external_exports.enum(DS_GRANULARITY).optional(),
+        time: external_exports.enum(["as-is", "to-be"]).optional(),
+        purity: external_exports.enum(["pure", "digitalized"]).optional()
+      }).optional(),
+      actors: external_exports.array(named2()).min(1),
+      workObjects: external_exports.array(named2()).default([]),
+      sentences: external_exports.array(external_exports.object({
+        id: external_exports.string().optional(),
+        /** Sequence number; defaults to the next one. Two sentences may share a number (parallel activities). */
+        seq: external_exports.number().int().positive().optional(),
+        /** The actor who acts (id or text). */
+        actor: external_exports.string().min(1),
+        /** The activity, a verb from the domain language. */
+        verb: external_exports.string().min(1),
+        /** The work object (id or text of a declared work object, or any text — each activity gets its own card). */
+        object: external_exports.string().optional(),
+        /** The actor(s) the work object goes to. */
+        to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
+        /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
+        toLabel: external_exports.string().optional(),
+        note: external_exports.string().optional(),
+        traces: external_exports.array(traceSchema).optional()
+      })).min(1),
+      groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
+      annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+      /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
+      icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
+      /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
+      layout: external_exports.object({
+        spacing: external_exports.enum(["compact", "normal", "roomy"]).optional(),
+        /** horizontal pitch of the actor grid in px (overrides the spacing's) */
+        gapX: external_exports.number().min(240).max(2e3).optional(),
+        /** vertical pitch of the actor grid in px */
+        gapY: external_exports.number().min(180).max(2e3).optional()
+      }).optional()
+    });
+    QUICK_START2 = "domainstorytelling.org/quick-start-guide";
+    NOTE_RECOMMENDED = 120;
   }
 });
 
@@ -62013,6 +61074,63 @@ var init_check = __esm({
   }
 });
 
+// packages/canvas/dist/diagrams/grammar.js
+function checkEventStorming(content) {
+  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
+  const out = [];
+  for (const u3 of m2.unresolved)
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no element`, page: "p.202" });
+  const detailed = m2.level !== "big-picture";
+  if (detailed) {
+    for (const k2 of m2.commands) {
+      if (!k2.system)
+        out.push({ rule: "command-without-system", severity: "warning", element: k2.id, message: `"${k2.text}": no system between the command and its event`, page: "p.202" });
+      if (!k2.produces.length)
+        out.push({ rule: "command-without-event", severity: "warning", element: k2.id, message: `"${k2.text}" produces no event \u2014 the path is not complete`, page: "p.199" });
+      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r) => r.informs.includes(k2.id));
+      if (!triggered)
+        out.push({ rule: "command-without-trigger", severity: "info", element: k2.id, message: `"${k2.text}": nobody issues it \u2014 add a person or a policy`, page: "p.216" });
+    }
+    for (const p of m2.policies) {
+      if (!p.when.length)
+        out.push({ rule: "policy-without-event", severity: "warning", element: p.id, message: `"${p.text}": whenever \u2026 what? no event`, page: "p.222" });
+      if (!p.then.length)
+        out.push({ rule: "policy-without-command", severity: "warning", element: p.id, message: `"${p.text}": \u2026 then what? no command`, page: "p.222" });
+    }
+    const produced = new Set(m2.commands.flatMap((k2) => k2.produces));
+    const raised = new Set(m2.systems.flatMap((s) => s.raises));
+    m2.events.forEach((e, i) => {
+      if (i === 0 || produced.has(e.id) || raised.has(e.id) || e.time || e.person)
+        return;
+      out.push({ rule: "event-without-source", severity: "info", element: e.id, message: `"${e.text}": where does it come from? a command, a system, time or a policy`, page: "p.208" });
+    });
+    for (const r of m2.readModels) {
+      if (!r.informs.length)
+        out.push({ rule: "read-model-unused", severity: "warning", element: r.id, message: `"${r.text}" informs no person or command`, page: "p.231" });
+    }
+    if (m2.level === "process") {
+      for (const e of m2.events.filter((e2) => e2.pivotal))
+        out.push({ rule: "pivotal-on-process", severity: "info", element: e.id, message: `"${e.text}": pivotal events sort a big picture; a process board follows one flow`, page: "p.82, p.197" });
+    }
+  }
+  if (m2.level === "software") {
+    for (const a of m2.aggregates) {
+      const owns = m2.commands.some((k2) => k2.aggregate === a.id) || m2.events.some((e) => e.aggregate === a.id);
+      if (!owns)
+        out.push({ rule: "aggregate-without-behaviour", severity: "info", element: a.id, message: `aggregate "${a.text}" handles no command and raises no event`, page: "p.260" });
+    }
+  }
+  if (m2.hotspots.length) {
+    out.push({ rule: "open-hotspots", severity: "info", message: `${m2.hotspots.length} open hotspot${m2.hotspots.length === 1 ? "" : "s"} \u2014 a process is done when this reaches zero`, page: "p.199, p.203" });
+  }
+  return out;
+}
+var init_grammar = __esm({
+  "packages/canvas/dist/diagrams/grammar.js"() {
+    init_eventStorming();
+  }
+});
+
 // packages/canvas/dist/diagrams/designFile.js
 function designFromObject(file2, raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
@@ -62259,6 +61377,22 @@ function originsOf(changes) {
 function redrawInputs(changes) {
   return { placed: placedByUser(changes.filter((c2) => c2.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
 }
+function redrawInputsFromJson(j2) {
+  const out = emptyRedrawInputs();
+  for (const id of Array.isArray(j2?.placed) ? j2.placed : [])
+    if (typeof id === "string")
+      out.placed.add(id);
+  const table = Array.isArray(j2?.origins) ? j2.origins : [];
+  for (const [id, i] of Object.entries(j2?.originOf && typeof j2.originOf === "object" ? j2.originOf : {})) {
+    const o = table[i];
+    if (o && typeof o.author === "string")
+      out.origins.set(id, { author: o.author, ...o.by ? { by: o.by } : {}, ...o.note ? { note: o.note } : {} });
+  }
+  for (const e of Array.isArray(j2?.removed) ? j2.removed : [])
+    if (Array.isArray(e) && typeof e[0] === "string")
+      out.removed.set(e[0], typeof e[1] === "string" ? { at: e[1] } : {});
+  return out;
+}
 function isFileNote(it, prefix) {
   if (it.type !== "comment" || it.role !== "note")
     return false;
@@ -62341,10 +61475,11 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
     const op = { kind: "update", id: d.id, patch };
     const final = keep ? keepUserLayout([op], /* @__PURE__ */ new Set([d.id]))[0] : op;
     const changed = changedKeys(final.patch ?? {}, was);
-    if (changed.length)
-      plan.updated.push({ id: d.id, label: label(was), why: changed.join(", ") });
-    else
+    if (!changed.length) {
       plan.unchanged++;
+      continue;
+    }
+    plan.updated.push({ id: d.id, label: label(was), why: changed.join(", ") });
     updates.push(final);
   }
   const drawers = new Set([...origins?.values() ?? []].filter((o) => o.author === "agent" && isRedrawNote(o.note)).map((o) => o.by ?? ""));
@@ -62443,7 +61578,7 @@ function planLines(plan, o = {}) {
   }
   return out;
 }
-var GEOMETRY, SCOPE, pendingOf, node2, wireOf, sameWire, PRESENTATION, isRedrawNote, label, IGNORED, changedKeys, lockOf, KEPT_REMOVED, SECTIONS;
+var GEOMETRY, SCOPE, pendingOf, node2, wireOf, sameWire, PRESENTATION, isRedrawNote, emptyRedrawInputs, label, IGNORED, mergedData, changedKeys, lockOf, KEPT_REMOVED, SECTIONS;
 var init_redraw = __esm({
   "packages/canvas/dist/diagrams/redraw.js"() {
     init_annotations();
@@ -62461,14 +61596,16 @@ var init_redraw = __esm({
       const w2 = wireOf(drawn);
       return !!w2 && node2(w2.from) === node2(want.from) && node2(w2.to) === node2(want.to) && (want.event === void 0 || w2.event === want.event);
     };
-    PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy"];
+    PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy", "hidden"];
     isRedrawNote = (note) => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note);
+    emptyRedrawInputs = () => ({ placed: /* @__PURE__ */ new Set(), origins: /* @__PURE__ */ new Map(), removed: /* @__PURE__ */ new Map() });
     label = (it) => {
       const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
       return t ? t.length > 48 ? `${t.slice(0, 47)}\u2026` : t : String(it?.type ?? "?");
     };
     IGNORED = /* @__PURE__ */ new Set(["id", "createdBy", "updatedBy", "updatedAt"]);
-    changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same(patch[k2], was[k2]));
+    mergedData = (was, patch) => patch && typeof patch === "object" ? Object.fromEntries(Object.entries({ ...was, ...patch }).filter(([, v2]) => v2 !== null)) : patch;
+    changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same(k2 === "data" && was.type === "comment" ? mergedData(was.data, patch.data) : patch[k2], was[k2]));
     lockOf = (board, id) => layoutLock(board, id);
     KEPT_REMOVED = "you deleted it \u2014 the file still has it; propose the file change?";
     SECTIONS = [
@@ -62482,6 +61619,902 @@ var init_redraw = __esm({
       ["settled", ">", "proposals settled"],
       ["foreign", "*", "not from this file (kept)"]
     ];
+  }
+});
+
+// packages/canvas/dist/client.js
+function canvasOrigin(url2) {
+  const u3 = new URL(url2.trim());
+  const cut = u3.pathname.search(/\/(b|api|docs)(\/|$)/);
+  const prefix = (cut >= 0 ? u3.pathname.slice(0, cut) : u3.pathname).replace(/\/+$/, "");
+  return `${u3.origin}${prefix}`;
+}
+async function probeCanvas(base, timeoutMs = 4e3, token, component = "mcp") {
+  try {
+    const res = await fetch(`${base}/api/boards`, { signal: AbortSignal.timeout(timeoutMs), headers: { "user-agent": userAgent(component), ...token ? { authorization: `Bearer ${token}` } : {} } });
+    if (res.status === 403) {
+      const why = (await res.json().catch(() => ({}))).error;
+      return { ok: false, reason: why ? `HTTP 403: ${why}` : `HTTP 403 \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request` };
+    }
+    if (res.status === 401) {
+      const why = (await res.json().catch(() => ({}))).error;
+      return { ok: false, auth: true, reason: token ? `the token was refused: ${why ?? "HTTP 401"}` : "this canvas wants an access token for requests from elsewhere (UNPROSE_TOKEN)" };
+    }
+    if (!res.ok)
+      return { ok: false, reason: `HTTP ${res.status} ${res.statusText}` };
+    const body = await res.json().catch(() => void 0);
+    if (!body || typeof body !== "object")
+      return { ok: false, reason: "the answer is not the canvas API (is this the canvas URL?)" };
+    return { ok: true };
+  } catch (e) {
+    const err = e;
+    return { ok: false, reason: err.name === "TimeoutError" ? `no answer within ${timeoutMs / 1e3}s` : err.cause?.code ?? err.message };
+  }
+}
+function addQuery(q2, extra) {
+  for (const [k2, v2] of Object.entries(extra ?? {})) {
+    if (v2 === void 0 || v2 === false || Array.isArray(v2) && !v2.length || v2 === "")
+      continue;
+    q2.set(k2, Array.isArray(v2) ? v2.join(",") : v2 === true ? "1" : String(v2));
+  }
+}
+var CanvasClient;
+var init_client2 = __esm({
+  "packages/canvas/dist/client.js"() {
+    init_routing();
+    init_credentials3();
+    init_redraw();
+    init_version2();
+    CanvasClient = class {
+      baseUrl;
+      /** What board links start with. */
+      publicUrl;
+      token;
+      agentName;
+      component;
+      /** Said instead of the canvas's 401 while this agent is not connected yet (the pairing code to type). */
+      authHint;
+      /** Called on a 401 (e.g. to start pairing again). */
+      onAuthNeeded;
+      constructor(baseUrl = process.env.AWD_CANVAS_URL ?? "http://localhost:4400", opts = {}) {
+        this.baseUrl = canvasOrigin(baseUrl);
+        this.publicUrl = opts.publicUrl ? canvasOrigin(opts.publicUrl) : this.baseUrl;
+        this.token = opts.token ?? (process.env.UNPROSE_TOKEN || savedToken(this.baseUrl) || void 0);
+        this.agentName = opts.agentName ?? (process.env.UNPROSE_AGENT_NAME || void 0);
+        this.component = opts.component ?? "client";
+      }
+      /** Use this token from now on (the device flow hands one over while the MCP server runs). */
+      setToken(token) {
+        this.token = token;
+      }
+      /** The token this client sends (the MCP server hands it to the design tools and subprocesses). */
+      get currentToken() {
+        return this.token;
+      }
+      get hasToken() {
+        return !!this.token;
+      }
+      /** The headers every call carries: who is calling (User-Agent), and the token or the local agent's name. */
+      headers() {
+        return { "user-agent": userAgent(this.component), ...this.token ? { authorization: `Bearer ${this.token}` } : this.agentName ? { "x-unprose-agent": this.agentName } : {} };
+      }
+      async req(method, p, body, signal) {
+        let res;
+        try {
+          res = await fetch(this.baseUrl + p, {
+            method,
+            headers: { ...this.headers(), ...body !== void 0 ? { "content-type": "application/json" } : {} },
+            body: body !== void 0 ? JSON.stringify(body) : void 0,
+            ...signal ? { signal } : {}
+          });
+        } catch (e) {
+          if (signal?.aborted)
+            throw e;
+          throw new Error(`canvas server not reachable at ${this.baseUrl} \u2014 start it with \`awd-canvas serve\` (${e.message})`);
+        }
+        const text3 = await res.text();
+        let data = text3;
+        try {
+          data = JSON.parse(text3);
+        } catch {
+        }
+        if (res.status === 401) {
+          const hint = this.authHint;
+          this.onAuthNeeded?.();
+          if (hint)
+            throw new Error(hint);
+        }
+        if (!res.ok) {
+          const msg = data?.error;
+          if (res.status === 403 && !msg)
+            throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request`);
+          throw Object.assign(new Error(msg ?? `${res.status} ${res.statusText}`), { status: res.status });
+        }
+        return data;
+      }
+      /** Boards, optionally only those of one project (a project id, or 'personal'). */
+      listBoards(project) {
+        const q2 = project ? `?project=${encodeURIComponent(project)}` : "";
+        return this.req("GET", `/api/boards${q2}`).then((r) => r.boards);
+      }
+      createBoard(input2) {
+        return this.req("POST", "/api/boards", input2).then((r) => r.board);
+      }
+      /**
+       * The board titled `title`, else a new one — decided by the canvas in one step, so two agents drawing at once get the
+       * same board (docs/canvas.md "Projects": the same project first, then the personal space, then any board you see).
+       */
+      boardByTitle(input2) {
+        return this.req("POST", "/api/boards", { ...input2, author: "agent", reuse: "title" });
+      }
+      projects() {
+        return this.req("GET", "/api/projects").then((r) => r.projects);
+      }
+      /** Register the project at `root` on this canvas (only accepted from the canvas's own machine). */
+      registerProject(root) {
+        return this.req("POST", "/api/projects", { root }).then((r) => r.project);
+      }
+      /** Move a board (snapshot + log) into a project: a project id or, from this machine, `{ projectRoot }`. */
+      moveBoard(id, to) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/move`, to);
+      }
+      getBoard(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}`).then((r) => r.board);
+      }
+      outline(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/outline`);
+      }
+      apply(id, ops, author = "agent", note) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/ops`, { author, ops, note });
+      }
+      template(id, kind, content, at3, scope, frame) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/template`, { kind, content, at: at3, scope, ...frame ? { frame } : {} });
+      }
+      /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
+      updateBoard(id, patch) {
+        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
+      }
+      /**
+       * Merge into the board's meta (PATCH /api/boards/:id): only the keys given change (null removes one);
+       * `meta.diagrams` merges per diagram key — so two agents drawing different diagrams never overwrite each other.
+       */
+      patchBoard(id, patch) {
+        return this.req("PATCH", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
+      }
+      changes(id, since = 0, author) {
+        const q2 = new URLSearchParams({ since: String(since) });
+        if (author)
+          q2.set("author", author);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/changes?${q2}`);
+      }
+      /**
+       * What a redraw needs from the board's whole change log (docs/diagrams.md "What a redraw keeps"), folded by the canvas;
+       * a canvas without that route (404) sends the whole log, folded here.
+       */
+      async redrawInputs(id) {
+        try {
+          return redrawInputsFromJson(await this.req("GET", `/api/boards/${encodeURIComponent(id)}/redraw-inputs`));
+        } catch (e) {
+          if (e.status !== 404)
+            throw e;
+          return redrawInputs((await this.changes(id, 0)).changes);
+        }
+      }
+      /** `extra`: frame, from (names), kinds, summary, last, limit, cursor, maxChars (docs/canvas.md "Reading big boards"). */
+      diff(id, since, author, extra) {
+        const q2 = new URLSearchParams({ since: String(since) });
+        if (author)
+          q2.set("author", author);
+        addQuery(q2, extra);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/diff?${q2}`);
+      }
+      /** `listen: 'all'`: everything on the board, not only what is for this agent (docs/canvas.md "Several agents on one board"). */
+      /**
+       * `opts.signal` aborts the wait (the server then frees its watcher slot); `untilMention` wakes only on what addresses
+       * this agent personally; `contextOnce` asks the server to send the board context only when this agent has not seen it.
+       */
+      async wait(id, since, timeoutMs, author, quietMs, wake, listen, extra, opts = {}) {
+        const q2 = new URLSearchParams({ since: String(since), timeout: String(timeoutMs) });
+        addQuery(q2, extra);
+        if (author)
+          q2.set("author", author);
+        if (quietMs !== void 0)
+          q2.set("quiet", String(quietMs));
+        if (wake)
+          q2.set("wake", wake);
+        if (listen === "all")
+          q2.set("to", "all");
+        if (opts.untilMention)
+          q2.set("until", "mention");
+        if (opts.contextOnce)
+          q2.set("context", "changed");
+        const r = await this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`, void 0, opts.signal);
+        if (typeof r !== "object" || r === null || typeof r.seq !== "number")
+          throw new Error(r?.error ?? "the canvas gave no answer to the wait");
+        return r;
+      }
+      /** Who answers the board, its context note, who holds the files, the agents it knows. */
+      settings(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/settings`);
+      }
+      /**
+       * Before a redraw (docs/canvas.md "Handing over the files"): the refusal when another agent holds the files of
+       * diagram `key` ('workflow' for a workflow board's `meta.workflow`) — undefined when this caller may draw it (it holds
+       * them, nobody does yet, or the canvas is too old to say).
+       */
+      async redrawRefusal(id, key, o = {}) {
+        const s = await this.settings(id).catch(() => void 0);
+        if (!s || !Array.isArray(s.holders))
+          return void 0;
+        const me = s.you ?? LOCAL_AGENT;
+        const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
+        return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
+      }
+      /** Change board settings (logged): `answeredBy` ('any' | 'studio' | 'me' | a name | null), `context` (markdown | null), `agentTurns`. */
+      setSettings(id, patch, author = "agent") {
+        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}/settings`, { ...patch, author });
+      }
+      // ---- Handing over the files (docs/canvas.md "Handing over the files"); only the person starts one ----
+      /** The open handover on a board, and who holds the files of each diagram. */
+      handover(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/handover`);
+      }
+      /** As the agent handing files over: its diagrams (or only `keys`) are ready to be taken, as the board has them now. */
+      handoverReady(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/ready`, { ...o, author: "agent" });
+      }
+      /** As the agent receiving them: take the files over (once every one is ready); `repo` / `remote` say where you keep them. */
+      handoverAccept(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/accept`, { ...o, author: "agent" });
+      }
+      /** Decline (either side of it): the files stay where they are. */
+      handoverCancel(id, o = {}) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: "agent" });
+      }
+      /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
+      sendFeedback(input2) {
+        return this.req("POST", "/api/feedback", input2);
+      }
+      /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
+      feedback() {
+        return this.req("GET", "/api/feedback").then((r) => r.feedback);
+      }
+      /** Kanban: column moves since `since` (structured; see cardMoves). */
+      cardMoves(id, since) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/cards?since=${since}`);
+      }
+      addCard(id, card) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/cards`, card);
+      }
+      moveCard(id, cardId2, column, author = "agent", note) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId2)}/move`, { column, author, note });
+      }
+      /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
+      focus(id, target, author = "agent") {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author });
+      }
+      /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
+      files(id) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
+      }
+      file(id, path24) {
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path24)}`).then((r) => r.file);
+      }
+      /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
+      propose(id, input2) {
+        return this.req("POST", `/api/boards/${encodeURIComponent(id)}/proposals`, { ...input2, author: "agent" });
+      }
+      // ---- Agent-scale reading, seeing the board, the layout check, local approval (docs/canvas.md "Reading big boards") ----
+      /** A board read with filters, a format and a size cap (`GET /api/boards/:id/read`). */
+      read(id, o = {}) {
+        const q2 = new URLSearchParams();
+        addQuery(q2, o);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/read?${q2}`);
+      }
+      /** The layout findings of a board or one frame. */
+      layout(id, frame, limit2) {
+        const q2 = new URLSearchParams();
+        addQuery(q2, { frame, limit: limit2 });
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/layout?${q2}`);
+      }
+      /** A server-side render: PNG bytes when the canvas can rasterize, else the SVG text; `info` says what is in it. */
+      async snapshot(id, o = {}) {
+        const q2 = new URLSearchParams();
+        addQuery(q2, o);
+        let res;
+        try {
+          res = await fetch(`${this.baseUrl}/api/boards/${encodeURIComponent(id)}/snapshot?${q2}`, { headers: this.headers() });
+        } catch (e) {
+          throw new Error(`canvas server not reachable at ${this.baseUrl} \u2014 start it with \`awd-canvas serve\` (${e.message})`);
+        }
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          if (res.status === 401 && this.authHint)
+            throw new Error(this.authHint);
+          throw new Error(body.error ?? `${res.status} ${res.statusText}`);
+        }
+        const mime = (res.headers.get("content-type") ?? "").split(";")[0];
+        let info = { width: 0, height: 0, scale: 1, items: 0, region: { x: 0, y: 0, w: 0, h: 0 }, notes: [], renderer: void 0 };
+        try {
+          info = { ...info, ...JSON.parse(res.headers.get("x-unprose-snapshot") ?? "{}") };
+        } catch {
+        }
+        if (mime === "image/png")
+          return { mime, png: Buffer.from(await res.arrayBuffer()), info };
+        return { mime, svg: await res.text(), info };
+      }
+      /** Approve a pairing code as the local agent (only a canvas on this machine accepts it). */
+      approve(code, o = {}) {
+        return this.req("POST", "/api/approve", { code, ...o });
+      }
+      /** Board URL; `frame` / `focus` make the page open on that diagram frame / item. */
+      boardUrl(id, at3 = {}) {
+        const q2 = new URLSearchParams();
+        if (at3.frame)
+          q2.set("frame", at3.frame);
+        if (at3.focus)
+          q2.set("focus", at3.focus);
+        const qs = q2.toString();
+        return `${this.publicUrl}/b/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
+      }
+    };
+  }
+});
+
+// packages/cli/dist/projects.js
+var projects_exports = {};
+__export(projects_exports, {
+  boardByTitle: () => boardByTitle,
+  canvasApi: () => canvasApi,
+  canvasBase: () => canvasBase,
+  canvasHeaders: () => canvasHeaders2,
+  cmdBoards: () => cmdBoards,
+  cmdProjects: () => cmdProjects,
+  holderInfo: () => holderInfo,
+  redrawRefusal: () => redrawRefusal,
+  registerProject: () => registerProject
+});
+import fs12 from "node:fs";
+import os3 from "node:os";
+import path13 from "node:path";
+import { execFileSync } from "node:child_process";
+function canvasHeaders2(env = process.env, base) {
+  return canvasHeaders(base ?? env.AWD_CANVAS_URL ?? "http://localhost:4400", "cli", env);
+}
+function canvasBase(flag, env = process.env) {
+  const raw = flag || env.AWD_CANVAS_URL || "http://localhost:4400";
+  try {
+    return canvasOrigin(raw);
+  } catch {
+    return raw.replace(/\/+$/, "");
+  }
+}
+function canvasApi(base) {
+  return async (method, p, body) => {
+    const res = await fetch(base + p, { method, headers: { "content-type": "application/json", ...canvasHeaders2(process.env, base) }, body: body === void 0 ? void 0 : JSON.stringify(body) });
+    const text3 = await res.text();
+    if (!res.ok) {
+      let msg = text3.slice(0, 300);
+      try {
+        msg = JSON.parse(text3).error ?? msg;
+      } catch {
+        if (res.status === 403)
+          msg = `not the canvas's answer \u2014 something in front of it (Cloudflare?) refused the request`;
+      }
+      throw new Error(`${method} ${p} \u2192 ${res.status} ${msg}`);
+    }
+    return text3 ? JSON.parse(text3) : {};
+  };
+}
+function holderInfo(root) {
+  let remote;
+  try {
+    remote = execFileSync("git", ["-C", root, "remote", "get-url", "origin"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3e3 }).trim() || void 0;
+  } catch {
+  }
+  return { machine: os3.hostname().replace(/\.local$/, ""), root, repo: path13.basename(root), ...remote ? { remote: remote.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]*@/i, "$1") } : {} };
+}
+async function redrawRefusal(api, boardId, key, o = {}) {
+  let s;
+  try {
+    s = await api("GET", `/api/boards/${encodeURIComponent(boardId)}/settings`);
+  } catch {
+    return void 0;
+  }
+  if (!Array.isArray(s.holders))
+    return void 0;
+  const me = s.you ?? "agent";
+  const h = o.workflow ? [...s.holders].reverse().find((x2) => x2.key === "workflow") : s.holders.find((x2) => x2.key === key);
+  return h && !sameAgent(h.holder.agent, me) ? heldElsewhereText(key, h.source, h.holder.agent) : void 0;
+}
+async function registerProject(api, root) {
+  try {
+    return (await api("POST", "/api/projects", { root: path13.resolve(root) })).project.id;
+  } catch {
+    return void 0;
+  }
+}
+async function boardByTitle(api, title, kind, project, match = () => true, sameKind = false) {
+  const { boards } = await api("GET", "/api/boards");
+  const found = pickBoardByTitle(boards, title, project, match);
+  const note = ambiguityNote(title, found);
+  if (note)
+    console.warn(`\u26A0 ${note}`);
+  if (found.board)
+    return found.board;
+  const made = await api("POST", "/api/boards", { title, kind, ...project ? { project } : {}, answeredBy: "me", reuse: sameKind ? "title+kind" : "title" });
+  return made.board;
+}
+async function cmdProjects(args2, flags2) {
+  const [sub] = args2;
+  let ref2 = args2[1];
+  const forceWord = typeof flags2.force === "string" && !["true", "false", "1", "0"].includes(flags2.force) ? flags2.force : void 0;
+  if (forceWord && !ref2)
+    ref2 = forceWord;
+  const base = canvasBase(typeof flags2.canvas === "string" ? flags2.canvas : void 0);
+  const api = canvasApi(base);
+  const { projects } = await api("GET", "/api/projects");
+  if (sub === "list" || sub === "ls") {
+    for (const p2 of projects)
+      console.log(`${p2.id}	${p2.boards} board(s)	${p2.personal ? "(personal space)" : p2.root ?? p2.name}`);
+    return true;
+  }
+  if (sub !== "remove" && sub !== "rm" || !ref2) {
+    console.error("usage: awd projects remove <project dir | project id> [--force] [--canvas URL]   \xB7   awd projects list");
+    return false;
+  }
+  const abs = path13.resolve(ref2);
+  const real = fs12.existsSync(abs) ? fs12.realpathSync(abs) : abs;
+  const p = projects.find((x2) => !x2.personal && (x2.id === ref2 || x2.root === abs || x2.root === real));
+  if (!p) {
+    console.error(`no project ${ref2} on ${base} (projects: ${projects.filter((x2) => !x2.personal).map((x2) => `${x2.id}${x2.root ? ` = ${x2.root}` : ""}`).join(", ") || "none"})`);
+    return false;
+  }
+  const force = flags2.force === true || flags2.force === "true" || flags2.force === "1" || !!forceWord;
+  try {
+    const r = await api("DELETE", `/api/projects/${encodeURIComponent(p.id)}${force ? "?force=1" : ""}`);
+    console.log(`removed project ${r.removed.id}${p.root ? ` (${p.root} \u2014 its files stay)` : ""}${r.moved.length ? `; moved ${r.moved.length} board(s) to the personal space: ${r.moved.join(", ")}` : ""}`);
+    return true;
+  } catch (e) {
+    console.error(e.message);
+    return false;
+  }
+}
+async function cmdBoards(args2, flags2) {
+  const [sub, ref2] = args2;
+  const to = typeof flags2.to === "string" ? flags2.to : void 0;
+  if (sub !== "move" || !ref2 || !to) {
+    console.error("usage: awd boards move <board id | title:\u2026> --to <project dir> [--canvas URL]");
+    return false;
+  }
+  const base = canvasBase(typeof flags2.canvas === "string" ? flags2.canvas : void 0);
+  const api = canvasApi(base);
+  let id = ref2;
+  if (ref2.startsWith("title:")) {
+    const title = ref2.slice(6).trim();
+    const hits = (await api("GET", "/api/boards")).boards.filter((b2) => b2.title === title);
+    if (hits.length !== 1) {
+      console.error(hits.length ? `${hits.length} boards are titled "${title}" \u2014 pass the board id (${hits.map((b2) => `${b2.id} [${b2.project ?? "personal"}]`).join(", ")})` : `no board titled "${title}"`);
+      return false;
+    }
+    id = hits[0].id;
+  }
+  const r = await api("POST", `/api/boards/${encodeURIComponent(id)}/move`, { projectRoot: path13.resolve(to) });
+  console.log(`moved ${r.board} into project ${r.project} (${path13.join(path13.resolve(to), ".unprose", "boards")}); the URL ${base}/b/${r.board} is unchanged`);
+  console.log(`commit ${path13.join(".unprose", "boards", `${r.board}.json`)} with the project (the change log stays local)`);
+  return true;
+}
+var init_projects = __esm({
+  "packages/cli/dist/projects.js"() {
+    init_credentials3();
+    init_boardLookup();
+    init_client2();
+    init_routing();
+  }
+});
+
+// packages/cli/dist/applied.js
+import { execFileSync as execFileSync2 } from "node:child_process";
+import fs13 from "node:fs";
+import path14 from "node:path";
+function appliedMessage(o) {
+  const first = (o.note ?? "").split("\n").map((l) => l.trim()).find(Boolean);
+  return [`Apply canvas proposal to ${o.file}`, "", ...first ? [first.slice(0, 200), ""] : [], `Proposed by ${o.by ?? "the person"}; agreed by the person in ${o.link}`, ""].join("\n");
+}
+async function afterApplied(api, o) {
+  const env = o.env ?? process.env;
+  const notes = [];
+  const { board } = await api("GET", `/api/boards/${encodeURIComponent(o.boardId)}`);
+  const c2 = board.items[o.thread];
+  if (!c2 || c2.type !== "comment")
+    return { notes: [`no comment ${o.thread} on board ${o.boardId} \u2014 nothing answered, nothing committed`] };
+  const edit = c2.data?.discuss?.edit;
+  const proposed = typeof edit?.file === "string" ? edit.file : void 0;
+  const file2 = proposed && fs13.existsSync(path14.join(o.root, proposed)) ? proposed : o.fallbackFile;
+  const link = `${o.base}/b/${encodeURIComponent(o.boardId)}?focus=${encodeURIComponent(o.thread)}`;
+  let commit;
+  let pushed = false;
+  if (env.UNPROSE_APPLY_COMMIT === "1") {
+    try {
+      const top = fs13.realpathSync(git(o.root, ["rev-parse", "--show-toplevel"]));
+      if (top !== fs13.realpathSync(o.root))
+        throw new Error(`${o.root} is not the top of its git repo (${top})`);
+      git(o.root, ["add", "--", file2]);
+      git(o.root, ["commit", "-m", appliedMessage({ file: file2, note: c2.text, by: typeof edit?.by === "string" ? edit.by : void 0, link }), "--", file2]);
+      commit = git(o.root, ["rev-parse", "--short", "HEAD"]);
+      notes.push(`committed ${file2} as ${commit}`);
+      if (env.UNPROSE_APPLY_PUSH === "1") {
+        try {
+          git(o.root, ["push"]);
+          pushed = true;
+          notes.push("pushed");
+        } catch (e) {
+          notes.push(`push failed: ${firstLine(e)}`);
+        }
+      }
+    } catch (e) {
+      notes.push(`not committed: ${firstLine(e)}`);
+    }
+  }
+  const text3 = `Applied to ${file2}${commit ? ` \u2014 committed ${commit}${pushed ? " and pushed" : ""}` : ""}. Redrawn from the file.`;
+  const { ops } = await api("POST", `/api/boards/${encodeURIComponent(o.boardId)}/template`, { kind: "freeform", content: { items: [{ id: `applied.${Date.now().toString(36)}`, type: "comment", text: text3, target: o.thread }] } });
+  await api("POST", `/api/boards/${encodeURIComponent(o.boardId)}/ops`, { author: "agent", ops, note: `applied ${o.thread}` });
+  return { file: file2, ...commit ? { commit } : {}, pushed, notes };
+}
+var git, firstLine;
+var init_applied = __esm({
+  "packages/cli/dist/applied.js"() {
+    git = (root, args2) => execFileSync2("git", ["-C", root, ...args2], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 6e4 }).trim();
+    firstLine = (e) => String(e.stderr || e.message || e).split("\n").find((l) => l.trim()) ?? "failed";
+  }
+});
+
+// packages/canvas/dist/diagrams/guidance.js
+function tellBack(content) {
+  let m2;
+  try {
+    m2 = normalizeDomainStory(content);
+  } catch {
+    return [];
+  }
+  const lines = [...m2.sentences].sort((a, b2) => a.seq - b2.seq).map((s) => `  ${readSentence(m2, s)}`);
+  return [
+    "The grammar and the drawing are checked; whether this is the right diagram and a true story is not. Tell it back \u2014 did the person say this, or did you guess?",
+    ...lines
+  ];
+}
+var WHICH_DIAGRAM, DOMAIN_STORY_METHOD, LAYOUT_NEVER_THE_STORY;
+var init_guidance = __esm({
+  "packages/canvas/dist/diagrams/guidance.js"() {
+    init_domainStory();
+    WHICH_DIAGRAM = `Which diagram for which content:
+- what happens over time, how the system reacts, what does NOT happen and why \u2192 EventStorming (events, policies, hotspots)
+- one concrete case of who does what with what, and hands it to whom \u2192 domain story (one scenario, no conditions, no "not")
+- a rule, an invariant, a comparison ("only once per contact", "A vs B") \u2192 a definition / policy / hotspot sticky, or a note \u2014 not a story
+- scope and order of delivery \u2192 story map; the work \u2192 kanban; one page \u2192 wireframe / UI mock; a persona's feelings \u2192 journey`;
+    DOMAIN_STORY_METHOD = `A domain story tells ONE concrete case as sentences the person would say aloud: actor \u2014 verb \u2014 work object \u2014 to actor. State its scope (coarse-, medium- or fine-grained; as-is or to-be; pure or digitalized) and keep every sentence at that level. Actors are the people, groups and systems that act, named by role, each once; the same thing keeps the same name every time it comes back (its state may change). It has no "if", no "or", no "does not": what does not happen is a note on the sentence that would have happened ("variation: already sent \u2192 \u2462 does not happen"), the case the story tells is a note on the whole story ("assumption: Casey matches for the first time"), and the rule itself lives in an EventStorming policy or a story map's acceptance \u2014 never a story of its own. Do not guess who acts or what they want \u2014 ask; then tell the story back sentence by sentence before you call it done.`;
+    LAYOUT_NEVER_THE_STORY = "When pictograms or labels collide, change the layout (layout.spacing, groups, a split into scenarios) \u2014 never the story: an actor or a sentence is not dropped to make the picture fit.";
+  }
+});
+
+// packages/canvas/dist/diagrams/proposeStories.js
+function segments(m2) {
+  const order = m2.events.map((e) => e.id);
+  const at3 = (id) => id ? order.indexOf(id) : -1;
+  const phased = m2.phases.filter((p) => p.from || p.to);
+  if (phased.length) {
+    return phased.map((p) => {
+      const from = Math.max(at3(p.from), 0);
+      const to = p.to ? at3(p.to) : order.length - 1;
+      return { id: p.id, text: p.text, events: order.slice(from, to + 1) };
+    });
+  }
+  const out = [];
+  let current = [];
+  for (const e of m2.events) {
+    current.push(e.id);
+    if (e.pivotal) {
+      out.push({ id: e.id, text: e.text, events: current });
+      current = [];
+    }
+  }
+  if (current.length) {
+    const last = m2.events.find((e) => e.id === current[current.length - 1]);
+    out.push({ id: last.id, text: out.length ? `After: ${out[out.length - 1].text}` : "Flow", events: current });
+  }
+  return out;
+}
+function proposeStories(content, opts) {
+  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
+  const existing = opts.existing ? normalizeUserStoryMap(opts.existing) : void 0;
+  const traced = new Set(existing?.activities.flatMap((a) => a.steps.flatMap((s) => s.stories.flatMap((st) => st.traces.map((t) => t.from)))) ?? []);
+  const activityByText = new Map(existing?.activities.map((a) => [a.text, a.id]) ?? []);
+  const stepByText = new Map(existing?.activities.flatMap((a) => a.steps.map((s) => [s.text, s.id])) ?? []);
+  const person = (id) => id ? m2.people.find((p) => p.id === id)?.text : void 0;
+  const eventText = (id) => m2.events.find((e) => e.id === id)?.text ?? id;
+  const ref2 = (id) => `${opts.esKey}/${id}`;
+  const segs = segments(m2);
+  const segOf = (eventId) => segs.find((s) => eventId && s.events.includes(eventId)) ?? segs[segs.length - 1];
+  const candidates = [];
+  if (m2.commands.length) {
+    const pos = (k2) => Math.min(...k2.produces.map((e) => m2.events.findIndex((x2) => x2.id === e)).filter((i) => i >= 0), Number.MAX_SAFE_INTEGER);
+    const commands = [...m2.commands].sort((a, b2) => pos(a) - pos(b2));
+    for (const k2 of commands) {
+      if (traced.has(ref2(k2.id)))
+        continue;
+      const seg = segOf(k2.produces[0]);
+      const who = person(k2.by) ?? person(m2.policies.find((p) => p.then.includes(k2.id))?.person);
+      const shown = m2.readModels.filter((r) => r.informs.includes(k2.id) || k2.by !== void 0 && r.informs.includes(k2.by));
+      candidates.push({
+        id: `from-${k2.id}`,
+        text: who ? `As ${who}, I ${lowerFirst(k2.text)}` : k2.text,
+        acceptance: [...k2.produces.map((e) => `Event: ${eventText(e)}`), ...shown.map((r) => `Shows: ${r.text}`)],
+        traces: [{ from: ref2(k2.id), rel: "derived-from" }],
+        activity: { id: activityByText.get(seg.text) ?? seg.id, text: seg.text },
+        step: { id: stepByText.get(k2.text) ?? k2.id, text: k2.text },
+        person: who,
+        source: { kind: "command", id: k2.id }
+      });
+    }
+  } else {
+    for (const e of m2.events.filter((e2) => e2.person)) {
+      if (traced.has(ref2(e.id)))
+        continue;
+      const seg = segOf(e.id);
+      const who = person(e.person);
+      candidates.push({
+        id: `from-${e.id}`,
+        text: `As ${who}: ${e.text}`,
+        acceptance: [`Event: ${e.text}`],
+        traces: [{ from: ref2(e.id), rel: "derived-from" }],
+        activity: { id: activityByText.get(seg.text) ?? seg.id, text: seg.text },
+        step: { id: stepByText.get(e.text) ?? e.id, text: e.text },
+        person: who,
+        source: { kind: "event", id: e.id }
+      });
+    }
+  }
+  const activities = [];
+  for (const cnd of candidates) {
+    let a = activities.find((x2) => x2.id === cnd.activity.id);
+    if (!a)
+      activities.push(a = { id: cnd.activity.id, text: cnd.activity.text, steps: [] });
+    let s = a.steps.find((x2) => x2.id === cnd.step.id);
+    if (!s)
+      a.steps.push(s = { id: cnd.step.id, text: cnd.step.text, stories: [] });
+    s.stories.push({ id: cnd.id, text: cnd.text, acceptance: cnd.acceptance, traces: cnd.traces });
+  }
+  return { candidates, activities };
+}
+var lowerFirst;
+var init_proposeStories = __esm({
+  "packages/canvas/dist/diagrams/proposeStories.js"() {
+    init_eventStorming();
+    init_userStoryMap();
+    lowerFirst = (s) => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+  }
+});
+
+// packages/canvas/dist/diagrams/egon.js
+function fromEgon(file2) {
+  const warnings = [];
+  const root = file2;
+  const story = Array.isArray(root) ? { businessObjects: root.filter((o) => o.type) } : root.domainStory ?? (typeof root.dst === "string" ? JSON.parse(root.dst) : root.dst) ?? {};
+  const objs = Array.isArray(story) ? story : story.businessObjects ?? [];
+  if (!objs.length)
+    throw new Error("no domain story found (expected { domainStory: { businessObjects: [...] } })");
+  const byId = new Map(objs.map((o) => [o.id, o]));
+  const alloc = idAllocator();
+  const ours = /* @__PURE__ */ new Map();
+  const actors = objs.filter((o) => o.type.startsWith(ACTOR)).map((o, i) => {
+    const icon = o.type.slice(ACTOR.length) || "Person";
+    const text3 = (o.name ?? "").trim() || `${icon} ${i + 1}`;
+    const id = alloc(void 0, text3, "actor");
+    ours.set(o.id, id);
+    return { id, text: text3, kind: lowerIcon(icon) };
+  });
+  const workObjects = objs.filter((o) => o.type.startsWith(OBJECT)).map((o, i) => {
+    const icon = o.type.slice(OBJECT.length) || "Document";
+    const text3 = (o.name ?? "").trim() || `${icon.toLowerCase()} ${i + 1}`;
+    const id = alloc(void 0, text3, "object");
+    ours.set(o.id, id);
+    return { id, text: text3, kind: lowerIcon(icon) };
+  });
+  const isActor = (id) => !!id && byId.get(id)?.type.startsWith(ACTOR);
+  const isObject2 = (id) => !!id && byId.get(id)?.type.startsWith(OBJECT);
+  const activities = objs.filter((o) => o.type === "domainStory:activity");
+  const starts = activities.filter((a) => isActor(a.source)).sort((a, b2) => (a.number ?? Infinity) - (b2.number ?? Infinity));
+  let next = 1;
+  const sentences = starts.map((a) => {
+    const seq = typeof a.number === "number" && a.number > 0 ? a.number : next;
+    next = Math.max(next, seq + 1);
+    const verb = (a.name ?? "").trim() || "does";
+    const id = alloc(void 0, `${seq}-${verb}`, "sentence");
+    ours.set(a.id, id);
+    if (isObject2(a.target)) {
+      const onward = activities.filter((b2) => b2.source === a.target && isActor(b2.target));
+      const toLabel = onward.map((b2) => (b2.name ?? "").trim()).find(Boolean);
+      return { id, seq, actor: ours.get(a.source), verb, object: ours.get(a.target), ...onward.length ? { to: onward.map((b2) => ours.get(b2.target)) } : {}, ...toLabel ? { toLabel } : {} };
+    }
+    return { id, seq, actor: ours.get(a.source), verb, ...isActor(a.target) ? { to: [ours.get(a.target)] } : {} };
+  });
+  for (const a of activities)
+    if (!isActor(a.source) && !isObject2(a.source))
+      warnings.push(`activity ${a.id} starts at neither an actor nor a work object \u2014 skipped`);
+  const groups = objs.filter((o) => o.type === "domainStory:group").map((g2, i) => ({ id: alloc(void 0, (g2.name ?? "").trim() || `group ${i + 1}`, "group"), text: (g2.name ?? "").trim() || `Group ${i + 1}`, members: (g2.children ?? []).map((c2) => ours.get(c2)).filter((x2) => !!x2) }));
+  const annotations = objs.filter((o) => o.type === "domainStory:textAnnotation").flatMap((t) => {
+    const link = objs.find((c2) => c2.type === "domainStory:connection" && (c2.source === t.id || c2.target === t.id));
+    const other = link ? link.source === t.id ? link.target : link.source : void 0;
+    const on = other ? ours.get(other) : void 0;
+    if (!on) {
+      warnings.push(`annotation "${(t.text ?? "").slice(0, 40)}" is linked to nothing \u2014 skipped`);
+      return [];
+    }
+    return [{ on, text: t.text ?? "" }];
+  });
+  const s = story.scope ?? {};
+  const scope = { ...s.granularity ? { granularity: s.granularity } : {}, ...s.pointInTime ? { time: s.pointInTime } : {}, ...s.domainPurity ? { purity: s.domainPurity } : {} };
+  const content = {
+    ...Object.keys(scope).length ? { scope } : {},
+    actors,
+    workObjects,
+    sentences,
+    ...groups.length ? { groups } : {},
+    ...annotations.length ? { annotations } : {}
+  };
+  const meta3 = story;
+  return { content, ...meta3.title ? { title: meta3.title } : {}, ...meta3.description ? { description: meta3.description } : {}, warnings };
+}
+function toEgon(content, opts = {}) {
+  const m2 = normalizeDomainStory(content);
+  let n = 0;
+  const id = (p) => `${p}_${1e3 + ++n}`;
+  const objs = [];
+  const shapeOf = /* @__PURE__ */ new Map();
+  const COL4 = 250;
+  const at3 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
+  const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
+  const firstSeen = [];
+  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq))
+    for (const a of [s.actor, ...s.to])
+      if (!firstSeen.includes(a))
+        firstSeen.push(a);
+  for (const a of m2.actors)
+    if (!firstSeen.includes(a.id))
+      firstSeen.push(a.id);
+  firstSeen.forEach((aid, i) => {
+    const a = m2.actors.find((x2) => x2.id === aid);
+    const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at3(i, 0), pickedColor: "black" };
+    shapeOf.set(a.id, o);
+    objs.push(o);
+  });
+  const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
+  const icons = { actors: new Set(m2.actors.map((a) => capIcon(a.kind))), workObjects: /* @__PURE__ */ new Set() };
+  for (const s of m2.sentences) {
+    const col = seqs.indexOf(s.seq);
+    const stack = m2.sentences.filter((x2) => x2.seq === s.seq).indexOf(s);
+    const actor = shapeOf.get(s.actor);
+    if (s.objectText) {
+      icons.workObjects.add(capIcon(s.objectKind));
+      const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at3(col, 1 + stack), pickedColor: "black" };
+      objs.push(wo);
+      shapeOf.set(s.id, wo);
+      objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
+      for (const r of s.to) {
+        const to = shapeOf.get(r);
+        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.toLabel ?? "", number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: "black" });
+      }
+    } else {
+      for (const r of s.to.length ? s.to : []) {
+        const to = shapeOf.get(r);
+        objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: "black" });
+      }
+    }
+  }
+  for (const g2 of m2.groups) {
+    const members2 = g2.members.map((mid) => shapeOf.get(mid) ?? objs.find((o) => o.type.startsWith(OBJECT) && o.name === m2.workObjects.find((w2) => w2.id === mid)?.text)).filter((o) => !!o);
+    if (!members2.length)
+      continue;
+    const xs = members2.map((o) => o.x ?? 0);
+    const ys = members2.map((o) => o.y ?? 0);
+    objs.push({ id: id("shape"), type: "domainStory:group", name: g2.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members2.map((o) => o.id), pickedColor: "black" });
+  }
+  m2.annotations.forEach((a, i) => {
+    const target = shapeOf.get(a.on);
+    const t = { id: id("shape"), type: "domainStory:textAnnotation", text: a.text, x: 100 + i * COL4, y: 100 + (seqs.length ? 3 : 2) * 200, width: 150, height: 60 };
+    objs.push(t);
+    if (target)
+      objs.push({ id: id("connection"), type: "domainStory:connection", source: t.id, target: target.id, waypoints: [center(t), center(target)] });
+  });
+  const own2 = (icon) => {
+    const glyph = parseDsIcon(m2.icons?.[lowerIcon(icon)] ?? m2.icons?.[icon]);
+    return glyph ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${dsGlyphMarkup(glyph)}</svg>` : void 0;
+  };
+  const iconMap = (names) => Object.fromEntries([...names].map((k2) => [k2, own2(k2) ?? svg(k2)]));
+  return {
+    iconSet: { name: "unprose", actors: iconMap(icons.actors), workObjects: iconMap(icons.workObjects) },
+    domainStory: {
+      businessObjects: objs,
+      title: opts.title ?? "",
+      description: opts.description ?? "",
+      version: "4.0.0",
+      scope: { ...m2.scope.granularity ? { granularity: m2.scope.granularity } : {}, ...m2.scope.time ? { pointInTime: m2.scope.time } : {}, ...m2.scope.purity ? { domainPurity: m2.scope.purity } : {} }
+    }
+  };
+}
+var ACTOR, OBJECT, lowerIcon, capIcon, GLYPH, svg;
+var init_egon = __esm({
+  "packages/canvas/dist/diagrams/egon.js"() {
+    init_ids2();
+    init_domainStory();
+    init_dsIcons();
+    ACTOR = "domainStory:actor";
+    OBJECT = "domainStory:workObject";
+    lowerIcon = (icon) => icon.toLowerCase();
+    capIcon = (kind) => kind.charAt(0).toUpperCase() + kind.slice(1);
+    GLYPH = {
+      Person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/>',
+      Group: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5zM10 20c0-3 3-5 6-5s6 2 6 5z"/>',
+      System: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8v-2H8z"/>',
+      Document: '<path d="M6 2h8l4 4v16H6z"/>'
+    };
+    svg = (icon) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${GLYPH[icon] ?? '<rect x="4" y="4" width="16" height="16" rx="3"/>'}</svg>`;
+  }
+});
+
+// packages/canvas/dist/diagrams/proposeFromDomainStory.js
+function proposeFromDomainStory(content, opts) {
+  const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
+  const existing = opts.existing ? normalizeUserStoryMap(opts.existing) : void 0;
+  const traced = new Set(existing?.activities.flatMap((a) => a.steps.flatMap((s) => s.stories.flatMap((st) => st.traces.map((t) => t.from)))) ?? []);
+  const activityByText = new Map(existing?.activities.map((a) => [a.text, a.id]) ?? []);
+  const stepByText = new Map(existing?.activities.flatMap((a) => a.steps.map((s) => [s.text, s.id])) ?? []);
+  const actor = (id) => m2.actors.find((a) => a.id === id);
+  const story = { id: "story", text: opts.storyName ?? opts.dsKey };
+  const candidates = [];
+  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq)) {
+    const who = actor(s.actor);
+    if (who.kind === "system")
+      continue;
+    const ref2 = `${opts.dsKey}/${s.id}`;
+    if (traced.has(ref2))
+      continue;
+    const receivers = s.to.map((r) => actor(r).text);
+    const group = m2.groups.find((g2) => g2.members.includes(s.id) || s.object && g2.members.includes(s.object) || g2.members.includes(s.actor)) ?? story;
+    candidates.push({
+      id: `from-${s.id}`,
+      text: `As ${who.text}, I ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${receivers.length ? ` ${s.toLabel ?? "to"} ${receivers.join(", ")}` : ""}`,
+      acceptance: [receivers.length && s.objectText ? `${s.objectText} reaches ${receivers.join(", ")}` : `Done: ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}`],
+      traces: [{ from: ref2, rel: "derived-from" }],
+      activity: { id: activityByText.get(group.text) ?? group.id, text: group.text },
+      step: { id: stepByText.get(who.text) ?? who.id, text: who.text },
+      person: who.text,
+      source: { kind: "sentence", id: s.id }
+    });
+  }
+  const activities = [];
+  for (const c2 of candidates) {
+    let a = activities.find((x2) => x2.id === c2.activity.id);
+    if (!a)
+      activities.push(a = { id: c2.activity.id, text: c2.activity.text, steps: [] });
+    let st = a.steps.find((x2) => x2.id === c2.step.id);
+    if (!st)
+      a.steps.push(st = { id: c2.step.id, text: c2.step.text, stories: [] });
+    st.stories.push({ id: c2.id, text: c2.text, acceptance: c2.acceptance, traces: c2.traces });
+  }
+  return { candidates, activities };
+}
+var init_proposeFromDomainStory = __esm({
+  "packages/canvas/dist/diagrams/proposeFromDomainStory.js"() {
+    init_domainStory();
+    init_userStoryMap();
+  }
+});
+
+// packages/canvas/dist/diagrams/goto.js
+var init_goto = __esm({
+  "packages/canvas/dist/diagrams/goto.js"() {
+    init_model();
   }
 });
 
@@ -62523,8 +62556,7 @@ async function pushGraphToCanvas(def2, opts = {}) {
     throw new Error(refused);
   const { items: drawn } = await api("POST", `/api/boards/${board.id}/template`, { kind: "workflow", content: graph });
   const { board: current } = await api("GET", `/api/boards/${board.id}`);
-  const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0`);
-  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes));
+  const { ops } = explainRedraw(current.items, drawn, await redrawInputsOf(api, board.id));
   const { seq } = await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd graph: ${def2.name}` });
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || "http://localhost:4311").replace(/\/$/, "");
   const root = opts.file ? repoRoot(path15.dirname(path15.resolve(opts.file))) : void 0;
@@ -62544,10 +62576,19 @@ async function previewGraph(def2, opts = {}) {
     return { base, lines: [`Redraw preview \u2014 ${def2.name} (dry run: nothing written)`, `  no board "${title}" yet: a real draw creates it and adds every block`] };
   const { items: drawn } = await api("POST", `/api/boards/${hit.id}/template`, { kind: "workflow", content: graph });
   const { board: current } = await api("GET", `/api/boards/${hit.id}`);
-  const { changes } = await api("GET", `/api/boards/${hit.id}/changes?since=0`);
-  const { plan } = explainRedraw(current.items, drawn, redrawInputs(changes));
+  const { plan } = explainRedraw(current.items, drawn, await redrawInputsOf(api, hit.id));
   const refused = await redrawRefusal(api, hit.id, "workflow", { workflow: true });
   return { base, boardId: hit.id, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 workflow ${def2.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
+}
+async function redrawInputsOf(api, boardId) {
+  const id = encodeURIComponent(boardId);
+  try {
+    return redrawInputsFromJson(await api("GET", `/api/boards/${id}/redraw-inputs`));
+  } catch (e) {
+    if (!/ → 404 /.test(e.message))
+      throw e;
+    return redrawInputs((await api("GET", `/api/boards/${id}/changes?since=0`)).changes);
+  }
 }
 function withDetails(graph, file2) {
   if (!file2)
@@ -62701,9 +62742,9 @@ async function previewDesign(file2, opts) {
     frame: { key: d.key, title: d.title, source, level: d.level, ...opts.at ? { at: opts.at } : {} }
   });
   const drawn = withDesignFindings(d, served);
-  const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0`);
+  const inputs = await redrawInputsOf(api, board.id);
   const frame = drawn.find((it) => it.type === "frame" && it.data?.diagram?.key === d.key) ?? frameOf(board, d.key);
-  const { plan } = explainRedraw(board.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && board.items[frame.id] ? { frame: frame.id } : {} });
+  const { plan } = explainRedraw(board.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && board.items[frame.id] ? { frame: frame.id } : {} });
   const refused = await redrawRefusal(api, board.id, d.key);
   return { base, boardId: board.id, key: d.key, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
 }
@@ -62727,9 +62768,9 @@ async function drawDesign(file2, opts) {
   });
   const drawn = withDesignFindings(d, served);
   const current = (await api("GET", `/api/boards/${board.id}`)).board;
-  const { changes } = await api("GET", `/api/boards/${board.id}/changes?since=0`);
+  const inputs = await redrawInputsOf(api, board.id);
   const frame = drawn.find((it) => it.type === "frame" && it.data?.diagram?.key === d.key) ?? frameOf(current, d.key);
-  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && current.items[frame.id] ? { frame: frame.id } : {} });
+  const { ops } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && current.items[frame.id] ? { frame: frame.id } : {} });
   const { seq } = await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd design draw: ${source}` });
   const holder = { ...holderInfo(root), ...opts.applied ? { applied: opts.applied } : {} };
   const projectRoot = current.meta?.project?.root;
@@ -62971,6 +63012,14 @@ var init_base2 = __esm({
   }
 });
 
+// packages/canvas/dist/adapters/boards/changeLog.js
+var CHUNK;
+var init_changeLog = __esm({
+  "packages/canvas/dist/adapters/boards/changeLog.js"() {
+    CHUNK = 1 << 20;
+  }
+});
+
 // packages/canvas/dist/adapters/boards/location.js
 var init_location = __esm({
   "packages/canvas/dist/adapters/boards/location.js"() {
@@ -62981,6 +63030,7 @@ var init_location = __esm({
 var init_file4 = __esm({
   "packages/canvas/dist/adapters/boards/file.js"() {
     init_base2();
+    init_changeLog();
     init_location();
   }
 });
@@ -62998,6 +63048,7 @@ var init_projects2 = __esm({
     init_model();
     init_boardRepository();
     init_base2();
+    init_changeLog();
     init_location();
   }
 });
@@ -63025,6 +63076,21 @@ var init_store2 = __esm({
 // packages/canvas/dist/patch.js
 var init_patch = __esm({
   "packages/canvas/dist/patch.js"() {
+  }
+});
+
+// packages/canvas/dist/hidden.js
+function hiddenFramesLine(list3, listed = false) {
+  if (!list3.length)
+    return [];
+  const names = list3.map((f) => `${[f.key, f.title !== f.key ? `"${f.title}"` : ""].filter(Boolean).join(" ")} (${itemCount(f.items)})`);
+  return [`Hidden frames: ${names.join(", ")} \u2014 the person hid their contents on the board (not drawn for anyone); ${listed ? "listed here because of includeHidden: true" : "canvas_read_board with includeHidden: true lists them"}`];
+}
+var itemCount;
+var init_hidden = __esm({
+  "packages/canvas/dist/hidden.js"() {
+    init_model();
+    itemCount = (n) => `${n} item${n === 1 ? "" : "s"}`;
   }
 });
 
@@ -63113,6 +63179,7 @@ var init_outline = __esm({
   "packages/canvas/dist/outline.js"() {
     init_annotations();
     init_domainStory();
+    init_hidden();
     init_model();
     init_routing();
     init_todos();
@@ -68080,6 +68147,7 @@ var init_release = __esm({
 // packages/canvas/dist/thumb.js
 var init_thumb = __esm({
   "packages/canvas/dist/thumb.js"() {
+    init_hidden();
   }
 });
 
@@ -79751,7 +79819,7 @@ function helpText(o) {
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? "this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)" : "local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)"}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     "- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects",
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu, Hide contents / Show contents of a frame (canvas_read_board lists a hidden frame as one line; includeHidden: true lists what it holds). Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
     `Annotations: ${ANNOTATIONS_HELP}`,
@@ -79777,7 +79845,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.26.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.27.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -79846,10 +79914,11 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
       fields: external_exports.array(external_exports.string()).optional().describe('json: the item fields to return, e.g. ["id","role","text","x","y","w","h","parent"] or "data.ui"; default all, with bulky data summarised'),
       limit: external_exports.number().int().min(1).max(1e3).optional().describe("json: items per page (default 200); outline: lines per page"),
       cursor: external_exports.string().optional().describe("the next cursor a previous answer gave"),
-      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the answer (default 40000 characters)")
+      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the answer (default 40000 characters)"),
+      includeHidden: external_exports.boolean().optional().describe("also list what hidden frames hold (the person hid their contents on the board; by default each is one line saying how many items it holds)")
     }
-  }, async ({ id, format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars }) => {
-    const r = await client.read(id, { format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars });
+  }, async ({ id, format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars, includeHidden }) => {
+    const r = await client.read(id, { format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars, includeHidden });
     return text(r.text);
   });
   server.registerTool("canvas_apply", {
@@ -79977,7 +80046,9 @@ ${r.lines.join("\n")}${page}`);
   }, async ({ id, ids, frame, note }) => {
     const r = await client.focus(id, { ids, frame, note });
     const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
-    return text(r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+    const hidden = r.hidden?.length ? `
+Note: ${r.hidden.map((f) => `"${f.title}"`).join(", ")} ${r.hidden.length === 1 ? "is a hidden frame" : "are hidden frames"} (the person hid the contents): their page shows ${r.hidden.length === 1 ? "it" : "them"} collapsed instead of what you asked for \u2014 ask them to Show it if they should look inside` : "";
+    return text((r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`) + hidden);
   });
   server.registerTool("canvas_snapshot", {
     title: "See the board (an image of a frame, items or the whole board)",
@@ -80019,7 +80090,7 @@ ${svg2}`);
     const r = await client.layout(id, frame, limit2 ?? 60);
     const lines = r.lines;
     if (!r.findings.length)
-      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ""} checked \u2014 nothing overlaps, collides, is cut off or out of place.`);
+      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ""} checked${r.hidden ? ` (${r.hidden} in hidden frames not checked)` : ""} \u2014 nothing overlaps, collides, is cut off or out of place.`);
     return text((lines ?? r.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
   });
   if (!opts.remote) {
@@ -80059,6 +80130,7 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       ...s.handover ? handoverLines(s.handover) : [],
       ...s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done \u2014 things to confirm with someone else, not questions to you (canvas_todo lists them)`] : [],
       ...s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} \u2014 the person's own words: the holder judges each in its thread, then applies it or says why not`] : [],
+      ...hiddenFramesLine(s.hidden ?? []),
       ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ""} is still registered, but its frame is gone from the board${f.holder ? ` \u2014 files held by ${displayName(f.holder)}` : ""}: ${f.holder ? "its holder redraws it from the file, or drops the entry" : "redraw it from the file, or drop the entry"} \u2014 PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? " (only the holder may)" : ""}`),
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
@@ -80410,6 +80482,7 @@ var init_mcp2 = __esm({
     init_credentials3();
     init_todos();
     init_version2();
+    init_hidden();
     kindEnum = external_exports.enum(diagramKinds);
     CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples):
 - event-storming (Introducing EventStorming; docs/diagrams.md \xA73 \u2014 every element may carry \`id\`, references are ids or texts; drawn left \u2192 right in time): { level: 'big-picture'|'process'|'software', lanes?: string[], people?: (string|{id,text})[], systems?: [{id?, text, external?, raises?}], events: [{id?, text, lane?, phase?, pivotal?, time?, recurring?, person?, aggregate?}], commands?: [{id?, text, by?: <person>, system?: <system>, produces: <event> | <event>[] (several = branches, happy path first), aggregate?}], policies?: [{id?, text, when: <event>|<event>[], then: <command>, person?}], readModels?: [{id?, text, updatedBy?: <event>|<event>[], informs?: <person|command>}], hotspots?: [{text, on: <element>}], opportunities?: [{text, on}], values?: [{text, on, sign: '+'|'-'}], votes?: [{on, count}], milestones?: [{text, before: <event>}], phases?: [{text, from, to}], definitions?: [{term, text}], aggregates?: string[] }  \u2014 the grammar: a system between a command and its event, a policy between an event and the next command. The older shape (commands[].event, readModels[].for, externals, hotspots[].near) still works. Prefer \`awd design draw design/<name>.es.yaml\` so the file stays the truth.
@@ -80426,7 +80499,7 @@ Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on 
     LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long \u2014 timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
     ANNOTATIONS_HELP = `Annotations say what an item is for; they live in the design file (a top-level \`annotations: [{ on, text }]\` in every kind) and are drawn as numbered cards beside the drawing with a pin on the item \u2014 not threads. The person writes one on the canvas as a draft: a proposal to the agent holding the files. A draft annotation is the person's own words: judge it first \u2014 true to the design? does it contradict the file or another annotation? does it say what the item is for? \u2014 and reply in its thread with your judgement in a sentence or two. If it is sound, apply it at once (the person wrote it, so that counts as consent): the edit adds one \`annotations:\` entry \u2014 check \`base\`, apply, lint, redraw with --applied <thread>. If you have doubts, say why and wait for the person. An agent without the files proposes an annotation with canvas_propose_edit like any edit.`;
     TODO_HELP = `A TODO marks something still to be confirmed with someone outside the board (the PM, legal, the backend team) \u2014 a note, not a question to you: never answer one yourself. It lives on the board only and wakes no agent when written. Whoever finds out checks it off (the person, or an agent); checked off with an answer, the answer is posted as a reply in its thread and goes to the board's "Answered by" agent, which decides whether the design changes and proposes that as usual; checked off without an answer it notifies nobody.`;
-    READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
+    READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). A frame the person hid (its contents are not drawn) is one line saying how many items it holds; includeHidden: true lists them too. To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
     text = (s) => ({ content: [{ type: "text", text: s }] });
     ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`;
     DIAGRAMS = `${WHICH_DIAGRAM}
@@ -80459,6 +80532,7 @@ var init_remoteMcp = __esm({
 var init_read = __esm({
   "packages/canvas/dist/read.js"() {
     init_annotations();
+    init_hidden();
     init_model();
     init_todos();
     init_outline();
@@ -80469,6 +80543,7 @@ var init_read = __esm({
 // packages/canvas/dist/shown.js
 var init_shown = __esm({
   "packages/canvas/dist/shown.js"() {
+    init_hidden();
     init_model();
   }
 });
@@ -80486,6 +80561,7 @@ var DS_GLYPHS;
 var init_snapshot = __esm({
   "packages/canvas/dist/snapshot.js"() {
     init_annotations();
+    init_hidden();
     init_uiMock();
     init_shown();
     init_dsIcons();
@@ -80514,6 +80590,7 @@ var init_snapshot = __esm({
 var init_layoutCheck = __esm({
   "packages/canvas/dist/layoutCheck.js"() {
     init_annotations();
+    init_hidden();
     init_model();
     init_shown();
     init_textMetrics();
@@ -80565,6 +80642,7 @@ var init_server3 = __esm({
     init_proposals();
     init_todos();
     init_model();
+    init_redraw();
     init_routing();
     init_routing();
     init_feedback();
@@ -80575,6 +80653,7 @@ var init_server3 = __esm({
     init_remoteMcp();
     init_diff();
     init_read();
+    init_hidden();
     init_snapshot();
     init_layoutCheck();
     init_raster();

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Author, Board, Change, Item, Op } from '../../../src/model'
+import type { Author, Board, BriefChange, BriefOp, Change, Item, Op } from '../../../src/model'
 import { isContainer } from '../flow/boardToFlow'
 import { detailOf, type DiscussModel } from '../inspector/detail'
 import { Links } from './Links'
@@ -32,7 +32,8 @@ import { ItemMarks, type ItemMarksActions } from './ItemMarks'
 
 interface Props {
   board: Board
-  changes: Change[]
+  /** newest first; those read on load are trimmed for the list (BriefChange) */
+  changes: Array<Change | BriefChange>
   selectedId: string | null
   /** the whole selection (the Chat tab is about all of it) */
   selectedIds: string[]
@@ -89,7 +90,7 @@ const DIAGRAM_KEYS = new Set(['diagram', 'pending', 'trace', 'traces', 'icon', '
 
 const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 
-function describeOp(op: Op, board: Board, change: Change): string {
+function describeOp(op: Op | BriefOp, board: Board, change: Change | BriefChange): string {
   const name = (id: string) => {
     const it = board.items[id] ?? change.before[id]
     const t = it?.text?.trim()
@@ -106,7 +107,9 @@ function describeOp(op: Op, board: Board, change: Change): string {
   return `${parts.join(' and ') || 'touched'} ${name(op.id)}`
 }
 
-const idsOf = (c: Change) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.item.id : o.id)))]
+const idsOf = (c: Change | BriefChange) => [...new Set(c.ops.map((o) => (o.kind === 'add' ? o.item.id : o.id)))]
+/** every op of the change — a trimmed one lists at most 50 */
+const opCountOf = (c: Change | BriefChange) => ('opCount' in c ? c.opCount : c.ops.length)
 
 type Filter = 'all' | 'agent' | 'user'
 
@@ -219,6 +222,8 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
               <ul className="feed">
                 {visible.map((c) => {
                   const ids = idsOf(c).filter((i) => board.items[i])
+                  // a trimmed change says how many items it touched; locate takes the ids it lists
+                  const n = 'itemCount' in c ? c.itemCount : ids.length
                   return (
                     <li key={c.seq} className={c.author}>
                       <div className="row">
@@ -228,44 +233,28 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
                       </div>
                       {c.note === 'handoff' ? (
                         <div className="note">Handed to the agent</div>
-                      ) : c.author === 'agent' && ids.length ? (
+                      ) : c.author === 'agent' && n ? (
                         <div className="note">
-                          Agent changed {ids.length} item{ids.length === 1 ? '' : 's'}
+                          Agent changed {n} item{n === 1 ? '' : 's'}
                           {c.note ? `: ${c.note}` : ''}{' '}
-                          <button type="button" className="link" data-item-link={ids.join(' ')} onClick={() => onLocate(ids)}>
-                            locate
-                          </button>
+                          {ids.length > 0 && (
+                            <button type="button" className="link" data-item-link={ids.join(' ')} onClick={() => onLocate(ids)}>
+                              locate
+                            </button>
+                          )}
                         </div>
                       ) : (
                         c.note && <div className="note">{c.note}</div>
                       )}
-                      {c.ops.length > 0 && (
-                        <details>
-                          <summary>
-                            {c.ops.length} change{c.ops.length === 1 ? '' : 's'}
-                          </summary>
-                          <ul className="ops">
-                            {c.ops.map((op, i) => {
-                              const id = op.kind === 'add' ? op.item.id : op.id
-                              const exists = Boolean(board.items[id])
-                              return (
-                                <li key={i}>
-                                  <button
-                                    type="button"
-                                    disabled={!exists}
-                                    data-item-link={exists ? id : undefined}
-                                    onClick={() => {
-                                      onSelect(id)
-                                      setTab('item')
-                                    }}
-                                  >
-                                    {describeOp(op, board, c)}
-                                  </button>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        </details>
+                      {opCountOf(c) > 0 && (
+                        <ChangeOps
+                          change={c}
+                          board={board}
+                          onOpen={(id) => {
+                            onSelect(id)
+                            setTab('item')
+                          }}
+                        />
                       )}
                     </li>
                   )
@@ -365,6 +354,36 @@ export function SidePanel({ board: liveBoard, changes, selectedId, selectedIds, 
       </div>
     </aside>
     </PanelNavContext.Provider>
+  )
+}
+
+/** A change's ops, put on the page only once opened: a redraw of a big diagram has thousands. */
+function ChangeOps({ change, board, onOpen }: { change: Change | BriefChange; board: Board; onOpen: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const count = opCountOf(change)
+  const unlisted = count - change.ops.length
+  return (
+    <details onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>
+        {count} change{count === 1 ? '' : 's'}
+      </summary>
+      {open && (
+        <ul className="ops">
+          {change.ops.map((op, i) => {
+            const id = op.kind === 'add' ? op.item.id : op.id
+            const exists = Boolean(board.items[id])
+            return (
+              <li key={i}>
+                <button type="button" disabled={!exists} data-item-link={exists ? id : undefined} onClick={() => onOpen(id)}>
+                  {describeOp(op, board, change)}
+                </button>
+              </li>
+            )
+          })}
+          {unlisted > 0 && <li className="muted">… {unlisted} more not listed</li>}
+        </ul>
+      )}
+    </details>
   )
 }
 

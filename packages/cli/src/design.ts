@@ -9,8 +9,8 @@ import YAML from 'yaml'
 import { annotationFindings, designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, tellBack, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
-import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
-import { repoRoot, withDetails } from './graphCanvas.js'
+import { explainRedraw, planLines, type RedrawPlan } from '@awd/canvas/diagrams'
+import { redrawInputsOf, repoRoot, withDetails } from './graphCanvas.js'
 import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, redrawRefusal, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 
@@ -146,9 +146,9 @@ export async function previewDesign(file: string, opts: DrawOptions): Promise<Dr
     frame: { key: d.key, title: d.title, source, level: d.level, ...(opts.at ? { at: opts.at } : {}) },
   })
   const drawn = withDesignFindings(d, served)
-  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
+  const inputs = await redrawInputsOf(api, board.id)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(board, d.key)
-  const { plan } = explainRedraw(board.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && board.items[frame.id] ? { frame: frame.id } : {}) })
+  const { plan } = explainRedraw(board.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && board.items[frame.id] ? { frame: frame.id } : {}) })
   const refused = await redrawRefusal(api, board.id, d.key)
   return { base, boardId: board.id, key: d.key, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }), ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
 }
@@ -176,10 +176,10 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   // a UI mock's lint findings go on its elements, from the file as written (docs/diagrams.md §6c)
   const drawn = withDesignFindings(d, served)
   const current = (await api<{ board: Board }>('GET', `/api/boards/${board.id}`)).board
-  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
-  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
+  // from the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const inputs = await redrawInputsOf(api, board.id)
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(current, d.key)
-  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && current.items[frame.id] ? { frame: frame.id } : {}) })
+  const { ops } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && current.items[frame.id] ? { frame: frame.id } : {}) })
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design draw: ${source}` })
   // PATCH merges: only this diagram's entry changes — another machine's diagrams and keys stay as they are.
   // the holder: this agent has the files and where (machine, root — the project root per diagram); the canvas stamps the

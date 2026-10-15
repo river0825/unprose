@@ -1,7 +1,9 @@
 // Server-rendered SVG thumbnail of a board — the "wall of boards" preview.
 // No text: lanes/frames as hairline rects, stickies as filled squares in the
 // sticky palette, arrows as thin lines, comments as tiny yellow squares.
-// Colours are CSS variables inside the SVG so it follows the viewer's theme.
+// Colours are CSS variables inside the SVG so it follows the viewer's theme. A hidden frame is drawn collapsed,
+// without what it holds, as the page draws it (hidden.ts).
+import { drawnBoard } from './hidden.js'
 import type { Board, ColorToken, Item } from './model.js'
 
 export interface ThumbOptions {
@@ -51,7 +53,8 @@ function n(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, '')
 }
 
-export function renderThumb(board: Board, opts: ThumbOptions = {}): string {
+export function renderThumb(stored: Board, opts: ThumbOptions = {}): string {
+  const board = drawnBoard(stored)
   const w = opts.w ?? 280
   const h = opts.h ?? 160
   const pad = opts.pad ?? 8

@@ -6,11 +6,11 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { boardByTitle, canvasApi, canvasBase, holderInfo, redrawRefusal, registerProject } from './projects.js'
+import { boardByTitle, canvasApi, canvasBase, holderInfo, redrawRefusal, registerProject, type Api } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
 import { toGraph, type WorkflowDefinition } from '@awd/core'
 import { loadWorkflow, blockDetails, workflowFiles } from '@awd/runtime'
-import { explainRedraw, planLines, redrawInputs, type LoggedChange, type RedrawPlan } from '@awd/canvas/diagrams'
+import { explainRedraw, planLines, redrawInputs, redrawInputsFromJson, type LoggedChange, type RedrawInputs, type RedrawInputsJson, type RedrawPlan } from '@awd/canvas/diagrams'
 
 export interface PushGraphOptions {
   /** Canvas server (default AWD_CANVAS_URL or http://localhost:4400). */
@@ -36,9 +36,8 @@ export async function pushGraphToCanvas(def: WorkflowDefinition, opts: PushGraph
   if (refused) throw new Error(refused)
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${board.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem>; meta?: { workflow?: { statusUrl?: string } } & Record<string, unknown> } }>('GET', `/api/boards/${board.id}`)
-  // the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
-  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${board.id}/changes?since=0`)
-  const { ops } = explainRedraw(current.items, drawn, redrawInputs(changes))
+  // from the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
+  const { ops } = explainRedraw(current.items, drawn, await redrawInputsOf(api, board.id))
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd graph: ${def.name}` })
   // A redraw without --runtime keeps the runtime the board already points at (studio redraws without one).
   const statusUrl = (opts.runtime || process.env.AWD_RUNTIME_URL || current.meta?.workflow?.statusUrl || 'http://localhost:4311').replace(/\/$/, '')
@@ -62,10 +61,24 @@ export async function previewGraph(def: WorkflowDefinition, opts: PushGraphOptio
   if (!hit) return { base, lines: [`Redraw preview — ${def.name} (dry run: nothing written)`, `  no board "${title}" yet: a real draw creates it and adds every block`] }
   const { items: drawn } = await api<{ items: BoardItem[] }>('POST', `/api/boards/${hit.id}/template`, { kind: 'workflow', content: graph })
   const { board: current } = await api<{ board: { items: Record<string, BoardItem> } }>('GET', `/api/boards/${hit.id}`)
-  const { changes } = await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${hit.id}/changes?since=0`)
-  const { plan } = explainRedraw(current.items, drawn, redrawInputs(changes))
+  const { plan } = explainRedraw(current.items, drawn, await redrawInputsOf(api, hit.id))
   const refused = await redrawRefusal(api, hit.id, 'workflow', { workflow: true })
   return { base, boardId: hit.id, plan, lines: [...planLines(plan, { title: `Redraw preview — workflow ${def.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }), ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
+}
+
+/**
+ * What a redraw needs from the board's whole change log, folded by the canvas (`GET …/redraw-inputs`); a canvas
+ * without that route (404) sends the log and the fold happens here.
+ */
+export async function redrawInputsOf(api: Api, boardId: string): Promise<Required<RedrawInputs>> {
+  const id = encodeURIComponent(boardId)
+  try {
+    return redrawInputsFromJson(await api<RedrawInputsJson>('GET', `/api/boards/${id}/redraw-inputs`))
+  } catch (e) {
+    // canvasApi's errors read "GET <path> → <status> <message>"
+    if (!/ → 404 /.test((e as Error).message)) throw e
+    return redrawInputs((await api<{ changes: LoggedChange[] }>('GET', `/api/boards/${id}/changes?since=0`)).changes)
+  }
 }
 
 /**

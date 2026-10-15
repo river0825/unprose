@@ -1,9 +1,11 @@
 // Tiny HTTP client for the canvas API — used by the MCP server and the CLI.
 import type { Author, Board, Change, DiagramKind, Item, Op, Wake } from './model.js'
 import type { CardMove } from './diff.js'
+import type { HiddenFrame } from './hidden.js'
 import { heldElsewhereText, LOCAL_AGENT, sameAgent, type BoardContext, type FileHolder, type Handover, type Responder } from './routing.js'
 import type { FeedbackRecord } from './ports/feedbackStore.js'
 import { savedToken } from './credentials.js'
+import { redrawInputs, redrawInputsFromJson, type LoggedChange, type RedrawInputs, type RedrawInputsJson } from './diagrams/redraw.js'
 import { userAgent } from './version.js'
 
 /** A board's settings (`GET /api/boards/:id/settings`, docs/canvas.md "Several agents on one board"). */
@@ -20,6 +22,8 @@ export interface BoardSettings {
   drafts?: number
   /** diagrams still registered whose frame is gone from the board; `holder` is the agent holding their files */
   frameless?: Array<{ key: string; source?: string; holder?: string }>
+  /** frames the person hid the contents of (docs/canvas.md "Hiding a frame") */
+  hidden?: HiddenFrame[]
   /** a responder the person may confirm: one an agent asked for ('asked', by suggestionBy), or the sole file holder ('holder') */
   suggestion?: string
   suggestionBy?: string | null
@@ -157,7 +161,7 @@ export class CanvasClient {
       const msg = (data as { error?: string })?.error
       // a 403 without the canvas's own JSON: a proxy in front of it (Cloudflare) refused the request
       if (res.status === 403 && !msg) throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} — not the canvas's answer: something in front of it (Cloudflare?) refused the request`)
-      throw new Error(msg ?? `${res.status} ${res.statusText}`)
+      throw Object.assign(new Error(msg ?? `${res.status} ${res.statusText}`), { status: res.status })
     }
     return data as T
   }
@@ -215,6 +219,18 @@ export class CanvasClient {
     const q = new URLSearchParams({ since: String(since) })
     if (author) q.set('author', author)
     return this.req<{ changes: Change[]; seq: number }>('GET', `/api/boards/${encodeURIComponent(id)}/changes?${q}`)
+  }
+  /**
+   * What a redraw needs from the board's whole change log (docs/diagrams.md "What a redraw keeps"), folded by the canvas;
+   * a canvas without that route (404) sends the whole log, folded here.
+   */
+  async redrawInputs(id: string): Promise<Required<RedrawInputs>> {
+    try {
+      return redrawInputsFromJson(await this.req<RedrawInputsJson>('GET', `/api/boards/${encodeURIComponent(id)}/redraw-inputs`))
+    } catch (e) {
+      if ((e as { status?: number }).status !== 404) throw e
+      return redrawInputs((await this.changes(id, 0)).changes as unknown as LoggedChange[])
+    }
   }
   /** `extra`: frame, from (names), kinds, summary, last, limit, cursor, maxChars (docs/canvas.md "Reading big boards"). */
   diff(id: string, since: number, author?: Author | 'others', extra?: AgentScaleQuery) {
@@ -300,7 +316,7 @@ export class CanvasClient {
   }
   /** "Look here": ask the board's open pages to bring these items / this diagram frame into view. */
   focus(id: string, target: { ids?: string[]; frame?: string; note?: string }, author: Author = 'agent') {
-    return this.req<{ ok: true; viewers: number; focus: { ids: string[]; frame?: string; note?: string } }>('POST', `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author })
+    return this.req<{ ok: true; viewers: number; focus: { ids: string[]; frame?: string; note?: string }; /** the hidden frames some of those items are in: the page shows the frame collapsed instead */ hidden?: HiddenFrame[] }>('POST', `/api/boards/${encodeURIComponent(id)}/focus`, { ...target, author })
   }
   /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
   files(id: string) {
@@ -315,7 +331,7 @@ export class CanvasClient {
   }
   // ---- Agent-scale reading, seeing the board, the layout check, local approval (docs/canvas.md "Reading big boards") ----
   /** A board read with filters, a format and a size cap (`GET /api/boards/:id/read`). */
-  read(id: string, o: AgentScaleQuery & { format?: 'outline' | 'json' | 'summary'; types?: string[]; ids?: string[]; text?: string; fields?: string[] } = {}) {
+  read(id: string, o: AgentScaleQuery & { format?: 'outline' | 'json' | 'summary'; types?: string[]; ids?: string[]; text?: string; fields?: string[]; includeHidden?: boolean } = {}) {
     const q = new URLSearchParams()
     addQuery(q, o)
     return this.req<{ format: string; text: string; matched: number; nextCursor?: string; more?: string; seq: number }>('GET', `/api/boards/${encodeURIComponent(id)}/read?${q}`)
@@ -324,7 +340,7 @@ export class CanvasClient {
   layout(id: string, frame?: string, limit?: number) {
     const q = new URLSearchParams()
     addQuery(q, { frame, limit })
-    return this.req<{ findings: Array<{ id: string; kind: string; message: string; suggestion: string; others?: string[]; frame?: string }>; checked: number; wires?: number; frame?: string; counts: Record<string, number> }>('GET', `/api/boards/${encodeURIComponent(id)}/layout?${q}`)
+    return this.req<{ findings: Array<{ id: string; kind: string; message: string; suggestion: string; others?: string[]; frame?: string }>; checked: number; wires?: number; frame?: string; counts: Record<string, number>; /** items in hidden frames, not checked */ hidden?: number }>('GET', `/api/boards/${encodeURIComponent(id)}/layout?${q}`)
   }
   /** A server-side render: PNG bytes when the canvas can rasterize, else the SVG text; `info` says what is in it. */
   async snapshot(id: string, o: { frame?: string; ids?: string[]; scale?: number; maxPx?: number; theme?: 'light' | 'dark'; format?: 'png' | 'svg'; traces?: 'all' | 'none' } = {}): Promise<{ mime: string; png?: Buffer; svg?: string; info: { width: number; height: number; scale: number; items: number; region: { x: number; y: number; w: number; h: number }; notes: string[]; renderer?: string } }> {

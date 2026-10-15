@@ -38,13 +38,16 @@ interface Props {
   /** the layout lock (docs/diagrams.md "What a redraw keeps"): absent for comments and wires */
   lock?: { locked: boolean; frame: boolean; byFrame: boolean }
   onToggleLock?: (id: string) => void
+  /** a frame: whether its contents are hidden (docs/canvas.md "Hiding a frame"); absent for anything else */
+  hidden?: boolean
+  onToggleHidden?: (id: string) => void
   /** write an annotation (what the item is for) or a TODO (still to be confirmed) on it: absent for comments and wires */
   onAnnotate?: (id: string) => void
   onTodo?: (id: string) => void
 }
 
 /** Item context menu: a small hairline panel at the pointer, arrow-key navigable. */
-export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, onCopyLink, canColor, askEnabled, onPlayStory, onPlayMock, onClickThrough, lock, onToggleLock, onAnnotate, onTodo }: Props) {
+export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, onDuplicate, onDelete, onCopyImage, copyCount, onCopyLink, canColor, askEnabled, onPlayStory, onPlayMock, onClickThrough, lock, onToggleLock, hidden, onToggleHidden, onAnnotate, onTodo }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [colorsOpen, setColorsOpen] = useState(false)
   const [pos, setPos] = useState({ x: menu.x, y: menu.y })
@@ -194,6 +197,15 @@ export function ContextMenu({ menu, onClose, onComment, onAsk, onEdit, onColor, 
           onClick={act(() => onToggleLock(menu.itemId))}
         >
           {lock.locked ? (lock.frame ? 'Unlock layout' : 'Unlock position') : lock.frame ? 'Lock layout' : 'Lock position'}
+        </button>
+      )}
+      {hidden !== undefined && onToggleHidden && (
+        <button
+          role="menuitem"
+          title={hidden ? 'Draw what this frame holds again' : 'Fold this frame to its header: what it holds is not drawn, for everyone on the board, until it is shown again'}
+          onClick={act(() => onToggleHidden(menu.itemId))}
+        >
+          {hidden ? 'Show contents' : 'Hide contents'}
         </button>
       )}
       <button role="menuitem" onClick={act(() => onDuplicate(menu.itemId))}>

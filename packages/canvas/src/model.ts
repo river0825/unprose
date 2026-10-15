@@ -117,6 +117,27 @@ export interface Change {
   meta?: Record<string, unknown>
 }
 
+/**
+ * A change trimmed for a list (`GET /api/boards/:id/changes?brief=1`, the page's Changes tab): at most 50 ops, each
+ * only what names it — never applied, so it is not a `Change`. `before` holds only the items its removes take.
+ */
+export interface BriefChange extends Omit<Change, 'ops' | 'before' | 'meta'> {
+  ops: BriefOp[]
+  before: Record<string, Pick<Item, 'id' | 'type' | 'text'> | null>
+  /** the settings keys it set, values null */
+  meta?: Record<string, null>
+  /** every op of the change, listed or not */
+  opCount: number
+  /** the distinct items it touched */
+  itemCount: number
+}
+
+/** An add names its item; an update keeps the keys it set (values null), not the stamps (id, createdBy, updatedBy, updatedAt); a remove is as it was. */
+export type BriefOp =
+  | { kind: 'add'; item: Pick<Item, 'id' | 'type' | 'role' | 'text'> }
+  | { kind: 'update'; id: string; patch: Record<string, null> }
+  | { kind: 'remove'; id: string }
+
 /** Wire messages on the board websocket. */
 export type WsMessage =
   | { type: 'hello'; board: Board }

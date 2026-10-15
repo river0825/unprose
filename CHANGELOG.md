@@ -6,6 +6,40 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-10-15
+
+### Added
+- **Hide a frame's contents** (docs/canvas.md "Hiding a frame"). Right-click a frame → **Hide contents**: everything
+  it holds, the wires with an end in it and the threads about them are no longer drawn, for everyone on the board; the
+  frame stays as a short strip with its title, "N items hidden" and **Show**. One ordinary, undoable change
+  (`data.hidden` on the frame) that a redraw keeps. A jump to something inside lands on the strip and says so; nothing
+  is dropped into it. Agents see one line per hidden frame in `canvas_read_board` and `canvas_context` — not what it
+  holds, unless `includeHidden: true`; the layout check, `canvas_snapshot` and the thumbnail leave it out too. Hiding
+  an unused mock is also the quickest way to make a big board light: on a 3,824-item board, hiding its 2,681-item
+  mock cut opening to 0.9 s and a change by someone else to under 0.15 s.
+
+### Changed
+- **A big board is fast again.** Measured on a 3,824-item board with a 108 MB change log: opening went from 5.8 s to
+  1.4 s, and a change by someone else (an agent's add or move) is drawn after 0.15–0.3 s instead of 4–5 s.
+  - Wires are planned again only near what changed (a move or an add re-planned every wire on the board), and the
+    crossings are counted by intervals — the same routes, ~20× faster.
+  - The page loads the latest 300 changes, trimmed for the Changes tab (`GET …/changes?last=N&brief=1`), not the
+    whole log: 97 MB → 1 MB (33 s → under 1 s through a tunnel). A change's ops are drawn only once it is opened.
+  - The panel re-reads the board's meta alone (`GET …/meta`), not the whole board, and only after a redraw.
+  - The Chats list is gathered in one pass over the comments, not one per thread.
+- **A redraw writes only what changed.** An item the file draws exactly as it is gets no op; before, every drawn item
+  was rewritten (a big UI mock: ~3,000 ops and 3.6 MB of log per redraw, sent to every open page).
+- **A redraw from another machine downloads no log**: `awd design draw`, `design_draw` and `awd graph --canvas` read
+  what they need from it — who moved, added and deleted what — from `GET …/redraw-inputs` (245 KB instead of 97 MB),
+  kept by the canvas per board; an older canvas is read as before.
+- **The canvas reads its change log through an index**: `changes`, `diff` and every `canvas_wait` check read only
+  what is new (~260 ms → under 1 ms on a 108 MB log, without blocking the server); a torn last line no longer breaks
+  reading the log.
+
+### Fixed
+- After a redraw, undoing your own move no longer says the agent changed the item since: an unchanged item is no
+  longer re-stamped by the redraw.
+
 ## [0.26.0] — 2026-10-13
 
 ### Added
@@ -954,7 +988,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/river0825/unprose/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/river0825/unprose/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/river0825/unprose/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/river0825/unprose/compare/v0.23.0...v0.24.0

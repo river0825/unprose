@@ -3904,17 +3904,17 @@ var require_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    function visit_(key, node4, visitor, path15) {
-      const ctrl = callVisitor(key, node4, visitor, path15);
+    function visit_(key, node4, visitor, path16) {
+      const ctrl = callVisitor(key, node4, visitor, path16);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path15, ctrl);
-        return visit_(key, ctrl, visitor, path15);
+        replaceNode(key, path16, ctrl);
+        return visit_(key, ctrl, visitor, path16);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path15 = Object.freeze(path15.concat(node4));
+          path16 = Object.freeze(path16.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = visit_(i, node4.items[i], visitor, path15);
+            const ci = visit_(i, node4.items[i], visitor, path16);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3925,13 +3925,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path15 = Object.freeze(path15.concat(node4));
-          const ck = visit_("key", node4.key, visitor, path15);
+          path16 = Object.freeze(path16.concat(node4));
+          const ck = visit_("key", node4.key, visitor, path16);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = visit_("value", node4.value, visitor, path15);
+          const cv = visit_("value", node4.value, visitor, path16);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -3952,17 +3952,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node4, visitor, path15) {
-      const ctrl = await callVisitor(key, node4, visitor, path15);
+    async function visitAsync_(key, node4, visitor, path16) {
+      const ctrl = await callVisitor(key, node4, visitor, path16);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path15, ctrl);
-        return visitAsync_(key, ctrl, visitor, path15);
+        replaceNode(key, path16, ctrl);
+        return visitAsync_(key, ctrl, visitor, path16);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node4)) {
-          path15 = Object.freeze(path15.concat(node4));
+          path16 = Object.freeze(path16.concat(node4));
           for (let i = 0; i < node4.items.length; ++i) {
-            const ci = await visitAsync_(i, node4.items[i], visitor, path15);
+            const ci = await visitAsync_(i, node4.items[i], visitor, path16);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -3973,13 +3973,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node4)) {
-          path15 = Object.freeze(path15.concat(node4));
-          const ck = await visitAsync_("key", node4.key, visitor, path15);
+          path16 = Object.freeze(path16.concat(node4));
+          const ck = await visitAsync_("key", node4.key, visitor, path16);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node4.key = null;
-          const cv = await visitAsync_("value", node4.value, visitor, path15);
+          const cv = await visitAsync_("value", node4.value, visitor, path16);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -4006,23 +4006,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node4, visitor, path15) {
+    function callVisitor(key, node4, visitor, path16) {
       if (typeof visitor === "function")
-        return visitor(key, node4, path15);
+        return visitor(key, node4, path16);
       if (identity.isMap(node4))
-        return visitor.Map?.(key, node4, path15);
+        return visitor.Map?.(key, node4, path16);
       if (identity.isSeq(node4))
-        return visitor.Seq?.(key, node4, path15);
+        return visitor.Seq?.(key, node4, path16);
       if (identity.isPair(node4))
-        return visitor.Pair?.(key, node4, path15);
+        return visitor.Pair?.(key, node4, path16);
       if (identity.isScalar(node4))
-        return visitor.Scalar?.(key, node4, path15);
+        return visitor.Scalar?.(key, node4, path16);
       if (identity.isAlias(node4))
-        return visitor.Alias?.(key, node4, path15);
+        return visitor.Alias?.(key, node4, path16);
       return void 0;
     }
-    function replaceNode(key, path15, node4) {
-      const parent = path15[path15.length - 1];
+    function replaceNode(key, path16, node4) {
+      const parent = path16[path16.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node4;
       } else if (identity.isPair(parent)) {
@@ -4634,10 +4634,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path15, value) {
+    function collectionFromPath(schema, path16, value) {
       let v2 = value;
-      for (let i = path15.length - 1; i >= 0; --i) {
-        const k2 = path15[i];
+      for (let i = path16.length - 1; i >= 0; --i) {
+        const k2 = path16[i];
         if (typeof k2 === "number" && Number.isInteger(k2) && k2 >= 0) {
           const a = [];
           a[k2] = v2;
@@ -4656,7 +4656,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path15) => path15 == null || typeof path15 === "object" && !!path15[Symbol.iterator]().next().done;
+    var isEmptyPath = (path16) => path16 == null || typeof path16 === "object" && !!path16[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -4686,11 +4686,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path15, value) {
-        if (isEmptyPath(path15))
+      addIn(path16, value) {
+        if (isEmptyPath(path16))
           this.add(value);
         else {
-          const [key, ...rest] = path15;
+          const [key, ...rest] = path16;
           const node4 = this.get(key, true);
           if (identity.isCollection(node4))
             node4.addIn(rest, value);
@@ -4704,8 +4704,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path15) {
-        const [key, ...rest] = path15;
+      deleteIn(path16) {
+        const [key, ...rest] = path16;
         if (rest.length === 0)
           return this.delete(key);
         const node4 = this.get(key, true);
@@ -4719,8 +4719,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path15, keepScalar) {
-        const [key, ...rest] = path15;
+      getIn(path16, keepScalar) {
+        const [key, ...rest] = path16;
         const node4 = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node4) ? node4.value : node4;
@@ -4738,8 +4738,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path15) {
-        const [key, ...rest] = path15;
+      hasIn(path16) {
+        const [key, ...rest] = path16;
         if (rest.length === 0)
           return this.has(key);
         const node4 = this.get(key, true);
@@ -4749,8 +4749,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path15, value) {
-        const [key, ...rest] = path15;
+      setIn(path16, value) {
+        const [key, ...rest] = path16;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -5837,7 +5837,7 @@ var require_YAMLMap = __commonJS({
       static from(schema, obj, ctx) {
         const { keepUndefined, replacer } = ctx;
         const map2 = new this(schema);
-        const add = (key, value) => {
+        const add2 = (key, value) => {
           if (typeof replacer === "function")
             value = replacer.call(obj, key, value);
           else if (Array.isArray(replacer) && !replacer.includes(key))
@@ -5847,10 +5847,10 @@ var require_YAMLMap = __commonJS({
         };
         if (obj instanceof Map) {
           for (const [key, value] of obj)
-            add(key, value);
+            add2(key, value);
         } else if (obj && typeof obj === "object") {
           for (const key of Object.keys(obj))
-            add(key, obj[key]);
+            add2(key, obj[key]);
         }
         if (typeof schema.sortMapEntries === "function") {
           map2.items.sort(schema.sortMapEntries);
@@ -7265,9 +7265,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path15, value) {
+      addIn(path16, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path15, value);
+          this.contents.addIn(path16, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -7342,14 +7342,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path15) {
-        if (Collection.isEmptyPath(path15)) {
+      deleteIn(path16) {
+        if (Collection.isEmptyPath(path16)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path15) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path16) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -7364,10 +7364,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path15, keepScalar) {
-        if (Collection.isEmptyPath(path15))
+      getIn(path16, keepScalar) {
+        if (Collection.isEmptyPath(path16))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path15, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path16, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -7378,10 +7378,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path15) {
-        if (Collection.isEmptyPath(path15))
+      hasIn(path16) {
+        if (Collection.isEmptyPath(path16))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path15) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path16) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -7398,13 +7398,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path15, value) {
-        if (Collection.isEmptyPath(path15)) {
+      setIn(path16, value) {
+        if (Collection.isEmptyPath(path16)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path15), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path16), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path15, value);
+          this.contents.setIn(path16, value);
         }
       }
       /**
@@ -9365,9 +9365,9 @@ var require_cst_visit = __commonJS({
     visit2.BREAK = BREAK;
     visit2.SKIP = SKIP;
     visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path15) => {
+    visit2.itemAtPath = (cst, path16) => {
       let item = cst;
-      for (const [field, index] of path15) {
+      for (const [field, index] of path16) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -9376,23 +9376,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path15) => {
-      const parent = visit2.itemAtPath(cst, path15.slice(0, -1));
-      const field = path15[path15.length - 1][0];
+    visit2.parentCollection = (cst, path16) => {
+      const parent = visit2.itemAtPath(cst, path16.slice(0, -1));
+      const field = path16[path16.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path15, item, visitor) {
-      let ctrl = visitor(item, path15);
+    function _visit(path16, item, visitor) {
+      let ctrl = visitor(item, path16);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path15.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path16.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -9403,10 +9403,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path15);
+            ctrl = ctrl(item, path16);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path15) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path16) : ctrl;
     }
     exports.visit = visit2;
   }
@@ -10708,14 +10708,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs14 = this.flowScalar(this.type);
+              const fs15 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map2.items.push({ start, key: fs14, sep: [] });
+                map2.items.push({ start, key: fs15, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs14);
+                this.stack.push(fs15);
               } else {
-                Object.assign(it, { key: fs14, sep: [] });
+                Object.assign(it, { key: fs15, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -10843,13 +10843,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs14 = this.flowScalar(this.type);
+              const fs15 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs14, sep: [] });
+                fc.items.push({ start: [], key: fs15, sep: [] });
               else if (it.sep)
-                this.stack.push(fs14);
+                this.stack.push(fs15);
               else
-                Object.assign(it, { key: fs14, sep: [] });
+                Object.assign(it, { key: fs15, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -14386,8 +14386,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path15) {
-      let input2 = path15;
+    function removeDotSegments(path16) {
+      let input2 = path16;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -14796,8 +14796,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path15 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path15 && path15 !== "/" ? path15 : void 0;
+        const path16 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path16 && path16 !== "/" ? path16 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -18310,12 +18310,12 @@ var require_dist2 = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list3, fs14, exportName) {
+    function addFormats(ajv, list3, fs15, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list3)
-        ajv.addFormat(f, fs14[f]);
+        ajv.addFormat(f, fs15[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -18324,16 +18324,16 @@ var require_dist2 = __commonJS({
 });
 
 // packages/canvas/dist/cli.js
-import fs13 from "node:fs";
+import fs14 from "node:fs";
 import os8 from "node:os";
-import path14 from "node:path";
+import path15 from "node:path";
 import { execFile as execFile4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/canvas/dist/server.js
 import http from "node:http";
-import fs9 from "node:fs";
-import path10 from "node:path";
+import fs10 from "node:fs";
+import path11 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/ws/wrapper.mjs
@@ -18639,7 +18639,7 @@ var BoardRepositoryBase = class {
     if (!this.boards.has(id))
       throw new NotFound(`board ${id} not found`);
     const since = q2.since ?? 0;
-    return this.readLog(id).filter((c) => c.seq > since && (!q2.author || c.author === q2.author) && (!q2.match || q2.match(c)));
+    return this.readLog(id, since).filter((c) => c.seq > since && (!q2.author || c.author === q2.author) && (!q2.match || q2.match(c)));
   }
   subscribe(id, fn) {
     if (!this.subs.has(id))
@@ -18741,19 +18741,192 @@ var BoardRepositoryBase = class {
   }
 };
 
+// packages/canvas/dist/adapters/boards/changeLog.js
+import fs from "node:fs";
+import path from "node:path";
+var NL = 10;
+var CHUNK = 1 << 20;
+var HEAD = 64;
+var SEQ_HEAD = /^\{\s*"seq"\s*:\s*(\d+)\s*[,}]/;
+var ChangeLogFiles = class {
+  /** By absolute path. */
+  indexes = /* @__PURE__ */ new Map();
+  /** Append one change as a line (creating the file). */
+  append(file2, change) {
+    const key = path.resolve(file2);
+    const line = Buffer.from(JSON.stringify(change) + "\n");
+    const fd = fs.openSync(key, "a+");
+    try {
+      const before = fs.fstatSync(fd);
+      const torn = before.size > 0 && byteAt(fd, before.size - 1) !== NL;
+      const bytes = torn ? Buffer.concat([Buffer.from("\n"), line]) : line;
+      for (let off = 0; off < bytes.length; )
+        off += fs.writeSync(fd, bytes, off, bytes.length - off);
+      const after = fs.fstatSync(fd);
+      const idx = this.indexes.get(key);
+      if (idx && !torn && idx.end === idx.size && same(idx, before) && after.size === before.size + bytes.length) {
+        add(idx, before.size, after.size - 1, change.seq);
+        idx.end = idx.size = after.size;
+        idx.mtimeMs = after.mtimeMs;
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+  }
+  /** The changes with seq > `since` (all of them without it), in file order. A missing file has none. */
+  read(file2, since) {
+    const key = path.resolve(file2);
+    let fd;
+    try {
+      fd = fs.openSync(key, "r");
+    } catch (e) {
+      if (e?.code !== "ENOENT")
+        throw e;
+      this.indexes.delete(key);
+      return [];
+    }
+    try {
+      const idx = this.refresh(key, fd);
+      const n4 = idx.seqs.length;
+      const k2 = since === void 0 ? 0 : firstAfter(idx, since);
+      if (k2 >= n4)
+        return [];
+      const from = idx.starts[k2];
+      const buf = Buffer.allocUnsafe(idx.ends[n4 - 1] - from);
+      const got = readAt(fd, buf, from);
+      const out = [];
+      for (let j2 = k2; j2 < n4 && idx.ends[j2] - from <= got; j2++) {
+        if (since !== void 0 && idx.seqs[j2] <= since)
+          continue;
+        let c;
+        try {
+          c = JSON.parse(buf.toString("utf8", idx.starts[j2] - from, idx.ends[j2] - from));
+        } catch {
+          continue;
+        }
+        if (typeof c?.seq === "number" && (since === void 0 || c.seq > since))
+          out.push(c);
+      }
+      return out;
+    } finally {
+      fs.closeSync(fd);
+    }
+  }
+  /** The file was moved or removed by its adapter. */
+  forget(file2) {
+    this.indexes.delete(path.resolve(file2));
+  }
+  /** The index of the open file, brought up to date with what is in it now. */
+  refresh(key, fd) {
+    const st = fs.fstatSync(fd);
+    let idx = this.indexes.get(key);
+    if (idx && (st.ino !== idx.ino || st.dev !== idx.dev || st.size < idx.size || st.size === idx.size && st.mtimeMs !== idx.mtimeMs || st.size > idx.size && idx.end > 0 && byteAt(fd, idx.end - 1) !== NL)) {
+      idx = void 0;
+    }
+    if (!idx) {
+      idx = { dev: st.dev, ino: st.ino, size: 0, mtimeMs: st.mtimeMs, end: 0, starts: [], ends: [], seqs: [], ordered: true };
+      this.indexes.set(key, idx);
+    }
+    if (st.size !== idx.size)
+      scan(fd, idx, st.size);
+    idx.size = st.size;
+    idx.mtimeMs = st.mtimeMs;
+    return idx;
+  }
+};
+function same(idx, st) {
+  return st.ino === idx.ino && st.dev === idx.dev && st.size === idx.size && st.mtimeMs === idx.mtimeMs;
+}
+function add(idx, start, end, seq) {
+  if (idx.seqs.length && seq < idx.seqs[idx.seqs.length - 1])
+    idx.ordered = false;
+  idx.starts.push(start);
+  idx.ends.push(end);
+  idx.seqs.push(seq);
+}
+function firstAfter(idx, since) {
+  const s = idx.seqs;
+  if (!idx.ordered) {
+    const k2 = s.findIndex((q2) => q2 > since);
+    return k2 === -1 ? s.length : k2;
+  }
+  let lo = 0;
+  let hi = s.length;
+  while (lo < hi) {
+    const mid = lo + hi >>> 1;
+    if (s[mid] > since)
+      hi = mid;
+    else
+      lo = mid + 1;
+  }
+  return lo;
+}
+function scan(fd, idx, to) {
+  const buf = Buffer.allocUnsafe(Math.max(1, Math.min(CHUNK, to - idx.end)));
+  let pos = idx.end;
+  let start = idx.end;
+  while (pos < to) {
+    const n4 = fs.readSync(fd, buf, 0, Math.min(buf.length, to - pos), pos);
+    if (n4 <= 0)
+      break;
+    const view = n4 === buf.length ? buf : buf.subarray(0, n4);
+    for (let nl = view.indexOf(NL); nl !== -1; nl = view.indexOf(NL, nl + 1)) {
+      const end = pos + nl;
+      if (end > start)
+        indexLine(fd, idx, start, end, start >= pos ? view.subarray(start - pos, Math.min(nl, start - pos + HEAD)) : void 0);
+      start = end + 1;
+    }
+    pos += n4;
+  }
+  idx.end = start;
+}
+function indexLine(fd, idx, start, end, head) {
+  if (!head) {
+    head = Buffer.allocUnsafe(Math.min(HEAD, end - start));
+    head = head.subarray(0, readAt(fd, head, start));
+  }
+  const m2 = SEQ_HEAD.exec(head.toString("latin1"));
+  let seq = m2 ? Number(m2[1]) : void 0;
+  if (seq === void 0) {
+    const line = Buffer.allocUnsafe(end - start);
+    try {
+      const c = JSON.parse(line.toString("utf8", 0, readAt(fd, line, start)));
+      if (typeof c?.seq === "number")
+        seq = c.seq;
+    } catch {
+    }
+  }
+  if (seq !== void 0)
+    add(idx, start, end, seq);
+}
+function byteAt(fd, pos) {
+  const b2 = Buffer.alloc(1);
+  return fs.readSync(fd, b2, 0, 1, pos) === 1 ? b2[0] : -1;
+}
+function readAt(fd, buf, pos) {
+  let got = 0;
+  while (got < buf.length) {
+    const n4 = fs.readSync(fd, buf, got, buf.length - got, pos + got);
+    if (n4 <= 0)
+      break;
+    got += n4;
+  }
+  return got;
+}
+
 // packages/canvas/dist/adapters/boards/location.js
 import os from "node:os";
-import path from "node:path";
+import path2 from "node:path";
 function defaultBoardsDir(env = process.env, home = os.homedir()) {
   const explicit = env.AWD_BOARDS_DIR || env.AWD_CANVAS_DIR;
   if (explicit)
-    return path.resolve(explicit);
+    return path2.resolve(explicit);
   if (env.XDG_DATA_HOME)
-    return path.join(env.XDG_DATA_HOME, "awd", "boards");
-  return path.join(home, ".awd", "boards");
+    return path2.join(env.XDG_DATA_HOME, "awd", "boards");
+  return path2.join(home, ".awd", "boards");
 }
 function isInsidePluginCache(dir) {
-  return /[\\/]plugins[\\/]cache[\\/]/.test(path.resolve(dir) + path.sep);
+  return /[\\/]plugins[\\/]cache[\\/]/.test(path2.resolve(dir) + path2.sep);
 }
 
 // packages/canvas/dist/adapters/boards/memory.js
@@ -18767,8 +18940,9 @@ var MemoryBoardRepository = class extends BoardRepositoryBase {
       this.logs.set(change.boardId, []);
     this.logs.get(change.boardId).push(change);
   }
-  readLog(id) {
-    return (this.logs.get(id) ?? []).slice();
+  readLog(id, since) {
+    const log = this.logs.get(id) ?? [];
+    return since === void 0 ? log.slice() : log.filter((c) => c.seq > since);
   }
   remove(id) {
     this.logs.delete(id);
@@ -18776,8 +18950,8 @@ var MemoryBoardRepository = class extends BoardRepositoryBase {
 };
 
 // packages/canvas/dist/adapters/boards/projects.js
-import fs from "node:fs";
-import path2 from "node:path";
+import fs2 from "node:fs";
+import path3 from "node:path";
 var REGISTRY_FILE = ".projects.json";
 var PROJECT_GITIGNORE = `# Unprose (https://github.com/river0825/unprose)
 # boards/<id>.json \u2014 the board snapshots \u2014 are meant to be committed with the project.
@@ -18796,11 +18970,12 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
   registered = [];
   /** Which directory stores each board. */
   dirOf = /* @__PURE__ */ new Map();
+  logs = new ChangeLogFiles();
   constructor(dir = defaultBoardsDir()) {
     super();
-    this.dir = path2.resolve(dir);
-    this.registryPath = path2.join(this.dir, REGISTRY_FILE);
-    fs.mkdirSync(this.dir, { recursive: true });
+    this.dir = path3.resolve(dir);
+    this.registryPath = path3.join(this.dir, REGISTRY_FILE);
+    fs2.mkdirSync(this.dir, { recursive: true });
     this.loadDir(this.dir);
     for (const p of this.readRegistry()) {
       this.registered.push(p);
@@ -18811,20 +18986,20 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
   projects() {
     return [
       { id: PERSONAL_PROJECT, name: "Personal", root: null, boardsDir: this.dir, personal: true },
-      ...this.registered.map((p) => ({ id: p.id, name: path2.basename(p.root), root: p.root, boardsDir: boardsDirOf(p.root) }))
+      ...this.registered.map((p) => ({ id: p.id, name: path3.basename(p.root), root: p.root, boardsDir: boardsDirOf(p.root) }))
     ];
   }
   registerProject(root) {
-    const abs = path2.resolve(root);
-    if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory())
+    const abs = path3.resolve(root);
+    if (!fs2.existsSync(abs) || !fs2.statSync(abs).isDirectory())
       throw new Error(`project root ${abs} is not a directory`);
-    const real = fs.realpathSync(abs);
-    if (real === fs.realpathSync(this.dir))
+    const real = fs2.realpathSync(abs);
+    if (real === fs2.realpathSync(this.dir))
       throw new Error("the personal boards dir cannot be a project");
     let p = this.registered.find((r2) => r2.root === real);
     if (!p) {
       const taken = /* @__PURE__ */ new Set([PERSONAL_PROJECT, ...this.registered.map((r2) => r2.id)]);
-      const base = projectSlug(path2.basename(real));
+      const base = projectSlug(path3.basename(real));
       let id = base;
       for (let n4 = 2; taken.has(id); n4++)
         id = `${base}-${n4}`;
@@ -18863,16 +19038,18 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
     if (from === to)
       return board;
     this.prepare(to);
-    const log = path2.join(from, `${boardId}${LOG}`);
-    if (fs.existsSync(log))
-      fs.copyFileSync(log, path2.join(to, `${boardId}${LOG}`));
+    const log = path3.join(from, `${boardId}${LOG}`);
+    if (fs2.existsSync(log))
+      fs2.copyFileSync(log, path3.join(to, `${boardId}${LOG}`));
     writeSnapshot(to, board);
-    if (!fs.existsSync(path2.join(to, `${boardId}.json`)))
+    if (!fs2.existsSync(path3.join(to, `${boardId}.json`)))
       throw new Error(`could not write ${boardId}.json into ${to}`);
     this.dirOf.set(boardId, to);
-    for (const f of [path2.join(from, `${boardId}.json`), log])
-      if (fs.existsSync(f))
-        fs.unlinkSync(f);
+    for (const f of [path3.join(from, `${boardId}.json`), log])
+      if (fs2.existsSync(f))
+        fs2.unlinkSync(f);
+    this.logs.forget(log);
+    this.logs.forget(path3.join(to, `${boardId}${LOG}`));
     return board;
   }
   unregisterProject(projectId, opts = {}) {
@@ -18897,19 +19074,17 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
     writeSnapshot(this.dirFor(board.id), board);
   }
   appendLog(change) {
-    fs.appendFileSync(path2.join(this.dirFor(change.boardId), `${change.boardId}${LOG}`), JSON.stringify(change) + "\n");
+    this.logs.append(this.logPath(change.boardId), change);
   }
-  readLog(id) {
-    const p = path2.join(this.dirFor(id), `${id}${LOG}`);
-    if (!fs.existsSync(p))
-      return [];
-    return fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  readLog(id, since) {
+    return this.logs.read(this.logPath(id), since);
   }
   remove(id) {
     const dir = this.dirFor(id);
-    for (const p of [path2.join(dir, `${id}.json`), path2.join(dir, `${id}${LOG}`)])
-      if (fs.existsSync(p))
-        fs.unlinkSync(p);
+    for (const p of [path3.join(dir, `${id}.json`), this.logPath(id)])
+      if (fs2.existsSync(p))
+        fs2.unlinkSync(p);
+    this.logs.forget(this.logPath(id));
     this.dirOf.delete(id);
   }
   /** A directory vanished (a plugin reinstall, a `git clean`): make it again so the retry can write. */
@@ -18917,13 +19092,16 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
     if (error62?.code !== "ENOENT")
       return false;
     for (const dir of new Set(this.dirOf.values()))
-      fs.mkdirSync(dir, { recursive: true });
-    fs.mkdirSync(this.dir, { recursive: true });
+      fs2.mkdirSync(dir, { recursive: true });
+    fs2.mkdirSync(this.dir, { recursive: true });
     return true;
   }
   // ---- internals ----
   dirFor(id) {
     return this.dirOf.get(id) ?? this.dir;
+  }
+  logPath(id) {
+    return path3.join(this.dirFor(id), `${id}${LOG}`);
   }
   dirForProject(projectId) {
     if (projectId === PERSONAL_PROJECT)
@@ -18935,23 +19113,23 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
   }
   /** A project's boards dir exists and its `.unprose/.gitignore` says what to commit. */
   prepare(dir) {
-    fs.mkdirSync(dir, { recursive: true });
+    fs2.mkdirSync(dir, { recursive: true });
     if (dir === this.dir)
       return;
-    const ignore = path2.join(path2.dirname(dir), ".gitignore");
-    if (!fs.existsSync(ignore))
-      fs.writeFileSync(ignore, PROJECT_GITIGNORE);
+    const ignore = path3.join(path3.dirname(dir), ".gitignore");
+    if (!fs2.existsSync(ignore))
+      fs2.writeFileSync(ignore, PROJECT_GITIGNORE);
   }
   /** Load the boards stored in `dir` (snapshots first, then boards that only have a log). */
   loadDir(dir) {
-    if (!fs.existsSync(dir))
+    if (!fs2.existsSync(dir))
       return;
-    const files = fs.readdirSync(dir);
+    const files = fs2.readdirSync(dir);
     for (const f of files) {
       if (!f.endsWith(".json") || f.startsWith("."))
         continue;
       try {
-        const board = JSON.parse(fs.readFileSync(path2.join(dir, f), "utf8"));
+        const board = JSON.parse(fs2.readFileSync(path3.join(dir, f), "utf8"));
         if (!board?.id)
           continue;
         if (this.boards.has(board.id) && this.dirOf.get(board.id) !== dir) {
@@ -18979,26 +19157,26 @@ var ProjectsBoardRepository = class extends BoardRepositoryBase {
   }
   readRegistry() {
     try {
-      const raw = JSON.parse(fs.readFileSync(this.registryPath, "utf8"));
-      return (raw.projects ?? []).filter((p) => p && typeof p.id === "string" && typeof p.root === "string" && fs.existsSync(p.root));
+      const raw = JSON.parse(fs2.readFileSync(this.registryPath, "utf8"));
+      return (raw.projects ?? []).filter((p) => p && typeof p.id === "string" && typeof p.root === "string" && fs2.existsSync(p.root));
     } catch {
       return [];
     }
   }
   writeRegistry() {
     const tmp = `${this.registryPath}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ projects: this.registered }, null, 2) + "\n");
-    fs.renameSync(tmp, this.registryPath);
+    fs2.writeFileSync(tmp, JSON.stringify({ projects: this.registered }, null, 2) + "\n");
+    fs2.renameSync(tmp, this.registryPath);
   }
 };
 function boardsDirOf(root) {
-  return path2.join(root, ".unprose", "boards");
+  return path3.join(root, ".unprose", "boards");
 }
 function writeSnapshot(dir, board) {
-  const p = path2.join(dir, `${board.id}.json`);
+  const p = path3.join(dir, `${board.id}.json`);
   const tmp = `${p}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(board, null, 2) + "\n");
-  fs.renameSync(tmp, p);
+  fs2.writeFileSync(tmp, JSON.stringify(board, null, 2) + "\n");
+  fs2.renameSync(tmp, p);
 }
 
 // packages/canvas/dist/adapters/boards/index.js
@@ -19103,8 +19281,8 @@ async function unregisterRoute(store, req, id, force) {
 
 // packages/canvas/dist/boardLookup.js
 var norm = (s) => s.trim().replace(/\s+/g, " ");
-function pickBoardByTitle(boards, title, project, match = () => true) {
-  const want = norm(title);
+function pickBoardByTitle(boards, title2, project, match = () => true) {
+  const want = norm(title2);
   const exact = boards.filter((b2) => norm(b2.title) === want && match(b2));
   const loose = exact.length ? exact : boards.filter((b2) => norm(b2.title).toLowerCase() === want.toLowerCase() && match(b2));
   const tiers = [
@@ -20104,10 +20282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path15) {
-  if (!path15)
+function getElementAtPath(obj, path16) {
+  if (!path16)
     return obj;
-  return path15.reduce((acc, key) => acc?.[key], obj);
+  return path16.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -20447,11 +20625,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path15, issues) {
+function prefixIssues(path16, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path15);
+    iss.path.unshift(path16);
     return iss;
   });
 }
@@ -20901,16 +21079,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path15 = []) => {
+  const processError = (error63, path16 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path15, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path16, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
       } else {
-        const fullpath = [...path15, ...issue2.path];
+        const fullpath = [...path16, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -20949,17 +21127,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path15 = []) => {
+  const processError = (error63, path16 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path15, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path16, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path15, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path16, ...issue2.path]);
       } else {
-        const fullpath = [...path15, ...issue2.path];
+        const fullpath = [...path16, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -20998,8 +21176,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path15 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path15) {
+  const path16 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path16) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -38101,13 +38279,13 @@ function resolveRef(ref2, ctx) {
   if (!ref2.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path15 = ref2.slice(1).split("/").filter(Boolean);
-  if (path15.length === 0) {
+  const path16 = ref2.slice(1).split("/").filter(Boolean);
+  if (path16.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path15[0] === defsKey) {
-    const key = path15[1] === void 0 ? void 0 : decodeJSONPointerSegment(path15[1]);
+  if (path16[0] === defsKey) {
+    const key = path16[1] === void 0 ? void 0 : decodeJSONPointerSegment(path16[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref2}`);
     }
@@ -39263,9 +39441,9 @@ function checkDomainStory(content) {
       out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n4}`, page: QUICK_START2 });
   });
   for (const n4 of seqs) {
-    const same2 = m2.sentences.filter((s) => s.seq === n4);
-    if (same2.length > 1)
-      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n4)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+    const same3 = m2.sentences.filter((s) => s.seq === n4);
+    if (same3.length > 1)
+      out.push({ rule: "sequence-shared", severity: "info", element: same3[1].id, message: `${circled(n4)} is used by ${same3.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
   }
   const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
   for (let i = 0; i < m2.groups.length; i++)
@@ -39358,12 +39536,12 @@ function joinLines(lines2) {
   return lines2.map((l) => l.endsWith(NO_EOL) ? l.slice(0, -1) : `${l}
 `).join("");
 }
-function unifiedDiff(before, after, path15 = "file", context = 3) {
+function unifiedDiff(before, after, path16 = "file", context = 3) {
   if (before === after)
     return "";
   const ops = lineOps(splitLines(before), splitLines(after));
   const changed = ops.map((o, k3) => o.kind !== " " ? k3 : -1).filter((k3) => k3 >= 0);
-  const out = [`--- a/${path15}`, `+++ b/${path15}`];
+  const out = [`--- a/${path16}`, `+++ b/${path16}`];
   let k2 = 0;
   while (k2 < changed.length) {
     const lo = Math.max(0, changed[k2] - context);
@@ -40075,7 +40253,7 @@ function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
   const thread = threadOf(board, root);
   const author = agentOf(comment);
   const out = [];
-  const add = (n4) => {
+  const add2 = (n4) => {
     if (n4 && !sameAgent(n4, author) && !out.some((o) => sameAgent(o, n4)))
       out.push(n4);
   };
@@ -40092,8 +40270,8 @@ function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
     const parties = ho.to ? { to: ho.to, from: ho.from ?? [] } : open2 && open2.thread === root.id ? { to: open2.to, from: handoverFroms(open2) } : void 0;
     if (parties) {
       for (const f of parties.from)
-        add(f);
-      add(parties.to);
+        add2(f);
+      add2(parties.to);
       return { to: out, route: "handover" };
     }
   }
@@ -40102,22 +40280,22 @@ function routeOf(board, comment, maxTurns = DEFAULT_AGENT_TURNS) {
   const holder = proposal ? proposalHolder(board, root) : void 0;
   const proposer = proposal ? agentOf(root) : void 0;
   if (asked) {
-    add(str2(asked.data?.mention));
-    add(agentOf(asked));
-    add(holder?.agent);
-    add(proposer);
+    add2(str2(asked.data?.mention));
+    add2(agentOf(asked));
+    add2(holder?.agent);
+    add2(proposer);
     return { to: out, route: "mention" };
   }
   if (holder) {
-    add(holder.agent);
-    add(proposer);
+    add2(holder.agent);
+    add2(proposer);
     return { to: out, route: "proposal" };
   }
   const r2 = responderName(responderOf(board.meta));
   if (!r2)
     return {};
-  add(r2);
-  add(agentOf(root));
+  add2(r2);
+  add2(agentOf(root));
   return { to: out, route: "responder" };
 }
 var ROUTING_KEYS = ["to", "route", "mention", "mentionAt", "paused", "postedAt"];
@@ -40289,6 +40467,118 @@ function settingsLines(meta3) {
   return out;
 }
 
+// packages/canvas/dist/hidden.js
+var HIDDEN_FRAME_H = 44;
+var HIDDEN_FRAME_W = 640;
+var COUNT = "hiddenItems";
+var isHiddenFrame = (it) => it?.type === "frame" && it.data?.hidden === true;
+function hiddenOf(board) {
+  const items = Object.values(board.items);
+  if (!items.some(isHiddenFrame))
+    return void 0;
+  const ids = /* @__PURE__ */ new Set();
+  const frames = /* @__PURE__ */ new Map();
+  const frameOf2 = /* @__PURE__ */ new Map();
+  const outermost = (it) => {
+    let top;
+    const seen = /* @__PURE__ */ new Set([it.id]);
+    for (let p = it.parent ? board.items[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board.items[p.parent] : void 0) {
+      seen.add(p.id);
+      if (isHiddenFrame(p))
+        top = p.id;
+    }
+    return top;
+  };
+  for (const it of items) {
+    if (it.type === "comment" || it.type === "arrow")
+      continue;
+    const f = outermost(it);
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items) {
+    if (it.type !== "arrow")
+      continue;
+    const f = frameOf2.get(it.from ?? "") ?? frameOf2.get(it.to ?? "");
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items) {
+    if (it.type !== "comment")
+      continue;
+    const f = frameOf2.get(threadTarget(board, it) ?? "");
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items)
+    if (isHiddenFrame(it) && !ids.has(it.id))
+      frames.set(it.id, 0);
+  for (const f of frameOf2.values())
+    frames.set(f, (frames.get(f) ?? 0) + 1);
+  return { ids, frames, frameOf: frameOf2 };
+}
+function threadTarget(board, c) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = c;
+  while (cur?.type === "comment" && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur.target;
+    cur = next;
+  }
+  return void 0;
+}
+function withoutHidden(board, h = hiddenOf(board)) {
+  if (!h)
+    return board;
+  const items = {};
+  for (const [id, it] of Object.entries(board.items))
+    if (!h.ids.has(id))
+      items[id] = it;
+  return { ...board, items };
+}
+function drawnBoard(board, h = hiddenOf(board)) {
+  if (!h)
+    return board;
+  const out = withoutHidden(board, h);
+  for (const [id, n4] of h.frames) {
+    const f = out.items[id];
+    out.items[id] = { ...f, w: Math.min(f.w, HIDDEN_FRAME_W), h: Math.min(f.h, HIDDEN_FRAME_H), data: { ...f.data, [COUNT]: n4 } };
+  }
+  return out;
+}
+function hiddenCountOf(it) {
+  const n4 = it?.data?.[COUNT];
+  return isHiddenFrame(it) && typeof n4 === "number" ? n4 : void 0;
+}
+var itemCount = (n4) => `${n4} item${n4 === 1 ? "" : "s"}`;
+var title = (f) => (f.text ?? "").replace(/\s+/g, " ").trim().slice(0, 60) || f.id;
+function hiddenFrameList(board, h = hiddenOf(board)) {
+  if (!h)
+    return [];
+  return [...h.frames].map(([id, items]) => ({ f: board.items[id], items })).sort((a, b2) => a.f.y - b2.f.y || a.f.x - b2.f.x).map(({ f, items }) => {
+    const key = diagramSpecOf(f)?.key;
+    return { id: f.id, ...key ? { key } : {}, title: title(f), items };
+  });
+}
+function hiddenTotal(v2) {
+  const n4 = v2.list.reduce((sum, f) => sum + f.items, 0);
+  return n4 && !v2.listed ? `, ${n4} more in hidden frames` : "";
+}
+function hiddenFramesLine(list3, listed = false) {
+  if (!list3.length)
+    return [];
+  const names = list3.map((f) => `${[f.key, f.title !== f.key ? `"${f.title}"` : ""].filter(Boolean).join(" ")} (${itemCount(f.items)})`);
+  return [`Hidden frames: ${names.join(", ")} \u2014 the person hid their contents on the board (not drawn for anyone); ${listed ? "listed here because of includeHidden: true" : "canvas_read_board with includeHidden: true lists them"}`];
+}
+
 // packages/canvas/dist/todos.js
 var short = (s, n4 = 120) => {
   const t = (s ?? "").replace(/\s+/g, " ").trim();
@@ -40431,7 +40721,7 @@ function containmentTree(board) {
       continue;
     let best;
     for (const c of containers) {
-      if (c.id === it.id || !inside(it, c))
+      if (c.id === it.id || isHiddenFrame(c) || !inside(it, c))
         continue;
       if (isContainer(it) && c.w * c.h <= it.w * it.h)
         continue;
@@ -40577,12 +40867,19 @@ function outline(board, opts = {}) {
     if (r2.target && board.items[r2.target])
       threadsOn.set(r2.target, [...threadsOn.get(r2.target) ?? [], r2]);
   const out = [];
+  const hidden = opts.hidden ?? { list: [], listed: true };
   if (!opts.bare) {
-    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items)`);
-    const settings = [...settingsLines(board.meta), ...framelessLines(board)];
+    out.push(`# ${board.title} (${board.kind}, seq ${board.seq}, ${items.length} items${hiddenTotal(hidden)})`);
+    const settings = [...settingsLines(board.meta), ...framelessLines(board), ...hiddenFramesLine(hidden.list, hidden.listed)];
     if (settings.length)
       out.push(...settings, "");
   }
+  const hiddenTag = (c) => {
+    if (!isHiddenFrame(c))
+      return void 0;
+    const n4 = hidden.list.find((f) => f.id === c.id)?.items;
+    return n4 === void 0 ? "hidden on the board" : `hidden on the board: ${itemCount(n4)}${hidden.listed ? "" : " not listed (includeHidden: true lists them)"}`;
+  };
   const printed = /* @__PURE__ */ new Set();
   const maxReplies = opts.replies ?? 3;
   const said = (c) => {
@@ -40601,10 +40898,10 @@ function outline(board, opts = {}) {
       out.push(`${indent}\u{1F4DD} ${draftLine(c)}${rs.length ? ` [${rs.length + 1} messages]` : ""}  #${c.id}`);
     else
       out.push(`${indent}\u{1F4AC} ${said(c)} ${short2(c.text, 200)}${tags.length ? ` [${tags.join(" \xB7 ")}]` : ""}  #${c.id}`);
-    const hidden = Math.max(0, rs.length - maxReplies);
-    if (hidden)
-      out.push(`${indent}  \u21B3 \u2026 ${hidden} earlier repl${hidden === 1 ? "y" : "ies"} (ids: [${c.id}] with format json for all)`);
-    for (const r2 of rs.slice(hidden)) {
+    const hidden2 = Math.max(0, rs.length - maxReplies);
+    if (hidden2)
+      out.push(`${indent}  \u21B3 \u2026 ${hidden2} earlier repl${hidden2 === 1 ? "y" : "ies"} (ids: [${c.id}] with format json for all)`);
+    for (const r2 of rs.slice(hidden2)) {
       out.push(`${indent}  \u21B3 ${said(r2)} ${short2(r2.text, 200)}  #${r2.id}`);
       printed.add(r2.id);
     }
@@ -40711,7 +41008,7 @@ function outline(board, opts = {}) {
     if (spec) {
       const n4 = descendants(tree, c.id).size;
       const holder = holdersOf(board.meta).find((h) => h.key === spec.key);
-      const bits = [`key ${spec.key}`, spec.source, spec.level, `${n4} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
+      const bits = [`key ${spec.key}`, spec.source, spec.level, hiddenTag(c) ?? `${n4} items`, holder ? `files held by ${displayName(holder.holder.agent)}` : ""].filter(Boolean);
       out.push(`${indent}## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short2(c.text, 60)}" \u2014 ${bits.join(" \xB7 ")}  #${c.id}`);
     } else {
       const role = c.type === "ui" ? String(c.data?.ui?.type ?? "ui") : c.role ?? c.type;
@@ -40724,6 +41021,9 @@ function outline(board, opts = {}) {
       const notes = cardsOn.get(c.id);
       if (notes?.length)
         f.push(`annotation ${notes.map(num2).join("")}`);
+      const hid = hiddenTag(c);
+      if (hid)
+        f.push(hid);
       out.push(`${indent}## ${role}: ${short2(c.text, 80) || "(untitled)"}${f.length ? ` [${f.join("; ")}]` : ""}  #${c.id}`);
     }
     for (const t of threadsOn.get(c.id) ?? [])
@@ -40973,7 +41273,10 @@ function summarize(board, changes, opts = {}) {
       const todoMoved = !!tWas && !!tNow && tWas.state !== tNow.state;
       if (todoMoved)
         parts2.push(tNow.state === "done" ? `checked off${tNow.doneBy ? ` by ${tNow.doneBy === "person" ? "the person" : displayName(tNow.doneBy)}` : ""}${tNow.answer ? ` \u2014 answer: "${short3(tNow.answer, 160)}"` : " without an answer (nobody is notified)"}` : "reopened");
-      const meaning = (d) => JSON.stringify(todoMoved ? { ...meaningOf(d), todo: void 0 } : meaningOf(d));
+      const [hidWas, hidNow] = [was?.data?.hidden === true, patch.data !== void 0 ? patch.data.hidden === true : was?.data?.hidden === true];
+      if (was?.type === "frame" && hidWas !== hidNow)
+        parts2.push(hidNow ? "hid its contents (not drawn for anyone; canvas_read_board includeHidden: true lists them)" : "showed its contents again");
+      const meaning = (d) => JSON.stringify({ ...meaningOf(d), ...todoMoved ? { todo: void 0 } : {}, ...hidWas !== hidNow ? { hidden: void 0 } : {} });
       if (patch.data !== void 0 && meaning(patch.data) !== meaning(was?.data))
         parts2.push(`data changed: ${short3(JSON.stringify(meaningOf(patch.data)), 120)}`);
       if (opts.collapseMoves && isLayoutOnly(op, was) && !parts2.some((p) => p.startsWith("moved from"))) {
@@ -41524,14 +41827,14 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
   const bandOf = new Map(nodes.map((n4) => [n4.id, n4.band]));
   const succ = new Map(ids.map((id) => [id, []]));
   const pred = new Map(ids.map((id) => [id, []]));
-  const add = (a, b2) => {
+  const add2 = (a, b2) => {
     if (!known.has(a) || !known.has(b2) || a === b2 || succ.get(a).includes(b2))
       return;
     succ.get(a).push(b2);
     pred.get(b2).push(a);
   };
   for (const [a, b2] of edges)
-    add(a, b2);
+    add2(a, b2);
   const back = /* @__PURE__ */ new Set();
   const t = opts.time;
   if (t) {
@@ -41577,7 +41880,7 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
       bandOf.set(id, band);
       succ.set(id, []);
       pred.set(id, []);
-      add(a, id);
+      add2(a, id);
     }
   }
   const forward = (a, b2) => !back.has(`${a}>${b2}`);
@@ -41606,7 +41909,7 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
     const [a, b2] = [events[i - 1], events[i]];
     if (siblings(a, b2) || reaches(b2, a))
       continue;
-    add(a, b2);
+    add2(a, b2);
   }
   const order = topo(ids, succ, forward);
   const rank = /* @__PURE__ */ new Map();
@@ -42581,8 +42884,8 @@ function unwrap(s) {
   return s;
 }
 var isPlainObject2 = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-var at2 = (path15, key) => typeof key === "number" ? `${path15}[${key}]` : path15 ? `${path15}.${key}` : key;
-function unknownFields(schema, value, path15 = "") {
+var at2 = (path16, key) => typeof key === "number" ? `${path16}[${key}]` : path16 ? `${path16}.${key}` : key;
+function unknownFields(schema, value, path16 = "") {
   const s = unwrap(schema);
   const d = def(s);
   if (d.type === "object" && isPlainObject2(value)) {
@@ -42591,16 +42894,16 @@ function unknownFields(schema, value, path15 = "") {
     const out = [];
     for (const [k2, v2] of Object.entries(value)) {
       if (k2 in shape)
-        out.push(...unknownFields(shape[k2], v2, at2(path15, k2)));
+        out.push(...unknownFields(shape[k2], v2, at2(path16, k2)));
       else if (!open2)
-        out.push({ path: path15 || "(root)", field: k2 });
+        out.push({ path: path16 || "(root)", field: k2 });
     }
     return out;
   }
   if (d.type === "array" && Array.isArray(value) && d.element)
-    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path15, i)));
+    return value.flatMap((v2, i) => unknownFields(d.element, v2, at2(path16, i)));
   if (d.type === "record" && isPlainObject2(value) && d.valueType)
-    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path15, k2)));
+    return Object.entries(value).flatMap(([k2, v2]) => unknownFields(d.valueType, v2, at2(path16, k2)));
   if (d.type === "union" && d.options) {
     const fits = d.options.filter((o) => {
       const t = def(unwrap(o)).type;
@@ -42608,7 +42911,7 @@ function unknownFields(schema, value, path15 = "") {
     });
     if (!fits.length)
       return [];
-    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path15) })).sort((a, b2) => a.extra.length - b2.extra.length);
+    const ranked = fits.map((o) => ({ o, extra: unknownFields(o, value, path16) })).sort((a, b2) => a.extra.length - b2.extra.length);
     return ranked[0].extra;
   }
   return [];
@@ -42848,7 +43151,7 @@ function normalizeUiMock(raw) {
       used.add(id);
       return id;
     };
-    const el = (n4, path15) => {
+    const el = (n4, path16) => {
       const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n4;
       const words = text3 ?? label2;
       const id = alloc(n4.id, words, type);
@@ -42858,8 +43161,8 @@ function normalizeUiMock(raw) {
         type,
         ...words !== void 0 ? { text: words } : {},
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
-        path: path15,
-        children: (children ?? []).map((ch, i) => el(ch, [...path15, "children", i])),
+        path: path16,
+        children: (children ?? []).map((ch, i) => el(ch, [...path16, "children", i])),
         props: { ...props, ...items ? { items: itemsOf(items, n4.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
@@ -43282,8 +43585,8 @@ function lintUiMock(raw) {
     for (const e of walkUi(s.body))
       where.set(uiPathText(e.path), e.ref);
   }
-  const owner = (path15) => {
-    for (let p = path15; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+  const owner = (path16) => {
+    for (let p = path16; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
       const hit2 = where.get(p);
       if (hit2)
         return hit2;
@@ -43985,29 +44288,29 @@ function labelHits(x2, y2, w2, h, boxes, gap = EDGE_LABEL.gap) {
   const r2 = { x: x2 - w2 / 2, y: y2 - h / 2, w: w2, h };
   return boxes.filter((b2) => hit(r2, b2, gap));
 }
-function pointAlong(path15, t) {
-  const lens = path15.slice(1).map((p, i) => Math.hypot(p.x - path15[i].x, p.y - path15[i].y));
+function pointAlong(path16, t) {
+  const lens = path16.slice(1).map((p, i) => Math.hypot(p.x - path16[i].x, p.y - path16[i].y));
   const total = lens.reduce((a, b2) => a + b2, 0);
   let d = total * t;
   for (let i = 0; i < lens.length; i++) {
     if (d <= lens[i] || i === lens.length - 1) {
       const k2 = lens[i] ? Math.min(1, d / lens[i]) : 0;
-      return { x: path15[i].x + (path15[i + 1].x - path15[i].x) * k2, y: path15[i].y + (path15[i + 1].y - path15[i].y) * k2 };
+      return { x: path16[i].x + (path16[i + 1].x - path16[i].x) * k2, y: path16[i].y + (path16[i + 1].y - path16[i].y) * k2 };
     }
     d -= lens[i];
   }
-  return path15[0];
+  return path16[0];
 }
 var FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
-function spots(path15, at3) {
+function spots(path16, at3) {
   const out = [];
-  const segs = path15.slice(1).map((b2, i) => ({ a: path15[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
+  const segs = path16.slice(1).map((b2, i) => ({ a: path16[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
   const dirOf = (s) => {
     const l = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) || 1;
     return { x: (s.b.x - s.a.x) / l, y: (s.b.y - s.a.y) / l };
   };
   if (at3 !== void 0 && segs.length) {
-    const p = pointAlong(path15, at3);
+    const p = pointAlong(path16, at3);
     const seg = segs.find((s) => Math.abs((s.b.x - s.a.x) * (p.y - s.a.y) - (s.b.y - s.a.y) * (p.x - s.a.x)) < 1 && p.x >= Math.min(s.a.x, s.b.x) - 1 && p.x <= Math.max(s.a.x, s.b.x) + 1 && p.y >= Math.min(s.a.y, s.b.y) - 1 && p.y <= Math.max(s.a.y, s.b.y) + 1) ?? segs[0];
     out.push({ p, dir: dirOf(seg) });
   }
@@ -44018,13 +44321,13 @@ function spots(path15, at3) {
       out.push({ p: { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }, dir: dirOf(s) });
   return out;
 }
-function placeEdgeLabel(text3, path15, boxes, o = {}) {
+function placeEdgeLabel(text3, path16, boxes, o = {}) {
   const full = text3.replace(/\s+/g, " ").trim();
-  if (!full || path15.length < 2)
+  if (!full || path16.length < 2)
     return void 0;
   const font = o.font ?? EDGE_LABEL.font;
-  const xs = path15.map((p) => p.x);
-  const ys = path15.map((p) => p.y);
+  const xs = path16.map((p) => p.x);
+  const ys = path16.map((p) => p.y);
   const m2 = EDGE_LABEL.maxW;
   const near = boxes.filter((b2) => b2.x < Math.max(...xs) + m2 && b2.x + b2.w > Math.min(...xs) - m2 && b2.y < Math.max(...ys) + m2 && b2.y + b2.h > Math.min(...ys) - m2);
   const variants = [];
@@ -44048,7 +44351,7 @@ function placeEdgeLabel(text3, path15, boxes, o = {}) {
     push(l.cut ? "cut" : o.short ? "short" : "full", l.lines);
     push("cut", [cutLine(src, w2, font)]);
   }
-  const tries = spots(path15, o.at);
+  const tries = spots(path16, o.at);
   for (const v2 of variants) {
     const { w: w2, h } = labelSize(v2.lines, font);
     for (const p of o.prefer ?? [])
@@ -44072,7 +44375,7 @@ function placeEdgeLabel(text3, path15, boxes, o = {}) {
     }
   }
   const D2 = EDGE_LABEL.dot;
-  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path15, 0.5);
+  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path16, 0.5);
   return { mode: "dot", x: dotAt.x, y: dotAt.y, w: D2, h: D2, lines: [], text: full, font };
 }
 
@@ -44151,14 +44454,14 @@ function nearestFree(at3, w2, h, boxes, step, start = { x: 0, y: 1 }) {
   return box({ x: at3.x, y: at3.y + 41 * step });
 }
 function countCrossings(segs) {
-  const same2 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
+  const same3 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
   const orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
   let n4 = 0;
   for (let i = 0; i < segs.length; i++)
     for (let j2 = i + 1; j2 < segs.length; j2++) {
       const [a, b2] = segs[i];
       const [c, d] = segs[j2];
-      if (same2(a, c) || same2(a, d) || same2(b2, c) || same2(b2, d))
+      if (same3(a, c) || same3(a, d) || same3(b2, c) || same3(b2, d))
         continue;
       if (orient(a, b2, c) * orient(a, b2, d) < 0 && orient(c, d, a) * orient(c, d, b2) < 0)
         n4++;
@@ -44474,22 +44777,22 @@ function groupOutlines(groups) {
 var SCREEN_LABEL = 28;
 var SCREEN_GAP2 = 120;
 function entryTop(e, i) {
-  const title = e.text ? 1 : 0;
+  const title2 = e.text ? 1 : 0;
   switch (e.type) {
     case "list":
-      return title * 30 + i * (e.props.items.some((x2) => x2.meta) ? 60 : 44);
+      return title2 * 30 + i * (e.props.items.some((x2) => x2.meta) ? 60 : 44);
     case "sidebar":
-      return 16 + title * 48 + i * 36;
+      return 16 + title2 * 48 + i * 36;
     case "tabs":
     case "navbar":
     case "breadcrumb":
       return 0;
     // side by side on one line: read in the file's order
     case "select":
-      return title * 26;
+      return title2 * 26;
     // the options' pins sit in the field
     default:
-      return title * 30 + i * 36;
+      return title2 * 30 + i * 36;
   }
 }
 function renderUiMock(raw, opts = {}) {
@@ -44826,8 +45129,8 @@ function renderKind(kind, content, opts) {
 var diagramKinds = Object.keys(contentSchemas);
 
 // packages/canvas/dist/docs.js
-import fs2 from "node:fs";
-import path3 from "node:path";
+import fs3 from "node:fs";
+import path4 from "node:path";
 import { fileURLToPath } from "node:url";
 
 // node_modules/marked/lib/marked.esm.js
@@ -46039,16 +46342,16 @@ var Xt = b.parse;
 var Jt = x.lex;
 
 // packages/canvas/dist/docs.js
-var __dirname = path3.dirname(fileURLToPath(import.meta.url));
+var __dirname = path4.dirname(fileURLToPath(import.meta.url));
 function findDocsDir(from = __dirname) {
   if (process.env.AWD_DOCS_DIR)
-    return path3.resolve(process.env.AWD_DOCS_DIR);
+    return path4.resolve(process.env.AWD_DOCS_DIR);
   let dir = from;
   for (let i = 0; i < 6; i++) {
-    const candidate = path3.join(dir, "docs");
-    if (fs2.existsSync(path3.join(candidate, "DESIGN.md")) || fs2.existsSync(path3.join(candidate, "ARCHITECTURE.md")))
+    const candidate = path4.join(dir, "docs");
+    if (fs3.existsSync(path4.join(candidate, "DESIGN.md")) || fs3.existsSync(path4.join(candidate, "ARCHITECTURE.md")))
       return candidate;
-    const parent = path3.dirname(dir);
+    const parent = path4.dirname(dir);
     if (parent === dir)
       break;
     dir = parent;
@@ -46058,14 +46361,14 @@ function findDocsDir(from = __dirname) {
 var PREFERRED_ORDER = ["MANUAL", "README", "ARCHITECTURE", "ROADMAP", "agents", "reflection", "workflow", "canvas", "DESIGN", "DESIGN-SYSTEM", "UX-FLOW"];
 function listDocs(docsDir) {
   const entries = [];
-  const readme = path3.join(path3.dirname(docsDir), "README.md");
-  if (fs2.existsSync(readme))
+  const readme = path4.join(path4.dirname(docsDir), "README.md");
+  if (fs3.existsSync(readme))
     entries.push({ name: "README", title: titleOf(readme) ?? "README", file: readme });
-  for (const f of fs2.readdirSync(docsDir).sort()) {
+  for (const f of fs3.readdirSync(docsDir).sort()) {
     if (!f.endsWith(".md"))
       continue;
     const name = f.slice(0, -3);
-    entries.push({ name, title: titleOf(path3.join(docsDir, f)) ?? name, file: path3.join(docsDir, f) });
+    entries.push({ name, title: titleOf(path4.join(docsDir, f)) ?? name, file: path4.join(docsDir, f) });
   }
   const rank = (e) => {
     const i = PREFERRED_ORDER.indexOf(e.name);
@@ -46074,16 +46377,16 @@ function listDocs(docsDir) {
   return entries.sort((a, b2) => rank(a) - rank(b2) || a.name.localeCompare(b2.name));
 }
 function titleOf(file2) {
-  const head = fs2.readFileSync(file2, "utf8").slice(0, 4e3);
+  const head = fs3.readFileSync(file2, "utf8").slice(0, 4e3);
   const m2 = /^#\s+(.+)$/m.exec(head);
   return m2?.[1].trim();
 }
 function resolveDocAsset(docsDir, rel) {
-  const root = path3.dirname(docsDir);
-  const safe = path3.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-  const candidates = [path3.join(docsDir, safe), path3.join(root, safe)];
+  const root = path4.dirname(docsDir);
+  const safe = path4.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+  const candidates = [path4.join(docsDir, safe), path4.join(root, safe)];
   for (const c of candidates) {
-    if ((c.startsWith(docsDir) || c.startsWith(path3.join(root, "example"))) && fs2.existsSync(c) && fs2.statSync(c).isFile())
+    if ((c.startsWith(docsDir) || c.startsWith(path4.join(root, "example"))) && fs3.existsSync(c) && fs3.statSync(c).isFile())
       return c;
   }
   return void 0;
@@ -46093,9 +46396,9 @@ function renderDoc(docsDir, name) {
   const entry = docs.find((e) => e.name === name);
   if (!entry)
     return void 0;
-  const md = fs2.readFileSync(entry.file, "utf8");
+  const md = fs3.readFileSync(entry.file, "utf8");
   const { html, headings } = renderMarkdownWithToc(md, { inlineSvg: (href) => inlineSvgFor(docsDir, href) });
-  return page({ title: entry.title, body: html, docs, current: entry.name, headings, file: path3.basename(entry.file) });
+  return page({ title: entry.title, body: html, docs, current: entry.name, headings, file: path4.basename(entry.file) });
 }
 function inlineSvgFor(docsDir, href) {
   if (!/\.svg$/i.test(href) || /^[a-z]+:/i.test(href))
@@ -46104,15 +46407,15 @@ function inlineSvgFor(docsDir, href) {
   const file2 = resolveDocAsset(docsDir, rel);
   if (!file2)
     return void 0;
-  const read = (f) => fs2.readFileSync(f, "utf8").replace(/^\s*<\?xml[^>]*>\s*/i, "").replace(/^\s*<!DOCTYPE[^>]*>\s*/i, "");
+  const read = (f) => fs3.readFileSync(f, "utf8").replace(/^\s*<\?xml[^>]*>\s*/i, "").replace(/^\s*<!DOCTYPE[^>]*>\s*/i, "");
   const darkFile = file2.replace(/\.svg$/i, "-dark.svg");
-  return { light: read(file2), dark: fs2.existsSync(darkFile) ? read(darkFile) : void 0 };
+  return { light: read(file2), dark: fs3.existsSync(darkFile) ? read(darkFile) : void 0 };
 }
 function renderIndex(docsDir) {
   const docs = listDocs(docsDir);
   const body = `<h1>Docs</h1>
 <p class="lede">\u9019\u500B\u5C08\u6848\u7684\u8AAA\u660E\u6587\u4EF6\u3002\u8981\u300C\u505A\u67D0\u4EF6\u4E8B\u300D\u770B<a href="/docs/MANUAL">\u64CD\u4F5C\u624B\u518A</a>\uFF1B\u8981\u61C2\u300C\u70BA\u4EC0\u9EBC\u9019\u6A23\u8A2D\u8A08\u300D\u770B<a href="/docs/ARCHITECTURE">\u67B6\u69CB\u8AAA\u660E</a>\uFF1B\u5176\u4ED6\u662F reference\u3002</p>
-<ol class="doc-list">${docs.map((d) => `<li><a href="/docs/${encodeURIComponent(d.name)}">${escapeHtml(d.title)}</a><span class="slug">${escapeHtml(path3.basename(d.file))}</span></li>`).join("")}</ol>`;
+<ol class="doc-list">${docs.map((d) => `<li><a href="/docs/${encodeURIComponent(d.name)}">${escapeHtml(d.title)}</a><span class="slug">${escapeHtml(path4.basename(d.file))}</span></li>`).join("")}</ol>`;
   return page({ title: "Docs", body, docs, headings: [] });
 }
 function renderMarkdownWithToc(md, opts = {}) {
@@ -46141,8 +46444,8 @@ function renderMarkdownWithToc(md, opts = {}) {
   };
   renderer.link = function(token) {
     const href = rewriteLink(token.href);
-    const title = token.title ? ` title="${escapeHtml(token.title)}"` : "";
-    return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`;
+    const title2 = token.title ? ` title="${escapeHtml(token.title)}"` : "";
+    return `<a href="${escapeHtml(href)}"${title2}>${this.parser.parseInline(token.tokens)}</a>`;
   };
   renderer.image = function(token) {
     const svg = opts.inlineSvg?.(token.href);
@@ -46185,7 +46488,7 @@ function rewriteAsset(href) {
     return href;
   return `/docs/_asset/${href.replace(/^(\.\.\/)+/, "").replace(/^\.\//, "")}`;
 }
-function page({ title, body, docs, current, headings, file: file2 }) {
+function page({ title: title2, body, docs, current, headings, file: file2 }) {
   const nav = docs.map((d) => `<a href="/docs/${encodeURIComponent(d.name)}"${d.name === current ? ' class="current" aria-current="page"' : ""}>${escapeHtml(d.title)}</a>`).join("");
   const toc = headings.length > 1 ? `<nav class="toc" aria-label="On this page"><div class="side-heading">On this page</div>${headings.map((h) => `<a class="l${h.level}" href="#${h.id}">${escapeHtml(h.text)}</a>`).join("")}</nav>` : "";
   return `<!doctype html>
@@ -46193,7 +46496,7 @@ function page({ title, body, docs, current, headings, file: file2 }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} \u2014 awd docs</title>
+<title>${escapeHtml(title2)} \u2014 awd docs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -46205,7 +46508,7 @@ function page({ title, body, docs, current, headings, file: file2 }) {
   <a class="boards" href="/">Boards</a>
   <span class="sep" aria-hidden="true"></span>
   <a class="brand" href="/docs">Docs</a>
-  ${current ? `<span class="crumb">${escapeHtml(title)}</span>` : ""}
+  ${current ? `<span class="crumb">${escapeHtml(title2)}</span>` : ""}
   ${file2 ? `<span class="file">${escapeHtml(file2)}</span>` : ""}
 </header>
 <div class="shell">
@@ -46522,13 +46825,13 @@ function escapeHtml(s) {
 }
 
 // packages/canvas/dist/release.js
-import fs3 from "node:fs";
-import path4 from "node:path";
+import fs4 from "node:fs";
+import path5 from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
-var __dirname2 = path4.dirname(fileURLToPath2(import.meta.url));
+var __dirname2 = path5.dirname(fileURLToPath2(import.meta.url));
 var readJson = (p) => {
   try {
-    return JSON.parse(fs3.readFileSync(p, "utf8"));
+    return JSON.parse(fs4.readFileSync(p, "utf8"));
   } catch {
     return void 0;
   }
@@ -46538,16 +46841,16 @@ function findRelease(from = __dirname2) {
   let version2 = null;
   let dir = from;
   for (let i = 0; i < 6; i++) {
-    if (changelog === null && fs3.existsSync(path4.join(dir, "CHANGELOG.md")))
-      changelog = fs3.readFileSync(path4.join(dir, "CHANGELOG.md"), "utf8");
+    if (changelog === null && fs4.existsSync(path5.join(dir, "CHANGELOG.md")))
+      changelog = fs4.readFileSync(path5.join(dir, "CHANGELOG.md"), "utf8");
     if (version2 === null && changelog !== null) {
-      const v2 = readJson(path4.join(dir, "package.json"))?.version;
+      const v2 = readJson(path5.join(dir, "package.json"))?.version;
       if (typeof v2 === "string")
         version2 = v2;
     }
     if (changelog !== null && version2 !== null)
       break;
-    const parent = path4.dirname(dir);
+    const parent = path5.dirname(dir);
     if (parent === dir)
       break;
     dir = parent;
@@ -46595,7 +46898,8 @@ function tokenOf(item) {
 function n(v2) {
   return Number.isInteger(v2) ? String(v2) : v2.toFixed(2).replace(/\.?0+$/, "");
 }
-function renderThumb(board, opts = {}) {
+function renderThumb(stored, opts = {}) {
+  const board = drawnBoard(stored);
   const w2 = opts.w ?? 280;
   const h = opts.h ?? 160;
   const pad = opts.pad ?? 8;
@@ -46761,19 +47065,19 @@ function boardFiles(board) {
   const meta3 = board.meta ?? {};
   const wf = meta3.workflow;
   const truncated = new Set(Array.isArray(wf?.truncated) ? wf.truncated.filter((t) => typeof t === "string") : []);
-  const add = (files, from) => {
+  const add2 = (files, from) => {
     if (!files || typeof files !== "object")
       return;
-    for (const [path15, text3] of Object.entries(files)) {
-      if (typeof text3 !== "string" || out.has(path15))
+    for (const [path16, text3] of Object.entries(files)) {
+      if (typeof text3 !== "string" || out.has(path16))
         continue;
-      out.set(path15, { path: path15, text: text3, sha: sha1(text3), truncated: truncated.has(path15), from });
+      out.set(path16, { path: path16, text: text3, sha: sha1(text3), truncated: truncated.has(path16), from });
     }
   };
-  add(wf?.files, { workflow: true });
+  add2(wf?.files, { workflow: true });
   const diagrams = meta3.diagrams;
   for (const [key, d] of Object.entries(diagrams && typeof diagrams === "object" ? diagrams : {}))
-    add(d?.files, { diagram: key });
+    add2(d?.files, { diagram: key });
   return [...out.values()];
 }
 var ProposalError = class extends Error {
@@ -46990,10 +47294,573 @@ function stampAttribution(board, ops, by) {
   });
 }
 
+// packages/canvas/dist/diagrams/check.js
+function contentSchemaFor(kind) {
+  if (kind === "workflow" || kind === "freeform")
+    return void 0;
+  return contentSchemas[kind];
+}
+function unknownContentFields(kind, content) {
+  const schema = contentSchemaFor(kind);
+  return schema ? unknownFields(schema, content) : [];
+}
+
+// packages/canvas/dist/diagrams/grammar.js
+function checkEventStorming(content) {
+  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
+  const out = [];
+  for (const u3 of m2.unresolved)
+    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no element`, page: "p.202" });
+  const detailed = m2.level !== "big-picture";
+  if (detailed) {
+    for (const k2 of m2.commands) {
+      if (!k2.system)
+        out.push({ rule: "command-without-system", severity: "warning", element: k2.id, message: `"${k2.text}": no system between the command and its event`, page: "p.202" });
+      if (!k2.produces.length)
+        out.push({ rule: "command-without-event", severity: "warning", element: k2.id, message: `"${k2.text}" produces no event \u2014 the path is not complete`, page: "p.199" });
+      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r2) => r2.informs.includes(k2.id));
+      if (!triggered)
+        out.push({ rule: "command-without-trigger", severity: "info", element: k2.id, message: `"${k2.text}": nobody issues it \u2014 add a person or a policy`, page: "p.216" });
+    }
+    for (const p of m2.policies) {
+      if (!p.when.length)
+        out.push({ rule: "policy-without-event", severity: "warning", element: p.id, message: `"${p.text}": whenever \u2026 what? no event`, page: "p.222" });
+      if (!p.then.length)
+        out.push({ rule: "policy-without-command", severity: "warning", element: p.id, message: `"${p.text}": \u2026 then what? no command`, page: "p.222" });
+    }
+    const produced = new Set(m2.commands.flatMap((k2) => k2.produces));
+    const raised = new Set(m2.systems.flatMap((s) => s.raises));
+    m2.events.forEach((e, i) => {
+      if (i === 0 || produced.has(e.id) || raised.has(e.id) || e.time || e.person)
+        return;
+      out.push({ rule: "event-without-source", severity: "info", element: e.id, message: `"${e.text}": where does it come from? a command, a system, time or a policy`, page: "p.208" });
+    });
+    for (const r2 of m2.readModels) {
+      if (!r2.informs.length)
+        out.push({ rule: "read-model-unused", severity: "warning", element: r2.id, message: `"${r2.text}" informs no person or command`, page: "p.231" });
+    }
+    if (m2.level === "process") {
+      for (const e of m2.events.filter((e2) => e2.pivotal))
+        out.push({ rule: "pivotal-on-process", severity: "info", element: e.id, message: `"${e.text}": pivotal events sort a big picture; a process board follows one flow`, page: "p.82, p.197" });
+    }
+  }
+  if (m2.level === "software") {
+    for (const a of m2.aggregates) {
+      const owns = m2.commands.some((k2) => k2.aggregate === a.id) || m2.events.some((e) => e.aggregate === a.id);
+      if (!owns)
+        out.push({ rule: "aggregate-without-behaviour", severity: "info", element: a.id, message: `aggregate "${a.text}" handles no command and raises no event`, page: "p.260" });
+    }
+  }
+  if (m2.hotspots.length) {
+    out.push({ rule: "open-hotspots", severity: "info", message: `${m2.hotspots.length} open hotspot${m2.hotspots.length === 1 ? "" : "s"} \u2014 a process is done when this reaches zero`, page: "p.199, p.203" });
+  }
+  return out;
+}
+
+// packages/canvas/dist/diagrams/designFile.js
+var KIND_ALIASES = {
+  es: "event-storming",
+  "event-storming": "event-storming",
+  "story-map": "user-story-map",
+  usm: "user-story-map",
+  "user-story-map": "user-story-map",
+  kanban: "kanban",
+  wireframe: "wireframe",
+  "domain-story": "domain-story",
+  dst: "domain-story",
+  journey: "user-journey",
+  "user-journey": "user-journey",
+  ui: "ui-mock",
+  mockup: "ui-mock",
+  "ui-mock": "ui-mock",
+  workflow: "workflow"
+};
+function designFromObject(file2, raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new Error(`${file2}: expected a YAML mapping`);
+  const r2 = raw;
+  const base = (file2.split(/[\\/]/).pop() ?? file2).replace(/\.ya?ml$/i, "");
+  const dot = base.lastIndexOf(".");
+  const name = dot > 0 ? base.slice(0, dot) : base;
+  const alias = dot > 0 ? base.slice(dot + 1) : void 0;
+  if (alias === "workflow" || !r2.kind && !alias && Array.isArray(r2.steps) === false && r2.steps && typeof r2.steps === "object") {
+    const key2 = `${name}-workflow`.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+    return { key: key2, kind: "workflow", title: typeof r2.name === "string" ? r2.name : void 0, content: r2 };
+  }
+  const kind = typeof r2.kind === "string" ? KIND_ALIASES[r2.kind] ?? r2.kind : alias ? KIND_ALIASES[alias] : void 0;
+  if (!kind)
+    throw new Error(`${file2}: which diagram is this? name it <name>.<kind>.yaml (${Object.keys(KIND_ALIASES).join(", ")}) or set kind:`);
+  const derived2 = alias && !name.endsWith(`-${alias}`) ? `${name}-${alias}` : name;
+  const key = typeof r2.key === "string" ? r2.key : derived2.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(key))
+    throw new Error(`${file2}: diagram key "${key}" must be lower-case letters, digits and dashes`);
+  const { key: _k, kind: _kind, title: title2, ...content } = r2;
+  const level = typeof content.level === "string" ? content.level : void 0;
+  return { key, kind, title: typeof title2 === "string" ? title2 : void 0, level, content };
+}
+function yamlCommentHint(text3, failingLine) {
+  const lines2 = text3.split("\n");
+  const last = Math.min(lines2.length, failingLine ?? lines2.length);
+  for (let i = last - 1; i >= Math.max(0, last - 20); i--) {
+    const bare = lines2[i].replace(/"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g, '""');
+    const open2 = bare.indexOf("[");
+    const hash2 = open2 >= 0 ? bare.slice(open2).search(/\s#/) : -1;
+    if (hash2 > 0 && !bare.slice(open2, open2 + hash2).includes("]")) {
+      return `hint: line ${i + 1} has an unquoted "#" inside [ \u2026 ] \u2014 a "#" after a space starts a YAML comment, so the rest of the line is dropped. Quote values containing # (e.g. "PR #1113").`;
+    }
+  }
+  return void 0;
+}
+function withDesignFindings(d, drawn) {
+  return d.kind === "ui-mock" ? attachUiFindings(drawn, d.content) : drawn;
+}
+function lintDesignContent(d) {
+  const schema = contentSchemaFor(d.kind);
+  if (!schema)
+    return [{ severity: "info", message: `${d.kind}: no schema for this kind \u2014 the canvas validates it on draw` }];
+  const unknown2 = unknownContentFields(d.kind, d.content).map((u3) => ({ severity: "warning", message: `unknown field \`${u3.field}\` at ${u3.path} \u2014 it is not part of ${d.kind} and will be ignored` }));
+  const parsed = schema.safeParse(d.content);
+  if (!parsed.success)
+    return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
+  if (d.kind === "domain-story")
+    return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+  const notes = annotationFindings(d.kind, parsed.data, d.key);
+  if (d.kind === "ui-mock")
+    return [...[...lintUiMock(d.content), ...clickNoteFindings(d.content)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
+  if (d.kind !== "event-storming")
+    return [...unknown2, ...notes];
+  return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page })), ...notes];
+}
+function annotationFindings(kind, content, key) {
+  if (!annotationsIn(content).length || !diagramKinds.includes(kind))
+    return [];
+  let items;
+  try {
+    items = render(kind, content, { scope: key, now: "1970-01-01T00:00:00.000Z" });
+  } catch {
+    return [];
+  }
+  return unresolvedAnnotations(kind, content, items, key);
+}
+function findingLine(f) {
+  return `${f.severity === "error" ? "\u2716" : f.severity === "warning" ? "\u26A0" : "\xB7"} ${f.element ? `${f.element}: ` : ""}${f.message}${f.page ? `  (${f.page})` : ""}`;
+}
+function frameOf(board, key) {
+  return Object.values(board.items).find((it) => it.type === "frame" && it.data?.diagram?.key === key);
+}
+function growFrame(frame, drawn, placed, pad = 20) {
+  if (placed.has(frame.id))
+    return void 0;
+  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
+  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) }) }] : [it]);
+  if (!boxes.length)
+    return void 0;
+  const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
+  const w2 = Math.max(fw, ...boxes.map((b2) => num2(b2.x) + num2(b2.w) + pad - fx));
+  const h = Math.max(fh, ...boxes.map((b2) => num2(b2.y) + num2(b2.h) + pad - fy));
+  return w2 > fw || h > fh ? { kind: "update", id: frame.id, patch: { w: w2, h } } : void 0;
+}
+var CARD_W3 = 180;
+var CARD_H2 = 96;
+var GAP3 = 16;
+var PAD2 = 24;
+function esItemFor(board, esKey, element) {
+  return Object.values(board.items).find((it) => it.id.startsWith(`${esKey}.`) && it.type !== "arrow" && it.type !== "comment" && (it.data?.element === element || it.id.endsWith(`.${element}`)));
+}
+function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ new Date()).toISOString()) {
+  const frame = frameOf(board, usmKey);
+  if (!frame)
+    throw new Error(`no story-map frame keyed "${usmKey}" on this board \u2014 draw the story map first (awd design draw <file>)`);
+  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
+  const already = new Set(Object.values(board.items).map((it) => it.data?.pending?.trace?.from).filter(Boolean));
+  const fresh = candidates.filter((c) => !already.has(c.traces[0]?.from));
+  const children = Object.values(board.items).filter((it) => it.parent === frame.id);
+  const fx = num2(frame.x);
+  const fy = num2(frame.y);
+  const bottom = Math.max(fy + PAD2, ...children.map((c) => num2(c.y) + num2(c.h)));
+  const y2 = bottom + GAP3 * 2;
+  const stamp = { createdBy: "agent", updatedBy: "agent", updatedAt: now };
+  const ops = [];
+  fresh.forEach((c, i) => {
+    const id = `${usmKey}.proposed.${c.id}`;
+    const trace3 = c.traces[0];
+    ops.push({
+      kind: "add",
+      item: {
+        id,
+        type: "card",
+        role: "story",
+        color: "white",
+        parent: frame.id,
+        x: fx + PAD2 + i * (CARD_W3 + GAP3),
+        y: y2,
+        w: CARD_W3,
+        h: CARD_H2,
+        text: c.text,
+        data: {
+          pending: { kind: "add", trace: trace3, story: { id: c.id, text: c.text, acceptance: c.acceptance, traces: c.traces }, activity: c.activity, step: c.step, by: "agent", at: now },
+          traces: c.traces,
+          acceptance: c.acceptance
+        },
+        ...stamp
+      }
+    });
+    const src = trace3 && esItemFor(board, esKey, c.source.id);
+    if (src) {
+      ops.push({ kind: "add", item: { id: `${id}.trace`, type: "arrow", role: "trace", from: src.id, to: id, label: "\u4F86\u81EA", x: 0, y: 0, w: 0, h: 0, data: { pending: { kind: "add", trace: trace3 } }, ...stamp } });
+    }
+  });
+  const need = y2 + CARD_H2 + PAD2 - fy;
+  if (fresh.length && need > num2(frame.h))
+    ops.push({ kind: "update", id: frame.id, patch: { h: need } });
+  const right = fx + PAD2 + fresh.length * (CARD_W3 + GAP3) + PAD2 - fx;
+  if (fresh.length && right > num2(frame.w))
+    ops.push({ kind: "update", id: frame.id, patch: { w: right } });
+  return { ops, proposed: fresh.length, skipped: candidates.length - fresh.length };
+}
+
+// packages/canvas/dist/diagrams/redraw.js
+var GEOMETRY2 = ["x", "y", "w", "h", "parent", "order", "fontSize"];
+function placedByUser(changes) {
+  const ids = /* @__PURE__ */ new Set();
+  for (const ch of changes)
+    for (const op of ch.ops)
+      if (op.kind === "update" && op.id && op.patch && GEOMETRY2.some((k2) => k2 in op.patch))
+        ids.add(op.id);
+  return ids;
+}
+function keepUserLayout(ops, placed) {
+  return ops.map((op) => {
+    if (op.kind !== "update" || !op.id || !placed.has(op.id) || !op.patch)
+      return op;
+    const patch = Object.fromEntries(Object.entries(op.patch).filter(([k2]) => !GEOMETRY2.includes(k2) && k2 !== "updatedBy" && k2 !== "createdBy"));
+    return { ...op, patch };
+  });
+}
+var SCOPE = "wf.";
+function uiValueAt(it, sub) {
+  const ui = it.data?.ui;
+  if (sub[0] === "items") {
+    const row = ui?.items?.[Number(sub[1])];
+    return typeof row === "string" ? row : row?.text ?? "";
+  }
+  const v2 = sub.reduce((o, k2) => o?.[k2], ui);
+  return v2 === void 0 || v2 === null ? "" : String(v2);
+}
+var pendingOf = (it) => {
+  const p = it?.data?.pending;
+  return p && typeof p.kind === "string" ? p : void 0;
+};
+var node3 = (id) => id.replace(/^wf\.node\./, "");
+var wireOf = (it) => it.data?.event;
+var sameWire = (drawn, want) => {
+  const w2 = wireOf(drawn);
+  return !!w2 && node3(w2.from) === node3(want.from) && node3(w2.to) === node3(want.to) && (want.event === void 0 || w2.event === want.event);
+};
+var PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy", "hidden"];
+function withPresentation(drawn, was) {
+  const kept = Object.fromEntries(PRESENTATION.filter((k2) => was.data && k2 in was.data).map((k2) => [k2, was.data[k2]]));
+  return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn;
+}
+function isResolved(p, drawn, itemId) {
+  if (p.kind === "remove" && p.deleted)
+    return !(itemId && drawn.some((d) => d.id === itemId));
+  if (p.kind === "text") {
+    const now = itemId ? drawn.find((d) => d.id === itemId) : void 0;
+    if (now && p.sub)
+      return uiValueAt(now, p.sub) === (p.after?.text ?? "");
+    return !now || (now.text ?? "") === (p.after?.text ?? "");
+  }
+  if (p.path && (p.kind === "remove" || p.kind === "add")) {
+    const now = itemId ? drawn.some((d) => d.id === itemId) : false;
+    return p.kind === "remove" ? !now : now;
+  }
+  if (p.trace)
+    return drawn.some((d) => (d.data?.traces ?? []).some((t) => t.from === p.trace.from && t.rel === p.trace.rel));
+  const wires = drawn.filter((d) => d.type === "arrow" && wireOf(d));
+  if (p.kind === "remove")
+    return !!p.before && !wires.some((w2) => sameWire(w2, p.before));
+  return !!p.after && wires.some((w2) => sameWire(w2, p.after));
+}
+function removedByUser(changes) {
+  const out = /* @__PURE__ */ new Map();
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      if (op.kind === "remove" && op.id && ch.author === "user")
+        out.set(op.id, ch.ts ? { at: ch.ts } : {});
+      else if (op.kind === "add" && op.item?.id)
+        out.delete(op.item.id);
+    }
+  return out;
+}
+var isRedrawNote = (note) => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note);
+function originsOf(changes) {
+  const out = /* @__PURE__ */ new Map();
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      const id = op.kind === "add" ? op.item?.id : void 0;
+      if (id)
+        out.set(id, { author: ch.author ?? "agent", ...ch.by ? { by: ch.by } : {}, ...ch.note ? { note: ch.note } : {} });
+    }
+  return out;
+}
+function redrawInputs(changes) {
+  return { placed: placedByUser(changes.filter((c) => c.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
+}
+var emptyRedrawInputs = () => ({ placed: /* @__PURE__ */ new Set(), origins: /* @__PURE__ */ new Map(), removed: /* @__PURE__ */ new Map() });
+function foldRedrawInputs(acc, changes) {
+  for (const ch of changes)
+    for (const op of ch.ops) {
+      if (op.kind === "update") {
+        if (ch.author === "user" && op.id && op.patch && GEOMETRY2.some((k2) => k2 in op.patch))
+          acc.placed.add(op.id);
+      } else if (op.kind === "add" && op.item?.id) {
+        acc.origins.set(op.item.id, { author: ch.author ?? "agent", ...ch.by ? { by: ch.by } : {}, ...ch.note ? { note: ch.note } : {} });
+        acc.removed.delete(op.item.id);
+      } else if (op.kind === "remove" && op.id && ch.author === "user")
+        acc.removed.set(op.id, ch.ts ? { at: ch.ts } : {});
+    }
+  return acc;
+}
+function redrawInputsToJson(r2) {
+  const origins = [];
+  const index = /* @__PURE__ */ new Map();
+  const originOf = {};
+  for (const [id, o] of r2.origins) {
+    const key = JSON.stringify([o.author, o.by ?? null, o.note ?? null]);
+    let i = index.get(key);
+    if (i === void 0)
+      index.set(key, i = origins.push(o) - 1);
+    originOf[id] = i;
+  }
+  return { placed: [...r2.placed], origins, originOf, removed: [...r2.removed].map(([id, v2]) => v2.at ? [id, v2.at] : [id]) };
+}
+function redrawInputsFromJson(j2) {
+  const out = emptyRedrawInputs();
+  for (const id of Array.isArray(j2?.placed) ? j2.placed : [])
+    if (typeof id === "string")
+      out.placed.add(id);
+  const table = Array.isArray(j2?.origins) ? j2.origins : [];
+  for (const [id, i] of Object.entries(j2?.originOf && typeof j2.originOf === "object" ? j2.originOf : {})) {
+    const o = table[i];
+    if (o && typeof o.author === "string")
+      out.origins.set(id, { author: o.author, ...o.by ? { by: o.by } : {}, ...o.note ? { note: o.note } : {} });
+  }
+  for (const e of Array.isArray(j2?.removed) ? j2.removed : [])
+    if (Array.isArray(e) && typeof e[0] === "string")
+      out.removed.set(e[0], typeof e[1] === "string" ? { at: e[1] } : {});
+  return out;
+}
+function isFileNote(it, prefix) {
+  if (it.type !== "comment" || it.role !== "note")
+    return false;
+  const a = annotationOf(it);
+  return (calloutOf(it) !== void 0 || it.id.startsWith(`${prefix}note.`)) && !a?.draft && !a?.board;
+}
+function repliedTo(board) {
+  const out = /* @__PURE__ */ new Set();
+  for (const c of Object.values(board)) {
+    if (c.type !== "comment")
+      continue;
+    const seen = /* @__PURE__ */ new Set([c.id]);
+    for (let t = c.target; t && board[t]?.type === "comment" && !seen.has(t); t = board[t].target) {
+      seen.add(t);
+      out.add(t);
+    }
+  }
+  return out;
+}
+var label = (it) => {
+  const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
+  return t ? t.length > 48 ? `${t.slice(0, 47)}\u2026` : t : String(it?.type ?? "?");
+};
+var IGNORED = /* @__PURE__ */ new Set(["id", "createdBy", "updatedBy", "updatedAt"]);
+function same2(a, b2) {
+  if (a === b2)
+    return true;
+  if (typeof a !== "object" || typeof b2 !== "object" || !a || !b2)
+    return false;
+  if (Array.isArray(a) !== Array.isArray(b2))
+    return false;
+  const ka = Object.keys(a).filter((k2) => a[k2] !== void 0);
+  const kb = Object.keys(b2).filter((k2) => b2[k2] !== void 0);
+  return ka.length === kb.length && ka.every((k2) => same2(a[k2], b2[k2]));
+}
+var mergedData = (was, patch) => patch && typeof patch === "object" ? Object.fromEntries(Object.entries({ ...was, ...patch }).filter(([, v2]) => v2 !== null)) : patch;
+var changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same2(k2 === "data" && was.type === "comment" ? mergedData(was.data, patch.data) : patch[k2], was[k2]));
+var lockOf = (board, id) => layoutLock(board, id);
+var KEPT_REMOVED = "you deleted it \u2014 the file still has it; propose the file change?";
+function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
+  const { placed, origins, removed } = inputs;
+  const drawnIds = new Set(drawn.map((d) => d.id));
+  const held = /* @__PURE__ */ new Set();
+  const ops = [];
+  const plan = { prefix: scope.prefix, ...scope.frame ? { frame: scope.frame } : {}, added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], keptRemoved: [], held: [], settled: [], foreign: [] };
+  const owned = (it) => it.id.startsWith(scope.prefix) || it.type === "arrow" && !!it.from && !!it.to && [it.from, it.to].every((e) => e.startsWith(scope.prefix) || scope.keep?.has(e));
+  for (const it of Object.values(board)) {
+    const p = pendingOf(it);
+    if (!p || !owned(it))
+      continue;
+    if (!isResolved(p, drawn, it.id)) {
+      held.add(it.id);
+      if (p.kind === "remove" && p.deleted)
+        plan.keptRemoved.push({ id: it.id, label: label(it), why: KEPT_REMOVED });
+      else
+        plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` });
+    } else if (!drawnIds.has(it.id)) {
+      ops.push({ kind: "remove", id: it.id });
+      plan.settled.push({ id: it.id, label: label(it), why: p.kind === "remove" && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : "the file now has it" });
+    }
+  }
+  const keptLayout = /* @__PURE__ */ new Set();
+  const updates = [];
+  for (const d of drawn) {
+    if (held.has(d.id))
+      continue;
+    const was = board[d.id];
+    if (!was && removed?.has(d.id)) {
+      const pending = { kind: "remove", deleted: d.type === "arrow" ? "wire" : "item", by: "user", ...removed.get(d.id)?.at ? { at: removed.get(d.id).at } : {} };
+      updates.push({ kind: "add", item: { ...d, data: { ...d.data ?? {}, pending } } });
+      plan.keptRemoved.push({ id: d.id, label: label(d), why: KEPT_REMOVED });
+      continue;
+    }
+    if (!was) {
+      updates.push({ kind: "add", item: d });
+      plan.added.push({ id: d.id, label: label(d) });
+      continue;
+    }
+    const patch = withPresentation(d, was);
+    const lock = lockOf(board, d.id);
+    const keep = lock ? "locked" : placed.has(d.id) ? "moved" : void 0;
+    if (keep)
+      keptLayout.add(d.id);
+    const geometry = GEOMETRY2.filter((k2) => k2 in patch && !same2(patch[k2], was[k2]));
+    if (keep && geometry.length) {
+      const line = { id: d.id, label: label(was), why: keep === "locked" ? `${lock === "frame" ? "its frame is locked" : "locked"}: keeps ${geometry.join(", ")}` : `you moved it: keeps ${geometry.join(", ")}` };
+      (keep === "locked" ? plan.keptLocked : plan.keptMoved).push(line);
+    }
+    const op = { kind: "update", id: d.id, patch };
+    const final = keep ? keepUserLayout([op], /* @__PURE__ */ new Set([d.id]))[0] : op;
+    const changed = changedKeys(final.patch ?? {}, was);
+    if (!changed.length) {
+      plan.unchanged++;
+      continue;
+    }
+    plan.updated.push({ id: d.id, label: label(was), why: changed.join(", ") });
+    updates.push(final);
+  }
+  const drawers = new Set([...origins?.values() ?? []].filter((o) => o.author === "agent" && isRedrawNote(o.note)).map((o) => o.by ?? ""));
+  const addedBy = (it) => {
+    const o = origins?.get(it.id);
+    if (o)
+      return o.author === "user" ? `the person${o.by ? ` (${o.by})` : ""}` : o.by ?? "an agent";
+    return it.createdBy === "user" ? "the person" : "an agent";
+  };
+  const byHand = (it) => {
+    const o = origins?.get(it.id);
+    if (!o)
+      return it.createdBy === "user";
+    if (o.author === "user")
+      return true;
+    return !isRedrawNote(o.note) && drawers.size > 0 && !drawers.has(o.by ?? "");
+  };
+  const foreign = /* @__PURE__ */ new Set();
+  const answered = repliedTo(board);
+  for (const it of Object.values(board)) {
+    if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id))
+      continue;
+    if (!it.id.startsWith(scope.prefix) || it.type === "comment" && !isFileNote(it, scope.prefix))
+      continue;
+    if (byHand(it)) {
+      foreign.add(it.id);
+      continue;
+    }
+    if (it.type === "comment" && answered.has(it.id)) {
+      if (calloutOf(it) === void 0 && !it.data?.annotation)
+        continue;
+      ops.push({ kind: "update", id: it.id, patch: { data: { ...it.data, callout: null, callouts: null, annotation: null } } });
+      plan.updated.push({ id: it.id, label: label(it), why: "no longer in the file; it has replies, so it stays as a thread (no number)" });
+      continue;
+    }
+    ops.push({ kind: "remove", id: it.id });
+    const lock = lockOf(board, it.id);
+    plan.removed.push({ id: it.id, label: label(it), why: `no longer in the file${lock ? " (a lock keeps the position, not the item)" : ""}` });
+  }
+  const inFrame = (it) => {
+    if (!scope.frame)
+      return scope.prefix === SCOPE;
+    const seen = /* @__PURE__ */ new Set();
+    for (let p = it.parent ? board[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board[p.parent] : void 0) {
+      if (p.id === scope.frame)
+        return true;
+      seen.add(p.id);
+    }
+    return false;
+  };
+  const endIn = (id) => !!id && (id.startsWith(scope.prefix) || id === scope.frame || !!board[id] && inFrame(board[id]));
+  for (const it of Object.values(board)) {
+    if (it.type === "comment" || drawnIds.has(it.id) || held.has(it.id) || scope.keep?.has(it.id) || it.id === scope.frame)
+      continue;
+    if (pendingOf(it) && owned(it))
+      continue;
+    const mine = foreign.has(it.id);
+    const inside3 = mine || !it.id.startsWith(scope.prefix) && (it.type === "arrow" ? endIn(it.from) && endIn(it.to) : inFrame(it));
+    if (!inside3)
+      continue;
+    plan.foreign.push({ id: it.id, label: label(it), why: `added by ${addedBy(it)}${mine ? " with this file's prefix" : ""}, not from this file: kept` });
+  }
+  const result = [...keepUserLayout(updates, keptLayout), ...ops];
+  const frame = scope.frame ? board[scope.frame] : void 0;
+  if (frame) {
+    const grow = growFrame(frame, drawn, keptLayout);
+    if (grow) {
+      result.push(grow);
+      if (!plan.updated.some((l) => l.id === frame.id)) {
+        plan.updated.push({ id: frame.id, label: label(frame), why: `grows to ${grow.patch.w}\xD7${grow.patch.h}` });
+        if (plan.unchanged > 0 && drawnIds.has(frame.id))
+          plan.unchanged--;
+      }
+    }
+  }
+  return { ops: result, plan, keptLayout };
+}
+var SECTIONS = [
+  ["added", "+", "added"],
+  ["updated", "~", "updated"],
+  ["removed", "-", "removed"],
+  ["keptMoved", "=", "kept where the person moved it"],
+  ["keptLocked", "#", "kept: locked"],
+  ["keptRemoved", "x", "kept removed"],
+  ["held", "?", "proposals held"],
+  ["settled", ">", "proposals settled"],
+  ["foreign", "*", "not from this file (kept)"]
+];
+function planSummary(plan) {
+  const parts2 = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n4]) => n4 > 0).map(([n4, name]) => `${n4} ${name}`);
+  if (plan.unchanged)
+    parts2.splice(Math.min(2, parts2.length), 0, `${plan.unchanged} unchanged`);
+  return parts2.length ? parts2.join(" \xB7 ") : "nothing to change";
+}
+function planLines(plan, o = {}) {
+  const limit = o.limit ?? 8;
+  const out = [`${o.title ?? `Redraw preview \u2014 ${plan.frame ?? plan.prefix.replace(/\.$/, "")}`} (dry run: nothing written)`, `  ${planSummary(plan)}`];
+  for (const [k2, mark, name] of SECTIONS) {
+    const lines2 = plan[k2];
+    if (!lines2.length)
+      continue;
+    out.push(`  ${name} (${lines2.length}):`);
+    for (const l of lines2.slice(0, limit))
+      out.push(`    ${mark} ${l.id}  "${l.label}"${l.why ? ` \u2014 ${l.why}` : ""}`);
+    if (lines2.length > limit)
+      out.push(`    \u2026 and ${lines2.length - limit} more`);
+  }
+  return out;
+}
+
 // packages/canvas/dist/adapters/feedback/index.js
-import fs4 from "node:fs";
+import fs5 from "node:fs";
 import os2 from "node:os";
-import path5 from "node:path";
+import path6 from "node:path";
 var MemoryFeedbackStore = class {
   where = "memory";
   records = [];
@@ -47010,13 +47877,13 @@ var FileFeedbackStore = class {
     this.where = where;
   }
   append(record2) {
-    fs4.mkdirSync(path5.dirname(this.where), { recursive: true, mode: 448 });
-    fs4.appendFileSync(this.where, JSON.stringify(record2) + "\n", { mode: 384 });
+    fs5.mkdirSync(path6.dirname(this.where), { recursive: true, mode: 448 });
+    fs5.appendFileSync(this.where, JSON.stringify(record2) + "\n", { mode: 384 });
   }
   list() {
     let raw = "";
     try {
-      raw = fs4.readFileSync(this.where, "utf8");
+      raw = fs5.readFileSync(this.where, "utf8");
     } catch (e) {
       if (e.code === "ENOENT")
         return [];
@@ -47033,8 +47900,8 @@ var FileFeedbackStore = class {
 };
 function defaultFeedbackFile(agentsFile, env = process.env, home = os2.homedir()) {
   if (env.UNPROSE_FEEDBACK_FILE)
-    return path5.resolve(env.UNPROSE_FEEDBACK_FILE);
-  return path5.join(agentsFile ? path5.dirname(agentsFile) : path5.join(home, ".awd"), "feedback.ndjson");
+    return path6.resolve(env.UNPROSE_FEEDBACK_FILE);
+  return path6.join(agentsFile ? path6.dirname(agentsFile) : path6.join(home, ".awd"), "feedback.ndjson");
 }
 
 // packages/canvas/dist/access.js
@@ -47522,9 +48389,9 @@ var AccessService = class {
   /** GET /authorize: an MCP client asks to connect. Reloading the page reuses the request (same client, PKCE challenge and state). */
   startAuthorization(a) {
     this.sweep();
-    const same2 = [...this.pending.values()].find((x2) => x2.status === "pending" && x2.clientId === a.client.clientId && x2.challenge === a.challenge && x2.state === a.state && x2.redirectUri === a.redirectUri);
-    if (same2)
-      return { pending: same2 };
+    const same3 = [...this.pending.values()].find((x2) => x2.status === "pending" && x2.clientId === a.client.clientId && x2.challenge === a.challenge && x2.state === a.state && x2.redirectUri === a.redirectUri);
+    if (same3)
+      return { pending: same3 };
     return this.open({ via: "oauth", name: a.client.name, scope: scopeFrom(a.scope), ip: a.ip, userAgent: a.userAgent, clientId: a.client.clientId, redirectUri: a.redirectUri, state: a.state, challenge: a.challenge });
   }
   /** POST /device_authorization: an agent without a browser asks to connect (RFC 8628). */
@@ -47549,9 +48416,9 @@ var AccessService = class {
     if (grant.manage)
       return { error: "this browser may already manage agents", http: 409 };
     this.sweep();
-    const same2 = [...this.pending.values()].find((x2) => x2.status === "pending" && x2.via === "manage" && x2.sessionId === grant.agentId);
-    if (same2)
-      return { pending: same2 };
+    const same3 = [...this.pending.values()].find((x2) => x2.status === "pending" && x2.via === "manage" && x2.sessionId === grant.agentId);
+    if (same3)
+      return { pending: same3 };
     const r2 = this.open({ via: "manage", name: grant.name, sessionId: grant.agentId, scope: grant.scope, ip, userAgent: userAgent2 });
     if (r2.pending)
       this.log(grant.name, `asked for the right to manage agents (from ${ip})`, grant.agentId);
@@ -47806,9 +48673,9 @@ function withParams(uri, params) {
 }
 
 // packages/canvas/dist/adapters/access/index.js
-import fs5 from "node:fs";
+import fs6 from "node:fs";
 import os3 from "node:os";
-import path6 from "node:path";
+import path7 from "node:path";
 var empty = () => ({ agents: [], clients: [] });
 var MemoryAccessStore = class {
   where = "memory";
@@ -47830,7 +48697,7 @@ var FileAccessStore = class {
   }
   read() {
     try {
-      const j2 = JSON.parse(fs5.readFileSync(this.where, "utf8"));
+      const j2 = JSON.parse(fs6.readFileSync(this.where, "utf8"));
       return { agents: Array.isArray(j2.agents) ? j2.agents : [], clients: Array.isArray(j2.clients) ? j2.clients : [], ...Array.isArray(j2.audit) ? { audit: j2.audit } : {} };
     } catch (e) {
       if (e.code === "ENOENT")
@@ -47839,22 +48706,22 @@ var FileAccessStore = class {
     }
   }
   write(data) {
-    fs5.mkdirSync(path6.dirname(this.where), { recursive: true, mode: 448 });
+    fs6.mkdirSync(path7.dirname(this.where), { recursive: true, mode: 448 });
     const tmp = `${this.where}.${process.pid}.tmp`;
-    fs5.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 384 });
-    fs5.renameSync(tmp, this.where);
+    fs6.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 384 });
+    fs6.renameSync(tmp, this.where);
     try {
-      fs5.chmodSync(this.where, 384);
+      fs6.chmodSync(this.where, 384);
     } catch {
     }
   }
 };
 function defaultAgentsFile(env = process.env, home = os3.homedir()) {
   if (env.UNPROSE_AGENTS_FILE)
-    return path6.resolve(env.UNPROSE_AGENTS_FILE);
+    return path7.resolve(env.UNPROSE_AGENTS_FILE);
   if (env.XDG_DATA_HOME)
-    return path6.join(env.XDG_DATA_HOME, "awd", "agents.json");
-  return path6.join(home, ".awd", "agents.json");
+    return path7.join(env.XDG_DATA_HOME, "awd", "agents.json");
+  return path7.join(home, ".awd", "agents.json");
 }
 
 // packages/canvas/dist/accessRoutes.js
@@ -48274,9 +49141,9 @@ h1{font-size:20px;margin:0 0 6px}p{margin:8px 0}.muted{color:var(--muted);font-s
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 fieldset{border:1px solid var(--line);border-radius:8px;margin:14px 0 0;padding:8px 12px}legend{font-size:13px;color:var(--muted);padding:0 4px}label{display:block;margin:4px 0}
 .status{margin-top:14px;font-weight:600}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}code{background:var(--code-bg);padding:0 .3em;border-radius:4px}`;
-function errorPage(title, text3) {
+function errorPage(title2, text3) {
   const nonce = crypto4.randomBytes(12).toString("base64");
-  return { nonce, body: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc2(title)} \u2014 Unprose</title><style>${STYLE}</style><main><h1>${esc2(title)}</h1><p>${esc2(text3)}</p></main>` };
+  return { nonce, body: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc2(title2)} \u2014 Unprose</title><style>${STYLE}</style><main><h1>${esc2(title2)}</h1><p>${esc2(text3)}</p></main>` };
 }
 function authorizePage(o) {
   const nonce = crypto4.randomBytes(12).toString("base64");
@@ -51962,12 +52829,12 @@ var StreamableHTTPServerTransport = class {
 };
 
 // packages/canvas/dist/credentials.js
-import fs6 from "node:fs";
+import fs7 from "node:fs";
 import os4 from "node:os";
-import path7 from "node:path";
+import path8 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.26.0";
+var VERSION = "0.27.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -51984,11 +52851,11 @@ function tokenKey(base) {
   }
 }
 function tokenFile(env = process.env) {
-  return env.UNPROSE_TOKENS_FILE || path7.join(env.HOME || os4.homedir(), ".awd", "tokens.json");
+  return env.UNPROSE_TOKENS_FILE || path8.join(env.HOME || os4.homedir(), ".awd", "tokens.json");
 }
 function readTokens(env) {
   try {
-    const j2 = JSON.parse(fs6.readFileSync(tokenFile(env), "utf8"));
+    const j2 = JSON.parse(fs7.readFileSync(tokenFile(env), "utf8"));
     return j2 && typeof j2 === "object" ? j2 : {};
   } catch {
     return {};
@@ -52006,8 +52873,8 @@ function saveToken(base, token, env = process.env) {
     j2[tokenKey(base)] = token;
   else
     delete j2[tokenKey(base)];
-  fs6.mkdirSync(path7.dirname(f), { recursive: true, mode: 448 });
-  fs6.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
+  fs7.mkdirSync(path8.dirname(f), { recursive: true, mode: 448 });
+  fs7.writeFileSync(f, JSON.stringify(j2, null, 2) + "\n", { mode: 384 });
 }
 function adoptToken(token, env = process.env) {
   if (token)
@@ -52108,7 +52975,7 @@ var CanvasClient = class {
       const msg = data?.error;
       if (res.status === 403 && !msg)
         throw new Error(`HTTP 403 ${res.statusText} from ${this.baseUrl} \u2014 not the canvas's answer: something in front of it (Cloudflare?) refused the request`);
-      throw new Error(msg ?? `${res.status} ${res.statusText}`);
+      throw Object.assign(new Error(msg ?? `${res.status} ${res.statusText}`), { status: res.status });
     }
     return data;
   }
@@ -52166,6 +53033,19 @@ var CanvasClient = class {
     if (author)
       q2.set("author", author);
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/changes?${q2}`);
+  }
+  /**
+   * What a redraw needs from the board's whole change log (docs/diagrams.md "What a redraw keeps"), folded by the canvas;
+   * a canvas without that route (404) sends the whole log, folded here.
+   */
+  async redrawInputs(id) {
+    try {
+      return redrawInputsFromJson(await this.req("GET", `/api/boards/${encodeURIComponent(id)}/redraw-inputs`));
+    } catch (e) {
+      if (e.status !== 404)
+        throw e;
+      return redrawInputs((await this.changes(id, 0)).changes);
+    }
   }
   /** `extra`: frame, from (names), kinds, summary, last, limit, cursor, maxChars (docs/canvas.md "Reading big boards"). */
   diff(id, since, author, extra) {
@@ -52264,8 +53144,8 @@ var CanvasClient = class {
   files(id) {
     return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r2) => r2.files);
   }
-  file(id, path15) {
-    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path15)}`).then((r2) => r2.file);
+  file(id, path16) {
+    return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path16)}`).then((r2) => r2.file);
   }
   /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
   propose(id, input2) {
@@ -52335,523 +53215,6 @@ function addQuery(q2, extra) {
 
 // packages/canvas/dist/designTools.js
 var import_yaml = __toESM(require_dist(), 1);
-
-// packages/canvas/dist/diagrams/check.js
-function contentSchemaFor(kind) {
-  if (kind === "workflow" || kind === "freeform")
-    return void 0;
-  return contentSchemas[kind];
-}
-function unknownContentFields(kind, content) {
-  const schema = contentSchemaFor(kind);
-  return schema ? unknownFields(schema, content) : [];
-}
-
-// packages/canvas/dist/diagrams/grammar.js
-function checkEventStorming(content) {
-  const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
-  const out = [];
-  for (const u3 of m2.unresolved)
-    out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no element`, page: "p.202" });
-  const detailed = m2.level !== "big-picture";
-  if (detailed) {
-    for (const k2 of m2.commands) {
-      if (!k2.system)
-        out.push({ rule: "command-without-system", severity: "warning", element: k2.id, message: `"${k2.text}": no system between the command and its event`, page: "p.202" });
-      if (!k2.produces.length)
-        out.push({ rule: "command-without-event", severity: "warning", element: k2.id, message: `"${k2.text}" produces no event \u2014 the path is not complete`, page: "p.199" });
-      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r2) => r2.informs.includes(k2.id));
-      if (!triggered)
-        out.push({ rule: "command-without-trigger", severity: "info", element: k2.id, message: `"${k2.text}": nobody issues it \u2014 add a person or a policy`, page: "p.216" });
-    }
-    for (const p of m2.policies) {
-      if (!p.when.length)
-        out.push({ rule: "policy-without-event", severity: "warning", element: p.id, message: `"${p.text}": whenever \u2026 what? no event`, page: "p.222" });
-      if (!p.then.length)
-        out.push({ rule: "policy-without-command", severity: "warning", element: p.id, message: `"${p.text}": \u2026 then what? no command`, page: "p.222" });
-    }
-    const produced = new Set(m2.commands.flatMap((k2) => k2.produces));
-    const raised = new Set(m2.systems.flatMap((s) => s.raises));
-    m2.events.forEach((e, i) => {
-      if (i === 0 || produced.has(e.id) || raised.has(e.id) || e.time || e.person)
-        return;
-      out.push({ rule: "event-without-source", severity: "info", element: e.id, message: `"${e.text}": where does it come from? a command, a system, time or a policy`, page: "p.208" });
-    });
-    for (const r2 of m2.readModels) {
-      if (!r2.informs.length)
-        out.push({ rule: "read-model-unused", severity: "warning", element: r2.id, message: `"${r2.text}" informs no person or command`, page: "p.231" });
-    }
-    if (m2.level === "process") {
-      for (const e of m2.events.filter((e2) => e2.pivotal))
-        out.push({ rule: "pivotal-on-process", severity: "info", element: e.id, message: `"${e.text}": pivotal events sort a big picture; a process board follows one flow`, page: "p.82, p.197" });
-    }
-  }
-  if (m2.level === "software") {
-    for (const a of m2.aggregates) {
-      const owns = m2.commands.some((k2) => k2.aggregate === a.id) || m2.events.some((e) => e.aggregate === a.id);
-      if (!owns)
-        out.push({ rule: "aggregate-without-behaviour", severity: "info", element: a.id, message: `aggregate "${a.text}" handles no command and raises no event`, page: "p.260" });
-    }
-  }
-  if (m2.hotspots.length) {
-    out.push({ rule: "open-hotspots", severity: "info", message: `${m2.hotspots.length} open hotspot${m2.hotspots.length === 1 ? "" : "s"} \u2014 a process is done when this reaches zero`, page: "p.199, p.203" });
-  }
-  return out;
-}
-
-// packages/canvas/dist/diagrams/designFile.js
-var KIND_ALIASES = {
-  es: "event-storming",
-  "event-storming": "event-storming",
-  "story-map": "user-story-map",
-  usm: "user-story-map",
-  "user-story-map": "user-story-map",
-  kanban: "kanban",
-  wireframe: "wireframe",
-  "domain-story": "domain-story",
-  dst: "domain-story",
-  journey: "user-journey",
-  "user-journey": "user-journey",
-  ui: "ui-mock",
-  mockup: "ui-mock",
-  "ui-mock": "ui-mock",
-  workflow: "workflow"
-};
-function designFromObject(file2, raw) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw))
-    throw new Error(`${file2}: expected a YAML mapping`);
-  const r2 = raw;
-  const base = (file2.split(/[\\/]/).pop() ?? file2).replace(/\.ya?ml$/i, "");
-  const dot = base.lastIndexOf(".");
-  const name = dot > 0 ? base.slice(0, dot) : base;
-  const alias = dot > 0 ? base.slice(dot + 1) : void 0;
-  if (alias === "workflow" || !r2.kind && !alias && Array.isArray(r2.steps) === false && r2.steps && typeof r2.steps === "object") {
-    const key2 = `${name}-workflow`.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-    return { key: key2, kind: "workflow", title: typeof r2.name === "string" ? r2.name : void 0, content: r2 };
-  }
-  const kind = typeof r2.kind === "string" ? KIND_ALIASES[r2.kind] ?? r2.kind : alias ? KIND_ALIASES[alias] : void 0;
-  if (!kind)
-    throw new Error(`${file2}: which diagram is this? name it <name>.<kind>.yaml (${Object.keys(KIND_ALIASES).join(", ")}) or set kind:`);
-  const derived2 = alias && !name.endsWith(`-${alias}`) ? `${name}-${alias}` : name;
-  const key = typeof r2.key === "string" ? r2.key : derived2.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(key))
-    throw new Error(`${file2}: diagram key "${key}" must be lower-case letters, digits and dashes`);
-  const { key: _k, kind: _kind, title, ...content } = r2;
-  const level = typeof content.level === "string" ? content.level : void 0;
-  return { key, kind, title: typeof title === "string" ? title : void 0, level, content };
-}
-function yamlCommentHint(text3, failingLine) {
-  const lines2 = text3.split("\n");
-  const last = Math.min(lines2.length, failingLine ?? lines2.length);
-  for (let i = last - 1; i >= Math.max(0, last - 20); i--) {
-    const bare = lines2[i].replace(/"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g, '""');
-    const open2 = bare.indexOf("[");
-    const hash2 = open2 >= 0 ? bare.slice(open2).search(/\s#/) : -1;
-    if (hash2 > 0 && !bare.slice(open2, open2 + hash2).includes("]")) {
-      return `hint: line ${i + 1} has an unquoted "#" inside [ \u2026 ] \u2014 a "#" after a space starts a YAML comment, so the rest of the line is dropped. Quote values containing # (e.g. "PR #1113").`;
-    }
-  }
-  return void 0;
-}
-function withDesignFindings(d, drawn) {
-  return d.kind === "ui-mock" ? attachUiFindings(drawn, d.content) : drawn;
-}
-function lintDesignContent(d) {
-  const schema = contentSchemaFor(d.kind);
-  if (!schema)
-    return [{ severity: "info", message: `${d.kind}: no schema for this kind \u2014 the canvas validates it on draw` }];
-  const unknown2 = unknownContentFields(d.kind, d.content).map((u3) => ({ severity: "warning", message: `unknown field \`${u3.field}\` at ${u3.path} \u2014 it is not part of ${d.kind} and will be ignored` }));
-  const parsed = schema.safeParse(d.content);
-  if (!parsed.success)
-    return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
-  if (d.kind === "domain-story")
-    return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
-  const notes = annotationFindings(d.kind, parsed.data, d.key);
-  if (d.kind === "ui-mock")
-    return [...[...lintUiMock(d.content), ...clickNoteFindings(d.content)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
-  if (d.kind !== "event-storming")
-    return [...unknown2, ...notes];
-  return [...unknown2, ...checkEventStorming(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page })), ...notes];
-}
-function annotationFindings(kind, content, key) {
-  if (!annotationsIn(content).length || !diagramKinds.includes(kind))
-    return [];
-  let items;
-  try {
-    items = render(kind, content, { scope: key, now: "1970-01-01T00:00:00.000Z" });
-  } catch {
-    return [];
-  }
-  return unresolvedAnnotations(kind, content, items, key);
-}
-function findingLine(f) {
-  return `${f.severity === "error" ? "\u2716" : f.severity === "warning" ? "\u26A0" : "\xB7"} ${f.element ? `${f.element}: ` : ""}${f.message}${f.page ? `  (${f.page})` : ""}`;
-}
-function frameOf(board, key) {
-  return Object.values(board.items).find((it) => it.type === "frame" && it.data?.diagram?.key === key);
-}
-function growFrame(frame, drawn, placed, pad = 20) {
-  if (placed.has(frame.id))
-    return void 0;
-  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
-  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) }) }] : [it]);
-  if (!boxes.length)
-    return void 0;
-  const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
-  const w2 = Math.max(fw, ...boxes.map((b2) => num2(b2.x) + num2(b2.w) + pad - fx));
-  const h = Math.max(fh, ...boxes.map((b2) => num2(b2.y) + num2(b2.h) + pad - fy));
-  return w2 > fw || h > fh ? { kind: "update", id: frame.id, patch: { w: w2, h } } : void 0;
-}
-var CARD_W3 = 180;
-var CARD_H2 = 96;
-var GAP3 = 16;
-var PAD2 = 24;
-function esItemFor(board, esKey, element) {
-  return Object.values(board.items).find((it) => it.id.startsWith(`${esKey}.`) && it.type !== "arrow" && it.type !== "comment" && (it.data?.element === element || it.id.endsWith(`.${element}`)));
-}
-function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ new Date()).toISOString()) {
-  const frame = frameOf(board, usmKey);
-  if (!frame)
-    throw new Error(`no story-map frame keyed "${usmKey}" on this board \u2014 draw the story map first (awd design draw <file>)`);
-  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
-  const already = new Set(Object.values(board.items).map((it) => it.data?.pending?.trace?.from).filter(Boolean));
-  const fresh = candidates.filter((c) => !already.has(c.traces[0]?.from));
-  const children = Object.values(board.items).filter((it) => it.parent === frame.id);
-  const fx = num2(frame.x);
-  const fy = num2(frame.y);
-  const bottom = Math.max(fy + PAD2, ...children.map((c) => num2(c.y) + num2(c.h)));
-  const y2 = bottom + GAP3 * 2;
-  const stamp = { createdBy: "agent", updatedBy: "agent", updatedAt: now };
-  const ops = [];
-  fresh.forEach((c, i) => {
-    const id = `${usmKey}.proposed.${c.id}`;
-    const trace3 = c.traces[0];
-    ops.push({
-      kind: "add",
-      item: {
-        id,
-        type: "card",
-        role: "story",
-        color: "white",
-        parent: frame.id,
-        x: fx + PAD2 + i * (CARD_W3 + GAP3),
-        y: y2,
-        w: CARD_W3,
-        h: CARD_H2,
-        text: c.text,
-        data: {
-          pending: { kind: "add", trace: trace3, story: { id: c.id, text: c.text, acceptance: c.acceptance, traces: c.traces }, activity: c.activity, step: c.step, by: "agent", at: now },
-          traces: c.traces,
-          acceptance: c.acceptance
-        },
-        ...stamp
-      }
-    });
-    const src = trace3 && esItemFor(board, esKey, c.source.id);
-    if (src) {
-      ops.push({ kind: "add", item: { id: `${id}.trace`, type: "arrow", role: "trace", from: src.id, to: id, label: "\u4F86\u81EA", x: 0, y: 0, w: 0, h: 0, data: { pending: { kind: "add", trace: trace3 } }, ...stamp } });
-    }
-  });
-  const need = y2 + CARD_H2 + PAD2 - fy;
-  if (fresh.length && need > num2(frame.h))
-    ops.push({ kind: "update", id: frame.id, patch: { h: need } });
-  const right = fx + PAD2 + fresh.length * (CARD_W3 + GAP3) + PAD2 - fx;
-  if (fresh.length && right > num2(frame.w))
-    ops.push({ kind: "update", id: frame.id, patch: { w: right } });
-  return { ops, proposed: fresh.length, skipped: candidates.length - fresh.length };
-}
-
-// packages/canvas/dist/diagrams/redraw.js
-var GEOMETRY2 = ["x", "y", "w", "h", "parent", "order", "fontSize"];
-function placedByUser(changes) {
-  const ids = /* @__PURE__ */ new Set();
-  for (const ch of changes)
-    for (const op of ch.ops)
-      if (op.kind === "update" && op.id && op.patch && GEOMETRY2.some((k2) => k2 in op.patch))
-        ids.add(op.id);
-  return ids;
-}
-function keepUserLayout(ops, placed) {
-  return ops.map((op) => {
-    if (op.kind !== "update" || !op.id || !placed.has(op.id) || !op.patch)
-      return op;
-    const patch = Object.fromEntries(Object.entries(op.patch).filter(([k2]) => !GEOMETRY2.includes(k2) && k2 !== "updatedBy" && k2 !== "createdBy"));
-    return { ...op, patch };
-  });
-}
-var SCOPE = "wf.";
-function uiValueAt(it, sub) {
-  const ui = it.data?.ui;
-  if (sub[0] === "items") {
-    const row = ui?.items?.[Number(sub[1])];
-    return typeof row === "string" ? row : row?.text ?? "";
-  }
-  const v2 = sub.reduce((o, k2) => o?.[k2], ui);
-  return v2 === void 0 || v2 === null ? "" : String(v2);
-}
-var pendingOf = (it) => {
-  const p = it?.data?.pending;
-  return p && typeof p.kind === "string" ? p : void 0;
-};
-var node3 = (id) => id.replace(/^wf\.node\./, "");
-var wireOf = (it) => it.data?.event;
-var sameWire = (drawn, want) => {
-  const w2 = wireOf(drawn);
-  return !!w2 && node3(w2.from) === node3(want.from) && node3(w2.to) === node3(want.to) && (want.event === void 0 || w2.event === want.event);
-};
-var PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy"];
-function withPresentation(drawn, was) {
-  const kept = Object.fromEntries(PRESENTATION.filter((k2) => was.data && k2 in was.data).map((k2) => [k2, was.data[k2]]));
-  return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn;
-}
-function isResolved(p, drawn, itemId) {
-  if (p.kind === "remove" && p.deleted)
-    return !(itemId && drawn.some((d) => d.id === itemId));
-  if (p.kind === "text") {
-    const now = itemId ? drawn.find((d) => d.id === itemId) : void 0;
-    if (now && p.sub)
-      return uiValueAt(now, p.sub) === (p.after?.text ?? "");
-    return !now || (now.text ?? "") === (p.after?.text ?? "");
-  }
-  if (p.path && (p.kind === "remove" || p.kind === "add")) {
-    const now = itemId ? drawn.some((d) => d.id === itemId) : false;
-    return p.kind === "remove" ? !now : now;
-  }
-  if (p.trace)
-    return drawn.some((d) => (d.data?.traces ?? []).some((t) => t.from === p.trace.from && t.rel === p.trace.rel));
-  const wires = drawn.filter((d) => d.type === "arrow" && wireOf(d));
-  if (p.kind === "remove")
-    return !!p.before && !wires.some((w2) => sameWire(w2, p.before));
-  return !!p.after && wires.some((w2) => sameWire(w2, p.after));
-}
-function removedByUser(changes) {
-  const out = /* @__PURE__ */ new Map();
-  for (const ch of changes)
-    for (const op of ch.ops) {
-      if (op.kind === "remove" && op.id && ch.author === "user")
-        out.set(op.id, ch.ts ? { at: ch.ts } : {});
-      else if (op.kind === "add" && op.item?.id)
-        out.delete(op.item.id);
-    }
-  return out;
-}
-var isRedrawNote = (note) => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note);
-function originsOf(changes) {
-  const out = /* @__PURE__ */ new Map();
-  for (const ch of changes)
-    for (const op of ch.ops) {
-      const id = op.kind === "add" ? op.item?.id : void 0;
-      if (id)
-        out.set(id, { author: ch.author ?? "agent", ...ch.by ? { by: ch.by } : {}, ...ch.note ? { note: ch.note } : {} });
-    }
-  return out;
-}
-function redrawInputs(changes) {
-  return { placed: placedByUser(changes.filter((c) => c.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
-}
-function isFileNote(it, prefix) {
-  if (it.type !== "comment" || it.role !== "note")
-    return false;
-  const a = annotationOf(it);
-  return (calloutOf(it) !== void 0 || it.id.startsWith(`${prefix}note.`)) && !a?.draft && !a?.board;
-}
-function repliedTo(board) {
-  const out = /* @__PURE__ */ new Set();
-  for (const c of Object.values(board)) {
-    if (c.type !== "comment")
-      continue;
-    const seen = /* @__PURE__ */ new Set([c.id]);
-    for (let t = c.target; t && board[t]?.type === "comment" && !seen.has(t); t = board[t].target) {
-      seen.add(t);
-      out.add(t);
-    }
-  }
-  return out;
-}
-var label = (it) => {
-  const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
-  return t ? t.length > 48 ? `${t.slice(0, 47)}\u2026` : t : String(it?.type ?? "?");
-};
-var IGNORED = /* @__PURE__ */ new Set(["id", "createdBy", "updatedBy", "updatedAt"]);
-function same(a, b2) {
-  if (a === b2)
-    return true;
-  if (typeof a !== "object" || typeof b2 !== "object" || !a || !b2)
-    return false;
-  if (Array.isArray(a) !== Array.isArray(b2))
-    return false;
-  const ka = Object.keys(a).filter((k2) => a[k2] !== void 0);
-  const kb = Object.keys(b2).filter((k2) => b2[k2] !== void 0);
-  return ka.length === kb.length && ka.every((k2) => same(a[k2], b2[k2]));
-}
-var changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same(patch[k2], was[k2]));
-var lockOf = (board, id) => layoutLock(board, id);
-var KEPT_REMOVED = "you deleted it \u2014 the file still has it; propose the file change?";
-function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
-  const { placed, origins, removed } = inputs;
-  const drawnIds = new Set(drawn.map((d) => d.id));
-  const held = /* @__PURE__ */ new Set();
-  const ops = [];
-  const plan = { prefix: scope.prefix, ...scope.frame ? { frame: scope.frame } : {}, added: [], updated: [], unchanged: 0, removed: [], keptMoved: [], keptLocked: [], keptRemoved: [], held: [], settled: [], foreign: [] };
-  const owned = (it) => it.id.startsWith(scope.prefix) || it.type === "arrow" && !!it.from && !!it.to && [it.from, it.to].every((e) => e.startsWith(scope.prefix) || scope.keep?.has(e));
-  for (const it of Object.values(board)) {
-    const p = pendingOf(it);
-    if (!p || !owned(it))
-      continue;
-    if (!isResolved(p, drawn, it.id)) {
-      held.add(it.id);
-      if (p.kind === "remove" && p.deleted)
-        plan.keptRemoved.push({ id: it.id, label: label(it), why: KEPT_REMOVED });
-      else
-        plan.held.push({ id: it.id, label: label(it), why: `a proposal (${p.kind}) the file does not explain yet` });
-    } else if (!drawnIds.has(it.id)) {
-      ops.push({ kind: "remove", id: it.id });
-      plan.settled.push({ id: it.id, label: label(it), why: p.kind === "remove" && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : "the file now has it" });
-    }
-  }
-  const keptLayout = /* @__PURE__ */ new Set();
-  const updates = [];
-  for (const d of drawn) {
-    if (held.has(d.id))
-      continue;
-    const was = board[d.id];
-    if (!was && removed?.has(d.id)) {
-      const pending = { kind: "remove", deleted: d.type === "arrow" ? "wire" : "item", by: "user", ...removed.get(d.id)?.at ? { at: removed.get(d.id).at } : {} };
-      updates.push({ kind: "add", item: { ...d, data: { ...d.data ?? {}, pending } } });
-      plan.keptRemoved.push({ id: d.id, label: label(d), why: KEPT_REMOVED });
-      continue;
-    }
-    if (!was) {
-      updates.push({ kind: "add", item: d });
-      plan.added.push({ id: d.id, label: label(d) });
-      continue;
-    }
-    const patch = withPresentation(d, was);
-    const lock = lockOf(board, d.id);
-    const keep = lock ? "locked" : placed.has(d.id) ? "moved" : void 0;
-    if (keep)
-      keptLayout.add(d.id);
-    const geometry = GEOMETRY2.filter((k2) => k2 in patch && !same(patch[k2], was[k2]));
-    if (keep && geometry.length) {
-      const line = { id: d.id, label: label(was), why: keep === "locked" ? `${lock === "frame" ? "its frame is locked" : "locked"}: keeps ${geometry.join(", ")}` : `you moved it: keeps ${geometry.join(", ")}` };
-      (keep === "locked" ? plan.keptLocked : plan.keptMoved).push(line);
-    }
-    const op = { kind: "update", id: d.id, patch };
-    const final = keep ? keepUserLayout([op], /* @__PURE__ */ new Set([d.id]))[0] : op;
-    const changed = changedKeys(final.patch ?? {}, was);
-    if (changed.length)
-      plan.updated.push({ id: d.id, label: label(was), why: changed.join(", ") });
-    else
-      plan.unchanged++;
-    updates.push(final);
-  }
-  const drawers = new Set([...origins?.values() ?? []].filter((o) => o.author === "agent" && isRedrawNote(o.note)).map((o) => o.by ?? ""));
-  const addedBy = (it) => {
-    const o = origins?.get(it.id);
-    if (o)
-      return o.author === "user" ? `the person${o.by ? ` (${o.by})` : ""}` : o.by ?? "an agent";
-    return it.createdBy === "user" ? "the person" : "an agent";
-  };
-  const byHand = (it) => {
-    const o = origins?.get(it.id);
-    if (!o)
-      return it.createdBy === "user";
-    if (o.author === "user")
-      return true;
-    return !isRedrawNote(o.note) && drawers.size > 0 && !drawers.has(o.by ?? "");
-  };
-  const foreign = /* @__PURE__ */ new Set();
-  const answered = repliedTo(board);
-  for (const it of Object.values(board)) {
-    if (held.has(it.id) || drawnIds.has(it.id) || pendingOf(it) || scope.keep?.has(it.id))
-      continue;
-    if (!it.id.startsWith(scope.prefix) || it.type === "comment" && !isFileNote(it, scope.prefix))
-      continue;
-    if (byHand(it)) {
-      foreign.add(it.id);
-      continue;
-    }
-    if (it.type === "comment" && answered.has(it.id)) {
-      if (calloutOf(it) === void 0 && !it.data?.annotation)
-        continue;
-      ops.push({ kind: "update", id: it.id, patch: { data: { ...it.data, callout: null, callouts: null, annotation: null } } });
-      plan.updated.push({ id: it.id, label: label(it), why: "no longer in the file; it has replies, so it stays as a thread (no number)" });
-      continue;
-    }
-    ops.push({ kind: "remove", id: it.id });
-    const lock = lockOf(board, it.id);
-    plan.removed.push({ id: it.id, label: label(it), why: `no longer in the file${lock ? " (a lock keeps the position, not the item)" : ""}` });
-  }
-  const inFrame = (it) => {
-    if (!scope.frame)
-      return scope.prefix === SCOPE;
-    const seen = /* @__PURE__ */ new Set();
-    for (let p = it.parent ? board[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board[p.parent] : void 0) {
-      if (p.id === scope.frame)
-        return true;
-      seen.add(p.id);
-    }
-    return false;
-  };
-  const endIn = (id) => !!id && (id.startsWith(scope.prefix) || id === scope.frame || !!board[id] && inFrame(board[id]));
-  for (const it of Object.values(board)) {
-    if (it.type === "comment" || drawnIds.has(it.id) || held.has(it.id) || scope.keep?.has(it.id) || it.id === scope.frame)
-      continue;
-    if (pendingOf(it) && owned(it))
-      continue;
-    const mine = foreign.has(it.id);
-    const inside3 = mine || !it.id.startsWith(scope.prefix) && (it.type === "arrow" ? endIn(it.from) && endIn(it.to) : inFrame(it));
-    if (!inside3)
-      continue;
-    plan.foreign.push({ id: it.id, label: label(it), why: `added by ${addedBy(it)}${mine ? " with this file's prefix" : ""}, not from this file: kept` });
-  }
-  const result = [...keepUserLayout(updates, keptLayout), ...ops];
-  const frame = scope.frame ? board[scope.frame] : void 0;
-  if (frame) {
-    const grow = growFrame(frame, drawn, keptLayout);
-    if (grow) {
-      result.push(grow);
-      if (!plan.updated.some((l) => l.id === frame.id)) {
-        plan.updated.push({ id: frame.id, label: label(frame), why: `grows to ${grow.patch.w}\xD7${grow.patch.h}` });
-        if (plan.unchanged > 0 && drawnIds.has(frame.id))
-          plan.unchanged--;
-      }
-    }
-  }
-  return { ops: result, plan, keptLayout };
-}
-var SECTIONS = [
-  ["added", "+", "added"],
-  ["updated", "~", "updated"],
-  ["removed", "-", "removed"],
-  ["keptMoved", "=", "kept where the person moved it"],
-  ["keptLocked", "#", "kept: locked"],
-  ["keptRemoved", "x", "kept removed"],
-  ["held", "?", "proposals held"],
-  ["settled", ">", "proposals settled"],
-  ["foreign", "*", "not from this file (kept)"]
-];
-function planSummary(plan) {
-  const parts2 = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n4]) => n4 > 0).map(([n4, name]) => `${n4} ${name}`);
-  if (plan.unchanged)
-    parts2.splice(Math.min(2, parts2.length), 0, `${plan.unchanged} unchanged`);
-  return parts2.length ? parts2.join(" \xB7 ") : "nothing to change";
-}
-function planLines(plan, o = {}) {
-  const limit = o.limit ?? 8;
-  const out = [`${o.title ?? `Redraw preview \u2014 ${plan.frame ?? plan.prefix.replace(/\.$/, "")}`} (dry run: nothing written)`, `  ${planSummary(plan)}`];
-  for (const [k2, mark, name] of SECTIONS) {
-    const lines2 = plan[k2];
-    if (!lines2.length)
-      continue;
-    out.push(`  ${name} (${lines2.length}):`);
-    for (const l of lines2.slice(0, limit))
-      out.push(`    ${mark} ${l.id}  "${l.label}"${l.why ? ` \u2014 ${l.why}` : ""}`);
-    if (lines2.length > limit)
-      out.push(`    \u2026 and ${lines2.length - limit} more`);
-  }
-  return out;
-}
 
 // packages/canvas/dist/diagrams/proposeStories.js
 function segments(m2) {
@@ -53149,9 +53512,9 @@ ${hint}` : ""}`);
 async function resolveBoard(client, ref2) {
   if (!ref2.startsWith("title:"))
     return { id: (await client.getBoard(ref2)).id };
-  const title = ref2.slice(6).trim();
-  const r2 = await client.boardByTitle({ title, kind: "freeform", answeredBy: "me" });
-  const many = r2.ambiguous && r2.ambiguous.length > 1 ? `${r2.ambiguous.length} boards are titled "${title}" (${r2.ambiguous.map((b2) => `${b2.id} [${b2.project}]`).join(", ")}) \u2014 used ${r2.board.id}, the most recently changed; pass a board id to use another` : void 0;
+  const title2 = ref2.slice(6).trim();
+  const r2 = await client.boardByTitle({ title: title2, kind: "freeform", answeredBy: "me" });
+  const many = r2.ambiguous && r2.ambiguous.length > 1 ? `${r2.ambiguous.length} boards are titled "${title2}" (${r2.ambiguous.map((b2) => `${b2.id} [${b2.project}]`).join(", ")}) \u2014 used ${r2.board.id}, the most recently changed; pass a board id to use another` : void 0;
   return { id: r2.board.id, ...many ? { note: many } : {} };
 }
 async function planDesignRedraw(client, d, name, boardId, at3) {
@@ -53159,9 +53522,9 @@ async function planDesignRedraw(client, d, name, boardId, at3) {
   const drawn = withDesignFindings(d, r2.items);
   const current = await client.getBoard(boardId);
   const items = current.items;
-  const { changes } = await client.changes(boardId, 0);
+  const inputs = await client.redrawInputs(boardId);
   const frame = drawn.find((it) => it.type === "frame" && it.data?.diagram?.key === d.key) ?? frameOf({ items }, d.key);
-  const res = explainRedraw(items, drawn, redrawInputs(changes), { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && items[frame.id] ? { frame: frame.id } : {} });
+  const res = explainRedraw(items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && items[frame.id] ? { frame: frame.id } : {} });
   return { ...res, current, unresolved: r2.unresolvedTraces ?? [] };
 }
 async function previewDesignContent(client, name, content, board, o = {}) {
@@ -53279,9 +53642,9 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
 
 // packages/canvas/dist/mcp.js
 import { execFile } from "node:child_process";
-import fs7 from "node:fs";
+import fs8 from "node:fs";
 import os5 from "node:os";
-import path8 from "node:path";
+import path9 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -53657,8 +54020,8 @@ function getErrorMap2() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path15, errorMaps, issueData } = params;
-  const fullPath = [...path15, ...issueData.path || []];
+  const { data, path: path16, errorMaps, issueData } = params;
+  const fullPath = [...path16, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -53773,11 +54136,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path15, key) {
+  constructor(parent, value, path16, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path15;
+    this._path = path16;
     this._key = key;
   }
   get path() {
@@ -57328,11 +57691,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path15) {
-  if (path15.length === 0) {
+function getDotPath(path16) {
+  if (path16.length === 0) {
     return "object root";
   }
-  return path15.reduce((acc, seg, index) => {
+  return path16.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -58646,9 +59009,9 @@ var zodToJsonSchema = (schema, options) => {
     ...refs2,
     currentPath: [...refs2.basePath, refs2.definitionPath, name]
   }, false) ?? parseAnyDef(refs2);
-  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
-  if (title !== void 0) {
-    main2.title = title;
+  const title2 = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
+  if (title2 !== void 0) {
+    main2.title = title2;
   }
   if (refs2.flags.hasReferencedOpenAiAnyType) {
     if (!definitions) {
@@ -60907,10 +61270,10 @@ var McpServer = class {
       return registeredResourceTemplate;
     }
   }
-  _createRegisteredResource(name, title, uri, metadata, readCallback) {
+  _createRegisteredResource(name, title2, uri, metadata, readCallback) {
     const registeredResource = {
       name,
-      title,
+      title: title2,
       metadata,
       readCallback,
       enabled: true,
@@ -60939,10 +61302,10 @@ var McpServer = class {
     this._registeredResources[uri] = registeredResource;
     return registeredResource;
   }
-  _createRegisteredResourceTemplate(name, title, template, metadata, readCallback) {
+  _createRegisteredResourceTemplate(name, title2, template, metadata, readCallback) {
     const registeredResourceTemplate = {
       resourceTemplate: template,
-      title,
+      title: title2,
       metadata,
       readCallback,
       enabled: true,
@@ -60976,9 +61339,9 @@ var McpServer = class {
     }
     return registeredResourceTemplate;
   }
-  _createRegisteredPrompt(name, title, description, argsSchema, callback) {
+  _createRegisteredPrompt(name, title2, description, argsSchema, callback) {
     const registeredPrompt = {
-      title,
+      title: title2,
       description,
       argsSchema: argsSchema === void 0 ? void 0 : objectFromShape(argsSchema),
       callback,
@@ -61017,10 +61380,10 @@ var McpServer = class {
     }
     return registeredPrompt;
   }
-  _createRegisteredTool(name, title, description, inputSchema, outputSchema, annotations, execution, _meta, handler) {
+  _createRegisteredTool(name, title2, description, inputSchema, outputSchema, annotations, execution, _meta, handler) {
     validateAndWarnToolName(name);
     const registeredTool = {
-      title,
+      title: title2,
       description,
       inputSchema: getZodSchemaObject(inputSchema),
       outputSchema: getZodSchemaObject(outputSchema),
@@ -61103,8 +61466,8 @@ var McpServer = class {
     if (this._registeredTools[name]) {
       throw new Error(`Tool ${name} is already registered`);
     }
-    const { title, description, inputSchema, outputSchema, annotations, _meta } = config2;
-    return this._createRegisteredTool(name, title, description, inputSchema, outputSchema, annotations, { taskSupport: "forbidden" }, _meta, cb);
+    const { title: title2, description, inputSchema, outputSchema, annotations, _meta } = config2;
+    return this._createRegisteredTool(name, title2, description, inputSchema, outputSchema, annotations, { taskSupport: "forbidden" }, _meta, cb);
   }
   prompt(name, ...rest) {
     if (this._registeredPrompts[name]) {
@@ -61131,8 +61494,8 @@ var McpServer = class {
     if (this._registeredPrompts[name]) {
       throw new Error(`Prompt ${name} is already registered`);
     }
-    const { title, description, argsSchema } = config2;
-    const registeredPrompt = this._createRegisteredPrompt(name, title, description, argsSchema, cb);
+    const { title: title2, description, argsSchema } = config2;
+    const registeredPrompt = this._createRegisteredPrompt(name, title2, description, argsSchema, cb);
     this.setPromptRequestHandlers();
     this.sendPromptListChanged();
     return registeredPrompt;
@@ -61379,7 +61742,7 @@ Wire labels (docs/canvas.md "Wire labels"): smaller than card text and never on 
 var LOOP_HELP = `The alignment loop: 1) canvas_create_board (or canvas_add_items) to draw; 2) tell the user the URL and what to look at \u2014 and call canvas_focus so their page jumps there instead of making them search; 3) canvas_wait to block until they move/annotate something (wait long \u2014 timeoutSec up to 1800; every return costs tokens, so never poll; untilMention: true on a busy board); 4) read the returned diff lines (or canvas_diff / canvas_read_board) and react \u2014 answer comments with canvas_add_items comment items, redraw, or change the underlying plan. Always remember the \`seq\` you last saw and pass it as \`since\`.`;
 var ANNOTATIONS_HELP = `Annotations say what an item is for; they live in the design file (a top-level \`annotations: [{ on, text }]\` in every kind) and are drawn as numbered cards beside the drawing with a pin on the item \u2014 not threads. The person writes one on the canvas as a draft: a proposal to the agent holding the files. A draft annotation is the person's own words: judge it first \u2014 true to the design? does it contradict the file or another annotation? does it say what the item is for? \u2014 and reply in its thread with your judgement in a sentence or two. If it is sound, apply it at once (the person wrote it, so that counts as consent): the edit adds one \`annotations:\` entry \u2014 check \`base\`, apply, lint, redraw with --applied <thread>. If you have doubts, say why and wait for the person. An agent without the files proposes an annotation with canvas_propose_edit like any edit.`;
 var TODO_HELP = `A TODO marks something still to be confirmed with someone outside the board (the PM, legal, the backend team) \u2014 a note, not a question to you: never answer one yourself. It lives on the board only and wakes no agent when written. Whoever finds out checks it off (the person, or an agent); checked off with an answer, the answer is posted as a reply in its thread and goes to the board's "Answered by" agent, which decides whether the design changes and proposes that as usual; checked off without an answer it notifies nobody.`;
-var READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
+var READ_HELP = `Read a board, at a size you can take in. format 'outline' (default) is text grouped by diagram frame \u2192 lane / column / screen / group \u2192 items in reading order, with comment threads under their item ([waiting for an answer] when the person spoke last), proposals marked [proposed \u2026], each diagram's holder and its wires. On a big board start with format 'summary' (counts per frame, open threads), then read one diagram with frame: "<key>", or narrow with types (["comment"], ["hotspot"], ["card"], ["annotation"], ["todo"]), ids or text. 'json' gives the items with ids and geometry, one per line (fields to pick only some, e.g. ["id","role","text","x","y","w","h","parent"]). Every answer is capped (default 40 000 characters, maxChars up to 200 000); when there is more it ends with how to get the next page (cursor). A frame the person hid (its contents are not drawn) is one line saying how many items it holds; includeHidden: true lists them too. To SEE the board use canvas_snapshot; for overlaps and cut-off text, canvas_check_layout.`;
 var text2 = (s) => ({ content: [{ type: "text", text: s }] });
 var ABOUT = `Unprose: a shared canvas where the person and you talk designs through. Files are the truth (design/<name>.<kind>.yaml), you edit them, the person directs; edits the person makes on the canvas are proposals to discuss first.`;
 var DIAGRAMS = `${WHICH_DIAGRAM}
@@ -61467,7 +61830,7 @@ function helpText(o) {
     'What each way in can do (docs/canvas.md "What each surface can do"):',
     `- you, over ${o.remote ? "this remote /mcp: design_draw / design_lint take file TEXT (name + content), no workflow files; canvas_files + canvas_propose_edit are how you change a file (the holder applies it)" : "local MCP: design_draw / design_lint take a file PATH (diagrams and workflows); you can apply proposals to files you hold, after the person agrees (design_draw applied)"}; design_draw { dryRun: true } previews a redraw (added / updated / removed / kept) without writing; canvas_apply {kind:'lock', id | frame} (data.lock: 'layout') keeps redraws and the kanban layout off items or a frame`,
     "- the awd CLI (on the machine with the files): design draw / graph --canvas (also --dry-run, --applied), design lint, boards move, projects",
-    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu. Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
+    '- only the web UI: Copy as image, Replay, approving pairing codes, managing tokens and their access, upgrading, setting "Answered by", handing the files of diagrams over to another agent (Hand over files), Lock position / Lock layout from the menu, Hide contents / Show contents of a frame (canvas_read_board lists a hidden frame as one line; includeHidden: true lists what it holds). Agents have their own: canvas_snapshot (the board as a PNG, or SVG when no rasterizer can be had) and, for the local agent on the canvas machine only, canvas_approve (approve a pairing code)',
     "",
     `Canvas: ${o.canvas}${o.version ? ` (v${o.version})` : ""}. Docs: https://github.com/river0825/unprose`,
     `Annotations: ${ANNOTATIONS_HELP}`,
@@ -61478,14 +61841,14 @@ function helpText(o) {
   ].join("\n");
 }
 function sessionProjectRoot(env = process.env, cwd = process.cwd(), home = os5.homedir()) {
-  const start = path8.resolve(env.CLAUDE_PROJECT_DIR || cwd);
-  for (let d = start; ; d = path8.dirname(d)) {
-    if (fs7.existsSync(path8.join(d, ".git")))
+  const start = path9.resolve(env.CLAUDE_PROJECT_DIR || cwd);
+  for (let d = start; ; d = path9.dirname(d)) {
+    if (fs8.existsSync(path9.join(d, ".git")))
       return d;
-    if (path8.dirname(d) === d)
+    if (path9.dirname(d) === d)
       break;
   }
-  if (start === path8.resolve(home) || path8.dirname(start) === start)
+  if (start === path9.resolve(home) || path9.dirname(start) === start)
     return void 0;
   return start;
 }
@@ -61494,7 +61857,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.26.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.27.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -61538,8 +61901,8 @@ ${CONTENT_HELP}`,
       meta: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe('Free board metadata, e.g. { source: "workflow.yaml" }'),
       project: external_exports.string().optional().describe(`Project id to store the board in (its <project>/.unprose/boards/); default: this session's project${opts.project ? ` (${opts.project})` : ""}, 'personal' for none`)
     }
-  }, async ({ title, kind, content, meta: meta3, project }) => {
-    const board = await client.createBoard({ title, kind, content, meta: meta3, author: "agent", ...project ?? opts.project ? { project: project ?? opts.project } : {} });
+  }, async ({ title: title2, kind, content, meta: meta3, project }) => {
+    const board = await client.createBoard({ title: title2, kind, content, meta: meta3, author: "agent", ...project ?? opts.project ? { project: project ?? opts.project } : {} });
     const n4 = Object.keys(board.items).length;
     const url2 = client.boardUrl(board.id);
     const opened = opts.openBrowser !== false && process.platform === "darwin" && process.env.AWD_CANVAS_NO_OPEN !== "1";
@@ -61563,10 +61926,11 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
       fields: external_exports.array(external_exports.string()).optional().describe('json: the item fields to return, e.g. ["id","role","text","x","y","w","h","parent"] or "data.ui"; default all, with bulky data summarised'),
       limit: external_exports.number().int().min(1).max(1e3).optional().describe("json: items per page (default 200); outline: lines per page"),
       cursor: external_exports.string().optional().describe("the next cursor a previous answer gave"),
-      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the answer (default 40000 characters)")
+      maxChars: external_exports.number().int().min(2e3).max(2e5).optional().describe("size cap of the answer (default 40000 characters)"),
+      includeHidden: external_exports.boolean().optional().describe("also list what hidden frames hold (the person hid their contents on the board; by default each is one line saying how many items it holds)")
     }
-  }, async ({ id, format, frame, types, ids, text: q2, fields, limit, cursor, maxChars }) => {
-    const r2 = await client.read(id, { format, frame, types, ids, text: q2, fields, limit, cursor, maxChars });
+  }, async ({ id, format, frame, types, ids, text: q2, fields, limit, cursor, maxChars, includeHidden }) => {
+    const r2 = await client.read(id, { format, frame, types, ids, text: q2, fields, limit, cursor, maxChars, includeHidden });
     return text2(r2.text);
   });
   server.registerTool("canvas_apply", {
@@ -61694,7 +62058,9 @@ ${r2.lines.join("\n")}${page3}`);
   }, async ({ id, ids, frame, note }) => {
     const r2 = await client.focus(id, { ids, frame, note });
     const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r2.focus.ids[0], ...frame ? { frame } : {} });
-    return text2(r2.viewers ? `shown on ${r2.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`);
+    const hidden = r2.hidden?.length ? `
+Note: ${r2.hidden.map((f) => `"${f.title}"`).join(", ")} ${r2.hidden.length === 1 ? "is a hidden frame" : "are hidden frames"} (the person hid the contents): their page shows ${r2.hidden.length === 1 ? "it" : "them"} collapsed instead of what you asked for \u2014 ask them to Show it if they should look inside` : "";
+    return text2((r2.viewers ? `shown on ${r2.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`) + hidden);
   });
   server.registerTool("canvas_snapshot", {
     title: "See the board (an image of a frame, items or the whole board)",
@@ -61736,7 +62102,7 @@ ${svg}`);
     const r2 = await client.layout(id, frame, limit ?? 60);
     const lines2 = r2.lines;
     if (!r2.findings.length)
-      return text2(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r2.checked} items${r2.wires ? ` and ${r2.wires} wires` : ""} checked \u2014 nothing overlaps, collides, is cut off or out of place.`);
+      return text2(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r2.checked} items${r2.wires ? ` and ${r2.wires} wires` : ""} checked${r2.hidden ? ` (${r2.hidden} in hidden frames not checked)` : ""} \u2014 nothing overlaps, collides, is cut off or out of place.`);
     return text2((lines2 ?? r2.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
   });
   if (!opts.remote) {
@@ -61776,6 +62142,7 @@ ${s.context.text}` : "No board context yet \u2014 write one (text) when the boar
       ...s.handover ? handoverLines(s.handover) : [],
       ...s.todos && (s.todos.open || s.todos.done) ? [`TODOs: ${s.todos.open} open, ${s.todos.done} done \u2014 things to confirm with someone else, not questions to you (canvas_todo lists them)`] : [],
       ...s.drafts ? [`Draft annotations waiting for the holder of the files: ${s.drafts} \u2014 the person's own words: the holder judges each in its thread, then applies it or says why not`] : [],
+      ...hiddenFramesLine(s.hidden ?? []),
       ...(s.frameless ?? []).map((f) => `Diagram ${f.key}${f.source ? ` (${f.source})` : ""} is still registered, but its frame is gone from the board${f.holder ? ` \u2014 files held by ${displayName(f.holder)}` : ""}: ${f.holder ? "its holder redraws it from the file, or drops the entry" : "redraw it from the file, or drop the entry"} \u2014 PATCH /api/boards/${id} {"meta":{"diagrams":{"${f.key}":null}}}${f.holder ? " (only the holder may)" : ""}`),
       `Agents here: ${agents || "(none seen yet)"}${s.you ? ` \u2014 you are ${s.you}` : ""}`,
       `Ask one of them: canvas_ask { agent: "<handle>" }, or write @<handle> in a comment. Loop guard: ${s.agentTurns} agent messages in a row per thread.`
@@ -62217,6 +62584,15 @@ function selectIds(board, o) {
   }
   return set2;
 }
+function askedForHidden(board, h, o) {
+  const where = (id) => `the hidden frame "${short2(board.items[h.frameOf.get(id)]?.text, 60)}"`;
+  const f = o.frame ? resolveFrame(board, o.frame) : void 0;
+  if (f && f !== "board" && h.ids.has(f.id))
+    throw new ReadError(404, `frame "${o.frame}" is inside ${where(f.id)} \u2014 the person hid its contents; pass includeHidden: true to read it`);
+  const asked = (o.ids ?? []).filter((id) => board.items[id]);
+  if (asked.length && asked.every((id) => h.ids.has(id)))
+    throw new ReadError(404, `${asked.length === 1 ? `item "${asked[0]}" is` : `items ${asked.map((a) => `"${a}"`).join(", ")} are`} inside ${where(asked[0])} \u2014 the person hid its contents; pass includeHidden: true to read ${asked.length === 1 ? "it" : "them"}`);
+}
 var cap = (o) => Math.min(HARD_MAX_CHARS, Math.max(2e3, o.maxChars ?? DEFAULT_MAX_CHARS));
 function parseCursor(c, seq) {
   if (!c)
@@ -62249,16 +62625,21 @@ function pick2(it, fields) {
   }
   return { ...it, data };
 }
-function readBoard(board, o = {}) {
+function readBoard(stored, o = {}) {
   const format = o.format ?? "outline";
+  const h = hiddenOf(stored);
+  const hidden = { list: hiddenFrameList(stored, h), listed: !!o.includeHidden };
+  if (h && !o.includeHidden)
+    askedForHidden(stored, h, o);
+  const board = o.includeHidden ? stored : withoutHidden(stored, h);
   const only = selectIds(board, o);
   const matched = only ? only.size : Object.keys(board.items).length;
   if (format === "summary")
-    return { format, text: summaryText(board, only, o), matched, seq: board.seq };
+    return { format, text: summaryText(board, only, hidden), matched, seq: board.seq };
   const max = cap(o);
   const { offset, stale } = parseCursor(o.cursor, board.seq);
   const staleNote = stale ? ` (the board changed since that cursor \u2014 seq ${board.seq} now; re-read from the start if things look off)` : "";
-  const filters = FILTER_KEYS.filter((k2) => o[k2] !== void 0).map((k2) => `${k2}: ${JSON.stringify(o[k2])}`);
+  const filters = [...FILTER_KEYS.filter((k2) => o[k2] !== void 0).map((k2) => `${k2}: ${JSON.stringify(o[k2])}`), ...o.includeHidden ? ["includeHidden: true"] : []];
   const again = (next) => `canvas_read_board({ id: "${board.id}", format: "${format}"${filters.length ? `, ${filters.join(", ")}` : ""}, cursor: "${next}" })`;
   if (format === "json") {
     const order = Object.values(board.items).filter((i3) => !only || only.has(i3.id)).sort((a, b2) => byPos(a, b2) || a.id.localeCompare(b2.id));
@@ -62278,13 +62659,13 @@ function readBoard(board, o = {}) {
     const nextCursor2 = left2 > 0 ? `${board.seq}:${i2}` : void 0;
     const more2 = left2 > 0 ? `${left2} more item(s) of ${order.length} not shown${size3 > max * 0.9 ? ` (size cap ${max} characters)` : ""} \u2014 next page: ${again(nextCursor2)}; narrow with frame / types / ids / text, or fewer fields (fields: ["id","type","role","text","x","y","w","h","parent"])${staleNote}` : stale ? `last page${staleNote}` : void 0;
     const metaKeys = Object.keys(board.meta ?? {});
-    const head = { id: board.id, title: board.title, kind: board.kind, seq: board.seq, matched: order.length, from: offset, shown: page3.length, ...nextCursor2 ? { nextCursor: nextCursor2 } : {}, ...metaKeys.length ? { meta: `keys ${metaKeys.join(", ")} \u2014 canvas_context for the context and holders, canvas_files for the files` } : {} };
+    const head = { id: board.id, title: board.title, kind: board.kind, seq: board.seq, matched: order.length, from: offset, shown: page3.length, ...nextCursor2 ? { nextCursor: nextCursor2 } : {}, ...metaKeys.length ? { meta: `keys ${metaKeys.join(", ")} \u2014 canvas_context for the context and holders, canvas_files for the files` } : {}, ...hidden.list.length ? { hidden: hiddenFramesLine(hidden.list, hidden.listed)[0] } : {} };
     const text3 = `${JSON.stringify(head)}
 ${page3.map((p) => JSON.stringify(p)).join("\n")}${more2 ? `
 ${more2}` : ""}`;
     return { format, text: text3, matched: order.length, items: page3, ...nextCursor2 ? { nextCursor: nextCursor2 } : {}, ...more2 ? { more: more2 } : {}, seq: board.seq };
   }
-  const full = outline(board, only ? { only, bare: false } : {}).split("\n");
+  const full = outline(board, { ...only ? { only, bare: false } : {}, hidden }).split("\n");
   const limit = o.limit && o.limit > 0 ? o.limit : Infinity;
   const lines2 = [];
   let size2 = 0;
@@ -62304,15 +62685,16 @@ ${more2}` : ""}`;
   return { format, text: lines2.join("\n") + (more ? `
 ${more}` : ""), matched, ...nextCursor ? { nextCursor } : {}, ...more ? { more } : {}, seq: board.seq };
 }
-function summaryText(board, only, o) {
+function summaryText(board, only, hidden) {
   const tree = containmentTree(board);
   const items = Object.values(board.items).filter((i) => !only || only.has(i.id));
-  const out = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${Object.keys(board.items).length} items${only ? `, ${items.length} matched` : ""})`];
+  const out = [`# ${board.title} (${board.kind}, seq ${board.seq}, ${Object.keys(board.items).length} items${hiddenTotal(hidden)}${only ? `, ${items.length} matched` : ""})`];
   const ctx = contextOf(board.meta);
   if (ctx)
     out.push(`Board context${ctx.by ? ` (from ${displayName(ctx.by)})` : ""}: ${short2(ctx.text, 300)}`);
   const r2 = responderOf(board.meta);
-  out.push(`Answered by: ${responderLabel(r2)}`, ...framelessLines(board));
+  out.push(`Answered by: ${responderLabel(r2)}`, ...framelessLines(board), ...hiddenFramesLine(hidden.list, hidden.listed));
+  const hiddenItems = new Map(hidden.list.map((f) => [f.id, f.items]));
   const threadsOf = (set2) => {
     const roots = set2.filter((c) => c.type === "comment" && rootOf(board, c).id === c.id && !isAnnotationCard(c) && !isTodo(c));
     const all = Object.values(board.items).filter((c) => c.type === "comment");
@@ -62349,7 +62731,10 @@ function summaryText(board, only, o) {
     const t = threadsOf(inside3);
     const pend = inside3.filter((i) => i.type !== "comment" && pendingTag(i)).length;
     out.push("", `## ${KIND_LABEL[spec.kind] ?? spec.kind} "${short2(f.text, 60)}" \u2014 frame: "${spec.key}"${spec.source ? ` \xB7 ${spec.source}` : ""}${holder ? ` \xB7 files held by ${displayName(holder.holder.agent)}` : ""}  #${f.id}`);
-    out.push(`  ${inside3.length} items: ${counts(inside3) || "\u2014"}`);
+    if (hiddenItems.has(f.id))
+      out.push(`  hidden on the board: ${itemCount(hiddenItems.get(f.id))}${hidden.listed ? "" : " not counted here (includeHidden: true counts them)"}`);
+    if (!hiddenItems.has(f.id) || hidden.listed)
+      out.push(`  ${inside3.length} items: ${counts(inside3) || "\u2014"}`);
     const lanes = (tree.children.get(f.id) ?? []).filter(isContainer).sort(byPos);
     if (lanes.length)
       out.push(`  ${lanes.length} ${lanes[0].role === "column" ? "columns" : "lanes / groups"}: ${lanes.slice(0, 12).map((l) => `${short2(l.text, 24) || l.id}${l.role === "column" ? ` (${(tree.children.get(l.id) ?? []).length})` : ""}`).join(" \xB7 ")}${lanes.length > 12 ? " \xB7 \u2026" : ""}`);
@@ -62364,7 +62749,6 @@ function summaryText(board, only, o) {
   if (todos.open || todos.done)
     out.push("", `TODOs: ${todos.open} open, ${todos.done} done \u2014 to confirm with someone else, not questions to you (canvas_todo lists them)`);
   out.push("", `Next: canvas_read_board with frame: "<key>" (outline of one diagram), types / text / ids to narrow, format: "json" with fields for geometry; canvas_snapshot to see it; canvas_check_layout for overlaps and clipped text.`);
-  void o;
   return out.join("\n");
 }
 
@@ -62471,7 +62855,7 @@ function alignKanban(board, origins = kanbanOrigins(board)) {
   return { ...board, items: { ...board.items, ...patched } };
 }
 function shownBoard(board) {
-  return alignKanban(board);
+  return drawnBoard(alignKanban(board));
 }
 function shownDifferences(board) {
   const shown = shownBoard(board);
@@ -62479,7 +62863,7 @@ function shownDifferences(board) {
     return [];
   const out = [];
   for (const it of Object.values(board.items)) {
-    if (layoutLock(board.items, it.id))
+    if (layoutLock(board.items, it.id) || isHiddenFrame(it))
       continue;
     const s = shown.items[it.id];
     if (!s || s.x === it.x && s.y === it.y && s.w === it.w && s.h === it.h)
@@ -62868,10 +63252,11 @@ function drawFrame(c, it) {
   const bx = boxOf(it);
   const ds = it.data?.ds === "group";
   const parts2 = [];
+  const hidden = hiddenCountOf(it);
   if (ds)
     parts2.push(rect(bx, `fill="none" stroke="${p.ink3}" stroke-width="1.6" stroke-dasharray="6 5"`, 18));
   else
-    parts2.push(rect(bx, `fill="${p.chrome}" fill-opacity="0.45" stroke="${p.rule2}" stroke-width="1"`, 4));
+    parts2.push(rect(bx, `fill="${p.chrome}"${hidden === void 0 ? ' fill-opacity="0.45"' : ""} stroke="${p.rule2}" stroke-width="1"`, 4));
   if (c.text && it.text) {
     const spec = it.data?.diagram;
     let x2 = bx.x;
@@ -62884,6 +63269,8 @@ function drawFrame(c, it) {
     }
     parts2.push(`<text x="${n3(x2)}" y="${n3(bx.y - 9)}" font-size="13.5" font-weight="600" fill="${p.ink2}">${esc3(oneLine(it.text, Math.max(bx.w + 400, 200), 13.5, 600))}</text>`);
   }
+  if (c.text && hidden !== void 0)
+    parts2.push(`<text x="${n3(bx.x + 12)}" y="${n3(bx.y + bx.h / 2 + 4)}" font-size="12.5" fill="${p.ink3}">${itemCount(hidden)} hidden</text>`);
   return parts2.join("");
 }
 function drawLane(c, it) {
@@ -62980,10 +63367,10 @@ function drawText(c, it) {
   const { p } = c;
   const bx = boxOf(it);
   if (it.data?.ds === "annotation") {
-    const path15 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
+    const path16 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
     const fit2 = fitText(it);
     const lines2 = c.text && it.text ? fit2.lines : [];
-    return `<path d="${path15}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + fit2.box.padLeft, y: bx.y + fit2.box.padTop, font: fit2.box.font, lh: fit2.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit2.fits) });
+    return `<path d="${path16}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + fit2.box.padLeft, y: bx.y + fit2.box.padTop, font: fit2.box.font, lh: fit2.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit2.fits) });
   }
   if (it.role === "release-cut")
     return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n3(bx.x + 4)}" y="${n3(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
@@ -63369,6 +63756,35 @@ function drawItem(c, it) {
     s += pendingMark(c, it, boxOf(it));
   return s ? `<g data-id="${esc3(it.id)}">${s}</g>` : "";
 }
+function hiddenAsked(board, opts, notes) {
+  const h = hiddenOf(board);
+  if (!h)
+    return opts;
+  const name = (id) => `"${(board.items[id]?.text ?? id).split("\n")[0].slice(0, 60)}"`;
+  const out = { ...opts };
+  const stand = /* @__PURE__ */ new Set();
+  if (opts.frame) {
+    const f = board.items[opts.frame] ?? board.items[`diagram.${opts.frame}`];
+    const by = f ? h.frameOf.get(f.id) : void 0;
+    if (by) {
+      out.frame = by;
+      stand.add(by);
+    } else if (f && h.frames.has(f.id))
+      stand.add(f.id);
+  }
+  if (opts.ids?.length) {
+    out.ids = [...new Set(opts.ids.map((id) => h.frameOf.get(id) ?? id))];
+    for (const id of opts.ids)
+      if (h.frameOf.has(id) || h.frames.has(id))
+        stand.add(h.frameOf.get(id) ?? id);
+  }
+  if (!opts.frame && !opts.ids?.length)
+    for (const id of h.frames.keys())
+      stand.add(id);
+  for (const id of stand)
+    notes.push(`${name(id)} is a hidden frame (the person hid its contents): drawn collapsed, its ${itemCount(h.frames.get(id) ?? 0)} left out`);
+  return out;
+}
 function renderSnapshot(board, opts = {}) {
   if (opts.theme !== void 0 && opts.theme !== "light" && opts.theme !== "dark")
     throw new SnapshotError(400, "theme must be 'light' or 'dark'");
@@ -63384,7 +63800,7 @@ function renderSnapshot(board, opts = {}) {
     notes.push(`maxPx is at most ${SNAPSHOT_MAX_PX}`);
   const pad = Math.max(0, Math.min(200, opts.pad ?? 24));
   const b2 = shownBoard(board);
-  const sel = select(b2, opts);
+  const sel = select(b2, hiddenAsked(board, opts, notes));
   const region = sel.region;
   const vw = region.w + pad * 2;
   const vh = region.h + pad * 2;
@@ -63411,9 +63827,9 @@ function renderSnapshot(board, opts = {}) {
   const comments = items.filter((i) => i.type === "comment").sort(byPos2);
   const body = [...containers, ...plain, ...wires, ...comments].map((it) => drawItem(c, it)).join("\n");
   const head = (name, col) => `<marker id="ah-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker>`;
-  const title = sel.root ? `${board.title} \u2014 ${sel.root.text ?? sel.root.id}` : board.title;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${n3(region.x - pad)} ${n3(region.y - pad)} ${n3(vw)} ${n3(vh)}" role="img" aria-label="${esc3(title)}">
-<title>${esc3(title)}</title>
+  const title2 = sel.root ? `${board.title} \u2014 ${sel.root.text ?? sel.root.id}` : board.title;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${n3(region.x - pad)} ${n3(region.y - pad)} ${n3(vw)} ${n3(vh)}" role="img" aria-label="${esc3(title2)}">
+<title>${esc3(title2)}</title>
 <defs>${head("ink", p.ink)}${head("ink2", p.ink2)}${head("ink3", p.ink3)}${head("agent", p.agent)}${head("marker", p.marker)}</defs>
 <rect x="${n3(region.x - pad)}" y="${n3(region.y - pad)}" width="${n3(vw)}" height="${n3(vh)}" fill="${p.paper}"/>
 <g font-family="${esc3(FONT)}" font-size="13">
@@ -63485,7 +63901,7 @@ function checkLayout(board, opts = {}) {
   const inScope = new Set(items.map((i) => i.id));
   const found = [];
   const frameOf2 = (it) => diagramOf(board, board.items[it.id] ?? it)?.key;
-  const add = (it, f) => found.push({ id: it.id, ...f, ...frameOf2(it) ? { frame: frameOf2(it) } : {} });
+  const add2 = (it, f) => found.push({ id: it.id, ...f, ...frameOf2(it) ? { frame: frameOf2(it) } : {} });
   const byParent = /* @__PURE__ */ new Map();
   for (const it of items) {
     if (DECOR_ROLES.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
@@ -63513,7 +63929,7 @@ function checkLayout(board, opts = {}) {
         const moveX = second.x >= first.x ? first.x + first.w + 20 - second.x : 0;
         const moveY = first.y + first.h + 20 - second.y;
         const how = moveX > 0 && moveX <= moveY ? `move it ${r(moveX)} px right` : `move it ${r(Math.max(moveY, 0))} px down`;
-        add(second, {
+        add2(second, {
           kind: "overlap",
           message: `${nameOf2(second)} overlaps ${nameOf2(first)} (${ox > 0 ? r(ox) : 0}\xD7${r(oy)} px, ${cover}% of the smaller one)`,
           suggestion: `${how} (to x ${r(second.x + (moveX > 0 && moveX <= moveY ? moveX : 0))}, y ${r(second.y + (moveX > 0 && moveX <= moveY ? 0 : Math.max(moveY, 0)))}), or make one of them smaller`,
@@ -63529,7 +63945,7 @@ function checkLayout(board, opts = {}) {
       const room = it.w - 24 - 40;
       const need = measure(it.text.split("\n")[0], 13.5, 600);
       if (need > room + 2)
-        add(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need - room + 4)} px wider (w ${r(it.w + need - room + 4)}) or shorten the title` });
+        add2(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need - room + 4)} px wider (w ${r(it.w + need - room + 4)}) or shorten the title` });
       continue;
     }
     if (it.type !== "sticky" && it.type !== "card" && it.type !== "text" && !(it.type === "wireframe" && it.role !== "screen" && it.role !== "image" && it.role !== "nav"))
@@ -63541,7 +63957,7 @@ function checkLayout(board, opts = {}) {
     if (!fit2.clipped)
       continue;
     const grow = fit2.needH - (it.h - meta3);
-    add(it, {
+    add2(it, {
       kind: "clipped",
       message: `text of ${nameOf2(it)} likely cut off: needs ~${fit2.lines.length} line${fit2.lines.length === 1 ? "" : "s"} at ${fit2.box.font} px, the ${r(it.w)}\xD7${r(it.h)} box fits ${fit2.fits}`,
       suggestion: `make it ${grow} px taller (h ${r(it.h + grow)}), or wider, or shorten the text`
@@ -63569,9 +63985,9 @@ function checkLayout(board, opts = {}) {
     const fitsIn = it.w <= p.w - 20 && it.h <= p.h - 20;
     const into = fitsIn ? `move it to x ${r(nx)}, y ${r(ny)}` : `make ${nameOf2(p)} bigger (it is ${r(p.w)}\xD7${r(p.h)}, the item ${r(it.w)}\xD7${r(it.h)})`;
     if (isLane(p) && !centreIn)
-      add(it, { kind: "off-lane", message: `${nameOf2(it)} belongs to ${nameOf2(p)} but is drawn outside it (${sides.join(", ")})`, suggestion: `${into}, or set its parent to the lane it is in`, others: [p.id] });
+      add2(it, { kind: "off-lane", message: `${nameOf2(it)} belongs to ${nameOf2(p)} but is drawn outside it (${sides.join(", ")})`, suggestion: `${into}, or set its parent to the lane it is in`, others: [p.id] });
     else
-      add(it, { kind: "outside-parent", message: `${nameOf2(it)} sticks out of ${nameOf2(p)}: ${sides.join(", ")}`, suggestion: `${into}${fitsIn ? "" : ""}`, others: [p.id] });
+      add2(it, { kind: "outside-parent", message: `${nameOf2(it)} sticks out of ${nameOf2(p)}: ${sides.join(", ")}`, suggestion: `${into}${fitsIn ? "" : ""}`, others: [p.id] });
   }
   const groups = /* @__PURE__ */ new Map();
   for (const it of items) {
@@ -63595,7 +64011,7 @@ function checkLayout(board, opts = {}) {
       const target = typical && vsSibs ? { w: typical.w, h: typical.h, what: "like its siblings" } : { w: STICKY_W2, h: STICKY_H2, what: "(the template sticky)" };
       const atTarget = it.text ? fitText({ ...it, w: target.w, h: 1e4 }).needH : 0;
       const size2 = atTarget <= target.h ? `use ${r(target.w)}\xD7${r(target.h)} ${target.what}` : atTarget <= target.h * 2 ? `use ${r(target.w)}\xD7${r(atTarget)} (the usual width, tall enough for its text)` : `its text is long for one ${it.role ?? it.type}: split it into several, or move the detail into a comment or the file, and use ${r(target.w)}\xD7${r(target.h)}`;
-      add(it, {
+      add2(it, {
         kind: "oversized",
         message: vsSibs ? `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / median * 10) / 10}\xD7 the area of its ${sibs.length - 1} siblings (typically ${typical ? `${r(typical.w)}\xD7${r(typical.h)}` : "?"})` : `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / template * 10) / 10}\xD7 a template sticky (${STICKY_W2}\xD7${STICKY_H2})`,
         suggestion: `${size2}; sizes come from the template \u2014 do not scale stickies up to fill space`
@@ -63618,7 +64034,7 @@ function checkLayout(board, opts = {}) {
         continue;
       const ma = new Set(Array.isArray(ga.data?.members) ? ga.data.members : []);
       const shared2 = (Array.isArray(gb.data?.members) ? gb.data.members : []).filter((m2) => ma.has(m2));
-      add(gb, {
+      add2(gb, {
         kind: "group",
         message: `the outline of ${nameOf2(gb)} overlaps the outline of ${nameOf2(ga)} (${r(ox)}\xD7${r(oy)} px)${shared2.length ? `: they share ${shared2.slice(0, 4).join(", ")}` : ""}`,
         suggestion: shared2.length ? "a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other \u2014 it is then drawn inside it)" : `move ${nameOf2(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf2(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
@@ -63644,7 +64060,7 @@ function checkLayout(board, opts = {}) {
       const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w2.from && o.id !== w2.to);
       if (on.length) {
         const names = on.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
-        add(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
+        add2(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
       }
     }
     const label2 = planned?.label;
@@ -63658,7 +64074,7 @@ function checkLayout(board, opts = {}) {
       if (!covered.length)
         continue;
       const names = covered.slice(0, 3).map((b2) => nameOf2(shown.items[b2.id])).join(", ");
-      add(w2, { kind: "label", message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: "drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire", others: covered.map((b2) => b2.id) });
+      add2(w2, { kind: "label", message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: "drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire", others: covered.map((b2) => b2.id) });
       continue;
     }
     if (label2.mode !== "dot" && label2.mode !== "cut")
@@ -63673,7 +64089,7 @@ function checkLayout(board, opts = {}) {
     const fit2 = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label2.font * 0.55)));
     const shorter = labelControl(w2.data).short ? "a shorter data.label.short" : "a short form in data.label.short";
     const instead = `${fit2 >= 3 ? `${shorter} (about ${fit2} characters fit)` : shorter}, or shorten the label`;
-    add(w2, {
+    add2(w2, {
       kind: "label",
       message: label2.mode === "dot" ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need)}): the page shows only a dot there, the text on hover` : `${what} is cut to "${label2.lines.join(" ")}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need)})`,
       suggestion: need - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
@@ -63689,7 +64105,7 @@ function checkLayout(board, opts = {}) {
         continue;
       const z3 = shown.items[m2.wire.to];
       const fix = m2.wire.data?.bend ? "drag that label onto a free stretch of its wire, or clear data.bend" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
-      add(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
+      add2(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
     }
   const paper = (it) => it.type === "frame" || it.type === "lane";
   const coverable = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment" && !paper(it) && it.w > 8 && it.h > 8);
@@ -63739,7 +64155,7 @@ function checkLayout(board, opts = {}) {
     if (!t || !info?.frameId || isAnnotationDraft(c))
       continue;
     const f = shown.items[info.frameId];
-    if (!f)
+    if (!f || isHiddenFrame(f))
       continue;
     const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) };
     if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL)
@@ -63762,7 +64178,7 @@ function checkLayout(board, opts = {}) {
     if (!moved || it.type === "frame")
       continue;
     const card = it.type === "card";
-    add(it, {
+    add2(it, {
       kind: "moved-by-layout",
       message: `${nameOf2(it)} is stored at ${r(d.stored.x)},${r(d.stored.y)} but the page draws it at ${r(d.shown.x)},${r(d.shown.y)} (the kanban layout places ${card ? "cards" : "columns"})`,
       suggestion: card ? "kanban cards stack in their column in the order of their stored y: set y to reorder (x is ignored); to change columns, set parent (or use the cards API)" : "kanban columns stand side by side in the order of their stored x: set x to reorder them; their y and height follow the row"
@@ -63774,7 +64190,10 @@ function checkLayout(board, opts = {}) {
   const pos = (id) => shown.items[id] ?? board.items[id];
   found.sort((a, b2) => KINDS.indexOf(a.kind) - KINDS.indexOf(b2.kind) || byReading(pos(a.id), pos(b2.id)));
   const limit = opts.limit ?? 200;
-  return { findings: found.slice(0, limit), checked: items.length, wires, ...key ? { frame: key } : {}, counts };
+  const h = hiddenOf(board);
+  const within = (id) => !!id && (!root || id === root || inside2(board, board.items[id], root));
+  const hidden = h ? [...h.ids].filter((id) => within(id) || within(h.frameOf.get(id))).length : 0;
+  return { findings: found.slice(0, limit), checked: items.length, wires, ...key ? { frame: key } : {}, counts, ...hidden ? { hidden } : {} };
 }
 function byReading(a, b2) {
   const ra = Math.round(a.y / 60);
@@ -63784,7 +64203,7 @@ function byReading(a, b2) {
 function layoutLines(report, _board, max = 60) {
   const total = KINDS.reduce((n4, k2) => n4 + report.counts[k2], 0);
   const where = report.frame ? ` in ${report.frame}` : "";
-  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ""} checked`;
+  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ""} checked${report.hidden ? `; ${report.hidden} in hidden frames not checked` : ""}`;
   if (!total)
     return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`];
   const parts2 = KINDS.filter((k2) => report.counts[k2]).map((k2) => `${report.counts[k2]} ${k2}`);
@@ -63799,10 +64218,10 @@ function layoutLines(report, _board, max = 60) {
 
 // packages/canvas/dist/raster.js
 import crypto5 from "node:crypto";
-import fs8 from "node:fs";
+import fs9 from "node:fs";
 import { createRequire } from "node:module";
 import os6 from "node:os";
-import path9 from "node:path";
+import path10 from "node:path";
 import zlib from "node:zlib";
 
 // packages/canvas/dist/resvgPins.js
@@ -63866,7 +64285,7 @@ function packageVersion() {
 function defaultDeps(env = process.env) {
   return {
     env,
-    dataDir: env.CLAUDE_PLUGIN_DATA || path9.join(os6.homedir(), ".awd", "plugin"),
+    dataDir: env.CLAUDE_PLUGIN_DATA || path10.join(os6.homedir(), ".awd", "plugin"),
     pins: RESVG_PINS,
     version: RESVG_VERSION,
     platform: process.platform,
@@ -63945,21 +64364,21 @@ function createRasterizer(over = {}) {
   let failed;
   let inflight;
   const fromNative = (m2, renderer) => ({ render: (svg, opts) => new m2.Resvg(svg, JSON.stringify(opts)).render().asPng(), renderer });
-  const nativeDir = () => path9.join(d.dataDir, "native", "resvg", d.version);
-  const manifestPath = (pin2) => path9.join(nativeDir(), `${pin2.name.replace(/^@resvg\//, "")}.json`);
+  const nativeDir = () => path10.join(d.dataDir, "native", "resvg", d.version);
+  const manifestPath = (pin2) => path10.join(nativeDir(), `${pin2.name.replace(/^@resvg\//, "")}.json`);
   function cached2(pin2) {
     let man;
     try {
-      man = JSON.parse(fs8.readFileSync(manifestPath(pin2), "utf8"));
+      man = JSON.parse(fs9.readFileSync(manifestPath(pin2), "utf8"));
     } catch {
       return void 0;
     }
     if (man.name !== pin2.name || man.version !== pin2.version || man.integrity !== pin2.integrity || !/^[\w.-]+\.node$/.test(man.file))
       return void 0;
-    const file2 = path9.join(nativeDir(), man.file);
+    const file2 = path10.join(nativeDir(), man.file);
     let data;
     try {
-      data = fs8.readFileSync(file2);
+      data = fs9.readFileSync(file2);
     } catch {
       return void 0;
     }
@@ -63985,30 +64404,30 @@ function createRasterizer(over = {}) {
     if (pkg && (pkg.name !== pin2.name || pkg.version !== pin2.version))
       throw new IntegrityError(`the tarball says it is ${pkg.name}@${pkg.version}, not ${pin2.name}@${pin2.version}`);
     const dir = nativeDir();
-    fs8.mkdirSync(dir, { recursive: true });
-    const tmp = path9.join(dir, `.${file2}.tmp-${process.pid}`);
-    fs8.writeFileSync(tmp, data, { mode: 420 });
-    fs8.renameSync(tmp, path9.join(dir, file2));
+    fs9.mkdirSync(dir, { recursive: true });
+    const tmp = path10.join(dir, `.${file2}.tmp-${process.pid}`);
+    fs9.writeFileSync(tmp, data, { mode: 420 });
+    fs9.renameSync(tmp, path10.join(dir, file2));
     const man = { name: pin2.name, version: pin2.version, integrity: pin2.integrity, file: file2, sha256: sha256(data) };
     const mtmp = `${manifestPath(pin2)}.tmp-${process.pid}`;
-    fs8.writeFileSync(mtmp, JSON.stringify(man, null, 2) + "\n");
-    fs8.renameSync(mtmp, manifestPath(pin2));
+    fs9.writeFileSync(mtmp, JSON.stringify(man, null, 2) + "\n");
+    fs9.renameSync(mtmp, manifestPath(pin2));
   }
   async function downloadLocked(pin2) {
-    fs8.mkdirSync(nativeDir(), { recursive: true });
-    const lock = path9.join(nativeDir(), `.lock-${pin2.name.replace(/^@resvg\//, "")}`);
+    fs9.mkdirSync(nativeDir(), { recursive: true });
+    const lock = path10.join(nativeDir(), `.lock-${pin2.name.replace(/^@resvg\//, "")}`);
     const deadline = d.now() + d.lockWaitMs;
     for (; ; ) {
       try {
-        fs8.mkdirSync(lock);
+        fs9.mkdirSync(lock);
         break;
       } catch (e) {
         if (e.code !== "EEXIST")
           throw e;
       }
       try {
-        if (d.now() - fs8.statSync(lock).mtimeMs > STALE_LOCK_MS) {
-          fs8.rmSync(lock, { recursive: true, force: true });
+        if (d.now() - fs9.statSync(lock).mtimeMs > STALE_LOCK_MS) {
+          fs9.rmSync(lock, { recursive: true, force: true });
           continue;
         }
       } catch {
@@ -64031,7 +64450,7 @@ function createRasterizer(over = {}) {
         throw new Error("the downloaded native did not verify");
       return now;
     } finally {
-      fs8.rmSync(lock, { recursive: true, force: true });
+      fs9.rmSync(lock, { recursive: true, force: true });
     }
   }
   async function load() {
@@ -64105,8 +64524,8 @@ function svgToPng(svg) {
 }
 
 // packages/canvas/dist/server.js
-var __dirname3 = path10.dirname(fileURLToPath3(import.meta.url));
-var WEB_DIST = [path10.join(__dirname3, "web"), path10.resolve(__dirname3, "../web/dist")].find((d) => fs9.existsSync(path10.join(d, "index.html"))) ?? path10.resolve(__dirname3, "../web/dist");
+var __dirname3 = path11.dirname(fileURLToPath3(import.meta.url));
+var WEB_DIST = [path11.join(__dirname3, "web"), path11.resolve(__dirname3, "../web/dist")].find((d) => fs10.existsSync(path11.join(d, "index.html"))) ?? path11.resolve(__dirname3, "../web/dist");
 var MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -64129,18 +64548,18 @@ function studioArgv(template, project) {
 }
 var realOf = (p) => {
   try {
-    return fs9.realpathSync(p);
+    return fs10.realpathSync(p);
   } catch {
-    return path10.resolve(p);
+    return path11.resolve(p);
   }
 };
 function studioProjectOf(board, projects) {
   const claims = [board.meta?.project?.root, board.meta?.workflow?.file, ...diagramRoots(board.meta)];
   for (const c of claims) {
-    if (typeof c !== "string" || !path10.isAbsolute(c))
+    if (typeof c !== "string" || !path11.isAbsolute(c))
       continue;
     const want = realOf(c);
-    const hit2 = projects.find((p) => want === p.root || want.startsWith(p.root + path10.sep));
+    const hit2 = projects.find((p) => want === p.root || want.startsWith(p.root + path11.sep));
     if (hit2)
       return hit2;
   }
@@ -64148,7 +64567,7 @@ function studioProjectOf(board, projects) {
 }
 function studioSessions(p) {
   try {
-    const j2 = JSON.parse(fs9.readFileSync(path10.join(p.root, ".awd", "studio", "status.json"), "utf8"));
+    const j2 = JSON.parse(fs10.readFileSync(path11.join(p.root, ".awd", "studio", "status.json"), "utf8"));
     if (typeof j2.project === "string" && realOf(j2.project) !== p.root)
       return void 0;
     const n4 = (v2) => typeof v2 === "number" && Number.isFinite(v2) ? v2 : 0;
@@ -64346,6 +64765,8 @@ function startServer(opts = {}) {
       drafts: openDrafts(b2).length,
       // diagrams the board still registers whose frame is gone (removed over /ops or on the page)
       frameless: framelessDiagrams(viewOf(g2, b2)).map(({ key, source, holder }) => ({ key, ...source ? { source } : {}, ...holder ? { holder: holder.agent } : {} })),
+      // frames the person hid the contents of (docs/canvas.md "Hiding a frame")
+      hidden: hiddenFrameList(b2),
       suggestion,
       ...suggestion ? { suggestionBy: asked?.by ?? null, suggestionWhy: asked ? "asked" : "holder" } : {},
       agents: knownAgents(b2.id, g2).sort((a, z3) => a === LOCAL_AGENT ? -1 : z3 === LOCAL_AGENT ? 1 : a.localeCompare(z3)).map((name) => ({ name, label: displayName(name), handle: handleOf(name), watching: [...watching].some((w2) => sameAgent(w2, name)), ...seen[name] ? { seen: seen[name] } : {}, holder: holders.some((h) => sameAgent(h.holder.agent, name)) })),
@@ -64426,6 +64847,18 @@ function startServer(opts = {}) {
       store.apply(id, ops, "agent", "seen", name);
     return store.get(id);
   };
+  const redrawCache = /* @__PURE__ */ new Map();
+  const redrawInputsOf = (b2) => {
+    let c = redrawCache.get(b2.id);
+    if (!c || c.createdAt !== b2.createdAt || c.seq > b2.seq)
+      c = { createdAt: b2.createdAt, seq: 0, inputs: emptyRedrawInputs() };
+    if (c.seq < b2.seq) {
+      foldRedrawInputs(c.inputs, store.changes(b2.id, { since: c.seq }));
+      c.seq = b2.seq;
+    }
+    redrawCache.set(b2.id, c);
+    return { seq: c.seq, ...redrawInputsToJson(c.inputs) };
+  };
   const handoverActor = (req, g2, asked) => {
     if (asked !== void 0 && !isAuthor(asked))
       throw new HttpError(400, "author must be 'agent' or 'user'");
@@ -64472,8 +64905,8 @@ function startServer(opts = {}) {
     if (!action) {
       if (method === "GET") {
         const holders2 = holdersOf(viewOf(grant, board).meta).map((h) => {
-          const title = titleOfKey(board, h.key);
-          return { key: h.key, ...h.source ? { source: h.source } : {}, ...title ? { title } : {}, holder: h.holder };
+          const title2 = titleOfKey(board, h.key);
+          return { key: h.key, ...h.source ? { source: h.source } : {}, ...title2 ? { title: title2 } : {}, holder: h.holder };
         });
         return json4(res, 200, { handover: ho ?? null, holders: holders2, agents: knownAgents(id, grant) });
       }
@@ -64510,10 +64943,10 @@ function startServer(opts = {}) {
       const now2 = (/* @__PURE__ */ new Date()).toISOString();
       const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
       const keys = left.map((h) => {
-        const title = titleOfKey(board, h.key);
+        const title2 = titleOfKey(board, h.key);
         const root2 = h.holder.root?.replace(/\/+$/, "");
         const source = h.source && root2 && h.source.startsWith(`${root2}/`) ? h.source.slice(root2.length + 1) : h.source;
-        return { key: h.key, from: h.holder.agent, ...source ? { source } : {}, ...title ? { title } : {} };
+        return { key: h.key, from: h.holder.agent, ...source ? { source } : {}, ...title2 ? { title: title2 } : {} };
       });
       const handover = { id: `ho_${suffix}`, to, answeredBy: body2.answeredBy !== false, thread: `handover.${suffix}`, by: "user", at: now2, keys };
       const froms2 = handoverFroms(handover);
@@ -64638,12 +65071,12 @@ function startServer(opts = {}) {
     return json4(res, 200, { seq: change.seq });
   };
   const serveStatic = (res, rel) => {
-    const safe = path10.normalize(rel).replace(/^(\.\.[/\\])+/, "");
-    const file2 = path10.join(webDist, safe);
-    if (!file2.startsWith(webDist) || !fs9.existsSync(file2) || fs9.statSync(file2).isDirectory())
+    const safe = path11.normalize(rel).replace(/^(\.\.[/\\])+/, "");
+    const file2 = path11.join(webDist, safe);
+    if (!file2.startsWith(webDist) || !fs10.existsSync(file2) || fs10.statSync(file2).isDirectory())
       return false;
-    res.writeHead(200, { "content-type": MIME[path10.extname(file2)] ?? "application/octet-stream" });
-    fs9.createReadStream(file2).pipe(res);
+    res.writeHead(200, { "content-type": MIME[path11.extname(file2)] ?? "application/octet-stream" });
+    fs10.createReadStream(file2).pipe(res);
     return true;
   };
   const fallbackPage = (boards) => `<!doctype html><meta charset="utf-8"><title>awd-canvas</title>
@@ -64905,8 +65338,10 @@ function startServer(opts = {}) {
           }
           return json4(res, 200, { board: viewOf(grant, store.updateBoard(id, patch)) });
         }
-        if (method === "DELETE")
+        if (method === "DELETE") {
+          redrawCache.delete(id);
           return json4(res, 200, { deleted: store.delete(id) });
+        }
         throw new HttpError(405, "method not allowed");
       }
       if (sub === "move" && method === "POST")
@@ -64980,14 +65415,24 @@ function startServer(opts = {}) {
           throw new HttpError(400, "give ids and/or frame");
         const note = body.note?.trim().slice(0, 500) || void 0;
         const msg = { type: "focus", ids, ...frame ? { frame } : {}, ...note ? { note } : {}, author, ...who3.by ? { by: who3.by } : {}, at: (/* @__PURE__ */ new Date()).toISOString() };
-        return json4(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg });
+        const h = hiddenOf(board2);
+        const hidden = h ? hiddenFrameList(board2, h).filter((f) => ids.some((i) => h.frameOf.get(i) === f.id)) : [];
+        return json4(res, 200, { ok: true, viewers: emitFocus(id, msg), focus: msg, ...hidden.length ? { hidden } : {} });
       }
       if (sub === "changes" && method === "GET") {
         const since = Number(url2.searchParams.get("since") ?? 0);
         const f = authorFilter(req, grant, url2.searchParams.get("author"));
         const cf = changeFilterOf(url2);
-        const changes = agentScale(() => cf ? filterChanges(store.get(id), store.changes(id, { since, ...f }), cf) : store.changes(id, { since, ...f }));
-        return json4(res, 200, { changes, seq: store.get(id).seq });
+        const read = (from) => agentScale(() => cf ? filterChanges(store.get(id), store.changes(id, { since: from, ...f }), cf) : store.changes(id, { since: from, ...f }));
+        const last = numParam(url2, "last");
+        const changes = last === void 0 ? read(since) : lastChanges(store.get(id).seq, Number.isFinite(since) ? since : 0, last, read);
+        return json4(res, 200, { changes: boolParam(url2, "brief") ? changes.map(briefChange) : changes, seq: store.get(id).seq });
+      }
+      if (sub === "redraw-inputs" && method === "GET")
+        return json4(res, 200, redrawInputsOf(store.get(id)));
+      if (sub === "meta" && method === "GET") {
+        const view = viewOf(grant, store.get(id));
+        return json4(res, 200, { id: view.id, seq: view.seq, meta: view.meta ?? null });
       }
       if (sub === "diff" && method === "GET") {
         const since = Number(url2.searchParams.get("since") ?? 0);
@@ -65300,7 +65745,7 @@ function startServer(opts = {}) {
               args,
               cwd: project.root,
               env: { AWD_CANVAS_URL: `http://localhost:${port()}` },
-              logFile: studio.logDir ? path10.join(studio.logDir, `studio-${project.name}.log`) : void 0
+              logFile: studio.logDir ? path11.join(studio.logDir, `studio-${project.name}.log`) : void 0
             });
             return json4(res, 200, view(info));
           }
@@ -65333,8 +65778,8 @@ function startServer(opts = {}) {
         const file2 = resolveDocAsset(docsDir, decodeURIComponent(parts2.slice(2).join("/")));
         if (!file2)
           throw new HttpError(404, "asset not found");
-        res.writeHead(200, { "content-type": MIME[path10.extname(file2)] ?? "application/octet-stream" });
-        return void fs9.createReadStream(file2).pipe(res);
+        res.writeHead(200, { "content-type": MIME[path11.extname(file2)] ?? "application/octet-stream" });
+        return void fs10.createReadStream(file2).pipe(res);
       }
       const rendered = renderDoc(docsDir, decodeURIComponent(parts2[1]).replace(/\.md$/, ""));
       if (!rendered)
@@ -65343,7 +65788,7 @@ function startServer(opts = {}) {
     }
     if (method !== "GET")
       throw new HttpError(405, "method not allowed");
-    const hasUi = fs9.existsSync(path10.join(webDist, "index.html"));
+    const hasUi = fs10.existsSync(path11.join(webDist, "index.html"));
     if (parts2[0] === "b" || parts2.length === 0 || parts2[0] === "agents" && parts2.length === 1) {
       if (hasUi)
         return void serveStatic(res, "index.html");
@@ -65528,7 +65973,8 @@ function readOptionsOf(url2) {
     fields: listParam(url2, "fields"),
     limit: numParam(url2, "limit"),
     cursor: url2.searchParams.get("cursor") || void 0,
-    maxChars: numParam(url2, "maxChars")
+    maxChars: numParam(url2, "maxChars"),
+    includeHidden: boolParam(url2, "includeHidden") || void 0
   };
 }
 function changeFilterOf(url2) {
@@ -65541,6 +65987,39 @@ function changeFilterOf(url2) {
   if (!frame && !from && !kinds)
     return void 0;
   return { frame, from, kinds };
+}
+function lastChanges(seq, since, last, read) {
+  const n4 = Math.floor(last);
+  if (!(n4 >= 1))
+    throw new HttpError(400, "last must be 1 or more");
+  for (let k2 = n4 * 2; ; k2 *= 4) {
+    const from = Math.max(since, seq - k2);
+    const got = read(from).filter((c) => !isBookkeeping(c));
+    if (got.length >= n4 || from <= since)
+      return got.slice(-n4);
+  }
+}
+var BRIEF_OPS = 50;
+var STAMPS = /* @__PURE__ */ new Set(["id", "createdBy", "updatedBy", "updatedAt"]);
+var keysOnly = (o) => Object.fromEntries(Object.keys(o).filter((k2) => !STAMPS.has(k2)).map((k2) => [k2, null]));
+var briefText = (t) => t === void 0 ? {} : { text: t.length > 80 ? `${t.slice(0, 79)}\u2026` : t };
+function briefChange(c) {
+  const { ops: all, before: was, meta: meta3, ...rest } = c;
+  const ops = all.slice(0, BRIEF_OPS).map((op) => {
+    if (op.kind === "add")
+      return { kind: "add", item: { id: op.item.id, type: op.item.type, ...op.item.role ? { role: op.item.role } : {}, ...briefText(op.item.text) } };
+    if (op.kind === "update")
+      return { kind: "update", id: op.id, patch: keysOnly(op.patch) };
+    return { kind: "remove", id: op.id };
+  });
+  const before = {};
+  for (const op of ops) {
+    if (op.kind !== "remove" || !(op.id in was))
+      continue;
+    const b2 = was[op.id];
+    before[op.id] = b2 ? { id: b2.id, type: b2.type, ...briefText(b2.text) } : null;
+  }
+  return { ...rest, ...meta3 ? { meta: keysOnly(meta3) } : {}, ops, before, opCount: all.length, itemCount: new Set(all.map((op) => op.kind === "add" ? op.item.id : op.id)).size };
 }
 function agentScale(run) {
   try {
@@ -65557,8 +66036,8 @@ function agentScale(run) {
 
 // packages/canvas/dist/adapters/process/spawn.js
 import { spawn } from "node:child_process";
-import fs10 from "node:fs";
-import path11 from "node:path";
+import fs11 from "node:fs";
+import path12 from "node:path";
 
 // packages/canvas/dist/ports/processSupervisor.js
 var LOG_LINES = 50;
@@ -65576,8 +66055,8 @@ var SpawnSupervisor = class {
       return this.info(key);
     const e = { running: true, since: (/* @__PURE__ */ new Date()).toISOString(), log: cur?.log ?? [] };
     if (spec.logFile) {
-      fs10.mkdirSync(path11.dirname(spec.logFile), { recursive: true });
-      e.file = fs10.createWriteStream(spec.logFile, { flags: "a" });
+      fs11.mkdirSync(path12.dirname(spec.logFile), { recursive: true });
+      e.file = fs11.createWriteStream(spec.logFile, { flags: "a" });
     }
     this.entries.set(key, e);
     const push = (line) => {
@@ -65699,9 +66178,9 @@ var GitHubReleaseSource = class {
 // packages/canvas/dist/adapters/update/installer.js
 import { createHash as createHash3 } from "node:crypto";
 import { execFile as execFile3, spawn as spawn2 } from "node:child_process";
-import fs11 from "node:fs";
+import fs12 from "node:fs";
 import os7 from "node:os";
-import path12 from "node:path";
+import path13 from "node:path";
 var lines = (onLine) => {
   let rest = "";
   return (chunk) => {
@@ -65735,48 +66214,48 @@ var ChildInstaller = class {
   async downloadRuntime(version2, dir, onLine) {
     const name = `unprose-runtime-v${version2}.tgz`;
     const base = (process.env.AWD_RUNTIME_URL || this.o.base || `https://github.com/${this.o.repo}/releases/download`).replace(/\/$/, "");
-    const tmp = fs11.mkdtempSync(path12.join(os7.tmpdir(), "unprose-upgrade-"));
+    const tmp = fs12.mkdtempSync(path13.join(os7.tmpdir(), "unprose-upgrade-"));
     try {
-      const tgz = path12.join(tmp, name);
-      const sum = path12.join(tmp, `${name}.sha256`);
+      const tgz = path13.join(tmp, name);
+      const sum = path13.join(tmp, `${name}.sha256`);
       try {
         for (const [file2, url2] of [[tgz, `${base}/v${version2}/${name}`], [sum, `${base}/v${version2}/${name}.sha256`]]) {
           onLine(`downloading ${url2}`);
           const r2 = await fetch(url2, { headers: { "user-agent": userAgent("canvas") } });
           if (!r2.ok)
             throw new Error(`HTTP ${r2.status} for ${url2}`);
-          fs11.writeFileSync(file2, Buffer.from(await r2.arrayBuffer()));
+          fs12.writeFileSync(file2, Buffer.from(await r2.arrayBuffer()));
         }
       } catch (e) {
         onLine(`direct download failed (${e.message}); trying gh release download`);
         await execText("gh", ["release", "download", `v${version2}`, "-R", this.o.repo, "-p", name, "-p", `${name}.sha256`, "-D", tmp, "--clobber"]);
       }
-      const want = fs11.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
-      const got = createHash3("sha256").update(fs11.readFileSync(tgz)).digest("hex");
+      const want = fs12.readFileSync(sum, "utf8").trim().split(/\s+/)[0];
+      const got = createHash3("sha256").update(fs12.readFileSync(tgz)).digest("hex");
       if (!want || want !== got)
         throw new Error(`checksum mismatch for ${name}`);
-      const out = path12.join(tmp, "x");
-      fs11.mkdirSync(out);
+      const out = path13.join(tmp, "x");
+      fs12.mkdirSync(out);
       await execText("tar", ["-xzf", tgz, "-C", out]);
-      fs11.mkdirSync(path12.dirname(dir), { recursive: true });
-      fs11.rmSync(dir, { recursive: true, force: true });
-      fs11.renameSync(out, dir);
+      fs12.mkdirSync(path13.dirname(dir), { recursive: true });
+      fs12.rmSync(dir, { recursive: true, force: true });
+      fs12.renameSync(out, dir);
       onLine(`unpacked into ${dir}`);
     } finally {
-      fs11.rmSync(tmp, { recursive: true, force: true });
+      fs12.rmSync(tmp, { recursive: true, force: true });
     }
   }
   exists(p) {
-    return fs11.existsSync(p);
+    return fs12.existsSync(p);
   }
 };
 var ProcessLauncher = class {
   spawnDetached(entry, args, env, logFile) {
-    fs11.mkdirSync(path12.dirname(logFile), { recursive: true });
-    const fd = fs11.openSync(logFile, "a");
+    fs12.mkdirSync(path13.dirname(logFile), { recursive: true });
+    const fd = fs12.openSync(logFile, "a");
     const child = spawn2(process.execPath, [entry, ...args], { detached: true, stdio: ["ignore", fd, fd], env });
     child.unref();
-    fs11.closeSync(fd);
+    fs12.closeSync(fd);
     return child.pid ?? -1;
   }
   async probeVersion(port) {
@@ -65826,8 +66305,8 @@ var FakeUpdateSource = class {
 };
 
 // packages/canvas/dist/updater.js
-import fs12 from "node:fs";
-import path13 from "node:path";
+import fs13 from "node:fs";
+import path14 from "node:path";
 var SIX_HOURS = 6 * 60 * 60 * 1e3;
 var ERROR_TTL = 30 * 60 * 1e3;
 var REFRESH_THROTTLE = 30 * 1e3;
@@ -65842,7 +66321,7 @@ var UpdateService = class {
     this.o = o;
     try {
       if (o.cacheFile) {
-        const c = JSON.parse(fs12.readFileSync(o.cacheFile, "utf8"));
+        const c = JSON.parse(fs13.readFileSync(o.cacheFile, "utf8"));
         if (c.current === o.current)
           this.cache = c;
       }
@@ -65883,8 +66362,8 @@ var UpdateService = class {
       this.cache = c;
       try {
         if (this.o.cacheFile) {
-          fs12.mkdirSync(path13.dirname(this.o.cacheFile), { recursive: true });
-          fs12.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
+          fs13.mkdirSync(path14.dirname(this.o.cacheFile), { recursive: true });
+          fs13.writeFileSync(this.o.cacheFile, JSON.stringify(c, null, 2) + "\n");
         }
       } catch {
       }
@@ -65997,12 +66476,12 @@ var UpdateService = class {
       return void 0;
     let json4;
     try {
-      json4 = JSON.parse(fs12.readFileSync(installedFile, "utf8"));
+      json4 = JSON.parse(fs13.readFileSync(installedFile, "utf8"));
     } catch {
       return void 0;
     }
     const found = installedUpdate(json4, install.root, this.o.current, (p) => this.o.installer.exists(p));
-    return found && { version: found.version, entry: path13.join(found.root, "scripts", "canvas.mjs") };
+    return found && { version: found.version, entry: path14.join(found.root, "scripts", "canvas.mjs") };
   }
   /**
    * Follow `claude plugin update`: there is no post-update hook, so a plugin canvas looks at Claude Code's
@@ -66048,12 +66527,12 @@ var UpdateService = class {
     if (!f)
       return;
     try {
-      const s = JSON.parse(fs12.readFileSync(f, "utf8"));
+      const s = JSON.parse(fs13.readFileSync(f, "utf8"));
       if (s.pid !== (this.o.pid ?? process.pid))
         return;
-      const root = this.o.install.kind === "plugin" ? path13.dirname(path13.dirname(entry)) : s.root;
-      const runtime = this.o.install.kind === "plugin" ? path13.join(String(root), "dist") : path13.dirname(entry);
-      fs12.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
+      const root = this.o.install.kind === "plugin" ? path14.dirname(path14.dirname(entry)) : s.root;
+      const runtime = this.o.install.kind === "plugin" ? path14.join(String(root), "dist") : path14.dirname(entry);
+      fs13.writeFileSync(f, JSON.stringify({ ...s, pid, version: version2, root, runtime, startedAt: new Date(this.now()).toISOString() }, null, 2) + "\n");
     } catch {
     }
   }
@@ -66319,43 +66798,43 @@ function flags(args, name) {
   return args.flatMap((a, i) => a === name && args[i + 1] ? [args[i + 1]] : []);
 }
 function repoRoot(dir) {
-  for (let d = dir; ; d = path14.dirname(d)) {
-    if (fs13.existsSync(path14.join(d, ".git")))
+  for (let d = dir; ; d = path15.dirname(d)) {
+    if (fs14.existsSync(path15.join(d, ".git")))
       return d;
-    if (path14.dirname(d) === d)
+    if (path15.dirname(d) === d)
       return dir;
   }
 }
 function studioConfig(args) {
-  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path14.dirname(path14.resolve(f))))];
+  const dirs = [...flags(args, "--studio-project"), ...flags(args, "--studio").map((f) => repoRoot(path15.dirname(path15.resolve(f))))];
   if (!dirs.length)
     return void 0;
-  const roots = [...new Set(dirs.map((d) => fs13.realpathSync(path14.resolve(d))))];
-  const projects = roots.map((root) => ({ root, name: path14.basename(root) }));
+  const roots = [...new Set(dirs.map((d) => fs14.realpathSync(path15.resolve(d))))];
+  const projects = roots.map((root) => ({ root, name: path15.basename(root) }));
   const bundled = fileURLToPath4(new URL("./awd.mjs", import.meta.url));
-  const awd = fs13.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
+  const awd = fs14.existsSync(bundled) ? bundled : fileURLToPath4(new URL("../../cli/bin/awd.js", import.meta.url));
   const command = flag(args, "--studio-cmd") ?? `${process.execPath} ${awd} studio --project {project}`;
   if (!command.includes("{project}") && !command.includes("{file}"))
     console.warn("awd-canvas: --studio-cmd has no {project}; every project runs the same command");
-  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path14.join(os8.homedir(), "Library", "Logs", "awd") };
+  return { projects, command, supervisor: new SpawnSupervisor(), logDir: process.env.AWD_LOG_DIR ?? path15.join(os8.homedir(), "Library", "Logs", "awd") };
 }
 function updateService(env) {
   const repo = env.UNPROSE_UPDATE_REPO || "river0825/unprose";
   const entry = (() => {
     try {
-      return fs13.realpathSync(process.argv[1] ?? "");
+      return fs14.realpathSync(process.argv[1] ?? "");
     } catch {
       return process.argv[1] ?? "";
     }
   })();
-  const install = detectInstall(entry, env, (p) => fs13.existsSync(p));
+  const install = detectInstall(entry, env, (p) => fs14.existsSync(p));
   const current = findRelease().version;
   const off = env.UNPROSE_UPDATE_CHECK === "0";
   const fake = env.UNPROSE_UPDATE_FAKE_LATEST;
   const source = off ? void 0 : fake ? new FakeUpdateSource({ version: fake, source: "fake (UNPROSE_UPDATE_FAKE_LATEST)", notes: `### Added
 - A pretend release to try the upgrade notice (\`UNPROSE_UPDATE_FAKE_LATEST=${fake}\`).` }) : new GitHubReleaseSource({ repo, env });
   const home = os8.homedir();
-  const stateFile = env.CLAUDE_PLUGIN_DATA ? path14.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path14.join(home, ".awd", "plugin", "canvas.json");
+  const stateFile = env.CLAUDE_PLUGIN_DATA ? path15.join(env.CLAUDE_PLUGIN_DATA, "canvas.json") : path15.join(home, ".awd", "plugin", "canvas.json");
   return new UpdateService({
     current,
     install,
@@ -66365,10 +66844,10 @@ function updateService(env) {
     entry,
     argv: process.argv.slice(2),
     env: Object.fromEntries(Object.entries(env).filter((e) => typeof e[1] === "string")),
-    cacheFile: fake ? void 0 : path14.join(home, ".awd", "update-check.json"),
-    logFile: path14.join(home, ".awd", "canvas-upgrade.log"),
+    cacheFile: fake ? void 0 : path15.join(home, ".awd", "update-check.json"),
+    logFile: path15.join(home, ".awd", "canvas-upgrade.log"),
     stateFile,
-    installedFile: path14.join(env.CLAUDE_CONFIG_DIR || path14.join(home, ".claude"), "plugins", "installed_plugins.json"),
+    installedFile: path15.join(env.CLAUDE_CONFIG_DIR || path15.join(home, ".claude"), "plugins", "installed_plugins.json"),
     launchd: !!env.XPC_SERVICE_NAME && env.XPC_SERVICE_NAME !== "0" && /awd|unprose/i.test(env.XPC_SERVICE_NAME)
   });
 }
@@ -66383,7 +66862,7 @@ async function main() {
   switch (cmd) {
     case "serve": {
       const port = Number(flag(args, "--port") ?? process.env.PORT ?? 4400);
-      const dir = path14.resolve(flag(args, "--dir") ?? defaultBoardsDir());
+      const dir = path15.resolve(flag(args, "--dir") ?? defaultBoardsDir());
       const storeKind = flag(args, "--store") ?? process.env.AWD_CANVAS_STORE ?? "file";
       if (storeKind !== "memory" && isInsidePluginCache(dir))
         console.warn(`awd-canvas: WARNING boards are stored in ${dir}, inside a plugin install \u2014 reinstalling the plugin deletes them. Use --dir or AWD_BOARDS_DIR (default: ~/.awd/boards).`);
@@ -66395,7 +66874,7 @@ async function main() {
         const p = store.registerProject(root);
         console.log(`  project ${p.id}: boards in ${p.boardsDir}`);
       }
-      const agentsFile = path14.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
+      const agentsFile = path15.resolve(flag(args, "--agents-file") ?? defaultAgentsFile());
       const remoteAuth = process.env.UNPROSE_REMOTE_AUTH !== "off";
       const access = new AccessService({ store: new FileAccessStore(agentsFile), remoteAuth });
       const feedback = new FileFeedbackStore(defaultFeedbackFile(agentsFile));
@@ -66420,7 +66899,7 @@ async function main() {
       const [kind, file2] = args;
       if (!kind || !file2 || !diagramKinds.includes(kind))
         return void usage(1);
-      const content = JSON.parse(fs13.readFileSync(file2, "utf8"));
+      const content = JSON.parse(fs14.readFileSync(file2, "utf8"));
       const parsed = contentSchemas[kind].parse(content);
       console.log(JSON.stringify(render(kind, parsed, { now: (/* @__PURE__ */ new Date()).toISOString() }), null, 2));
       return;

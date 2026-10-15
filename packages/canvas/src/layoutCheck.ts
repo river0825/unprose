@@ -3,9 +3,10 @@
 // larger than their siblings (or than the template's sticky), and items the page draws somewhere other than their
 // stored coordinates (kanban stacking), wire labels and domain-story number circles that collide with each other or
 // with a card, domain-story group outlines that intersect, comments that cover an item or lie outside the diagram
-// frame their target is in. Each finding says what to do in plain words. Shared by the server
-// (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
+// frame their target is in. What a hidden frame holds is not drawn, so not checked. Each finding says what to do in
+// plain words. Shared by the server (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
 import { isAnnotationDraft } from './annotations.js'
+import { hiddenOf, isHiddenFrame } from './hidden.js'
 import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
@@ -42,6 +43,8 @@ export interface LayoutReport {
   frame?: string
   /** findings per kind, before `limit` */
   counts: Record<LayoutKind, number>
+  /** items in hidden frames, not drawn and so not checked (docs/canvas.md "Hiding a frame") */
+  hidden?: number
 }
 
 export class LayoutError extends Error {
@@ -398,7 +401,8 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
     // a draft annotation waits in the column right of the frame until the holder draws it from the file
     if (!t || !info?.frameId || isAnnotationDraft(c)) continue
     const f = shown.items[info.frameId]
-    if (!f) continue
+    // a hidden frame is drawn collapsed: what was inside its box is on the open paper now
+    if (!f || isHiddenFrame(f)) continue
     const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) }
     if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL) continue
     const sides = (Object.entries(out) as Array<[string, number]>).filter(([, v]) => v > OUTSIDE_TOL).map(([s, v]) => `${r(v)} px past the ${s}`)
@@ -433,7 +437,11 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
   const pos = (id: string) => shown.items[id] ?? board.items[id]
   found.sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || byReading(pos(a.id), pos(b.id)))
   const limit = opts.limit ?? 200
-  return { findings: found.slice(0, limit), checked: items.length, wires, ...(key ? { frame: key } : {}), counts }
+  // by the frame they are in, or the hidden frame that keeps them (a wire, a comment) from being drawn
+  const h = hiddenOf(board)
+  const within = (id: string | undefined) => !!id && (!root || id === root || inside(board, board.items[id], root))
+  const hidden = h ? [...h.ids].filter((id) => within(id) || within(h.frameOf.get(id))).length : 0
+  return { findings: found.slice(0, limit), checked: items.length, wires, ...(key ? { frame: key } : {}), counts, ...(hidden ? { hidden } : {}) }
 }
 
 function byReading(a: Item, b: Item): number {
@@ -446,7 +454,7 @@ function byReading(a: Item, b: Item): number {
 export function layoutLines(report: LayoutReport, _board: Board, max = 60): string[] {
   const total = KINDS.reduce((n, k) => n + report.counts[k], 0)
   const where = report.frame ? ` in ${report.frame}` : ''
-  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ''} checked`
+  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ''} checked${report.hidden ? `; ${report.hidden} in hidden frames not checked` : ''}`
   if (!total) return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`]
   const parts = KINDS.filter((k) => report.counts[k]).map((k) => `${report.counts[k]} ${k}`)
   const shown = report.findings.slice(0, max)

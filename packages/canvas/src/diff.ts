@@ -182,7 +182,10 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
       const [tWas, tNow] = [todoOf(was ?? undefined), patch.data !== undefined ? todoOf({ ...(was ?? now)!, data: patch.data }) : undefined]
       const todoMoved = !!tWas && !!tNow && tWas.state !== tNow.state
       if (todoMoved) parts.push(tNow!.state === 'done' ? `checked off${tNow!.doneBy ? ` by ${tNow!.doneBy === 'person' ? 'the person' : displayName(tNow!.doneBy)}` : ''}${tNow!.answer ? ` — answer: "${short(tNow!.answer, 160)}"` : ' without an answer (nobody is notified)'}` : 'reopened')
-      const meaning = (d: Record<string, unknown> | undefined) => JSON.stringify(todoMoved ? { ...meaningOf(d), todo: undefined } : meaningOf(d))
+      // hiding a frame's contents (docs/canvas.md "Hiding a frame"), or showing them again, says so — not as its data
+      const [hidWas, hidNow] = [was?.data?.hidden === true, patch.data !== undefined ? patch.data.hidden === true : was?.data?.hidden === true]
+      if (was?.type === 'frame' && hidWas !== hidNow) parts.push(hidNow ? 'hid its contents (not drawn for anyone; canvas_read_board includeHidden: true lists them)' : 'showed its contents again')
+      const meaning = (d: Record<string, unknown> | undefined) => JSON.stringify({ ...meaningOf(d), ...(todoMoved ? { todo: undefined } : {}), ...(hidWas !== hidNow ? { hidden: undefined } : {}) })
       if (patch.data !== undefined && meaning(patch.data) !== meaning(was?.data)) parts.push(`data changed: ${short(JSON.stringify(meaningOf(patch.data)), 120)}`)
       if (opts.collapseMoves && isLayoutOnly(op, was) && !parts.some((p) => p.startsWith('moved from'))) {
         folded.set(op.id, { seq: ch.seq, author: who, resized: resized || (folded.get(op.id)?.resized ?? false) })

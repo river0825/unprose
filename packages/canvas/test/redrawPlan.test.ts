@@ -11,6 +11,7 @@ import { startServer, type RunningServer } from '../src/server.js'
 import { CanvasClient } from '../src/client.js'
 import { drawDesignContent, previewDesignContent } from '../src/designTools.js'
 import { lockOps } from '../src/mcp.js'
+import { hiddenOf, hiddenOp } from '../src/hidden.js'
 
 const frame = (extra: Partial<BoardItem> = {}): BoardItem => ({ id: 'diagram.k', type: 'frame', x: 0, y: 0, w: 600, h: 300, text: 'K', data: { diagram: { kind: 'event-storming', key: 'k' } }, ...extra })
 const sticky = (id: string, extra: Partial<BoardItem> = {}): BoardItem => ({ id, type: 'sticky', x: 20, y: 20, w: 120, h: 60, parent: 'diagram.k', text: id, createdBy: 'agent', ...extra })
@@ -56,11 +57,17 @@ test('the plan names every fate: added, updated, removed, kept where moved, kept
   // the ops agree with the plan
   const removed = ops.filter((o) => o.kind === 'remove').map((o) => o.id)
   assert.deepEqual(removed, ['k.gone'])
-  const patch = (id: string) => ops.find((o) => o.kind === 'update' && o.id === id)!.patch!
+  const update = (id: string) => ops.find((o) => o.kind === 'update' && o.id === id)
+  // moved, locked or the same: the geometry the file would change is kept, the rest is as the file says — no op at all
+  for (const id of ['k.moved', 'k.locked', 'k.same', 'diagram.k']) assert.equal(update(id), undefined, `${id}: nothing to write`)
+  assert.equal(update('k.renamed')!.patch!.text, 'new words')
+  assert.equal(update('k.renamed')!.patch!.x, 20, 'neither moved nor locked: the file decides')
+  // new words for the moved and the locked one: the content is updated, their place and the lock stay
+  const reworded = explainRedraw(board, [frame(), sticky('k.moved', { text: 'new' }), sticky('k.locked', { text: 'new' })], redrawInputs(changes), scope).ops
+  const patch = (id: string) => reworded.find((o) => o.kind === 'update' && o.id === id)!.patch!
   assert.equal('x' in patch('k.moved'), false, 'moved by the person: geometry kept')
   assert.equal('x' in patch('k.locked'), false, 'locked: geometry kept')
   assert.deepEqual(patch('k.locked').data, { lock: 'layout', lockedBy: 'person' }, 'the lock survives the redraw')
-  assert.equal(patch('k.same').x, 20, 'neither moved nor locked: the file decides')
   // the text
   const lines = planLines(plan, { limit: 1 })
   assert.match(lines[0], /dry run: nothing written/)
@@ -77,7 +84,17 @@ test('precedence: locked beats moved; a locked frame locks everything in it and 
   assert.deepEqual(plan.keptLocked.map((l) => [l.id, l.why]), [['diagram.k', 'locked: keeps w'], ['k.a', 'its frame is locked: keeps x']], 'locked wins over moved')
   assert.deepEqual(plan.keptMoved, [])
   assert.equal(ops.some((o) => o.id === 'diagram.k' && o.patch && ('w' in o.patch || 'h' in o.patch)), false, 'a locked frame keeps its size and does not grow')
-  assert.equal(ops.find((o) => o.id === 'k.a')!.patch!.x, undefined)
+  assert.equal(ops.find((o) => o.id === 'k.a'), undefined, 'locked by its frame, and only its place would change: no op')
+})
+
+test('a hidden frame stays hidden through a redraw (docs/canvas.md "Hiding a frame"): the file decides its size, not whether it is shown', () => {
+  const board: Record<string, BoardItem> = { 'diagram.k': frame({ data: { diagram: { kind: 'event-storming', key: 'k' }, hidden: true } }), 'k.a': sticky('k.a') }
+  const drawn = [frame({ h: 500 }), sticky('k.a', { text: 'new words' }), sticky('k.b')]
+  const { ops, plan } = explainRedraw(board, drawn, { placed: new Set() }, scope)
+  const f = ops.find((o) => o.kind === 'update' && o.id === 'diagram.k')!
+  assert.deepEqual(f.patch!.data, { diagram: { kind: 'event-storming', key: 'k' }, hidden: true }, 'still hidden')
+  assert.equal(f.patch!.h, 500, 'the file still sizes the frame (the page draws it collapsed)')
+  assert.deepEqual(plan.added.map((l) => l.id), ['k.b'])
 })
 
 test('items another agent added by hand with this file\'s prefix are kept; a first redraw still clears stale template items', () => {
@@ -151,6 +168,19 @@ test('design_draw dryRun: a readable plan, no board created, nothing written; th
   assert.deepEqual([beta.x, beta.y, beta.data?.lock], [card('Beta').x, card('Beta').y, 'layout'], 'the locked card kept its place and its lock')
   assert.ok(b1.items['codex-note'], "another agent's card in the frame survives the redraw")
   assert.equal(Object.values(b1.items).some((i) => i.text === 'Delta'), false)
+})
+
+test('design_draw: a frame the person hid is still hidden after a redraw, and what the redraw adds is hidden with it', async () => {
+  const claude = new CanvasClient(srv.url, { agentName: 'claude-a' })
+  const r = await drawDesignContent(claude, 'shelf.kanban.yaml', KANBAN(['Alpha']), 'title:Shelf')
+  const b0 = await claude.getBoard(r.boardId)
+  const f = Object.values(b0.items).find((i) => i.type === 'frame')!
+  await claude.apply(r.boardId, [hiddenOp(f, true)], 'user', 'hid the contents')
+  await drawDesignContent(claude, 'shelf.kanban.yaml', KANBAN(['Alpha', 'Beta']), 'title:Shelf')
+  const b1 = await claude.getBoard(r.boardId)
+  assert.equal(b1.items[f.id].data?.hidden, true, 'the redraw keeps it hidden')
+  const beta = Object.values(b1.items).find((i) => i.type === 'card' && i.text === 'Beta')!
+  assert.ok(hiddenOf(b1)!.ids.has(beta.id), 'the new card is inside the hidden frame: not drawn either')
 })
 
 test('a redraw of an unchanged kanban changes nothing — not on the first redraw, not with a moved or a locked column', async () => {
