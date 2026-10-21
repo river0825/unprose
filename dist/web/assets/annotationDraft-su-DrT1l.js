@@ -1,4 +1,4 @@
-import{p as k,i as m,a as f,b as y}from"./public-api-DL0se-Iz.js";import{a as v,u as b}from"./index-BLGKAQI_.js";function p(t){return/^[\p{L}\p{N}][\p{L}\p{N} _.,'()/&+-]*$/u.test(t)&&!/^(true|false|null|yes|no|on|off|~)$/i.test(t)&&!/^[-+]?(\d|\.\d)/.test(t)&&!/\s$/.test(t)&&!/: |\s#/.test(t)?t:JSON.stringify(t)}const x=(t,e,s,n)=>t.slice(0,e)+n+t.slice(s),S=(t,e)=>t.lastIndexOf(`
+import{p as k,i as m,a as f,b as y}from"./public-api-DL0se-Iz.js";import{a as v,u as b}from"./index-D-dU4-_U.js";function p(t){return/^[\p{L}\p{N}][\p{L}\p{N} _.,'()/&+-]*$/u.test(t)&&!/^(true|false|null|yes|no|on|off|~)$/i.test(t)&&!/^[-+]?(\d|\.\d)/.test(t)&&!/\s$/.test(t)&&!/: |\s#/.test(t)?t:JSON.stringify(t)}const x=(t,e,s,n)=>t.slice(0,e)+n+t.slice(s),S=(t,e)=>t.lastIndexOf(`
 `,e-1)+1;function $(t,e){if(e>0&&t[e-1]===`
 `)return e;const s=t.indexOf(`
 `,e);return s<0?t.length:s+1}function E(t,e){const s=k(t,{keepSourceTokens:!0});if(s.errors.length)throw new Error(`the file is not valid YAML: ${s.errors[0].message}`);const n=s.contents;if(n!==null&&!m(n))throw new Error("the file is not a YAML map");const i=r=>`${r}- on: ${p(e.on)}

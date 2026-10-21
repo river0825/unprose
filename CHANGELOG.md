@@ -6,6 +6,14 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.27.1] — 2026-10-21
+
+### Fixed
+- **Replaying a big domain story stays readable** (docs/diagrams.md §6b "Replay"). The replay used to fit the whole
+  story, so on a big frame the names came out at ~5 px. A story that can be read whole still starts whole; a bigger
+  one is told sentence by sentence at 100 %, zoomed out only as far as a long sentence needs to be seen whole, and a
+  zoom you make while it plays is kept.
+
 ## [0.27.0] — 2026-10-15
 
 ### Added
@@ -988,7 +996,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.27.1...HEAD
+[0.27.1]: https://github.com/river0825/unprose/compare/v0.27.0...v0.27.1
 [0.27.0]: https://github.com/river0825/unprose/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/river0825/unprose/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/river0825/unprose/compare/v0.24.0...v0.25.0

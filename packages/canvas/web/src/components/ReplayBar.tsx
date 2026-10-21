@@ -2,11 +2,12 @@
 // "3 / 12", the current sentence read out, auto-play with a speed, ghosting what is not told yet, stop.
 // Keys: ← / → (and ↑ / ↓, PageUp / PageDown, Space — as Egon.io and presentation clickers do), Home / End,
 // P plays / pauses, Esc stops. The view follows the current sentence, gently: it only moves when the
-// sentence is not already in view, and it never zooms in further than the person has.
+// sentence is out of view or too small to read, and a zoom the person makes is kept (flow/replayCamera.ts).
 import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import type { ReplayModel } from '../diagrams/replay'
 import { SPEEDS, replay, type ReplayView } from '../flow/replay'
+import { centred, keptZoom, stepView, tellingZoom, type Viewport } from '../flow/replayCamera'
 import './replay.css'
 
 const Icon = ({ d, fill }: { d: string; fill?: boolean }) => (
@@ -86,31 +87,43 @@ export function ReplayBar({ model, view, title }: { model: ReplayModel; view: Re
     return () => clearTimeout(t)
   }, [view.playing, view.speed, k, n])
 
-  // the view: the whole frame when the replay starts, then the current sentence when it is out of view
-  const started = useRef(false)
+  // the view (flow/replayCamera.ts): the whole story when it can be read whole, else the sentences at a zoom where
+  // their text can be read; then the current sentence when it is out of view or too small
+  const cam = useRef<{ frame?: string; tell: number; to?: Viewport; until: number }>({ tell: 1, until: 0 })
   useEffect(() => {
-    const ids = step?.focus ?? []
     const timer = setTimeout(() => {
-      if (!started.current) {
-        // the stage: every pictogram of the story, at the zoom that fits them all
-        started.current = true
-        const story = [...model.appear].filter(([id, at]) => Number.isFinite(at) && flow.getNode(id) && flow.getNode(id)?.type !== 'frame').map(([id]) => id)
-        if (story.length) flow.fitBounds(flow.getNodesBounds(story), { padding: 0.12, duration: 400 })
+      const root = document.querySelector<HTMLElement>('.canvas-wrap .react-flow')
+      const r = root?.getBoundingClientRect()
+      if (!r) return
+      const bar = barRef.current?.getBoundingClientRect()
+      const m = 24
+      const top = Math.max(0, bar ? bar.bottom - r.top : 0) + m
+      const area = { left: m, top, width: Math.max(1, r.width - 2 * m), height: Math.max(1, r.height - top - m) }
+      const known = (ids: string[]) => ids.filter((id) => flow.getNode(id))
+      const c = cam.current
+      const move = (to: Viewport | null, duration: number) => {
+        if (!to) return
+        c.to = to
+        c.until = Date.now() + duration + 80
+        void flow.setViewport(to, { duration })
+      }
+      const ids = known(step?.focus ?? [])
+      if (c.frame !== model.frameId) {
+        c.frame = model.frameId
+        c.to = flow.getViewport()
+        c.until = 0
+        const story = known([...model.appear].filter(([, at]) => Number.isFinite(at)).map(([id]) => id)).filter((id) => flow.getNode(id)?.type !== 'frame')
+        const t = tellingZoom(story.length ? flow.getNodesBounds(story) : undefined, area)
+        c.tell = t.zoom
+        if (t.whole) move(centred(flow.getNodesBounds(story), area, t.zoom), 400)
+        else if (ids.length) move(stepView(flow.getNodesBounds(ids), c.to, area, c.tell), 400)
         return
       }
       if (!ids.length) return
-      const root = document.querySelector<HTMLElement>('.canvas-wrap .react-flow')
-      const r = root?.getBoundingClientRect()
-      const b = flow.getNodesBounds(ids)
-      const bar = barRef.current?.getBoundingClientRect()
-      if (r) {
-        const a = flow.flowToScreenPosition({ x: b.x, y: b.y })
-        const z = flow.flowToScreenPosition({ x: b.x + b.width, y: b.y + b.height })
-        const top = bar ? Math.max(r.top, bar.bottom) : r.top
-        const m = 24
-        if (a.x >= r.left + m && a.y >= top + m && z.x <= r.right - m && z.y <= r.bottom - m) return
-      }
-      flow.fitView({ nodes: ids.map((id) => ({ id })), padding: 0.45, duration: 500, maxZoom: Math.max(flow.getZoom(), 0.35) })
+      // still on its way from the last step: judge from where it is going; else a zoom the person made is kept
+      const busy = Date.now() < c.until
+      if (!busy) c.tell = keptZoom(c.tell, c.to?.zoom, flow.getZoom())
+      move(stepView(flow.getNodesBounds(ids), busy && c.to ? c.to : flow.getViewport(), area, c.tell), 500)
     }, 30)
     return () => clearTimeout(timer)
   }, [k, model.frameId])

@@ -465,8 +465,11 @@ in the frame's side panel, or from the right-click menu of the frame or anything
   1.5 / 2.5 / 4 s per sentence, **Ghost** (show what is still to come faintly instead of hiding it), ✕ stop.
   Keys: → ↓ Space PageDown next, ← ↑ PageUp previous (Egon uses the arrow keys; Space and PageUp / PageDown are what
   presentation clickers send), Home / End first / last, P play / pause, Esc stop.
-- **The view follows** gently: at the start it fits the whole story; on each step it moves only when the current
-  sentence is out of view, and never zooms in further than you had.
+- **The view follows** gently, at a size you can read. A story that can be read whole (fitted at 80 % or more, so the
+  13 px names come out at 10 px or more) starts whole; a bigger one starts on sentence 1 at 100 %. On each step the
+  view moves only when the current sentence is out of view or too small to read, and then centres it at 100 % —
+  zoomed out only as far as a long sentence needs to be seen whole (the bar still reads it out). A zoom you make
+  while it plays is kept.
 - **Purely a way of looking**: nothing is stored on the board and other viewers are not affected; while it plays
   the story's items cannot be dragged and the board's edit keys wait. **Copy as image** during a replay copies
   what is visible (hidden sentences are not drawn; ghosted ones come out faint).
