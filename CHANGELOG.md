@@ -6,6 +6,58 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-10-22
+
+### Added
+- **A domain-story group can have a colour** (docs/diagrams.md §6b), to tell groups apart: `color:` on a group in the
+  file (orange, blue, yellow, pale-yellow, lilac, green, pink, red, purple), or right-click the group on the board →
+  *Change colour*. It draws a pale wash behind the members — light enough for the arrows and names on it — and the
+  dashed outline in its shade, on the page and in the snapshot; Egon.io export colours the group's outline. Grey (the
+  default) and white draw no wash, so boards drawn before look the same. A colour chosen on the board survives a redraw
+  unless the file gives one.
+- **Report a problem · Suggest a feature** (docs/canvas.md "Feedback about Unprose"). Problems and ideas are tracked
+  as GitHub issues, and the person files them: Unprose never posts to GitHub. On the canvas page the entry sits at the
+  bottom of the keyboard shortcuts (`?`) and the release notes, and under the board list; a small dialog asks for the
+  kind, a title and what happened or what would help, says the issue will be public, and *Continue on GitHub* opens
+  the new issue in a tab with the form picked and filled in, the running version included — the person checks it and
+  submits it under their own account.
+- **Issue forms** in `.github/ISSUE_TEMPLATE`: *Report a problem* (what happened, what you expected, how to get there,
+  where, the version; label `bug`) and *Suggest a feature* (the problem, the idea, the version; label `enhancement`).
+  Blank issues stay allowed. The link fills the fields by their ids; a test checks every id against the forms.
+- **File on GitHub** on Connected agents → Feedback from agents: the same dialog, filled with what the agent wrote and
+  the tools it named (never the board id or item ids), to edit before going to GitHub.
+- **`unprose_feedback` takes `kind: 'bug' | 'idea'` and a `title`**, kept on the record, and its answer has the
+  record as a prefilled issue link with one line for the agent: the person files it if they want it tracked; an agent
+  files one itself only when asked and with its own GitHub access. `UNPROSE_ISSUES_REPO` sends issues elsewhere
+  (default: the repository updates come from, `river0825/unprose`); `GET /api/version` names it as `issuesRepo`.
+
+### Changed
+- **Agents are asked to draw icons for a domain story's things**, not to leave every work object a document. The
+  built-in work-object icons are generic and a work object without a `kind` is a document, so stories came out as a
+  row of identical pages. The `domain-story` prompt, the `domain-storytelling` skill, the tool description and
+  AGENTS.md now say: declare the work objects, draw an icon per kind of thing under `icons:` (the main work object
+  first, three to seven in a story) and use its name as the kind. The skill has a new `references/icons.md` — when to
+  draw one, how (an outline on 24 × 24, stroked in ink, never filled), and a gallery of 22 to copy from (invoice,
+  payment, card, order, appointment, reminder, contract, form, contact, shipment, place …).
+- **Lint asks when most work objects look alike**, not only when all do: `work-objects-one-icon` now fires when half
+  or more of them share one icon, names them, shows an example icon to draw, and points out the ones only named in
+  a sentence (they can only get a kind once declared under `workObjects`).
+
+### Fixed
+- **One malformed change in a board's log no longer blanks the board** (river0825/unprose#10). A line written by hand
+  (a board rebuilt after a loss) without `before` made the history panel throw, and the whole page went blank. Each
+  change is now read repaired: `before` missing reads as `{}`, `ops` not a list as none, an op of no known shape is
+  left out, an unknown author reads as the agent — and the canvas log says what it repaired, once per change, with its
+  seq. The side panel also draws behind an error boundary: if a part of it still fails, it says so in one line and
+  the board keeps working.
+- **An item can be dragged out of its frame or lane.** It used to stop at the frame's edge. Dropped with its centre
+  outside, it no longer belongs to the frame (it stays put when the frame moves or hides); dropped inside another frame,
+  lane or column, it joins that one. A frame or lane inside another stays in it. An item drawn from a file and moved out
+  keeps its place on a redraw, like any item the person moved.
+- **Taking an item out of its frame, lane or column was lost on the way** (a kanban card dropped outside every column,
+  the Inspector's *Move to lane or frame → None*): the change was sent as `parent: undefined`, which JSON drops, so the
+  item stayed in. An update now takes a key away with `null` (`parent: null`).
+
 ## [0.28.0] — 2026-10-22
 
 ### Added
@@ -1022,7 +1074,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/river0825/unprose/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/river0825/unprose/compare/v0.27.1...v0.28.0
 [0.27.1]: https://github.com/river0825/unprose/compare/v0.27.0...v0.27.1
 [0.27.0]: https://github.com/river0825/unprose/compare/v0.26.0...v0.27.0

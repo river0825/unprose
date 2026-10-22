@@ -593,6 +593,22 @@ a {
   overflow: hidden;
   min-height: 0;
 }
+/* a part of the page that could not be drawn (components/ErrorBoundary.tsx): one quiet line, the board goes on */
+.part-failed {
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.part-failed .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--marker);
+  text-decoration: underline;
+  cursor: pointer;
+}
 .panel {
   position: absolute;
   inset: 0;

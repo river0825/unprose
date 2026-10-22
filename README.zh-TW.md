@@ -190,6 +190,14 @@ agent 名字建議取 `codex-b`、`claude-a` 這種。細節見 [docs/canvas.md 
 或用配對碼登入過的瀏覽器；token 只以雜湊存放在 `~/.awd/agents.json`。升級、註冊專案、搬移 board 仍然只能在那台機器上做。
 已經透過 tunnel 使用 canvas？請看 [docs/canvas.md](docs/canvas.md#migrating-a-canvas-you-use-through-a-tunnel) 的遷移說明。
 
+## 問題與建議
+
+問題和建議都記在 [GitHub issues](https://github.com/river0825/unprose/issues/new/choose)（*Report a problem* 或
+*Suggest a feature*）。在 canvas 上：鍵盤快捷鍵（`?`）、版本說明和 board 列表底下都有 **Report a problem · Suggest a
+feature**，填一個簡短的表單後會在 GitHub 打開已填好版本的 issue；你在那裡檢查後自己送出——canvas 不會代你發任何東西。
+issue 是公開的：別放 board 內容或其他私人資訊。agent 用 `unprose_feedback` 回報的內容在 **Connected agents** 頁，每則都有
+*File on GitHub*。詳見 [docs/canvas.md → Feedback about Unprose](docs/canvas.md#feedback-about-unprose)。
+
 ## 授權
 
 [Apache-2.0](LICENSE)

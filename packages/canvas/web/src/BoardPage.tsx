@@ -21,9 +21,10 @@ import {
 import '@xyflow/react/dist/style.css'
 import './select.css'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Board, ColorToken, Item, Op } from '../../src/model'
+import type { Board, ColorToken, Item, ItemPatch, Op } from '../../src/model'
 import { isUnread, markSeen, newId, ownLock, layoutLock, LAYOUT_LOCK } from '../../src/model'
 import { ContextMenu, type MenuState } from './components/ContextMenu'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Rail, type Tool } from './components/Rail'
 import { ShortcutsSheet } from './components/ShortcutsSheet'
 import { SidePanel } from './components/SidePanel'
@@ -544,14 +545,14 @@ function BoardInner({ id }: { id: string }) {
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node, dragged: Node[]) => {
       if (!board) return
-      const patches = new Map<string, Partial<Item>>()
+      const patches = new Map<string, ItemPatch>()
       const moved = dragged.length ? dragged : [node]
       for (const n of moved) {
         const it = board.items[n.id]
         if (!it) continue
         // n.position is relative to its React Flow parent (which mirrors it.parent)
         const abs = absolutePosition(laid ?? board, n.id, n.position)
-        const patch: Partial<Item> = {}
+        const patch: ItemPatch = {}
         if (Math.round(abs.x) !== Math.round(it.x) || Math.round(abs.y) !== Math.round(it.y)) {
           patch.x = Math.round(abs.x)
           patch.y = Math.round(abs.y)
@@ -563,7 +564,7 @@ function BoardInner({ id }: { id: string }) {
           const cy = abs.y + it.h / 2
           const container = containerAt(laid ?? board, cx, cy, n.id)
           const nextParent = container?.id
-          if ((it.parent ?? undefined) !== nextParent) patch.parent = nextParent
+          if ((it.parent ?? undefined) !== nextParent) patch.parent = nextParent ?? null
         }
         if (Object.keys(patch).length) patches.set(n.id, patch)
       }
@@ -581,7 +582,7 @@ function BoardInner({ id }: { id: string }) {
       // a dropped kanban column snaps into its place in the row (and the others make room)
       if (moved.some((m) => board.items[m.id]?.type === 'lane' && board.items[m.id]?.role === 'column')) {
         const after: Board = { ...board, items: { ...board.items } }
-        for (const [id, p] of patches) after.items[id] = { ...after.items[id], ...p }
+        for (const [id, { parent, ...p }] of patches) after.items[id] = { ...after.items[id], ...p, ...(parent !== undefined ? { parent: parent ?? undefined } : {}) }
         for (const { id, patch } of snapColumns(board, after, moved.map((m) => m.id))) patches.set(id, { ...patches.get(id), ...patch })
       }
       const ops: Op[] = [...patches].map(([id, patch]) => ({ kind: 'update', id, patch }))
@@ -995,7 +996,7 @@ function BoardInner({ id }: { id: string }) {
       if (!board) return
       const it = board.items[iid]
       if (!it) return
-      const patch: Partial<Item> = { parent: containerId ?? undefined }
+      const patch: ItemPatch = { parent: containerId ?? null }
       const c = containerId ? board.items[containerId] : undefined
       if (c && isContainer(c)) {
         const inside = it.x >= c.x && it.y >= c.y && it.x + it.w <= c.x + c.w && it.y + it.h <= c.y + c.h
@@ -1532,62 +1533,65 @@ function BoardInner({ id }: { id: string }) {
       </div>
       <div className="panel-slot">
         <PanelResizer width={panelWidth} onWidth={setPanelWidth} />
-        <SidePanel
-          board={board}
-          changes={store.changes}
-          selectedId={selectedId}
-          selectedIds={selectedIds}
-          sourceRequest={sourceRequest}
-          onHoverItems={onHoverItems}
-          onReveal={reveal}
-          onComment={(tid, text) => void addComment(tid, text)}
-          onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
-          onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}
-          onUndoWire={undoWire}
-          onEditChat={(ids, text, model, edit) => void addComment(ids[0], text, { discuss: { model, about: ids, edit } })}
-          onUndoUiText={(iid) => {
-            const it = board.items[iid]
-            if (it) void commit(uiUndoOps(it), 'undid a proposal')
-          }}
-          onUiOps={(ops, label, sel) => {
-            // select what was just added once it is on the board
-            void commit(ops, label).then(() => {
-              if (sel) select([sel])
-            })
-          }}
-          onDismiss={(id) => void commit([{ kind: 'remove', id }], 'dismissed a proposed story')}
-          onPickWireEvent={pickWireEvent}
-          onReply={(rootId, text) => void addComment(rootId, text)}
-          onAnchoredComment={(target, text, anchor, discuss) => void addComment(target, text, { anchor, ...(discuss ? { discuss: { model: discuss.model, about: [target], ...(discuss.edit ? { edit: discuss.edit } : {}) } } : {}) })}
-          onEditText={(iid, text) => (board.items[iid]?.type === 'arrow' ? commitLabel(iid, text) : editApi.commitText(iid, text))}
-          onMoveToContainer={moveToContainer}
-          onLocate={(asked) => {
-            const ids = throughHidden(asked)
-            locate(ids)
-            select(ids)
-          }}
-          onToast={(t) => store.toast(t)}
-          onAnnotate={(iid, text) => void addAnnotation(iid, text)}
-          onAddTodo={(iid, text, ask) => addTodo(iid ?? undefined, text, ask)}
-          onCheckTodo={checkTodo}
-          onReopenTodo={reopenTodo}
-          onShowMark={(cid) => revealCard(cid, { center: true })}
-          onSelect={(sid) => {
-            // something a hidden frame holds is not drawn: go to the frame instead
-            if (sid && drawnTargets(board, [sid]).hiddenIn.length) return goTo([sid])
-            select(sid ? [sid] : [])
-            if (sid) {
-              // where it is drawn (a hidden frame: its strip)
-              const it = laid?.items[sid] ?? board.items[sid]
-              // a wire has no place of its own on the board: show its two ends
-              if (it?.type === 'arrow') locate([it.from, it.to].filter((x): x is string => !!x))
-              else if (it) {
-                views.mark()
-                flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
+        {/* a panel that fails to draw (a malformed change in the history, river0825/unprose#10) never blanks the board */}
+        <ErrorBoundary what="The side panel" resetKey={board.id}>
+          <SidePanel
+            board={board}
+            changes={store.changes}
+            selectedId={selectedId}
+            selectedIds={selectedIds}
+            sourceRequest={sourceRequest}
+            onHoverItems={onHoverItems}
+            onReveal={reveal}
+            onComment={(tid, text) => void addComment(tid, text)}
+            onChat={(ids, text, model) => void (ids.length ? addComment(ids[0], text, { discuss: { model, about: ids } }) : addBoardComment(text, { discuss: { model, about: [] } }))}
+            onWireChat={(ids, text, model, proposal) => void addComment(ids[0], text, { discuss: { model, about: ids, proposal } })}
+            onUndoWire={undoWire}
+            onEditChat={(ids, text, model, edit) => void addComment(ids[0], text, { discuss: { model, about: ids, edit } })}
+            onUndoUiText={(iid) => {
+              const it = board.items[iid]
+              if (it) void commit(uiUndoOps(it), 'undid a proposal')
+            }}
+            onUiOps={(ops, label, sel) => {
+              // select what was just added once it is on the board
+              void commit(ops, label).then(() => {
+                if (sel) select([sel])
+              })
+            }}
+            onDismiss={(id) => void commit([{ kind: 'remove', id }], 'dismissed a proposed story')}
+            onPickWireEvent={pickWireEvent}
+            onReply={(rootId, text) => void addComment(rootId, text)}
+            onAnchoredComment={(target, text, anchor, discuss) => void addComment(target, text, { anchor, ...(discuss ? { discuss: { model: discuss.model, about: [target], ...(discuss.edit ? { edit: discuss.edit } : {}) } } : {}) })}
+            onEditText={(iid, text) => (board.items[iid]?.type === 'arrow' ? commitLabel(iid, text) : editApi.commitText(iid, text))}
+            onMoveToContainer={moveToContainer}
+            onLocate={(asked) => {
+              const ids = throughHidden(asked)
+              locate(ids)
+              select(ids)
+            }}
+            onToast={(t) => store.toast(t)}
+            onAnnotate={(iid, text) => void addAnnotation(iid, text)}
+            onAddTodo={(iid, text, ask) => addTodo(iid ?? undefined, text, ask)}
+            onCheckTodo={checkTodo}
+            onReopenTodo={reopenTodo}
+            onShowMark={(cid) => revealCard(cid, { center: true })}
+            onSelect={(sid) => {
+              // something a hidden frame holds is not drawn: go to the frame instead
+              if (sid && drawnTargets(board, [sid]).hiddenIn.length) return goTo([sid])
+              select(sid ? [sid] : [])
+              if (sid) {
+                // where it is drawn (a hidden frame: its strip)
+                const it = laid?.items[sid] ?? board.items[sid]
+                // a wire has no place of its own on the board: show its two ends
+                if (it?.type === 'arrow') locate([it.from, it.to].filter((x): x is string => !!x))
+                else if (it) {
+                  views.mark()
+                  flow.setCenter(it.x + it.w / 2, it.y + it.h / 2, { zoom: Math.max(flow.getZoom(), 0.8), duration: 300 })
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+        </ErrorBoundary>
       </div>
       {menu && menuItem && (
         <ContextMenu
@@ -1610,7 +1614,7 @@ function BoardInner({ id }: { id: string }) {
             const url = itemLink(board, board.items[iid], location.origin)
             void copyText(url).then((ok) => store.toast(ok ? 'Link copied' : `Copy this link: ${url}`))
           }}
-          canColor={COLOURABLE.has(menuItem.type)}
+          canColor={COLOURABLE.has(menuItem.type) || menuItem.data?.ds === 'group'}
           askEnabled={store.agentWatching}
           // a hidden frame's story or screens are not drawn: nothing to play
           onPlayStory={!isHiddenFrame(menuItem) && replayFrameOf(board, menuItem) ? () => replay.start(replayFrameOf(board, menuItem)!) : undefined}

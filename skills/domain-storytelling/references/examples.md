@@ -52,3 +52,7 @@ movie-goer the show is sold out; ④ cashier suggests another show time … — 
 A small set that fits the domain: in the cinema — movie-goer, cashier, usher; ticket, seating plan, seat, show. In
 logistics — a container. Too many icons water the language down (p. 21); one generic icon for everything says nothing.
 Never the same icon for an actor and a work object (p. 35).
+
+| Don't | Do | Why |
+|---|---|---|
+| reminder, invoice, contract, payment record — all the document icon (no `kind`, or `kind: document` everywhere) | `icons:` with `reminder` (a bell), `invoice` (a receipt), `contract` (a signed page), `payment` (a banknote); the work objects declared with those kinds ([icons.md](icons.md)) | icons "convey meaning and make the Domain Story more tangible" (p. 21); four alike tell nothing apart |

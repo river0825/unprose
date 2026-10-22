@@ -551,7 +551,8 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     const o = shaped.get(g.id)
     if (!o) continue
     const extra = { ...(o.nestedIn ? { nestedIn: o.nestedIn } : {}), ...(o.overlaps.length ? { overlaps: o.overlaps } : {}) }
-    outlines.push(make({ id: itemId('group', g.id), type: 'frame', ...o.box, text: g.text, color: 'grey', role: 'group', data: { element: g.id, members: g.members, ds: 'group', ...extra } }, now))
+    // a colour only when the file gives one: else the board keeps what the person chose (Change colour)
+    outlines.push(make({ id: itemId('group', g.id), type: 'frame', ...o.box, text: g.text, ...(g.color ? { color: g.color } : {}), role: 'group', data: { element: g.id, members: g.members, ds: 'group', ...extra } }, now))
   }
 
   // Move everything so the story starts at PAD, then the legend under it.

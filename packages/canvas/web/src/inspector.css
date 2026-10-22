@@ -897,6 +897,8 @@ button.wire-pick { cursor: pointer; font: inherit; }
 .edge-label.ds-verb { font-family: var(--font-ui); font-size: 12px; line-height: 15px; color: var(--ink); background: color-mix(in srgb, var(--paper) 80%, transparent); padding: 1px 4px; border-radius: 3px; }
 .react-flow__node.ds-annotation .item { border-left: 2px solid var(--ink-2); border-top: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); border-radius: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
 .react-flow__node.ds-group .item { border: 1.6px dashed var(--ink-3) !important; border-radius: 18px !important; background: transparent !important; }
+/* a group with a colour: a pale wash of it, light enough for the arrows and names on it; the dashed outline in its shade */
+.react-flow__node.ds-group .item.tinted { background: color-mix(in srgb, var(--group-tint) 16%, transparent) !important; border-color: color-mix(in srgb, var(--group-tint) 70%, var(--ink-3)) !important; }
 .react-flow__edge.ds-note-link .react-flow__edge-path { stroke-dasharray: 6 4; }
 
 /* ── An edit proposal at the top of its chat (docs/canvas.md "Proposals and saving") ── */

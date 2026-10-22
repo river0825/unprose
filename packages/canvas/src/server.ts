@@ -27,6 +27,8 @@ import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_
 import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, stampTodos, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
 import type { FeedbackRecord, FeedbackStore } from './ports/feedbackStore.js'
 import { MemoryFeedbackStore } from './adapters/feedback/index.js'
+import { feedbackDraft, issuesRepo, issueUrl, repoName, type IssueKind } from './issueLink.js'
+import { VERSION } from './version.js'
 import { AccessService } from './access.js'
 import { MemoryAccessStore } from './adapters/access/index.js'
 import { canSeeBoard, canSeeProject, canWrite, cleanName, projectForNewBoard, type Grant } from './accessPolicy.js'
@@ -83,6 +85,8 @@ export interface ServerOptions {
   publicUrl?: string
   /** What agents tell the owner about Unprose (`unprose_feedback`); default memory (`awd-canvas serve`: ~/.awd/feedback.ndjson). */
   feedback?: FeedbackStore
+  /** Where problems and ideas are filed as GitHub issues, `owner/name` (default UNPROSE_ISSUES_REPO, else UNPROSE_UPDATE_REPO, else river0825/unprose). */
+  issuesRepo?: string
   /** The loop guard: agent messages in a row in one thread before agents pause there (default UNPROSE_AGENT_TURNS, else 6; a board's `agentTurns` wins). */
   agentTurns?: number
   /** Agent-to-agent @mentions one agent may post per window (default UNPROSE_AGENT_MENTIONS, else 20 per 10 minutes). */
@@ -384,6 +388,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
   // read once per server; the notes do not change while it runs
   let cachedRelease: Release | undefined
   const release = () => (cachedRelease ??= findRelease(opts.releaseDir))
+  const repoForIssues = repoName(opts.issuesRepo) ?? issuesRepo(process.env)
 
   // "Look here" messages go straight to the board's open pages; they are not board changes (docs/canvas.md).
   type FocusMessage = Extract<WsMessage, { type: 'focus' }>
@@ -771,7 +776,7 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
     if (parts[0] === 'api') {
       if (parts[1] === 'kinds' && method === 'GET') return json(res, 200, { kinds: diagramKinds })
       // pid: lets the plugin tell a canvas it started (and may restart after an update) from one the person runs
-      if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid })
+      if (parts[1] === 'version' && method === 'GET') return json(res, 200, { ...release(), pid: process.pid, issuesRepo: repoForIssues })
       const { grant, error } = await auth()
       if (error || !grant) return unauthorized(req, res, false, error)
       if (parts[1] === 'projects' && !parts[2]) {
@@ -791,10 +796,14 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
       // ---- Feedback about Unprose itself (docs/canvas.md "Feedback") ----
       if (parts[1] === 'feedback' && !parts[2]) {
         if (method === 'POST') {
-          const body = (await readBody(req)) as { text?: unknown; board?: unknown; about?: unknown }
+          const body = (await readBody(req)) as { text?: unknown; board?: unknown; about?: unknown; kind?: unknown; title?: unknown }
           const text = typeof body.text === 'string' ? body.text.trim() : ''
           if (!text) throw new HttpError(400, 'text is required: what was hard, what should change, what you missed')
           if (text.length > 4000) throw new HttpError(400, 'text is longer than 4000 characters')
+          if (body.kind !== undefined && body.kind !== 'bug' && body.kind !== 'idea') throw new HttpError(400, "kind is 'bug' (something did not work) or 'idea' (something is hard or missing)")
+          const kind = body.kind as IssueKind | undefined
+          const title = typeof body.title === 'string' ? body.title.replace(/\s+/g, ' ').trim() : ''
+          if (title.length > 200) throw new HttpError(400, 'title is longer than 200 characters')
           const board = typeof body.board === 'string' && body.board ? body.board : undefined
           if (board && (!store.get(board) || !visible(grant, board))) throw new HttpError(404, `board ${board} not found`)
           const about = Array.isArray(body.about) ? body.about.filter((a): a is string => typeof a === 'string').slice(0, 20) : undefined
@@ -803,9 +812,11 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           const recent = (feedbackLog.get(by) ?? []).filter((t) => now - t < 10 * 60_000)
           if (recent.length >= 30) throw new HttpError(429, 'thanks — that is a lot of feedback for ten minutes; send the rest later')
           feedbackLog.set(by, [...recent, now])
-          const rec: FeedbackRecord = { id: newId('fb'), at: new Date(now).toISOString(), by, via: grant.kind, text, ...(board ? { board } : {}), ...(about?.length ? { about } : {}) }
+          const rec: FeedbackRecord = { id: newId('fb'), at: new Date(now).toISOString(), by, via: grant.kind, text, ...(kind ? { kind } : {}), ...(title ? { title } : {}), ...(board ? { board } : {}), ...(about?.length ? { about } : {}) }
           feedback.append(rec)
-          return json(res, 201, { ok: true, id: rec.id })
+          // the same record as a prefilled GitHub issue, for the person to file if they want it tracked — never posted from here
+          const issue = issueUrl({ ...feedbackDraft(rec), version: release().version ?? VERSION, repo: repoForIssues })
+          return json(res, 201, { ok: true, id: rec.id, issue })
         }
         if (method === 'GET') {
           if (grant.kind !== 'local' && !grant.manage) throw new HttpError(403, 'feedback is read on the canvas machine (a local agent or page) or by a page allowed to manage agents')

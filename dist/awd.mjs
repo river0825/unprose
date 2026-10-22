@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.28.0";
+    VERSION2 = "0.29.0";
   }
 });
 
@@ -60085,13 +60085,26 @@ function reviewDomainStory(m2) {
   const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
   if (told.length >= 4 && names.size === told.length)
     out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
-  const kinds = new Set(told.map((s) => s.objectKind));
-  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
-    out.push({ rule: "work-objects-one-icon", severity: "info", message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon \u2014 a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO });
   const icons = m2.icons ?? {};
-  for (const [icon, svg2] of Object.entries(icons)) {
+  const drawnAs = (kind) => BUILT_IN_OBJECT_ICONS.has(kind) || parseDsIcon(icons[kind]) ? kind : "document";
+  const byIcon = /* @__PURE__ */ new Map();
+  for (const s of told) {
+    const icon2 = drawnAs(s.objectKind);
+    const things = byIcon.get(icon2) ?? /* @__PURE__ */ new Map();
+    things.set(s.object ?? s.objectText.trim().toLowerCase(), { text: s.objectText.trim(), declared: !!s.object });
+    byIcon.set(icon2, things);
+  }
+  const [icon, alike] = [...byIcon].sort((a, b2) => b2[1].size - a[1].size)[0] ?? [];
+  if (icon && alike && told.length >= 3 && alike.size >= 3 && alike.size * 2 >= names.size) {
+    const shown = [...alike.values()];
+    const list3 = shown.slice(0, 5).map((t) => `"${t.text}"`).join(", ") + (shown.length > 5 ? ", \u2026" : "");
+    const loose2 = shown.filter((t) => !t.declared).map((t) => `"${t.text}"`);
+    const declare = loose2.length ? `; ${loose2.slice(0, 3).join(", ")}${loose2.length > 3 ? " \u2026" : ""} ${loose2.length > 1 ? "are" : "is"} only named in a sentence (drawn as a document) \u2014 declare ${loose2.length > 1 ? "them" : "it"} under \`workObjects\` to give ${loose2.length > 1 ? "them" : "it"} a kind` : "";
+    out.push({ rule: "work-objects-one-icon", severity: "info", message: `${alike.size === names.size ? `all ${alike.size}` : `${alike.size} of ${names.size}`} work objects are drawn with the "${icon}" icon (${list3}) \u2014 a pictogram should say what the thing is, and the built-in icons are generic: draw a few of your own for this domain's things under \`icons:\` and use the name as the kind (a 24 \xD7 24 line drawing of plain shapes, e.g. \`invoice: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 7.5h6M9 11h6"/></svg>'\`), or give each a fitting built-in kind (document, thing, digital, folder, call, email, conversation, info)${declare}`, page: EGON_HOWTO });
+  }
+  for (const [icon2, svg2] of Object.entries(icons)) {
     if (!parseDsIcon(svg2))
-      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
+      out.push({ rule: "icon-invalid", severity: "warning", message: `icon "${icon2}" has nothing the board can draw \u2014 write a 24 \xD7 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO });
   }
   for (const o of m2.workObjects) {
     if (!BUILT_IN_OBJECT_ICONS.has(o.kind) && !(o.kind in icons))
@@ -60166,7 +60179,7 @@ function normalizeDomainStory(raw) {
   };
   const groups = c2.groups.map((g2) => {
     const id = alloc(g2.id, g2.text, "group");
-    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2) };
+    return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2), ...g2.color ? { color: g2.color } : {} };
   });
   const annotations = c2.annotations.flatMap((a, i) => {
     const id = alloc(a.id, `note-${i + 1}`, "note");
@@ -60255,7 +60268,7 @@ function checkDomainStory(content) {
   out.push(...reviewDomainStory(m2));
   return out;
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named2, actorSchema, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
+var DS_ACTOR_KINDS, DS_GROUP_COLORS, DS_GRANULARITY, named2, actorSchema, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
@@ -60263,6 +60276,7 @@ var init_domainStory = __esm({
     init_dsIcons();
     init_domainStoryReview();
     DS_ACTOR_KINDS = ["person", "group", "system"];
+    DS_GROUP_COLORS = ["orange", "blue", "yellow", "pale-yellow", "lilac", "green", "pink", "red", "purple", "grey", "white"];
     DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
     named2 = () => external_exports.union([
       external_exports.string(),
@@ -60309,7 +60323,8 @@ var init_domainStory = __esm({
         note: external_exports.string().optional(),
         traces: external_exports.array(traceSchema).optional()
       })).min(1),
-      groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]) })).default([]),
+      /** `color`: a pale wash behind the group, to tell groups apart (DS_GROUP_COLORS) */
+      groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]), color: external_exports.enum(DS_GROUP_COLORS).optional() })).default([]),
       annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
       /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
       icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
@@ -60743,7 +60758,7 @@ function renderDomainStory(raw, opts = {}) {
     if (!o)
       continue;
     const extra = { ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, ...o.overlaps.length ? { overlaps: o.overlaps } : {} };
-    outlines.push(make({ id: itemId("group", g2.id), type: "frame", ...o.box, text: g2.text, color: "grey", role: "group", data: { element: g2.id, members: g2.members, ds: "group", ...extra } }, now));
+    outlines.push(make({ id: itemId("group", g2.id), type: "frame", ...o.box, text: g2.text, ...g2.color ? { color: g2.color } : {}, role: "group", data: { element: g2.id, members: g2.members, ds: "group", ...extra } }, now));
   }
   const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
   const minX = Math.min(...all.map((i) => i.x));
@@ -62015,6 +62030,7 @@ var init_client2 = __esm({
         return this.req("POST", `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: "agent" });
       }
       /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
+      /** `issue`: the record as a prefilled GitHub "new issue" link for the person (an older canvas leaves it out). */
       sendFeedback(input2) {
         return this.req("POST", "/api/feedback", input2);
       }
@@ -62585,7 +62601,7 @@ function toEgon(content, opts = {}) {
       continue;
     const xs = members2.map((o) => o.x ?? 0);
     const ys = members2.map((o) => o.y ?? 0);
-    objs.push({ id: id("shape"), type: "domainStory:group", name: g2.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members2.map((o) => o.id), pickedColor: "black" });
+    objs.push({ id: id("shape"), type: "domainStory:group", name: g2.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members2.map((o) => o.id), pickedColor: g2.color && GROUP_INK[g2.color] || "black" });
   }
   m2.annotations.forEach((a, i) => {
     const target = shapeOf.get(a.on);
@@ -62610,7 +62626,7 @@ function toEgon(content, opts = {}) {
     }
   };
 }
-var ACTOR, OBJECT, lowerIcon, capIcon, GLYPH, svg;
+var ACTOR, OBJECT, lowerIcon, capIcon, GLYPH, GROUP_INK, svg;
 var init_egon = __esm({
   "packages/canvas/dist/diagrams/egon.js"() {
     init_ids2();
@@ -62627,6 +62643,7 @@ var init_egon = __esm({
       System: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8v-2H8z"/>',
       Document: '<path d="M6 2h8l4 4v16H6z"/>'
     };
+    GROUP_INK = { orange: "#d9922e", blue: "#4f8fd8", yellow: "#d6ba22", "pale-yellow": "#c9bd76", lilac: "#a07bd9", purple: "#9d4edd", green: "#66b664", pink: "#d67aa2", red: "#d85a5a" };
     svg = (icon) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${GLYPH[icon] ?? '<rect x="4" y="4" width="16" height="16" rx="3"/>'}</svg>`;
   }
 });
@@ -68341,6 +68358,12 @@ var init_feedback = __esm({
   }
 });
 
+// packages/canvas/dist/issueLink.js
+var init_issueLink = __esm({
+  "packages/canvas/dist/issueLink.js"() {
+  }
+});
+
 // packages/canvas/dist/accessPolicy.js
 var init_accessPolicy = __esm({
   "packages/canvas/dist/accessPolicy.js"() {
@@ -70959,7 +70982,7 @@ Write design/<name>.domain-story.yaml: the scope, every actor once, one work obj
 - An actor plays an active part (a person, a group, a software system) and is named by its role; what is only carried along or acted on is a work object.
 - Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward \u2014 what is the person after, and how does the system help?
 - A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
-- Give each kind of work object an icon that says what it is: a built-in kind (document, thing, digital, folder, call, email, conversation, info), or draw your own \u2014 \`icons: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }\`, a line drawing of plain shapes \u2014 and use its name as the kind. Fit the icon set to the domain, and keep it small: one icon for everything tells the reader nothing, too many water the language down.
+- Give each kind of work object an icon that says what it is. The built-in kinds (document, thing, digital, folder, call, email, conversation, info) are generic, and a work object without a \`kind\` is a document \u2014 so draw your own for the domain's things, the main work object first: \`icons: { invoice: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 7.5h6M9 11h6"/></svg>' }\`, an outline drawing of plain shapes (path, circle, rect, line \u2026) on 24 \xD7 24, and use its name as the kind (the \`domain-storytelling\` skill's references/icons.md has a gallery to start from). Fit the icon set to the domain, and keep it small \u2014 one icon per kind of thing, three to seven in a story: when most work objects look alike the reader cannot tell them apart, too many icons water the language down.
 When pictograms collide, change the layout (layout.spacing, a split into scenarios) \u2014 never the story: no actor or sentence is dropped to make the picture fit. Check it with design_lint (its hints are questions for us, not errors), draw it with design_draw, then tell the story back to me from the beginning, sentence by sentence, and ask what is missing or wrong. (design_egon imports from or exports to Egon.io.)
 ${CLOSE}`
       },
@@ -79961,7 +79984,7 @@ function helpText(o) {
     `Proposals: canvas_files (the files behind a board \u2014 workflow yaml, agents, scripts, design files \u2014 with their base sha-1), canvas_propose_edit (a unified diff or the whole new text \u2192 a proposal the person discusses in a thread on the block; ${o.remote ? "this canvas is not on your machine, so this is how you change a file" : "for files you cannot write yourself"}). Whoever has the files applies it after the person agrees`,
     `Several agents on one board: canvas_context (read / write the board's context note \u2014 what was discussed, links to the notes; suggest "Answered by", which the person confirms; lists the agents with their @handles), canvas_ask (ask another agent on the board by @handle or name, and wait for its answer; it says who it was delivered to and whether they are watching), canvas_handover (when the person hands the files behind some diagrams from one agent to another: the holder marks them ready, the new holder accepts; only the person starts one). Comments go to the board's responder ("Answered by"), an @handle mention sends a thread to that agent, a proposal goes to the agent holding the files \u2014 and only that agent redraws them; canvas_wait wakes you only for what is yours`,
     "Annotations and TODOs: an annotation (what an item is for) lives in the design file, drawn as a numbered card beside the drawing; the person's draft annotation is a proposal to the agent holding the files \u2014 judge it in its thread and apply it when it is sound. canvas_todo lists, opens, checks off and reopens TODOs: things to confirm with someone outside the board, not questions to you",
-    "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way)",
+    "Feedback: unprose_feedback (tell the owner what was hard or missing in Unprose itself \u2014 use it whenever something gets in your way; its answer has a prefilled GitHub issue link the person can file if they want it tracked)",
     ...o.designTools && o.remote ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals) \u2014 this canvas is not on your machine, so pass each file's text as `content` and its name as `name`"] : o.designTools ? ["Diagram files: design_lint (schema + grammar), design_draw (file \u2192 frame, keeps the person's layout), design_propose_stories (EventStorming / domain story \u2192 story proposals), design_egon (Egon.io import / export)"] : []
   ];
   return [
@@ -80014,7 +80037,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.28.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.29.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -80454,15 +80477,22 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
   });
   server.registerTool("unprose_feedback", {
     title: "Tell the owner what to improve in Unprose",
-    description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete.",
+    description: "Record friction, a missing feature, a confusing tool result or an idea about Unprose itself (not about the board's design \u2014 that goes in a comment). The owner reads these on the Connected agents page to improve Unprose. Use it whenever something got in your way: say what you tried, what happened, what would have helped. Short and concrete. The answer has a prefilled GitHub issue link: pass it on if the person wants it tracked \u2014 they open it, check it and submit it themselves. Never file an issue yourself unless the person asks you to and you have your own GitHub access.",
     inputSchema: {
       text: external_exports.string().min(1).max(4e3),
+      kind: external_exports.enum(["bug", "idea"]).optional().describe("'bug': something did not work as it should; 'idea': something is hard or missing (the default)"),
+      title: external_exports.string().max(200).optional().describe("a short title for the issue (default: the first sentence of text)"),
       board: external_exports.string().optional().describe("the board it happened on"),
       about: external_exports.array(external_exports.string()).optional().describe("tool names or item ids it is about")
     }
-  }, async ({ text: t, board, about }) => {
-    const r = await client.sendFeedback({ text: t, ...board ? { board } : {}, ...about?.length ? { about } : {} });
-    return text(`thanks \u2014 recorded as ${r.id}; the owner sees it on the Connected agents page.`);
+  }, async ({ text: t, kind, title, board, about }) => {
+    const r = await client.sendFeedback({ text: t, ...kind ? { kind } : {}, ...title ? { title } : {}, ...board ? { board } : {}, ...about?.length ? { about } : {} });
+    const thanks = `thanks \u2014 recorded as ${r.id}; the owner sees it on the Connected agents page.`;
+    if (!r.issue)
+      return text(thanks);
+    return text(`${thanks}
+If the person wants it tracked on GitHub, they can open this prefilled issue, check it holds nothing private (it will be public) and submit it: ${r.issue}
+Do not file it yourself unless they ask you to and you have your own GitHub access.`);
   });
   server.registerTool("unprose_feedback_list", {
     title: "Read what agents said about Unprose",
@@ -80472,7 +80502,8 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     const list3 = (await client.feedback()).slice(-limit2).reverse();
     if (!list3.length)
       return text("no feedback yet");
-    return text(list3.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.text}`).join("\n"));
+    const lines = list3.map((f) => `${f.at.slice(0, 16).replace("T", " ")} ${f.by}${f.kind ? ` ${f.kind}` : ""}${f.board ? ` (board ${f.board})` : ""}${f.about?.length ? ` [${f.about.join(", ")}]` : ""}: ${f.title ? `${f.title} \u2014 ` : ""}${f.text}`);
+    return text([...lines, "(to file one as a GitHub issue: Connected agents \u2192 Feedback from agents \u2192 File on GitHub)"].join("\n"));
   });
   server.registerTool("canvas_files", {
     title: "Read the files behind a board",
@@ -80660,7 +80691,7 @@ var init_mcp2 = __esm({
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[], color?: 'orange'|'blue'|'yellow'|'pale-yellow'|'lilac'|'green'|'pink'|'red'|'purple' (a pale wash to tell groups apart)}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 the built-in kinds are generic and a work object without a \`kind\` is a document, so draw your own for the domain's things under \`icons\` (an outline on 24 \xD7 24 of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`; one per kind of thing, the main work object first, three to seven in a story). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
@@ -80815,6 +80846,8 @@ var init_server3 = __esm({
     init_routing();
     init_routing();
     init_feedback();
+    init_issueLink();
+    init_version2();
     init_access();
     init_access2();
     init_accessPolicy();

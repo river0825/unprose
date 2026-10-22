@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Markdown } from '../inspector/Markdown'
 import { checkSummary, type UpdateInfo } from './updateCheck'
+import { ReportEntry } from './ReportIssue'
 import './release-notes.css'
 
 export type { UpdateInfo } from './updateCheck'
@@ -352,6 +353,9 @@ export function ReleaseNotes({ version, changelog, check, onClose }: { version: 
           {check && <UpdateCheckRow check={check} />}
           {update?.available && <UpdateBanner update={update} />}
           {changelog ? <Markdown text={notesForReading(changelog)} /> : <p className="muted">No release notes were found next to this server (CHANGELOG.md).</p>}
+        </div>
+        <div className="sheet-foot">
+          <ReportEntry before={onClose} />
         </div>
       </div>
     </div>

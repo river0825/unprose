@@ -22,6 +22,7 @@ packages/canvas/
   src/annotations.ts · todos.ts       annotations (numbered cards, the person's drafts) and TODOs: the marks web, server and CLI share
   src/templates/annotations.ts        drawing a file's annotations beside any diagram: resolving `on`, numbering, the gutter
   src/ports/feedbackStore.ts · adapters/feedback   what agents tell the owner about Unprose (unprose_feedback)
+  src/issueLink.ts                    a problem or an idea as a prefilled GitHub "new issue" link (Feedback about Unprose)
   src/cli.ts              awd-canvas serve | mcp | render | demo | outline | diff | card add|move|moves
   web/                    the React UI (built separately); web/src/run/ is the live run overlay
 ```
@@ -82,7 +83,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_ask` | `id, agent, question, about?, timeoutSec ≤ 120` | ask another agent on the board (`agent`: its @handle or its name): posts an `@handle` thread (on `about[0]`, else loose) and blocks until it answers in the thread; the result says exactly who it was delivered to (*Delivered to @codex-b — watching this board now*, or that it is not watching / never seen); on timeout returns the thread id — the answer comes back to you with `canvas_wait` |
 | `canvas_handover` | `board, ready? + keys?, accept? + repo?, remote?, cancel? + reason?` | the files behind diagrams changing hands, once **the person** started it (an agent cannot start one): `ready: true` — you hand them over, they are ready to be taken as the board has them (optionally only `keys`); `accept: true` — you receive them (once every one is ready): you become their holder, and the result lists the files to read with `canvas_files`, write into your repo and redraw once from; `cancel: true` — decline (either side). Without any: the open handover, who must do what next, who holds which files ([Handing over the files](#handing-over-the-files)) |
 | `canvas_todo` | `board, text? + on?, ask? \| done? + answer? \| reopen?` | [TODOs](#todos): `text` opens one (about the item `on`, to confirm with `ask`) — it wakes nobody; `done: <id>` checks one off, with `answer` posted as a *Confirmed: …* reply that reaches the board's *Answered by* agent; `reopen: <id>`; only `board`: the open TODOs and the last ones done. A read-only token lists only |
-| `unprose_feedback` | `text, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine ([Feedback](#feedback-about-unprose)) |
+| `unprose_feedback` | `text, kind? = bug\|idea, title?, board?, about?` | tell the owner what was hard or missing in Unprose itself; kept on the canvas machine. The answer has a prefilled GitHub issue link to pass on — the person files it if they want it tracked ([Feedback](#feedback-about-unprose)) |
 | `unprose_feedback_list` | `limit?` | read that feedback — a local agent only |
 | `canvas_open` | `id` | print the URL (and `open` it on macOS) |
 | `design_lint` | `file` | `awd design lint`: schema, unknown fields, the EventStorming / Domain Storytelling grammar (with book pages) |
@@ -324,7 +325,7 @@ machine without the canvas's files), which serves the same canvas tools minus lo
 | Manage tokens / OAuth clients (create, revoke, rename, change access and scope) | Connected agents (canvas machine or a managing page) | – | – | – |
 | Register / move projects | board list shows them | `awd-canvas serve --project`, auto-registered by `design draw` / `graph --canvas`, `awd boards move` | the session's project is registered on start | – (boards go to the token's project) |
 | Upgrade the canvas | release-notes dialog: *Check for updates*, *Upgrade* | `node scripts/ensure.mjs` (plugin) | – | – |
-| Feedback about Unprose | – | – | `unprose_feedback`, `unprose_feedback_list` | `unprose_feedback` (reading it is local only) |
+| Feedback about Unprose | *Report a problem* / *Suggest a feature* (keyboard shortcuts, release notes, under the board list) → a prefilled GitHub issue; Connected agents → *File on GitHub* | – | `unprose_feedback`, `unprose_feedback_list` | `unprose_feedback` (reading it is local only) |
 | Start / stop studio | studio control (allowed projects only) | `awd studio` | – | – |
 
 `unprose_help` carries a short version of this table.
@@ -907,12 +908,37 @@ Worked example: [agents-setup.md → Two machines, one board](agents-setup.md#tw
 
 ### Feedback about Unprose
 
-Agents tell the owner what got in their way: `unprose_feedback { text, board?, about? }` (`POST /api/feedback`, any
-caller with credentials, also read-only; at most 30 per 10 minutes per name) appends `{ id, at, by, via, text, board?,
-about? }` to `feedback.ndjson` next to the agents file (`~/.awd/feedback.ndjson`, 0600; `UNPROSE_FEEDBACK_FILE`
-moves it) — never into a project or a board. Read it on **Connected agents → Feedback from agents** (a page on the
-canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or with `unprose_feedback_list` /
-`GET /api/feedback` from a local agent (tokens get `403`).
+Agents tell the owner what got in their way: `unprose_feedback { text, kind?, title?, board?, about? }` (`POST
+/api/feedback`, any caller with credentials, also read-only; at most 30 per 10 minutes per name) appends `{ id, at, by,
+via, text, kind?, title?, board?, about? }` to `feedback.ndjson` next to the agents file (`~/.awd/feedback.ndjson`,
+0600; `UNPROSE_FEEDBACK_FILE` moves it) — never into a project or a board. `kind` is `bug` (something did not work) or
+`idea` (something is hard or missing; the default); `title` is at most 200 characters. Read it on **Connected agents →
+Feedback from agents** (a page on the canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or
+with `unprose_feedback_list` / `GET /api/feedback` from a local agent (tokens get `403`).
+
+**Problems and ideas as GitHub issues.** Unprose is tracked in GitHub issues, and **the person files them — Unprose
+never posts anything to GitHub**: no token, no API call. A report becomes a link to the repository's *new issue* page
+with an issue form picked and filled in (`.github/ISSUE_TEMPLATE`: *Report a problem* — what happened, what you
+expected, how to get there, where, the version; label `bug` — and *Suggest a feature* — the problem, the idea, the
+version; label `enhancement`; blank issues stay allowed). It opens in a new tab; the person reads it there, edits it
+and submits it under their own account. Issues are public while boards may be private, so every place that offers the
+link says so: leave out board content, names, links and tokens.
+
+- **On the canvas page**: *Report a problem* · *Suggest a feature* at the bottom of the keyboard shortcuts (`?`) and the
+  release notes (the version at the bottom of the rail), and under the board list. A small dialog asks for the kind, a
+  title (default: the first sentence) and what happened / what would help; *Continue on GitHub* opens the issue with
+  the running version (and *Where: Canvas page*) filled in.
+- **Connected agents → Feedback from agents → File on GitHub**: the same dialog, filled with the agent's kind, title,
+  text and the tools it named (`about` entries that are tool names; never the board id, never item ids), to edit
+  before going to GitHub.
+- **`unprose_feedback`'s answer** carries the same link for the record, with one line for the agent: if the person
+  wants it tracked, they open it, check it and submit it. An agent files an issue itself only when the person asks it
+  to and it has its own GitHub access.
+
+The link is `https://github.com/<repo>/issues/new?template=<form>.yml&title=…&<field id>=…` (GitHub fills a form's
+field from the query parameter named by the field's id), URL-encoded as UTF-8 and kept under 7000 characters: the
+longest field is cut and ends in `… (cut)`. `<repo>` is `UNPROSE_ISSUES_REPO`, else `UNPROSE_UPDATE_REPO`, else
+`river0825/unprose`; `GET /api/version` gives it to the page as `issuesRepo`.
 
 ## HTTP API
 
@@ -945,7 +971,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | POST | `/api/boards/:id/handover/ready` | `{ keys?, force?, author? }` | `{ seq, handover, open: string[] }` — the holder marks its keys ready (`keys[].ready = { by, at, files: path → sha-1 }`); the person only with `force: true` (*Hand over anyway*, `forced: true`); `open` = proposal threads still open on those diagrams |
 | POST | `/api/boards/:id/handover/accept` | `{ repo?, remote? }` | `{ seq, keys, files: [{ path, sha, lines }] }` — `to` only (`403` for the person or another agent), `409` until every key is ready; the holders become `to` (`from`, `handover` kept on them), *Answered by* too when asked for, `meta.handover` goes |
 | POST | `/api/boards/:id/handover/cancel` | `{ reason?, author? }` | `{ seq }` — the person, `to` or a `from` agent; `404` when none is open |
-| POST/GET | `/api/feedback` | `{ text, board?, about? }` | `201 { ok, id }` · `{ feedback }` (GET: this machine or a manage page only) |
+| POST/GET | `/api/feedback` | `{ text, kind?: 'bug' \| 'idea', title?, board?, about? }` | `201 { ok, id, issue }` — `issue`: the record as a prefilled GitHub *new issue* link ([Feedback about Unprose](#feedback-about-unprose)) · `{ feedback }` (GET: this machine or a manage page only) |
 | GET | `/api/boards/:id/files` | `?path=` | `{ files: [{ path, sha, truncated, from, size, lines }] }`; with `path`: `{ file: { path, sha, truncated, from, text } }` — the files snapshot ([Proposals and saving](#proposals-and-saving)) |
 | POST | `/api/boards/:id/proposals` | `{ file, base, diff? \| newText?, note, about?: string[], wires?: [{ from, to, event, condition?, remove? }], author? }` | `201 { seq, comment, file, diff, about, added, removed, offsets }`; `404` unknown file / item / block, `409` stale `base`, `422` a diff that does not apply or a file cut short on the board, `403` read-only / out of scope |
 | GET | `/api/boards/:id/thumb.svg` | | SVG thumbnail of the board (used by the board list) |
@@ -953,6 +979,7 @@ canvas machine or one allowed to manage agents; `GET /api/access/feedback`), or 
 | POST | `/api/boards/:id/template` | `{ kind?, content, at?, scope?, frame?: { key, title?, source?, level?, at? } }` | `{ items, ops }` — rendered but **not** applied. With `frame`, drawn inside the diagram frame `diagram.<key>` (created if missing; an existing frame keeps its geometry), ids `<key>.<role>.<element id>`; trace links become dotted `trace` wires when their target is on the board |
 | GET | `/api/boards/:id/studio` | | `{ capable, running, pid?, since?, exitedAt?, exitCode?, log: string[] (last 50), sessions?: { open, max, queued } }` — `capable: false` unless the board's `meta.workflow.file` is one of the server's `--studio` files |
 | POST | `/api/boards/:id/studio` | `{ action: 'start' \| 'stop' }` | same shape; `403` for a board that is not studio-capable, `400` for another action. Start is idempotent; one child per workflow; no auto-restart |
+| GET | `/api/version` | | `{ version, changelog, pid, issuesRepo }` — the running release and its notes; `issuesRepo`: where problems and ideas are filed ([Feedback about Unprose](#feedback-about-unprose)) |
 | GET | `/api/kinds` | | `{ kinds }` |
 | GET | `/api/update` | `?refresh=1` | `{ current, latest?, available, notes?, url?, checkedAt, source, error?, install: 'plugin'\|'checkout'\|'bundle'\|'unknown', supported, canUpgrade, reason?, command, throttled?, followsPluginUpdate? }` — the newest GitHub release (cached 6 h, errors 30 min); `refresh=1` checks again unless the previous check is under 30 s old (then `throttled: true` and that check); `canUpgrade` only for a page on this machine |
 | POST | `/api/update` | | `202 { started, version }` — upgrade and restart on the new version (see "Updating"); `403` unless the caller is on this machine, `409 { error }` when it cannot start (up to date, dirty checkout, unsupported install) |
@@ -1235,6 +1262,9 @@ Like Miro, FigJam and tldraw, a container moves by its edge and its inside is pa
   everything inside. A kanban column moves by its header and snaps into its place in the row. Clicking the title or
   border selects it; once selected, its corners resize it as before.
 - **Drag an item** (sticky, card, block, UI element — a UI card, navbar or sidebar included) — that item moves, alone.
+  It can leave its frame, lane or column: dropped with its centre outside, it no longer belongs to it (it stays put when
+  the frame moves or hides); dropped inside another one, it joins that one. A frame or lane inside another stays in it.
+  An item drawn from a file and moved out keeps its new place on a redraw, like any item the person moved.
 - **Shift-drag** anywhere — the box adds to the current selection instead of replacing it (a Shift drag that starts on an
   item draws a box too). Shift- or ⌘/Ctrl-click still adds or removes one item.
 - Middle-button drag, Space-drag and two-finger scroll pan the board; on a touch screen a drag on a frame's inside does

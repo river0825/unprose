@@ -92,7 +92,7 @@ const who = (a: Author) => (a === 'agent' ? 'Agent' : 'You')
 
 function describeOp(op: Op | BriefOp, board: Board, change: Change | BriefChange): string {
   const name = (id: string) => {
-    const it = board.items[id] ?? change.before[id]
+    const it = board.items[id] ?? change.before?.[id]
     const t = it?.text?.trim()
     return t ? `'${t.length > 40 ? `${t.slice(0, 40)}…` : t}'` : `${it?.type ?? 'item'} ${id.slice(0, 8)}`
   }

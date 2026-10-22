@@ -101,7 +101,7 @@ export const accessApi = {
   rename: (id: string, name: string) =>
     fetch(`/api/access/agents/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then((r) => body<{ ok: true; from: string; name: string }>(r)),
   /** What agents said about Unprose (unprose_feedback) — on this machine or a page that manages agents. */
-  feedback: () => fetch('/api/access/feedback').then((r) => body<{ feedback: Array<{ id: string; at: string; by: string; via: string; text: string; board?: string; about?: string[] }> }>(r)),
+  feedback: () => fetch('/api/access/feedback').then((r) => body<{ feedback: Array<{ id: string; at: string; by: string; via: string; text: string; kind?: 'bug' | 'idea'; title?: string; board?: string; about?: string[] }> }>(r)),
   revoke: (id: string, forget = false) => fetch(`/api/access/agents/${encodeURIComponent(id)}${forget ? '?forget=1' : ''}`, { method: 'DELETE' }).then((r) => body<{ ok: true }>(r)),
   decide: (id: string, d: { allow: boolean; scope?: 'read' | 'write'; code?: string; manage?: boolean }) => post(`/api/access/requests/${encodeURIComponent(id)}`, d).then((r) => body<{ status: string }>(r)),
   approveCode: (code: string, scope: 'read' | 'write') => post('/api/access/approve', { code, scope }).then((r) => body<{ status: string }>(r)),

@@ -6,6 +6,10 @@
 // The file stays the truth: each use looks at it first. Grown (another process appended): only the new
 // bytes are indexed. Shrunk, replaced or rewritten: indexed again. Gone: forgotten. A line counts once it
 // ends in a newline — a torn last line (a crash mid-write, a writer not done yet) is never read or indexed.
+//
+// A line may have been written by hand (a board rebuilt after a loss): one without `before` once blanked the whole
+// board (river0825/unprose#10). Each change is read as the canvas can use it (repairChange), and what was repaired is
+// logged once, with its seq.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -37,6 +41,8 @@ const SEQ_HEAD = /^\{\s*"seq"\s*:\s*(\d+)\s*[,}]/
 export class ChangeLogFiles {
   /** By absolute path. */
   private indexes = new Map<string, Index>()
+  /** `<path>#<seq>` of the repaired changes already logged */
+  private warned = new Set<string>()
 
   /** Append one change as a line (creating the file). */
   append(file: string, change: Change): void {
@@ -90,7 +96,13 @@ export class ChangeLogFiles {
         } catch {
           continue // a torn line a later append was put behind
         }
-        if (typeof c?.seq === 'number' && (since === undefined || c.seq > since)) out.push(c)
+        if (typeof c?.seq !== 'number' || (since !== undefined && c.seq <= since)) continue
+        const problems = repairChange(c)
+        if (problems.length && !this.warned.has(`${key}#${c.seq}`)) {
+          this.warned.add(`${key}#${c.seq}`)
+          console.warn(`awd-canvas: ${key}: change ${c.seq}: ${problems.join('; ')} — written by hand? It is read repaired.`)
+        }
+        out.push(c)
       }
       return out
     } finally {
@@ -119,6 +131,42 @@ export class ChangeLogFiles {
     idx.mtimeMs = st.mtimeMs
     return idx
   }
+}
+
+/**
+ * A change read from a line, repaired in place so the canvas can use it: `before` missing (or not an object) reads as
+ * {} — nothing known of the items before —, `ops` not a list as none, an op that is not an add / update / remove with
+ * its fields is left out, an author that is neither as the agent. Returns what was repaired (none: as written).
+ */
+export function repairChange(c: Change): string[] {
+  const problems: string[] = []
+  const raw = c as unknown as Record<string, unknown>
+  if (!isObject(raw.before)) {
+    problems.push('no "before" (read as {})')
+    c.before = {}
+  }
+  if (!Array.isArray(raw.ops)) {
+    problems.push('no "ops" list (read as none)')
+    c.ops = []
+  }
+  const ops = c.ops.filter(isOp)
+  if (ops.length !== c.ops.length) {
+    problems.push(`${c.ops.length - ops.length} malformed op(s) left out`)
+    c.ops = ops
+  }
+  if (c.author !== 'user' && c.author !== 'agent') {
+    problems.push(`author ${JSON.stringify(c.author ?? null)} (read as the agent)`)
+    c.author = 'agent'
+  }
+  return problems
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+function isOp(op: unknown): boolean {
+  if (!isObject(op)) return false
+  if (op.kind === 'add') return isObject(op.item) && typeof op.item.id === 'string'
+  if (op.kind === 'update') return typeof op.id === 'string' && isObject(op.patch)
+  return op.kind === 'remove' && typeof op.id === 'string'
 }
 
 function same(idx: Index, st: fs.Stats): boolean {

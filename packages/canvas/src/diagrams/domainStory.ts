@@ -27,6 +27,8 @@ import { reviewDomainStory, type DsReviewRule } from './domainStoryReview.js'
 export const DS_ACTOR_KINDS = ['person', 'group', 'system'] as const
 /** Work-object kinds with a glyph: the site's three categories plus Egon.io's default icon set. Custom names are allowed. */
 export const DS_OBJECT_KINDS = ['document', 'thing', 'digital', 'folder', 'call', 'email', 'conversation', 'info', 'message'] as const
+/** A group's fill (the board's colour tokens): a pale wash of it behind the members; grey and white draw none. Ours, not Egon.io's. */
+export const DS_GROUP_COLORS = ['orange', 'blue', 'yellow', 'pale-yellow', 'lilac', 'green', 'pink', 'red', 'purple', 'grey', 'white'] as const
 export const DS_GRANULARITY = ['coarse-grained', 'medium-grained', 'fine-grained', 'cloud-level', 'kite-level', 'sea-level', 'fish-level', 'clam-level'] as const
 
 const named = () =>
@@ -83,7 +85,8 @@ export const domainStorySchema = z.object({
       }),
     )
     .min(1),
-  groups: z.array(z.object({ id: z.string().optional(), text: z.string().min(1), members: z.array(z.string()).default([]) })).default([]),
+  /** `color`: a pale wash behind the group, to tell groups apart (DS_GROUP_COLORS) */
+  groups: z.array(z.object({ id: z.string().optional(), text: z.string().min(1), members: z.array(z.string()).default([]), color: z.enum(DS_GROUP_COLORS).optional() })).default([]),
   annotations: z.array(z.object({ id: z.string().optional(), on: z.string(), text: z.string().min(1) })).default([]),
   /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
   icons: z.record(z.string(), z.string().max(DS_ICON_MAX_CHARS)).optional(),
@@ -131,7 +134,7 @@ export interface DsModel {
   actors: DsActor[]
   workObjects: DsWorkObject[]
   sentences: DsSentence[]
-  groups: Array<{ id: string; text: string; members: string[] }>
+  groups: Array<{ id: string; text: string; members: string[]; color?: (typeof DS_GROUP_COLORS)[number] }>
   annotations: Array<{ id: string; on: string; text: string }>
   /** The story's own icons by kind name (absent: only the built-in ones). */
   icons?: Record<string, string>
@@ -193,7 +196,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
   }
   const groups = c.groups.map((g) => {
     const id = alloc(g.id, g.text, 'group')
-    return { id, text: g.text, members: g.members.map((m) => elementRef(m, id, 'members')).filter((x): x is string => !!x) }
+    return { id, text: g.text, members: g.members.map((m) => elementRef(m, id, 'members')).filter((x): x is string => !!x), ...(g.color ? { color: g.color } : {}) }
   })
   const annotations = c.annotations.flatMap((a, i) => {
     const id = alloc(a.id, `note-${i + 1}`, 'note')

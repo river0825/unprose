@@ -194,8 +194,9 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
       height: it.type === 'comment' ? (card ? undefined : BADGE) : it.h,
       initialHeight: it.h,
       parentId: parent?.id,
-      // a kanban card must be able to leave its column; drag-stop re-parents it by where it lands
-      extent: parent && !(it.type === 'card' && parent.role === 'column') ? 'parent' : undefined,
+      // an item can leave its frame, lane or column (drag-stop re-parents it by where its centre lands); a frame or lane
+      // inside another one stays in it — a container is never re-parented by a drag
+      extent: parent && (it.type === 'frame' || it.type === 'lane') ? 'parent' : undefined,
       zIndex: isContainer(it) ? -1 : it.type === 'comment' ? 10 : 1,
       data: { item: it, pulse: pulse.has(it.id) || thread.some((m) => pulse.has(m.id)), open, ...(shown === 'done' ? { done: true } : {}), replies: thread.slice(1), childCount: it.role === 'column' ? cardsIn(it.id) : undefined, diagram: badgeOf(board, it), ...(badges.has(it.id) ? { wireBadges: badges.get(it.id) } : {}), ...(mine ? { marks: mine } : {}) },
       ...nodeClass(it),

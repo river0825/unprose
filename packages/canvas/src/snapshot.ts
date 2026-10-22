@@ -296,7 +296,9 @@ function drawFrame(c: Ctx, it: Item): string {
   const parts: string[] = []
   // a hidden frame, collapsed: a solid strip saying how much it holds (as the page draws it)
   const hidden = hiddenCountOf(it)
-  if (ds) parts.push(rect(bx, `fill="none" stroke="${p.ink3}" stroke-width="1.6" stroke-dasharray="6 5"`, 18))
+  // a domain-story group's colour: a pale wash of it, the outline in its shade (as the page draws it; grey and white: none)
+  const tint = ds && it.color && it.color !== 'grey' && it.color !== 'white' ? p.c[it.color] : undefined
+  if (ds) parts.push(rect(bx, `${tint ? `fill="${tint}" fill-opacity="0.16"` : 'fill="none"'} stroke="${tint ?? p.ink3}" stroke-width="1.6" stroke-dasharray="6 5"`, 18))
   else parts.push(rect(bx, `fill="${p.chrome}"${hidden === undefined ? ' fill-opacity="0.45"' : ''} stroke="${p.rule2}" stroke-width="1"`, 4))
   if (c.text && it.text) {
     const spec = it.data?.diagram as { kind?: string } | undefined

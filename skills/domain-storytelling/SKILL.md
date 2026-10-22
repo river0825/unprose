@@ -11,7 +11,8 @@ person would say aloud. It is told *with* the people who do the work; you record
 Everything here rests on the authors' book (Stefan Hofer & Henning Schwentner, *Domain Storytelling*, Leanpub
 edition of 2021-02-27 — page numbers are that edition's) and their site, domainstorytelling.org. `references/method.md`
 has the rules chapter by chapter with pages; `references/examples.md` the good / bad pairs; `references/checklists.md`
-the questions to ask before, while and after. When a claim below is ours, not theirs, it says so.
+the questions to ask before, while and after; `references/icons.md` how to draw icons for the domain, with a gallery
+(ours). When a claim below is ours, not theirs, it says so.
 
 ## 1. Is a domain story the right diagram?
 
@@ -67,7 +68,7 @@ is sent)" has no plot: every activity must push the story forward (p. 37).
   policy or the story map's acceptance.
 - **Groups** — outlines for repeated or optional parts, locations, organisations, sub-domains (p. 28).
 - **Icons** — a set "adapted to the domain" (a container icon in logistics); not too many ("water down the language"),
-  different for actors and work objects (pp. 21, 35).
+  different for actors and work objects (pp. 21, 35). Draw the domain's own ([references/icons.md](references/icons.md)).
 - **No conditionals.** "There are no symbols for conditionals, variations, or alternatives. They were intentionally
   left out" (p. 30). No "if", "or", "sometimes", "does not".
 
@@ -121,7 +122,12 @@ You advise; whoever holds the file changes it after the person agrees.
 ## With Unprose
 
 `design/<name>.domain-story.yaml` (docs/diagrams.md §6b): `scope`, `actors`, `workObjects`, numbered `sentences`
-(`actor`, `verb`, `object`, `to`, `toLabel`, `note`), `groups`, `annotations`, `icons` of your own. `design_lint` checks
+(`actor`, `verb`, `object`, `to`, `toLabel`, `note`), `groups`, `annotations`, `icons` of your own.
+**Draw icons for the domain's things.** The built-in work-object icons (document, thing, digital, folder, call, email,
+conversation, info) are generic, and a work object without a `kind` is a document; when most of a story's things
+look alike the picture stops telling them apart. Declare the work objects, draw an icon for each kind of thing that
+matters — the main work object first — under `icons:` (a 24 × 24 outline of plain shapes) and use its name as the
+`kind`. [references/icons.md](references/icons.md): when, how, and a gallery to copy from. `design_lint` checks
 grammar and drawing and asks reviewer's questions; its result ends with the story read back. `design_draw` draws it;
 collisions are a layout problem (`layout.spacing`, groups, a split) — never the story. `/unprose:domain-story` tells a
 story with the person; `/unprose:critique` reviews one; `design_propose_stories` turns sentences by people into

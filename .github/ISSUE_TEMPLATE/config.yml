@@ -1,0 +1,6 @@
+# The issue chooser: the two forms first; a blank issue stays possible for what fits neither (a question, the docs).
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/river0825/unprose/tree/main/docs
+    about: Setting up the canvas and the agents, the diagram files, the tools.

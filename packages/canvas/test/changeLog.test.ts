@@ -324,3 +324,36 @@ test('a large log: a read since near the end reads only the tail', () => {
   assert.ok(done.bytes <= 2 * lineBytes + 1, `read ${done.bytes} bytes for the finished line`)
   assert.deepEqual(repo.changes(id, { since: 0 }), fullRead(logOf(dir, id)))
 })
+
+test('a change written by hand without before, ops or author is read repaired, and said once (river0825/unprose#10)', () => {
+  const dir = tmp()
+  const repo = new FileBoardRepository(dir)
+  const b = repo.create({ title: 't', kind: 'freeform', items: [sticky('a')] })
+  repo.apply(b.id, [{ kind: 'update', id: 'a', patch: { text: '1' } }], 'user')
+  const file = logOf(dir, b.id)
+  const last = Math.max(...fullRead(file).map((c) => c.seq))
+  // the line that blanked a board: no `before`
+  fs.appendFileSync(file, JSON.stringify({ seq: last + 1, ts: 't', author: 'user', boardId: b.id, ops: [{ kind: 'update', id: 'a', patch: { text: 'by hand' } }] }) + '\n')
+  // worse: `before` a list, an op of no known kind, an op that is not an object, no author
+  fs.appendFileSync(file, JSON.stringify({ seq: last + 2, ts: 't', boardId: b.id, ops: [{ kind: 'update', id: 'a', patch: { text: 'x' } }, { kind: 'teleport', id: 'a' }, 'nonsense'], before: [] }) + '\n')
+  const warned: string[] = []
+  const warn = console.warn
+  console.warn = (m: string) => void warned.push(m)
+  try {
+    const got = repo.changes(b.id, { since: last })
+    assert.deepEqual(got.map((c) => c.before), [{}, {}])
+    assert.deepEqual(got[0].ops, [{ kind: 'update', id: 'a', patch: { text: 'by hand' } }])
+    assert.deepEqual(got[1].ops, [{ kind: 'update', id: 'a', patch: { text: 'x' } }])
+    assert.equal(got[1].author, 'agent')
+    repo.changes(b.id) // read again: nothing said twice
+  } finally {
+    console.warn = warn
+  }
+  assert.equal(warned.length, 2)
+  assert.match(warned[0], new RegExp(`change ${last + 1}: no "before" \\(read as \\{\\}\\) — written by hand\\?`))
+  assert.match(warned[1], new RegExp(`change ${last + 2}: no "before" \\(read as \\{\\}\\); 2 malformed op\\(s\\) left out; author null \\(read as the agent\\)`))
+  // a well-formed change is read as written, and says nothing
+  const c = repo.apply(b.id, [{ kind: 'update', id: 'a', patch: { text: 'fine' } }], 'user')
+  assert.deepEqual(repo.changes(b.id).at(-1), stored(c))
+  assert.equal(warned.length, 2)
+})

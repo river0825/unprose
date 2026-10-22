@@ -7,7 +7,8 @@ Unprose to discuss designs with a person on a shared canvas.
 
 - **Files are the truth.** Each diagram is a file: `design/<name>.<kind>.yaml` (kinds `es`, `story-map`,
   `kanban`, `wireframe`, `domain-story`, `journey`) or a workflow yaml. The canvas board is a projection.
-  Domain stories (docs/diagrams.md §6b): actors appear once (a long story may set `layout: { actors: repeat }` so the board draws an actor again where the story comes back to it), every activity gets its own work object; `awd design
+  Domain stories (docs/diagrams.md §6b): actors appear once (a long story may set `layout: { actors: repeat }` so the board draws an actor again where the story comes back to it), every activity gets its own work object, and work objects get icons that fit the domain (draw your own under
+  `icons:` — the built-in ones are generic; `skills/domain-storytelling/references/icons.md`); `awd design
   import-egon` / `export-egon` exchange them with Egon.io.
 - **You edit, the person directs.** Change files after they agree; say which files you changed.
 - **Other agents propose; you apply.** A remote agent (through `/mcp`) cannot write the files, so it proposes an
@@ -43,7 +44,9 @@ Unprose to discuss designs with a person on a shared canvas.
   (EventStorming: `definitions` or `hotspots`); never enlarge stickies to fit (docs/diagrams.md "Bilingual boards").
 - **What each surface can do** (web UI, `awd` CLI, local MCP, remote `/mcp`): docs/canvas.md "What each surface can do".
 - **Tell the owner what got in your way**: `unprose_feedback` (friction, missing features, confusing results in
-  Unprose itself).
+  Unprose itself; `kind: 'bug' | 'idea'`, a short `title`). Its answer has a prefilled GitHub issue link: pass it on if
+  the person wants it tracked — they check it and submit it. Never file an issue yourself unless the person asks and
+  you have your own GitHub access (docs/canvas.md → Feedback about Unprose).
 
 ## Setup
 

@@ -7,8 +7,10 @@ import { navigate } from './BoardPage'
 import { timeAgo } from './time'
 import { RequestCard } from './components/RequestCard'
 import { usePendingRequests } from './components/AccessCenter'
+import { openReport } from './components/ReportIssue'
 import './access.css'
 import { handleOf } from '../../src/routing'
+import { feedbackDraft } from '../../src/issueLink'
 
 const HOW: Record<AgentView['via'], string> = { token: 'Token', oauth: 'OAuth', device: 'Device code', browser: 'Browser' }
 
@@ -166,7 +168,10 @@ export function AgentsPage() {
   )
 }
 
-/** What agents told the owner about Unprose itself (`unprose_feedback`), newest first. */
+/**
+ * What agents told the owner about Unprose itself (`unprose_feedback`), newest first. "File on GitHub" opens the
+ * report dialog prefilled with the agent's words (and the tools it named) — never the board it happened on.
+ */
 function FeedbackSection() {
   const [items, setItems] = useState<Awaited<ReturnType<typeof accessApi.feedback>>['feedback'] | null>(null)
   useEffect(() => {
@@ -176,7 +181,7 @@ function FeedbackSection() {
     <section className="agents-section" aria-labelledby="feedback-h">
       <h2 id="feedback-h">Feedback from agents</h2>
       <p className="muted">
-        What agents found hard or missing in Unprose (they send it with <span className="mono">unprose_feedback</span>). Kept on this machine only.
+        What agents found hard or missing in Unprose (they send it with <span className="mono">unprose_feedback</span>). Kept on this machine only; <em>File on GitHub</em> turns one into a public issue you check and submit.
       </p>
       {items === null ? (
         <p className="muted">Loading…</p>
@@ -185,12 +190,19 @@ function FeedbackSection() {
       ) : (
         <ul className="feedback-list">
           {items.slice(0, 50).map((f) => (
-            <li key={f.id}>
-              <div className="muted">
-                <strong>{f.by}</strong> · {timeAgo(f.at)}
-                {f.board ? <> · board <span className="mono">{f.board}</span></> : null}
-                {f.about?.length ? <> · {f.about.join(', ')}</> : null}
+            <li key={f.id} className="feedback-item">
+              <div className="feedback-meta">
+                <span className="muted">
+                  <strong>{f.by}</strong> · {timeAgo(f.at)}
+                  {f.kind ? <> · {f.kind === 'bug' ? 'problem' : 'idea'}</> : null}
+                  {f.board ? <> · board <span className="mono">{f.board}</span></> : null}
+                  {f.about?.length ? <> · {f.about.join(', ')}</> : null}
+                </span>
+                <button type="button" className="ghost small feedback-file" aria-label={`File on GitHub: ${f.title || f.text.slice(0, 60)}`} onClick={() => openReport(feedbackDraft(f))}>
+                  File on GitHub
+                </button>
               </div>
+              {f.title ? <div className="feedback-title">{f.title}</div> : null}
               <div>{f.text}</div>
             </li>
           ))}

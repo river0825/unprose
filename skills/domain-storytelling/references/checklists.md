@@ -16,7 +16,7 @@
 - [ ] Who starts it? An actor that acts, named by role.
 - [ ] Verb from the domain language; no "if", "or", "sometimes", "not", no date, no state.
 - [ ] The work object is a thing, explicit, not hidden in the verb; the same name as the last time it appeared; a
-      fitting icon.
+      fitting icon (draw one for the domain under `icons:` — [icons.md](icons.md) — rather than another document).
 - [ ] Hands it to whom? If nobody, is that right for this sentence?
 - [ ] Same level of detail as the sentence before.
 - [ ] Can I read it aloud as something the person would say?

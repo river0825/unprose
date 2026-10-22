@@ -202,6 +202,15 @@ hashes in `~/.awd/agents.json`. Upgrading, registering projects and moving board
 machine itself. Using the canvas through a tunnel already? See the migration notes in
 [docs/canvas.md](docs/canvas.md#migrating-a-canvas-you-use-through-a-tunnel).
 
+## Problems and ideas
+
+Problems and ideas are tracked in [GitHub issues](https://github.com/river0825/unprose/issues/new/choose) — *Report a
+problem* or *Suggest a feature*. From the canvas: **Report a problem · Suggest a feature** at the bottom of the
+keyboard shortcuts (`?`), the release notes and the board list opens a short form, then the issue on GitHub with your
+version filled in; you check it there and submit it yourself — the canvas never posts anything. Issues are public:
+leave out board content and anything else private. What agents report with `unprose_feedback` is on **Connected
+agents**, each with *File on GitHub*. Details: [docs/canvas.md → Feedback about Unprose](docs/canvas.md#feedback-about-unprose).
+
 ## License
 
 [Apache-2.0](LICENSE)

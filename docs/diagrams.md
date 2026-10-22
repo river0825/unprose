@@ -351,7 +351,7 @@ workObjects: [{ text: seat request, kind: conversation }, { text: ticket, kind: 
 sentences:
   - { actor: Moviegoer, verb: asks for, object: seat request, to: clerk }        # seq defaults to the next number
   - { actor: clerk, verb: books, object: ticket, to: Ticket system, toLabel: in, traces: [{ from: box-es/book, rel: relates }] }
-groups: [{ text: Booking, members: [ticket] }]          # actors, work objects or sentences
+groups: [{ text: Booking, members: [ticket], color: blue }]   # actors, work objects or sentences; color optional
 annotations: [{ on: clerk, text: Cash only }]
 layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or gapX / gapY in px
 icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"/></svg>' }   # optional: icons of your own, used as a kind
@@ -418,6 +418,11 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
     would still touch are trimmed apart where their members leave room. Groups that **share members** (neither
     inside the other) cannot have separate outlines: the outline carries `data.overlaps` and the lint warns
     (`groups-overlap`) — keep each shared element in one group, or make one group a sub-group;
+  - **a group's colour** (ours; Egon.io colours a group's outline): `color:` on a group — orange, blue, yellow,
+    pale-yellow, lilac, green, pink, red, purple — draws a pale wash of it behind the members and the dashed outline in
+    its shade, so groups are told apart at a glance (grey, the default, and white draw no wash). Without `color` in the
+    file the person sets it on the board (right-click the group → *Change colour*) and a redraw keeps it; a colour in
+    the file wins over the board's. The snapshot draws it too, and `export-egon` gives the group that colour;
   - **verbs and number circles** are placed for the board as a whole (`wireGeometry.ts` `planWires`, the same for the
     page, the snapshot and the layout check): first the number circles in sequence order, each at its arrow's start
     and a little further along when another circle or a pictogram is there; then the verbs in sequence order, each
@@ -443,8 +448,8 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   not happen (`negative-story`); several work objects whose names start with the same word (`work-objects-variants`);
   a date inside a verb (`date-in-verb`);
   a sentence that reads like a choice ("if", "or"); a work object that reads like an outcome ("check passed")
-  instead of a thing; no work object coming back in a second sentence; every work object drawn with the same
-  icon; a kind with no icon. `/unprose:critique` (the `critique` prompt) has an agent read a story this way.
+  instead of a thing; no work object coming back in a second sentence; half or more of the work objects drawn
+  with the same icon (`work-objects-one-icon`, naming them, with an example icon to draw); a kind with no icon. `/unprose:critique` (the `critique` prompt) has an agent read a story this way.
 - **The same work object, drawn again**: the method draws a work object once per sentence that touches it, so one
   thing appears several times under the same name. To make that visible (our display aid, not part of the
   notation), selecting or pointing at one of them puts the selection wash behind the others (no ring: they are related to
@@ -458,6 +463,13 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   snapshot and the Egon export draw from that list in the ink colour (an icon is text an agent wrote: it is never
   put on the page as it came). An icon with nothing to draw is a lint warning and falls back to the built-in one.
   `export-egon` puts them into the story's icon set; `import-egon` does not read Egon's icons.
+  **Agents should draw them.** The built-in work-object icons are generic and a work object without a `kind` is a
+  document, so a story an agent writes tends to be a row of identical pages; the book wants an icon set "adapted to
+  the domain" (p. 21). The prompt and the `domain-storytelling` skill ask the agent to draw icons for the domain's
+  things — one per kind of thing, the main work object first, three to seven in a story — and lint asks when half
+  or more of the work objects look alike. How to draw one (an outline on 24 × 24, stroked 1.9 wide in ink, never
+  filled; no `transform` or `<g>`) and a gallery of about twenty to copy from (invoice, payment, appointment,
+  reminder, contract, form, shipment …): `skills/domain-storytelling/references/icons.md`.
 - **Egon.io interop**: `awd design import-egon <story.egn | story.egn.svg> --out design/<name>.domain-story.yaml`
   and `awd design export-egon <file> --out <story.egn>` (with plain icons of our own for the names used).
 - **Into a story map** (our rule — the site gives none): `awd design propose-stories <domain-story file> --into

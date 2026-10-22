@@ -1,0 +1,28 @@
+# An idea for Unprose. The canvas fills these fields from the "Suggest a feature" link by their ids
+# (packages/canvas/src/issueLink.ts ISSUE_FORMS; test/issueLink.test.ts checks they match).
+name: Suggest a feature
+description: Something that is hard or missing in Unprose, and what would help.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is **public**. Leave out anything private: board content, file contents, names, links to your canvas, tokens.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or missing now, and what you were trying to do. A short idea of what would help can go here too.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would help, if you have something in mind — how it could work, what it could look like.
+  - type: input
+    id: version
+    attributes:
+      label: Unprose version
+      description: At the bottom of the left rail on a board, and in the answer of `unprose_help`.
+      placeholder: "0.28.0"

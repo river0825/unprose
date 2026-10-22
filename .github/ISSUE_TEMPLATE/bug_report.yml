@@ -1,0 +1,46 @@
+# A problem with Unprose. The canvas fills these fields from the "Report a problem" link by their ids
+# (packages/canvas/src/issueLink.ts ISSUE_FORMS; test/issueLink.test.ts checks they match).
+name: Report a problem
+description: Something in Unprose did not work as it should — the canvas page, the awd CLI, an MCP tool or the plugin.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is **public**. Leave out anything private: board content, file contents, names, links to your canvas, tokens.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did and what Unprose did. Paste an error message as text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to get there
+      description: The steps that lead to it, from a new board if you can.
+      placeholder: |
+        1.
+        2.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Canvas page
+        - awd CLI
+        - Local MCP
+        - Remote /mcp
+        - Claude Code plugin
+        - Other
+  - type: input
+    id: version
+    attributes:
+      label: Unprose version
+      description: At the bottom of the left rail on a board, and in the answer of `unprose_help`.
+      placeholder: "0.28.0"

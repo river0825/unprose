@@ -155,7 +155,7 @@ export function summarize(board: Board, changes: Change[], opts: { collapseMoves
       const moved = (patch.x !== undefined && patch.x !== was?.x) || (patch.y !== undefined && patch.y !== was?.y)
       const resized = (patch.w !== undefined && patch.w !== was?.w) || (patch.h !== undefined && patch.h !== was?.h)
       if (parentChanged) {
-        parts.push(`moved from ${containerName(was?.parent, board, changes) ?? 'nowhere'} → ${containerName(patch.parent as string | undefined, board, changes) ?? 'nowhere'}`)
+        parts.push(`moved from ${containerName(was?.parent, board, changes) ?? 'nowhere'} → ${containerName(patch.parent ?? undefined, board, changes) ?? 'nowhere'}`)
       } else if (moved && was) {
         // Containment may have changed geometrically without `parent` being set.
         const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was)
@@ -248,7 +248,7 @@ export function cardMoves(board: Board, changes: Change[]): CardMove[] {
       let to: string | undefined
       if (op.patch.parent !== undefined && op.patch.parent !== was.parent) {
         from = columnName(was.parent)
-        to = columnName(op.patch.parent as string | undefined)
+        to = columnName(op.patch.parent ?? undefined)
       } else if ((op.patch.x !== undefined && op.patch.x !== was.x) || (op.patch.y !== undefined && op.patch.y !== was.y)) {
         const beforeC = containerOf({ ...board, items: { ...board.items, [was.id]: was } }, was)
         const afterC = containerOf(board, now)

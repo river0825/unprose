@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { ReportEntry } from './ReportIssue'
 
 const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
 
@@ -108,6 +109,9 @@ export function ShortcutsSheet({ onClose }: { onClose: () => void }) {
               </dl>
             </section>
           ))}
+        </div>
+        <div className="sheet-foot">
+          <ReportEntry before={onClose} />
         </div>
       </div>
     </div>

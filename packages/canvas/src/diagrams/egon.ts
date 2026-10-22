@@ -124,6 +124,8 @@ const GLYPH: Record<string, string> = {
   System: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8v-2H8z"/>',
   Document: '<path d="M6 2h8l4 4v16H6z"/>',
 }
+/** A group's colour as Egon.io draws it (its outline and name): the strong shade of the board's token; grey and white stay black. */
+const GROUP_INK: Record<string, string> = { orange: '#d9922e', blue: '#4f8fd8', yellow: '#d6ba22', 'pale-yellow': '#c9bd76', lilac: '#a07bd9', purple: '#9d4edd', green: '#66b664', pink: '#d67aa2', red: '#d85a5a' }
 const svg = (icon: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${GLYPH[icon] ?? '<rect x="4" y="4" width="16" height="16" rx="3"/>'}</svg>`
 
 /** Our domain-story content → an Egon.io `.egn` object. Positions follow our left → right layout. */
@@ -188,7 +190,7 @@ export function toEgon(content: DomainStoryContent, opts: { title?: string; desc
     if (!members.length) continue
     const xs = members.map((o) => o.x ?? 0)
     const ys = members.map((o) => o.y ?? 0)
-    objs.push({ id: id('shape'), type: 'domainStory:group', name: g.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members.map((o) => o.id), pickedColor: 'black' })
+    objs.push({ id: id('shape'), type: 'domainStory:group', name: g.text, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, width: Math.max(...xs) - Math.min(...xs) + 160, height: Math.max(...ys) - Math.min(...ys) + 160, children: members.map((o) => o.id), pickedColor: (g.color && GROUP_INK[g.color]) || 'black' })
   }
   m.annotations.forEach((a, i) => {
     const target = shapeOf.get(a.on)

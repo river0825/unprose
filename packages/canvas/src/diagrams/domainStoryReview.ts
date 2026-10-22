@@ -85,12 +85,26 @@ export function reviewDomainStory(m: DsModel): DsReviewFinding[] {
   if (told.length >= 4 && names.size === told.length)
     out.push({ rule: 'work-objects-never-repeat', severity: 'info', message: `no work object is in more than one of the ${told.length} sentences — the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START })
 
-  // "A work object can have different icons within the same domain story if the medium changes"; Egon: "upload your own icons".
-  const kinds = new Set(told.map((s) => s.objectKind))
-  if (told.length >= 3 && names.size >= 3 && kinds.size === 1)
-    out.push({ rule: 'work-objects-one-icon', severity: 'info', message: `all ${names.size} work objects are drawn with the "${[...kinds][0]}" icon — a pictogram should say what the thing is: give each a fitting \`kind\` (document, thing, digital, folder, call, email, conversation, info), or draw a few of your own that fit the domain under \`icons:\` and use the name as the kind`, page: EGON_HOWTO })
-
+  // "An icon set should be adapted to the domain" (the book, p. 21); Egon: "upload your own icons". The built-in icons
+  // are generic, so when most of the things look alike the picture stops telling them apart — not only when all do.
   const icons = m.icons ?? {}
+  const drawnAs = (kind: string) => (BUILT_IN_OBJECT_ICONS.has(kind) || parseDsIcon(icons[kind]) ? kind : 'document')
+  const byIcon = new Map<string, Map<string, { text: string; declared: boolean }>>()
+  for (const s of told) {
+    const icon = drawnAs(s.objectKind)
+    const things = byIcon.get(icon) ?? new Map()
+    things.set(s.object ?? s.objectText!.trim().toLowerCase(), { text: s.objectText!.trim(), declared: !!s.object })
+    byIcon.set(icon, things)
+  }
+  const [icon, alike] = [...byIcon].sort((a, b) => b[1].size - a[1].size)[0] ?? []
+  if (icon && alike && told.length >= 3 && alike.size >= 3 && alike.size * 2 >= names.size) {
+    const shown = [...alike.values()]
+    const list = shown.slice(0, 5).map((t) => `"${t.text}"`).join(', ') + (shown.length > 5 ? ', …' : '')
+    const loose = shown.filter((t) => !t.declared).map((t) => `"${t.text}"`)
+    const declare = loose.length ? `; ${loose.slice(0, 3).join(', ')}${loose.length > 3 ? ' …' : ''} ${loose.length > 1 ? 'are' : 'is'} only named in a sentence (drawn as a document) — declare ${loose.length > 1 ? 'them' : 'it'} under \`workObjects\` to give ${loose.length > 1 ? 'them' : 'it'} a kind` : ''
+    out.push({ rule: 'work-objects-one-icon', severity: 'info', message: `${alike.size === names.size ? `all ${alike.size}` : `${alike.size} of ${names.size}`} work objects are drawn with the "${icon}" icon (${list}) — a pictogram should say what the thing is, and the built-in icons are generic: draw a few of your own for this domain's things under \`icons:\` and use the name as the kind (a 24 × 24 line drawing of plain shapes, e.g. \`invoice: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 7.5h6M9 11h6"/></svg>'\`), or give each a fitting built-in kind (document, thing, digital, folder, call, email, conversation, info)${declare}`, page: EGON_HOWTO })
+  }
+
   for (const [icon, svg] of Object.entries(icons)) {
     if (!parseDsIcon(svg)) out.push({ rule: 'icon-invalid', severity: 'warning', message: `icon "${icon}" has nothing the board can draw — write a 24 × 24 line drawing from <path d>, <circle>, <ellipse>, <rect>, <line>, <polyline> or <polygon> with plain numbers (no styles, text, images or links); the built-in icon is used instead`, page: EGON_HOWTO })
   }

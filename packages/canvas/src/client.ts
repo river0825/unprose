@@ -297,8 +297,9 @@ export class CanvasClient {
     return this.req<{ seq: number }>('POST', `/api/boards/${encodeURIComponent(id)}/handover/cancel`, { ...o, author: 'agent' })
   }
   /** Tell the owner something about Unprose itself (docs/canvas.md "Feedback"). */
-  sendFeedback(input: { text: string; board?: string; about?: string[] }) {
-    return this.req<{ ok: true; id: string }>('POST', '/api/feedback', input)
+  /** `issue`: the record as a prefilled GitHub "new issue" link for the person (an older canvas leaves it out). */
+  sendFeedback(input: { text: string; kind?: 'bug' | 'idea'; title?: string; board?: string; about?: string[] }) {
+    return this.req<{ ok: true; id: string; issue?: string }>('POST', '/api/feedback', input)
   }
   /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
   feedback() {

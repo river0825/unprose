@@ -315,6 +315,11 @@ button.danger {
 .feedback-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .feedback-list li { border: 1px solid var(--rule); border-radius: var(--radius); padding: 8px 10px; background: var(--paper); }
 .feedback-list li > div + div { margin-top: 4px; color: var(--ink); }
+.feedback-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px 12px; }
+.feedback-meta > .muted { min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
+.feedback-list .feedback-title { font-weight: 600; }
+.feedback-file { flex: none; margin: -2px -4px 0 0; color: var(--ink-2); font-weight: 500; }
+.feedback-file:hover { color: var(--ink); }
 
 /* Why a page cannot manage agents, and how to get the right (docs/canvas.md "Manage rights for a browser elsewhere") */
 .manage-why {

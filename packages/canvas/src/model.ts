@@ -92,8 +92,14 @@ export interface Board {
 
 export type Op =
   | { kind: 'add'; item: Item }
-  | { kind: 'update'; id: string; patch: Partial<Omit<Item, 'id'>> }
+  | { kind: 'update'; id: string; patch: ItemPatch }
   | { kind: 'remove'; id: string }
+
+/**
+ * What an update sets. JSON has no `undefined`, so a key is taken away with `null`: `parent: null` takes an item out of
+ * its frame, lane or column (an `undefined` there would be dropped on the way and the item would stay in it).
+ */
+export type ItemPatch = Omit<Partial<Omit<Item, 'id'>>, 'parent'> & { parent?: string | null }
 
 export interface Change {
   seq: number
@@ -267,7 +273,10 @@ export function applyOps(board: Board, ops: Op[], author: Author, now = new Date
       const cur = items[op.id]
       if (!cur) continue
       if (!(op.id in before)) before[op.id] = cur
-      items[op.id] = isSeenOnly(op, cur) ? { ...cur, ...op.patch, id: cur.id } : { ...cur, ...op.patch, id: cur.id, updatedBy: author, updatedAt: now }
+      const next = (isSeenOnly(op, cur) ? { ...cur, ...op.patch, id: cur.id } : { ...cur, ...op.patch, id: cur.id, updatedBy: author, updatedAt: now }) as Item & Record<string, unknown>
+      // null takes a key away (ItemPatch)
+      for (const [k, v] of Object.entries(op.patch)) if (v === null) delete next[k]
+      items[op.id] = next
     } else if (op.kind === 'remove') {
       const cur = items[op.id]
       if (!cur) continue

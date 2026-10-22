@@ -235,8 +235,10 @@ export function FrameNode({ data, selected }: NodeProps<ItemNode>) {
   const edit = useEdit()
   // a hidden frame is drawn collapsed to this strip: what it holds is not drawn (docs/canvas.md "Hiding a frame")
   const hidden = hiddenCountOf(item)
+  // a domain-story group's colour is a pale wash behind its members (grey, the default, and white: none) — docs/diagrams.md §6b
+  const tint = item.data?.ds === 'group' && item.color && item.color !== 'grey' && item.color !== 'white' ? colorVar(item.color) : undefined
   return (
-    <Shell item={item} pulse={pulse} selected={selected} resizable={hidden === undefined} className={hidden === undefined ? 'frame' : 'frame frame-hidden'} handles={false}>
+    <Shell item={item} pulse={pulse} selected={selected} resizable={hidden === undefined} className={`${hidden === undefined ? 'frame' : 'frame frame-hidden'}${tint ? ' tinted' : ''}`} handles={false} style={tint ? { ['--group-tint' as string]: tint } : undefined}>
       <Rims />
       <div className="frame-title drag-handle">
         {data.diagram ? (

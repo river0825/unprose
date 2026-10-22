@@ -10,6 +10,10 @@ export interface FeedbackRecord {
   /** how the caller got in: 'local' | 'agent' | 'person' | 'open' */
   via: string
   text: string
+  /** what the sender says it is — something that did not work, or something hard or missing (the GitHub issue form it fits) */
+  kind?: 'bug' | 'idea'
+  /** a short title for the issue; without one it is the text's first sentence */
+  title?: string
   board?: string
   about?: string[]
 }

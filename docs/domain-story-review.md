@@ -115,6 +115,7 @@ A finding is easiest to take when it sits on the sentence it is about, as one qu
 Lint sees the file, so it can tell: the scope is not stated; `pure` with a system actor; every sentence between
 one user and one system; most sentences about what does not happen; several work objects whose names start
 with the same word; a date in a verb; "if" / "or" in a sentence; a label ending in an outcome word; no work object repeated;
-one icon for everything; a kind without an icon. All of these are `info` (the scope contradiction is a
+half or more of the work objects drawn with one icon (usually the document — the built-in icons are generic; draw the
+domain's own); a kind without an icon. All of these are `info` (the scope contradiction is a
 warning): questions for the conversation. Lint cannot tell whether an actor really acts, whether the levels of
 detail are mixed, or whether the story has an ending — that is what the `critique` prompt is for.

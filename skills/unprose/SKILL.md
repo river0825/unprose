@@ -49,7 +49,9 @@ and annotate, and a rule set that keeps it honest:
   `description`, story `acceptance`, wireframe / UI `note`, EventStorming `definitions` / `hotspots`). Never enlarge a
   sticky to fit text (docs/diagrams.md "Bilingual boards").
 - **Feedback.** Something in Unprose got in your way (a confusing result, a missing tool)? Say so with
-  `unprose_feedback` — the owner reads it.
+  `unprose_feedback` (`kind: 'bug' | 'idea'`, a short `title`) — the owner reads it. Its answer has a prefilled GitHub
+  issue link: give it to the person if they want it tracked; they submit it. Never file an issue yourself unless they
+  ask and you have your own GitHub access.
 
 ## Tools
 

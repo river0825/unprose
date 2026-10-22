@@ -5,6 +5,7 @@ import { AgentsPage } from './AgentsPage'
 import { AccessContext, accessApi, SIGNIN_EVENT, type AccessMe } from './access'
 import { AccessCenter } from './components/AccessCenter'
 import { SignIn } from './components/SignIn'
+import { ReportHost } from './components/ReportIssue'
 
 function usePath(): string {
   const [path, setPath] = useState(location.pathname)
@@ -39,6 +40,7 @@ export function App() {
     <AccessContext.Provider value={me}>
       <AccessCenter hidden={agents} />
       {m ? <BoardPage key={m[1]} id={decodeURIComponent(m[1])} /> : agents ? <AgentsPage /> : <BoardList />}
+      <ReportHost />
     </AccessContext.Provider>
   )
 }

@@ -63,7 +63,7 @@ function invert(entry: Change, board: Board): { ops: Op[]; skipped: string[] } {
   const last = new Map<string, Op>()
   for (const op of entry.ops) last.set(op.kind === 'add' ? op.item.id : op.id, op)
   for (const [id, op] of last) {
-    const prev = entry.before[id]
+    const prev = entry.before?.[id]
     const cur = board.items[id]
     if (cur && cur.updatedBy === 'agent' && cur.updatedAt > entry.ts) {
       skipped.push(id)

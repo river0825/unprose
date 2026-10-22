@@ -3,6 +3,7 @@ import { api, asArray, type BoardSummary, type ProjectSummary } from './api'
 import { navigate } from './BoardPage'
 import { timeAgo } from './time'
 import { AskPanel } from './components/AskHints'
+import { ReportEntry } from './components/ReportIssue'
 
 const KIND_NAMES: Record<string, string> = {
   'event-storming': 'Event storming',
@@ -136,6 +137,9 @@ export function BoardList() {
           ))}
         </>
       )}
+      <footer className="list-foot">
+        <ReportEntry />
+      </footer>
     </main>
   )
 }

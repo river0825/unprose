@@ -187,7 +187,7 @@ test('a trace into a sentence without a work object reaches its actor', async ()
   assert.equal(wires[0].to, 'k.actor.b')
 })
 
-test('review hints: scope, one concrete case, work objects that are things, come back and have their own icons', () => {
+test('review hints: scope, one concrete case, work objects that are things, come back and have their own icons', async () => {
   const rules = (c: DomainStoryContent) => checkDomainStory(c).map((f) => f.rule)
   const base = { scope: { granularity: 'coarse-grained', time: 'to-be', purity: 'digitalized' }, actors: ['Operator', { text: 'App', kind: 'system' }] } as const
   const findings = checkDomainStory({
@@ -201,7 +201,9 @@ test('review hints: scope, one concrete case, work objects that are things, come
       { actor: 'Operator', verb: 'activates', object: 'experiment', to: 'App' },
     ],
   })
-  assert.deepEqual(findings.map((f) => f.rule).sort(), ['conditional', 'icon-unknown', 'request-response', 'work-object-outcome', 'work-objects-never-repeat'])
+  assert.deepEqual(findings.map((f) => f.rule).sort(), ['conditional', 'icon-unknown', 'request-response', 'work-object-outcome', 'work-objects-never-repeat', 'work-objects-one-icon'])
+  // "flask" has no icon, so it is drawn as a document too
+  assert.match(findings.find((f) => f.rule === 'work-objects-one-icon')!.message, /^all 5 work objects are drawn with the "document" icon \("segments", "cadence", "settings", "Validation passed \/ 檢查通過", "experiment"\)/)
   assert.ok(findings.every((f) => f.severity === 'info' && f.page))
 
   // the same thing coming back under one name, with icons that differ: nothing to say
@@ -217,6 +219,20 @@ test('review hints: scope, one concrete case, work objects that are things, come
     { actor: 'App', verb: 'sends', object: 'invoice', to: 'Operator' },
     { actor: 'Operator', verb: 'pays', object: 'bill', to: 'App' },
   ] }), ['work-objects-one-icon'])
+  // most of them alike is enough to ask (not only all); things only named in a sentence are told to be declared
+  const mostly = (extra: DomainStoryContent['workObjects'], objects: string[]) => checkDomainStory({ ...base, workObjects: extra, sentences: objects.map((object, i) => ({ actor: i % 2 ? 'App' : 'Operator', verb: 'hands on', object, to: i % 2 ? 'Operator' : 'App' })) }).filter((f) => f.rule === 'work-objects-one-icon')
+  const half = mostly([{ text: 'contract', kind: 'document' }, { text: 'call', kind: 'call' }, { text: 'parcel', kind: 'thing' }], ['contract', 'invoice', 'reminder', 'call', 'parcel', 'invoice'])
+  assert.equal(half.length, 1)
+  assert.match(half[0].message, /^3 of 5 work objects are drawn with the "document" icon \("contract", "invoice", "reminder"\)/)
+  assert.match(half[0].message, /"invoice", "reminder" are only named in a sentence \(drawn as a document\) — declare them under `workObjects`/)
+  // fewer than half alike, or a story's own icon for them: nothing to say
+  assert.deepEqual(mostly([{ text: 'call', kind: 'call' }, { text: 'parcel', kind: 'thing' }, { text: 'chat', kind: 'conversation' }, { text: 'db', kind: 'digital' }], ['contract', 'invoice', 'reminder', 'call', 'parcel', 'chat', 'db']), [])
+  const invoice = '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 7.5h6M9 11h6"/></svg>'
+  assert.deepEqual(checkDomainStory({ ...base, icons: { invoice }, workObjects: [{ text: 'invoice', kind: 'invoice' }, { text: 'contract', kind: 'document' }, { text: 'call', kind: 'call' }], sentences: ['invoice', 'contract', 'call', 'invoice'].map((object, i) => ({ actor: i % 2 ? 'App' : 'Operator', verb: 'hands on', object, to: i % 2 ? 'Operator' : 'App' })) }).filter((f) => f.rule === 'work-objects-one-icon'), [])
+  // the icon the hint shows as an example is one the board can draw
+  const { parseDsIcon } = await import('../src/diagrams/dsIcons.js')
+  const example = /invoice: '(<svg.*?<\/svg>)'/.exec(half[0].message)![1]
+  assert.equal(parseDsIcon(example)?.shapes.length, 2)
   // a user and a system answering each other, sentence after sentence, is a screen flow
   assert.match(findings.find((f) => f.rule === 'request-response')!.message, /between "Operator" and "App"/)
   // pure means no software systems; a story that states no scope is asked for it
@@ -257,6 +273,27 @@ test("icons of the story's own: only plain shapes are drawn, on the board, in th
   const egon = toEgon(content) as { iconSet: { workObjects: Record<string, string> } }
   assert.match(egon.iconSet.workObjects.Flask, /<path d="M9 3h6M10 3v6l-5 10h14l-5-10V3"\/><circle cx="12" cy="16" r="1"\/><\/svg>$/)
   assert.doesNotMatch(egon.iconSet.workObjects.Flask, /script|onload|image|javascript/)
+})
+
+test('the icon gallery agents copy from (domain-storytelling skill, references/icons.md) draws whole, and lints clean', async () => {
+  const fs = await import('node:fs')
+  const { parseDsIcon } = await import('../src/diagrams/dsIcons.js')
+  const md = fs.readFileSync(new URL('../../../skills/domain-storytelling/references/icons.md', import.meta.url), 'utf8')
+  const gallery = Object.fromEntries([...md.matchAll(/^([a-z]+): '(<svg viewBox="0 0 24 24">.*<\/svg>)'$/gm)].map((m) => [m[1], m[2]]))
+  assert.ok(Object.keys(gallery).length >= 20)
+  for (const [name, svg] of Object.entries(gallery)) {
+    const shapes = svg.match(/<(path|circle|ellipse|rect|line|polyline|polygon)\b/g)!.length
+    assert.equal(parseDsIcon(svg)?.shapes.length, shapes, `${name}: every shape is drawn`)
+  }
+  const names = Object.keys(gallery)
+  const content: DomainStoryContent = {
+    scope: { granularity: 'coarse-grained', time: 'to-be', purity: 'pure' },
+    actors: ['Clerk', 'Customer'],
+    workObjects: names.map((n) => ({ text: n, kind: n })),
+    sentences: names.map((n, i) => ({ actor: i % 2 ? 'Customer' : 'Clerk', verb: 'hands', object: n, to: i % 2 ? 'Clerk' : 'Customer' })),
+    icons: gallery,
+  }
+  assert.deepEqual(checkDomainStory(content).filter((f) => f.rule.startsWith('icon') || f.rule === 'work-objects-one-icon'), [])
 })
 
 test('the same work object in several sentences: its pictograms know each other', async () => {

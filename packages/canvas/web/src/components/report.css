@@ -1,0 +1,176 @@
+/* "Report a problem" / "Suggest a feature" (components/ReportIssue.tsx): a quiet line in the help sheets and under the
+   board list, and the dialog that opens a prefilled GitHub issue. Tokens from styles.css (light and dark). */
+
+/* the entry: muted text, two plain text buttons — present where people look for help, never eye-catching */
+.report-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.report-link {
+  min-height: 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-underline-offset: 2px;
+}
+.report-link:hover {
+  background: transparent;
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+/* at the bottom of a sheet (release notes, keyboard shortcuts), outside its scrolling body */
+.sheet-foot {
+  padding: 8px 16px 10px;
+  border-top: 1px solid var(--rule);
+}
+.release-notes .sheet-foot {
+  padding-inline: 20px;
+}
+/* under the board list */
+.list-foot {
+  margin-top: 40px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+/* the dialog */
+.report-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--chrome);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+  font-size: 13.5px;
+}
+.report-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.report-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.report-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.report-head p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.report-head .mono {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* kind: two segments, native radios underneath (arrow keys move between them) */
+.report-kind {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.report-kind label {
+  position: relative;
+  padding: 4px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.report-kind input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.report-kind label:hover {
+  color: var(--ink);
+}
+.report-kind label:has(input:checked) {
+  background: var(--marker-soft);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--marker);
+}
+.report-kind label:has(input:focus-visible) {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+
+.report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.report-field > label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.report-field input,
+.report-field textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.report-field textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+.report-field input::placeholder {
+  color: var(--ink-3);
+}
+.report-field input:focus-visible,
+.report-field textarea:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: -1px;
+}
+.report-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.report-privacy {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 2px solid var(--rule-2);
+  background: var(--chrome-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
