@@ -10,7 +10,8 @@
 // - "Every actor appears only once in the domain story. But for every activity, we draw a separate work object."
 //   That is the default. A long story whose sentences keep coming back to an early actor ends up with long arrows
 //   across the picture, so a story may let actors repeat (`layout.actors: repeat`, or `repeat: true` on one actor):
-//   the actor is still declared once, and the board draws it again where the story continues (templates/domain-story.ts).
+//   the actor is still declared once, and the board draws it again where the story continues (templates/domain-story.ts);
+//   a sentence's `drawAgain: <actor>` draws that actor again for that sentence, whatever the layout would pick.
 // - Textual annotations complement the sentences; "a group is represented as an outline that clusters parts
 //   of a story" (repetition, optional parts, locations, organisations, subdomains).
 // - Scope: granularity (coarse ↔ fine), point in time (as-is / to-be), domain purity (pure / digitalized).
@@ -80,6 +81,8 @@ export const domainStorySchema = z.object({
         to: z.union([z.string(), z.array(z.string())]).optional(),
         /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
         toLabel: z.string().optional(),
+        /** Actor(s) of this sentence (its actor or a receiver, id or text) to draw again for it, next to the sentence. */
+        drawAgain: z.union([z.string(), z.array(z.string())]).optional(),
         note: z.string().optional(),
         traces: z.array(traceSchema).optional(),
       }),
@@ -126,6 +129,8 @@ export interface DsSentence {
   objectKind: string
   to: string[]
   toLabel?: string
+  /** actors to draw again for this sentence (`drawAgain`): actor ids — a ref that names no actor stays as written, for the lint */
+  drawAgain?: string[]
   note?: string
   traces: Trace[]
 }
@@ -174,23 +179,29 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const id = alloc(s.id, `${seq}-${s.verb}`, 'sentence')
     const declared = s.object ? find(workObjects, s.object) : undefined
     const to = s.to === undefined ? [] : Array.isArray(s.to) ? s.to : [s.to]
+    const actor = actorRef(s.actor, id, 'actor')
+    const receivers = to.map((r) => actorRef(r, id, 'to'))
+    // resolved after the actor and receivers, so a drawAgain naming an actor first met in this sentence finds it
+    const again = s.drawAgain === undefined ? [] : Array.isArray(s.drawAgain) ? s.drawAgain : [s.drawAgain]
     return {
       id,
       seq,
-      actor: actorRef(s.actor, id, 'actor'),
+      actor,
       verb: s.verb,
       ...(declared ? { object: declared.id } : {}),
       ...(s.object ? { objectText: declared?.text ?? s.object } : {}),
       objectKind: declared?.kind ?? 'document',
-      to: to.map((r) => actorRef(r, id, 'to')),
+      to: receivers,
       ...(s.toLabel ? { toLabel: s.toLabel } : {}),
+      ...(again.length ? { drawAgain: [...new Set(again.map((r) => find(actors, r)?.id ?? r))] } : {}),
       ...(s.note ? { note: s.note } : {}),
       traces: s.traces ?? [],
     }
   })
 
+  const elementOf = (ref: string) => find(actors, ref)?.id ?? find(workObjects, ref)?.id ?? sentences.find((s) => s.id === ref)?.id
   const elementRef = (ref: string, element: string, field: string): string | undefined => {
-    const hit = find(actors, ref)?.id ?? find(workObjects, ref)?.id ?? sentences.find((s) => s.id === ref)?.id
+    const hit = elementOf(ref)
     if (!hit) unresolved.push({ element, field, ref })
     return hit
   }
@@ -198,8 +209,10 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const id = alloc(g.id, g.text, 'group')
     return { id, text: g.text, members: g.members.map((m) => elementRef(m, id, 'members')).filter((x): x is string => !!x), ...(g.color ? { color: g.color } : {}) }
   })
-  const annotations = c.annotations.flatMap((a, i) => {
-    const id = alloc(a.id, `note-${i + 1}`, 'note')
+  // a note's id is named after what it is on (`note-<element>`, a second one on it `-2`), not its place in the list: a
+  // note inserted above keeps the others' ids, so the board keeps where the person put them
+  const annotations = c.annotations.flatMap((a) => {
+    const id = alloc(a.id, `note-${elementOf(a.on) ?? a.on}`, 'note')
     const on = elementRef(a.on, id, 'on')
     return on ? [{ id, on, text: a.text }] : []
   })
@@ -220,7 +233,7 @@ export function circled(n: number): string {
 
 const QUICK_START = 'domainstorytelling.org/quick-start-guide'
 
-export type DsRule = 'unresolved-reference' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long'
+export type DsRule = 'unresolved-reference' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long' | 'draw-again-not-in-sentence' | 'draw-again-first-appearance'
 
 /** A note longer than this (in display width: a CJK character counts as two) crowds the story (§6b "No collisions"). */
 export const NOTE_RECOMMENDED = 120
@@ -257,6 +270,18 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
       })
     }
     if (!s.objectText) out.push({ rule: 'sentence-without-object', severity: 'info', element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object — a sentence is actor → activity → work object`, page: QUICK_START })
+  }
+  // drawAgain (§6b "Repeated actors"): an actor of the sentence, drawn again for it — in the order the board draws the story
+  const met = new Set<string>()
+  for (const s of [...m.sentences].sort((a, b) => a.seq - b.seq)) {
+    const members = [s.actor, ...s.to.filter((r) => r !== s.actor)]
+    for (const ref of s.drawAgain ?? []) {
+      if (!members.includes(ref))
+        out.push({ rule: 'draw-again-not-in-sentence', severity: 'warning', element: s.id, message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}": drawAgain names "${actorName(ref)}", who is not in this sentence, so nothing is drawn again for it — name its actor or a receiver (${members.map(actorName).join(', ')})`, page: 'docs/diagrams.md §6b' })
+      else if (!met.has(ref))
+        out.push({ rule: 'draw-again-first-appearance', severity: 'info', element: s.id, message: `${circled(s.seq)}: drawAgain names "${actorName(ref)}", who first appears here — there is no drawing yet to draw again; this is its first one (drop drawAgain, or move it to a later sentence)`, page: 'docs/diagrams.md §6b' })
+    }
+    for (const id of members) met.add(id)
   }
   const seqs = [...new Set(m.sentences.map((s) => s.seq))].sort((a, b) => a - b)
   seqs.forEach((n, i) => {

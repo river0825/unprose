@@ -21,7 +21,7 @@ import { renderThumb } from './thumb.js'
 import { autoPlaceComments } from './place.js'
 import { boardFiles, buildProposal, ProposalError, sha1, stampAttribution, type ProposalInput } from './proposals.js'
 import { openDrafts, todoCounts } from './todos.js'
-import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, WAIT_MAX_SEC, type Author, type Board, type BriefChange, type BriefOp, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
+import { applyOps, diagramFrameId, isBookkeeping, isLayoutOnly, newId, withoutHints, WAIT_MAX_SEC, type Author, type Board, type BriefChange, type BriefOp, type Change, type DiagramKind, type Item, type Op, type Wake, type WsMessage } from './model.js'
 import { emptyRedrawInputs, foldRedrawInputs, redrawInputsToJson, type LoggedChange, type RedrawInputs } from './diagrams/redraw.js'
 import { addressedTo, asksMe, mentionsMe, CONTEXT_MAX, contextOf, DEFAULT_AGENT_TURNS, diagramRoots, displayName, framelessDiagrams, handleOf, holdersOf, LOCAL_AGENT, mergeBoardMeta, parseResponder, redactHolders, renameInMeta, responderLabel, responderName, responderOf, responderValue, sameAgent, soleHolder, stampHolders, stampRouting, suggestionOf } from './routing.js'
 import { handoverAcceptText, handoverCancelText, handoverFroms, handoverOf, handoverReadyText, handoverStartText, handoverWaiting, heldRefusal, keepHandoverMarks, keepHeldEntries, openProposals, resolveAgent, stampTodos, withoutCredentials, type FileHolder, type Handover, type HandoverKey } from './routing.js'
@@ -884,7 +884,8 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
           if (!items && body.content !== undefined) {
             const parsed = contentSchemas[body.kind].safeParse(body.content)
             if (!parsed.success) throw new HttpError(400, `invalid content: ${parsed.error.message}`)
-            items = render(body.kind, parsed.data)
+            // a template's hints (model.ts DrawHints) are for a redraw, never stored
+            items = render(body.kind, parsed.data).map(withoutHints)
           }
           const who = actor(req, grant, body.author, 'agent')
           // A board an agent draws from its files SUGGESTS that agent as "Answered by"; the person confirms it
@@ -1287,7 +1288,9 @@ export function startServer(opts: ServerOptions = {}): Promise<RunningServer> {
         // traces whose target is not on the board are reported, not silently dropped (river0825/unprose#6)
         const traces = resolveTraces(drawn, board.items, now)
         const items = [...drawn, ...traces.wires]
-        const ops: Op[] = items.map((item) => (board.items[item.id] ? { kind: 'update', id: item.id, patch: item } : { kind: 'add', item }))
+        // `items` keep the template's hints for a redraw to read (diagrams/redraw.ts explainRedraw); `ops` are written as
+        // they are (canvas_create_board, canvas_add_items), so they go without them
+        const ops: Op[] = items.map(withoutHints).map((item) => (board.items[item.id] ? { kind: 'update', id: item.id, patch: item } : { kind: 'add', item }))
         return json(res, 200, { items, ops, unresolvedTraces: traces.unresolved })
       }
       if (sub === 'studio') {

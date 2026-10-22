@@ -7,7 +7,7 @@ Unprose to discuss designs with a person on a shared canvas.
 
 - **Files are the truth.** Each diagram is a file: `design/<name>.<kind>.yaml` (kinds `es`, `story-map`,
   `kanban`, `wireframe`, `domain-story`, `journey`) or a workflow yaml. The canvas board is a projection.
-  Domain stories (docs/diagrams.md §6b): actors appear once (a long story may set `layout: { actors: repeat }` so the board draws an actor again where the story comes back to it), every activity gets its own work object, and work objects get icons that fit the domain (draw your own under
+  Domain stories (docs/diagrams.md §6b): actors appear once (a long story may set `layout: { actors: repeat }` so the board draws an actor again where the story comes back to it; `drawAgain: <actor>` on a sentence draws it again right there), every activity gets its own work object, and work objects get icons that fit the domain (draw your own under
   `icons:` — the built-in ones are generic; `skills/domain-storytelling/references/icons.md`); `awd design
   import-egon` / `export-egon` exchange them with Egon.io.
 - **You edit, the person directs.** Change files after they agree; say which files you changed.

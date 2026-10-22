@@ -3,7 +3,7 @@
 // file. Pure — shared by the CLI (`awd design draw`, `awd graph --canvas`) and the canvas server's remote
 // design tools (docs/canvas.md "Remote agents").
 import { annotationOf, calloutOf } from '../annotations.js'
-import { layoutLock } from '../model.js'
+import { layoutLock, withoutHints } from '../model.js'
 import { growFrame } from './designFile.js'
 
 export type TemplateOp = { kind: string; id?: string; patch?: Record<string, unknown>; item?: BoardItem }
@@ -88,8 +88,12 @@ const sameWire = (drawn: BoardItem, want: WireEnd) => {
   return !!w && node(w.from) === node(want.from) && node(w.to) === node(want.to) && (want.event === undefined || w.event === want.event)
 }
 
-/** `data` keys that say how an item is shown or read, not what it means — a redraw keeps them. */
-const PRESENTATION = ['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend', 'lock', 'lockedBy', 'hidden']
+/**
+ * `data` keys that say how an item is shown or read, not what it means — a redraw keeps them. Two are the redraw's own
+ * records: `renamedFrom` (the item this one replaced, whose place it took — see renamedNotes) and `placedNear` (it was
+ * added next to where the person put that item, and keeps that place).
+ */
+const PRESENTATION = ['seenBy', 'seenByAgents', 'agentState', 'fromSide', 'toSide', 'bend', 'lock', 'lockedBy', 'hidden', 'renamedFrom', 'placedNear']
 function withPresentation(drawn: BoardItem, was: BoardItem): BoardItem {
   const kept = Object.fromEntries(PRESENTATION.filter((k) => was.data && k in was.data).map((k) => [k, was.data![k]]))
   return Object.keys(kept).length ? { ...drawn, data: { ...drawn.data, ...kept } } : drawn
@@ -133,6 +137,8 @@ export function planRedraw(board: Record<string, BoardItem>, drawn: BoardItem[],
 // Each item's geometry follows, in order: a lock (`data.lock: 'layout'` on it or on its frame) > where the person
 // moved or resized it (the change log) > the file. Content (text, colour, data) always follows the file. Items in the
 // frame that this file did not draw — the person's stickies, another agent's cards, comments — are kept and listed.
+// A new item the template placed next to another (`near`) lands next to where that one is on the board, and keeps
+// that place (`data.placedNear`); a note renamed by the file takes the old one's place (`data.renamedFrom`).
 
 /** Who added an item: the last `add` of its id in the change log. */
 export interface ItemOrigin { author: string; by?: string; note?: string }
@@ -175,9 +181,15 @@ export interface RedrawInputs {
   removed?: Map<string, { at?: string }>
 }
 
+/** The item a redraw's add replaced and took the place of (`data.renamedFrom`, see renamedNotes). */
+const renamedFromOf = (it: BoardItem | undefined): string | undefined => (typeof it?.data?.renamedFrom === 'string' ? it.data.renamedFrom : undefined)
+
 /** From the board's whole change log (every author): what the person placed and who added what. */
 export function redrawInputs(changes: LoggedChange[]): Required<RedrawInputs> {
-  return { placed: placedByUser(changes.filter((c) => c.author === 'user') as UserChange[]), origins: originsOf(changes), removed: removedByUser(changes) }
+  const placed = placedByUser(changes.filter((c) => c.author === 'user') as UserChange[])
+  // an item that took the place of one the person placed counts as placed too (oldest first: a rename of a rename)
+  for (const ch of changes) for (const op of ch.ops) if (op.kind === 'add' && op.item && placed.has(renamedFromOf(op.item) ?? '')) placed.add(op.item.id)
+  return { placed, origins: originsOf(changes), removed: removedByUser(changes) }
 }
 
 // ── The same, folded change by change (the canvas keeps it per board: GET /api/boards/:id/redraw-inputs) ──
@@ -196,6 +208,7 @@ export function foldRedrawInputs(acc: Required<RedrawInputs>, changes: LoggedCha
       } else if (op.kind === 'add' && op.item?.id) {
         acc.origins.set(op.item.id, { author: ch.author ?? 'agent', ...(ch.by ? { by: ch.by } : {}), ...(ch.note ? { note: ch.note } : {}) })
         acc.removed.delete(op.item.id)
+        if (acc.placed.has(renamedFromOf(op.item) ?? '')) acc.placed.add(op.item.id)
       } else if (op.kind === 'remove' && op.id && ch.author === 'user') acc.removed.set(op.id, ch.ts ? { at: ch.ts } : {})
     }
   return acc
@@ -314,9 +327,71 @@ const changedKeys = (patch: Record<string, unknown>, was: BoardItem) =>
 const lockOf = (board: Record<string, BoardItem>, id: string) => layoutLock(board as never, id)
 const KEPT_REMOVED = 'you deleted it — the file still has it; propose the file change?'
 
+// ── A new item next to where the person put its neighbour; a note that was renamed ───────────────────────
+
+type Box = { x: number; y: number; w: number; h: number }
+const num = (v: unknown) => (typeof v === 'number' ? v : 0)
+const boxOf = (it: BoardItem): Box => ({ x: num(it.x), y: num(it.y), w: num(it.w), h: num(it.h) })
+/** What a new item must not land on: anything with a body — not a wire, a comment, a frame or a lane (a group outline is a frame). */
+const solid = (it: BoardItem) => it.type !== 'arrow' && it.type !== 'comment' && it.type !== 'frame' && it.type !== 'lane'
+const GAP = 16
+
+/** The nearest spot to `b` that keeps GAP off every box: rings of growing radius, 12 directions each, the first away from `from`. */
+function freeSpot(b: Box, boxes: Box[], from: { x: number; y: number }): { box: Box; nudged: boolean } {
+  const hit = (c: Box) => boxes.some((o) => c.x < o.x + o.w + GAP && o.x < c.x + c.w + GAP && c.y < o.y + o.h + GAP && o.y < c.y + c.h + GAP)
+  if (!hit(b)) return { box: b, nudged: false }
+  const a0 = Math.atan2(b.y + b.h / 2 - from.y, b.x + b.w / 2 - from.x)
+  const step = Math.max(40, Math.round(Math.min(b.w, b.h) / 2))
+  for (let ring = 1; ring <= 30; ring++)
+    for (let k = 0; k < 12; k++) {
+      // alternate sides of the start direction: 0, +30°, -30°, +60° …
+      const a = a0 + (Math.ceil(k / 2) * (k % 2 ? 1 : -1) * Math.PI) / 6
+      const c = { ...b, x: Math.round(b.x + Math.cos(a) * ring * step), y: Math.round(b.y + Math.sin(a) * ring * step) }
+      if (!hit(c)) return { box: c, nudged: true }
+    }
+  return { box: b, nudged: false }
+}
+
+/** A note a file drew as an item of its own, about `data.on` (a domain story's annotation — not a numbered card). */
+const isOnNote = (it: BoardItem) => it.type !== 'comment' && it.role === 'annotation' && typeof it.data?.on === 'string'
+
+/**
+ * Drawn notes the board lacks, matched to the stale notes of this drawing they replace (new id → old id): the same
+ * `data.on` and text, else the same `data.on` when only one is left on each side — and the dashed line from such a note
+ * to what it is on (new line → old line). A domain story's notes were `note-1`, `note-2` … in file order before they
+ * were named after what they are on (`note-<element>`): this carries the person's placement over to the new ids.
+ */
+function renamedNotes(board: Record<string, BoardItem>, drawn: BoardItem[], drawnIds: Set<string>, prefix: string): Map<string, string> {
+  const fresh = drawn.filter((d) => !board[d.id] && isOnNote(d))
+  const stale = Object.values(board).filter((it) => it.id.startsWith(prefix) && !drawnIds.has(it.id) && isOnNote(it) && !pendingOf(it))
+  const on = (it: BoardItem) => it.data!.on as string
+  const out = new Map<string, string>()
+  const used = new Set<string>()
+  const match = (d: BoardItem, o: BoardItem | undefined) => void (o && (out.set(d.id, o.id), used.add(o.id)))
+  for (const d of fresh) match(d, stale.find((o) => !used.has(o.id) && on(o) === on(d) && o.text === d.text))
+  for (const d of fresh) {
+    if (out.has(d.id)) continue
+    const mine = fresh.filter((x) => !out.has(x.id) && on(x) === on(d))
+    const theirs = stale.filter((o) => !used.has(o.id) && on(o) === on(d))
+    if (mine.length === 1 && theirs.length === 1) match(d, theirs[0])
+  }
+  const links = Object.values(board).filter((a) => a.type === 'arrow' && !drawnIds.has(a.id))
+  for (const d of drawn) {
+    const from = d.type === 'arrow' && !board[d.id] && d.from ? out.get(d.from) : undefined
+    if (from) match(d, links.find((a) => a.from === from && a.to === d.to && !used.has(a.id)))
+  }
+  return out
+}
+
 /** The redraw's ops and, for the preview, what it does to each item and why. Pure: nothing is written. */
-export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem[], inputs: RedrawInputs, scope: RedrawScope = { prefix: SCOPE }): RedrawResult {
+export function explainRedraw(board: Record<string, BoardItem>, given: BoardItem[], inputs: RedrawInputs, scope: RedrawScope = { prefix: SCOPE }): RedrawResult {
   const { placed, origins, removed } = inputs
+  // a template's hints (`near`) are read here and never written: taken off every drawn item before anything is compared
+  const hints = new Map<string, string>()
+  const drawn = given.map((d) => {
+    if (typeof d.near === 'string') hints.set(d.id, d.near)
+    return withoutHints(d)
+  })
   const drawnIds = new Set(drawn.map((d) => d.id))
   const held = new Set<string>() // pending, not yet resolved: untouchable
   const ops: TemplateOp[] = []
@@ -337,7 +412,39 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
       plan.settled.push({ id: it.id, label: label(it), why: p.kind === 'remove' && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : 'the file now has it' })
     }
   }
-  // geometry: a lock > the person's move > the file
+  // in the frame (or on a frameless drawing's board)
+  const inFrame = (it: BoardItem): boolean => {
+    if (!scope.frame) return scope.prefix === SCOPE // a workflow board is one drawing; a frame-less diagram lists nothing
+    const seen = new Set<string>()
+    for (let p = it.parent ? board[it.parent as string] : undefined; p && !seen.has(p.id); p = p.parent ? board[p.parent as string] : undefined) {
+      if (p.id === scope.frame) return true
+      seen.add(p.id)
+    }
+    return false
+  }
+  // geometry: a lock > the person's move > the file; an item added next to where the person put another keeps its place
+  const keepOf = (id: string): 'locked' | 'moved' | 'near' | undefined =>
+    !board[id] ? undefined : lockOf(board, id) ? 'locked' : placed.has(id) ? 'moved' : typeof board[id].data?.placedNear === 'string' ? 'near' : undefined
+  const renamed = renamedNotes(board, drawn, drawnIds, scope.prefix)
+  const renamedTo = new Map([...renamed].map(([to, from]) => [from, to]))
+  const drawnById = new Map(drawn.map((d) => [d.id, d]))
+  // new items that land elsewhere than drawn (next to their neighbour, or where the note they replace was)
+  const landed = new Map<string, BoardItem>()
+  // where an item ends up: kept on the board, landed elsewhere, else as drawn
+  const at = (id: string): BoardItem | undefined => landed.get(id) ?? (keepOf(id) ? board[id] : (drawnById.get(id) ?? board[id]))
+  // how far the board has an item from where it is drawn (the person moved it, or it is locked where it was)
+  const shiftOf = (id: string): { dx: number; dy: number } | undefined => {
+    const d = drawnById.get(id)
+    const f = at(id)
+    if (!d || !f || f === d) return undefined
+    const [dx, dy] = [num(f.x) - num(d.x), num(f.y) - num(d.y)]
+    return dx || dy ? { dx, dy } : undefined
+  }
+  // what a new item must not land on: this drawing's items where they end up, and what else is in the frame
+  const obstacles = (self: string): Box[] => [
+    ...drawn.filter((d) => d.id !== self && solid(d)).map((d) => boxOf(at(d.id) ?? d)),
+    ...Object.values(board).filter((it) => !drawnIds.has(it.id) && !it.id.startsWith(scope.prefix) && solid(it) && inFrame(it)).map(boxOf),
+  ]
   const keptLayout = new Set<string>()
   const updates: TemplateOp[] = []
   for (const d of drawn) {
@@ -352,17 +459,45 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
       continue
     }
     if (!was) {
-      updates.push({ kind: 'add', item: d })
-      plan.added.push({ id: d.id, label: label(d) })
+      // a renamed note takes over the old one's presentation and, when that was kept, its place (`renamedFrom` makes
+      // it count as placed from then on: redrawInputs)
+      const from = renamed.get(d.id)
+      const old = from ? board[from] : undefined
+      let item = old ? withPresentation(d, old) : d
+      const why: string[] = []
+      if (old && from) {
+        if (d.type !== 'arrow') item = { ...item, data: { ...(item.data ?? {}), renamedFrom: from } }
+        why.push(`replaces ${from} (${d.type === 'arrow' ? 'the line of a renamed note' : 'the same note, renamed'})`)
+        const kept = keepOf(from)
+        if (kept && d.type !== 'arrow') {
+          item = { ...item, ...Object.fromEntries(GEOMETRY.filter((k) => k in old).map((k) => [k, old[k]])) }
+          landed.set(d.id, item)
+          why.push(kept === 'moved' ? 'keeps where you put it' : kept === 'locked' ? 'keeps its place (locked)' : 'keeps its place')
+        }
+      }
+      // a new item drawn next to another (the template's `near`) lands next to where that one is on the board — moved
+      // by the person, or locked where it was — not where the drawing has it, and off what is already there
+      const anchor = hints.get(d.id)
+      const shift = !landed.has(d.id) && anchor && solid(d) ? shiftOf(anchor) : undefined
+      if (anchor && shift) {
+        const a = boxOf(at(anchor)!)
+        const spot = freeSpot({ ...boxOf(d), x: num(d.x) + shift.dx, y: num(d.y) + shift.dy }, obstacles(d.id), { x: a.x + a.w / 2, y: a.y + a.h / 2 })
+        item = { ...item, x: spot.box.x, y: spot.box.y, data: { ...(item.data ?? {}), placedNear: anchor } }
+        landed.set(d.id, item)
+        why.push(`placed next to "${label(board[anchor] ?? drawnById.get(anchor))}", where ${placed.has(anchor) ? 'you put it' : 'it is on the board'}${spot.nudged ? ' (moved aside to a free spot)' : ''}`)
+      }
+      updates.push({ kind: 'add', item })
+      plan.added.push({ id: d.id, label: label(d), ...(why.length ? { why: why.join('; ') } : {}) })
       continue
     }
     const patch = withPresentation(d, was) as Record<string, unknown>
     const lock = lockOf(board, d.id)
-    const keep = lock ? 'locked' : placed.has(d.id) ? 'moved' : undefined
+    const keep = keepOf(d.id)
     if (keep) keptLayout.add(d.id)
     const geometry = GEOMETRY.filter((k) => k in patch && !same(patch[k], was[k]))
     if (keep && geometry.length) {
-      const line = { id: d.id, label: label(was), why: keep === 'locked' ? `${lock === 'frame' ? 'its frame is locked' : 'locked'}: keeps ${geometry.join(', ')}` : `you moved it: keeps ${geometry.join(', ')}` }
+      const near = keep === 'near' ? `placed next to "${label(board[String(was.data?.placedNear)])}" when it was added` : ''
+      const line = { id: d.id, label: label(was), why: keep === 'locked' ? `${lock === 'frame' ? 'its frame is locked' : 'locked'}: keeps ${geometry.join(', ')}` : `${near || 'you moved it'}: keeps ${geometry.join(', ')}` }
       ;(keep === 'locked' ? plan.keptLocked : plan.keptMoved).push(line)
     }
     const op: TemplateOp = { kind: 'update', id: d.id, patch }
@@ -376,6 +511,13 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
     }
     plan.updated.push({ id: d.id, label: label(was), why: changed.join(', ') })
     updates.push(final)
+  }
+  // a thread about a renamed note follows it (its first comment's `target`)
+  for (const c of Object.values(board)) {
+    const to = c.type === 'comment' && typeof c.target === 'string' ? renamedTo.get(c.target) : undefined
+    if (!to || held.has(c.id)) continue
+    updates.push({ kind: 'update', id: c.id, patch: { target: to } })
+    plan.updated.push({ id: c.id, label: label(c), why: `its thread was on ${c.target}, which is now ${to}: it follows` })
   }
   // stale: items of this drawing the file no longer has. An item the person added — or another agent added by hand —
   // with this drawing's prefix is not stale: it is kept with the foreign items.
@@ -411,18 +553,9 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
     }
     ops.push({ kind: 'remove', id: it.id })
     const lock = lockOf(board, it.id)
-    plan.removed.push({ id: it.id, label: label(it), why: `no longer in the file${lock ? ' (a lock keeps the position, not the item)' : ''}` })
+    plan.removed.push({ id: it.id, label: label(it), why: renamedTo.has(it.id) ? `renamed: now ${renamedTo.get(it.id)}` : `no longer in the file${lock ? ' (a lock keeps the position, not the item)' : ''}` })
   }
   // foreign: in the frame (or on a frameless drawing's board), not drawn by this file, not a comment or a proposal
-  const inFrame = (it: BoardItem): boolean => {
-    if (!scope.frame) return scope.prefix === SCOPE // a workflow board is one drawing; a frame-less diagram lists nothing
-    const seen = new Set<string>()
-    for (let p = it.parent ? board[it.parent as string] : undefined; p && !seen.has(p.id); p = p.parent ? board[p.parent as string] : undefined) {
-      if (p.id === scope.frame) return true
-      seen.add(p.id)
-    }
-    return false
-  }
   const endIn = (id: string | undefined) => !!id && (id.startsWith(scope.prefix) || id === scope.frame || (!!board[id] && inFrame(board[id])))
   for (const it of Object.values(board)) {
     if (it.type === 'comment' || drawnIds.has(it.id) || held.has(it.id) || scope.keep?.has(it.id) || it.id === scope.frame) continue
@@ -436,7 +569,8 @@ export function explainRedraw(board: Record<string, BoardItem>, drawn: BoardItem
   // a frame the person never resized (and nobody locked) grows to hold what was drawn
   const frame = scope.frame ? board[scope.frame] : undefined
   if (frame) {
-    const grow = growFrame(frame, drawn, keptLayout)
+    // what the redraw placed next to the person's items counts where it is (when added, and on every redraw after)
+    const grow = growFrame(frame, drawn.map((d) => landed.get(d.id) ?? (keepOf(d.id) === 'near' ? board[d.id] : d)), keptLayout)
     if (grow) {
       result.push(grow)
       if (!plan.updated.some((l) => l.id === frame.id)) {

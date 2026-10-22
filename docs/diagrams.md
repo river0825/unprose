@@ -98,6 +98,23 @@ bends, the lock itself, a frame's hidden contents — docs/canvas.md "Hiding a f
 frame stays hidden, and what the redraw adds to it is hidden with it. Nothing a redraw writes goes back into the file:
 layout lives on the board only.
 
+**A new item next to one the person placed.** A template says which item it put each new item next to — in a domain
+story: a new actor drawing → the actor it was drawn beside, a work object → its sentence's actor, a note → what it is
+on (a hint for the redraw, `near`, never stored on the board). When that neighbour is locked or the person moved it,
+the redraw adds the new item at the same offset from where the neighbour **is on the board**, not where the file's
+layout has it — so `drawAgain: lead` on "CL1 dials Lead" puts the new Lead beside the CL1 the person dragged to the
+bottom row — moved aside to the nearest free spot when something is already there. The preview says so (`+ … "Lead" —
+placed next to "CL1", where you put it`). It keeps that place on later redraws (`data.placedNear`; the preview lists
+it as kept), as if the person had put it there.
+
+**A note the file renamed.** A domain story's notes were numbered in file order (`<key>.note.note-1`, `-2` …), so
+inserting one shifted every later id and the person's placement landed on the wrong notes; they are now named after
+what they are on (§6b). On the first redraw of an older board, each new note takes over the old note with the same
+`on` and the same text (else the same `on`, when only one is left on each side): its place when the person moved or
+locked it, its presentation (the dashed line's folds too), and the threads about it (their `target` follows). The old
+one is removed ("renamed: now …"), and the new note counts as placed on every later redraw (`data.renamedFrom`). An old
+link to the note (`?focus=…note.note-2`) no longer finds it.
+
 **Lock.** The person right-clicks an item → **Lock position** (a frame: **Lock layout**, which locks the frame and
 everything inside it); a small lock shows at its corner and it can no longer be dragged or resized until **Unlock**.
 Agents lock with `canvas_apply` ops `{kind: 'lock', id}` or `{kind: 'lock', frame: '<key>'}` (and `unlock`; they may unlock only what an agent locked — a lock the person set
@@ -351,6 +368,7 @@ workObjects: [{ text: seat request, kind: conversation }, { text: ticket, kind: 
 sentences:
   - { actor: Moviegoer, verb: asks for, object: seat request, to: clerk }        # seq defaults to the next number
   - { actor: clerk, verb: books, object: ticket, to: Ticket system, toLabel: in, traces: [{ from: box-es/book, rel: relates }] }
+  # drawAgain: Moviegoer   — optional: draw an actor of this sentence again, next to it ("Drawn again at one sentence")
 groups: [{ text: Booking, members: [ticket], color: blue }]   # actors, work objects or sentences; color optional
 annotations: [{ on: clerk, text: Cash only }]
 layout: { spacing: roomy }    # optional: compact | normal (default) | roomy; or gapX / gapY in px
@@ -401,6 +419,19 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   3 times: also #… #…"). **Egon.io**: each drawing exports as an Egon actor of the same name (Egon lets a modeller
   place an actor again); importing a story with several Egon actors of one name and icon gives one actor with
   `repeat: true`.
+- **Drawn again at one sentence** (`drawAgain:` on a sentence, an actor or a list; our addition). `repeat` only
+  *allows* a copy, and the layout decides from its own grid — where two actors may sit side by side that the person
+  put far apart on the board, so the line between them still runs across the picture. `drawAgain` names an actor of
+  the sentence (its actor or a receiver, by id or text) to draw again for that sentence, next to it, whether or not
+  the actor repeats: `{ id: dial, actor: cl1, verb: dials, object: call, to: lead, drawAgain: lead }`. The sentence
+  is drawn next to its other actors and Lead is drawn again beside them (`<key>.actor.lead.2`, `data.drawAgain:
+  dial`); later sentences use Lead's nearest drawing, as for any actor (an actor that does not repeat gets exactly the
+  drawings `drawAgain` asks for). On a board the person arranged, the new drawing goes next to where they put CL1,
+  not where the layout has CL1 ("What a redraw keeps"). The lint warns when `drawAgain` names an actor the sentence
+  does not have (`draw-again-not-in-sentence`) and says so when it names one at its first appearance — there is no
+  drawing yet to draw again (`draw-again-first-appearance`). `canvas_read_board` says which sentence asked ("drawn 2
+  times: also #… (drawAgain in dial)"). Egon.io gets the drawing as one more actor of the same name; importing it
+  back gives that actor `repeat: true` (Egon has no `drawAgain`).
 - **No collisions.** The layout makes sure nothing is drawn on top of something else:
   - an actor that **sends to itself** (`actor: cl, to: cl`) gets its work object **beside** it, in a free slot whose
     arrow passes no other pictogram, and **no return arrow** (it would run back over the activity arrow); the lint
@@ -435,12 +466,19 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   arrow, traces into it resolve to its actor, and its own traces are drawn from its actor.
 - Each work object carries its sentence's element id and the sentence read out ("⑤ You approves proposal to
   AI Agent"); the Inspector shows it. No board item carries "① verb" as text.
+- **A note is named after what it is on**: `<key>.note.note-<element>` (`note-clerk`; a second note on the same element
+  `note-clerk-2`), so a note inserted into the list moves no other note on the board. Give a second note on one
+  element an `id` of its own (`{ id: cash-only, on: clerk, text: … }`): then its place never depends on the order of
+  the list. (Before, notes were numbered in file order, `note-1`, `note-2` …: see "What a redraw keeps" for how an
+  older board keeps the person's placement.)
 - The icons are our own simple line SVGs (Apache-2.0 like the rest of the code); Egon.io's GPL-3.0 icon set is
   not used.
 - Grammar check (lint and the frame panel): unknown actor or element, a sentence with no work object, gaps
   and shared numbers (shared = parallel activities: Egon allows them, the site does not describe them), work
   objects in no sentence, actors who neither act nor receive, custom actor kinds; and, for the drawing, sentences
-  sent to their own actor, groups sharing members, notes longer than recommended ("No collisions" above).
+  sent to their own actor, groups sharing members, notes longer than recommended ("No collisions" above), a
+  `drawAgain` that names an actor not in its sentence or one appearing there for the first time ("Drawn again at one
+  sentence" above).
 - **Reviewer's hints** (lint and the frame panel; `info`, because only the people telling the story can say
   whether it is wrong — [domain-story-review.md](domain-story-review.md) has the reasoning and the sources): a scope
   that does not state its granularity, time or purity; `pure` with a software system among the actors (a warning);

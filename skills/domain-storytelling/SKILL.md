@@ -50,7 +50,7 @@ is sent)" has no plot: every activity must push the story forward (p. 37).
 ## 3. The language (chapter 2)
 
 - **Actors** — a person, a group or a software system that "plays an active role" (p. 20); named by role, not by a
-  person's name (unless two people do it differently and you want to show that, p. 69); **each actor once** (p. 26) — declared once in the file; when a long story keeps coming back to an early actor and its arrows cross the picture, `layout: { actors: repeat }` lets the board draw that actor again where the story continues (docs/diagrams.md §6b "Repeated actors").
+  person's name (unless two people do it differently and you want to show that, p. 69); **each actor once** (p. 26) — declared once in the file; when a long story keeps coming back to an early actor and its arrows cross the picture, `layout: { actors: repeat }` lets the board draw that actor again where the story continues, and `drawAgain: <actor>` on a sentence draws it again for that sentence, next to it, when a line still runs across the board the person arranged (docs/diagrams.md §6b "Repeated actors").
   The same concept can be an actor in one story and a work object in another (a smartphone, p. 21) — ask.
 - **Work objects** — what actors "create, work with, and exchange": documents, physical things, digital objects, or
   the information about them; the icon may show the thing, its digital form or the medium (pp. 20–21). Nouns (p. 22).
@@ -122,7 +122,8 @@ You advise; whoever holds the file changes it after the person agrees.
 ## With Unprose
 
 `design/<name>.domain-story.yaml` (docs/diagrams.md §6b): `scope`, `actors`, `workObjects`, numbered `sentences`
-(`actor`, `verb`, `object`, `to`, `toLabel`, `note`), `groups`, `annotations`, `icons` of your own.
+(`actor`, `verb`, `object`, `to`, `toLabel`, `note`, `drawAgain`), `groups`, `annotations`, `icons` of your own. A note is named after
+what it is on; give a second note on the same element an `id`, so adding a note never moves another on the board.
 **Draw icons for the domain's things.** The built-in work-object icons (document, thing, digital, folder, call, email,
 conversation, info) are generic, and a work object without a `kind` is a document; when most of a story's things
 look alike the picture stops telling them apart. Declare the work objects, draw an icon for each kind of thing that

@@ -11,7 +11,7 @@
 import { idAllocator } from './ids.js'
 import { normalizeDomainStory, type DomainStoryContent } from './domainStory.js'
 import { dsGlyphMarkup, parseDsIcon } from './dsIcons.js'
-import { dsCasting, parseCopyKey } from '../templates/domain-story.js'
+import { drawsCopies, dsCasting, parseCopyKey } from '../templates/domain-story.js'
 
 type Obj = { id: string; type: string; name?: string; text?: string; x?: number; y?: number; width?: number; height?: number; number?: number | null; source?: string; target?: string; children?: string[]; waypoints?: Array<{ x: number; y: number }>; pickedColor?: string }
 
@@ -139,9 +139,9 @@ export function toEgon(content: DomainStoryContent, opts: { title?: string; desc
   const at = (col: number, row: number) => ({ x: 100 + col * COL, y: 100 + row * 200 })
   const center = (o: Obj) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 })
 
-  // one Egon actor per drawing: every actor once, or — a story whose actors repeat — each drawing the board makes of it,
-  // under the same name (Egon allows an actor to be placed again)
-  const repeats = m.actors.some((a) => a.repeat)
+  // one Egon actor per drawing: every actor once, or — a story whose actors repeat or are drawn again (`drawAgain`) —
+  // each drawing the board makes of it, under the same name (Egon allows an actor to be placed again)
+  const repeats = drawsCopies(m)
   const casting = repeats ? dsCasting(m) : undefined
   const firstSeen: string[] = []
   if (casting) firstSeen.push(...casting.drawn)

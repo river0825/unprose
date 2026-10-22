@@ -6,6 +6,31 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-10-22
+
+### Added
+- **Draw an actor again at one sentence** (docs/diagrams.md §6b "Drawn again at one sentence"). `layout: { actors:
+  repeat }` and `repeat: true` only allow a copy, and the layout decides from its own grid: on a board the person
+  arranged by hand, "CL1 dials Lead" could still be a long line back to the one Lead, because in the layout's grid CL1
+  sits next to Lead. `drawAgain: lead` on that sentence now draws Lead again for it, next to the sentence — with or
+  without `repeat`. The lint warns when `drawAgain` names an actor the sentence does not have, and says so when it
+  names one at its first appearance; `canvas_read_board` says which sentence asked; Egon.io gets one more actor of
+  the same name.
+- **A new drawing lands next to where you put its neighbour** (docs/diagrams.md "What a redraw keeps"). A redraw used
+  to add a new item where the file's layout put it, which on a moved or locked frame could be far from the item it
+  belongs to. Now a domain story's new actor drawing goes next to the actor it was drawn beside, a new work object
+  next to its sentence's actor and a new note next to what it is on — where those are on the board — moved aside when
+  something is already there, and it keeps that place on later redraws. The preview says "placed next to "CL1", where
+  you put it".
+
+### Fixed
+- **Inserting a note into a domain story no longer moves the others.** Notes were numbered in file order (`note-1`,
+  `note-2` …), so a note inserted in the middle shifted every later id and the places the person gave them landed on
+  the wrong notes. A note is now named after what it is on (`note-clerk`; a second one on the same element
+  `note-clerk-2`, or the `id` you give it). An older board keeps the person's placement: on its first redraw each
+  renamed note takes over the old one's place, folds and threads (an old link to a note, `?focus=…note.note-2`, no
+  longer finds it).
+
 ## [0.29.0] — 2026-10-22
 
 ### Added
@@ -1074,7 +1099,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/river0825/unprose/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/river0825/unprose/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/river0825/unprose/compare/v0.27.1...v0.28.0
 [0.27.1]: https://github.com/river0825/unprose/compare/v0.27.0...v0.27.1

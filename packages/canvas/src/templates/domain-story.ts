@@ -20,11 +20,13 @@
 // another group is drawn nested inside it, and two groups that would still overlap are trimmed apart where
 // there is room — or, when they share members, marked (`data.overlaps`) for the lint and the layout check.
 // Verbs and number circles are placed on the board as a whole (wireGeometry.ts planWires), not here.
+// Each actor drawing, work object and note says what it was placed next to (`near`: a hint the redraw reads and never
+// stores), so on a frame the person arranged a new one lands next to where they put its neighbour.
 // Items: actors and work objects are `card`s with `data.ds` (the web draws them as pictograms), activity
 // arrows carry `data.seq` (the web draws the number circle on the line) and the verb as their label. A
 // sentence without a work object is one arrow actor → receiver; its element id rides on that arrow, and
 // traces into it resolve to its actor.
-import type { Item } from '../model.js'
+import { withHints, type Item } from '../model.js'
 import { normalizeDomainStory, readSentence, type DomainStoryContent, type DsModel, type DsSentence } from '../diagrams/domainStory.js'
 import { measure, sizeToText } from '../textMetrics.js'
 import { EDGE_LABEL } from '../edgeLabel.js'
@@ -197,18 +199,27 @@ interface Layout {
   cast: Map<string, DsCast>
   /** copy keys in the order they were drawn */
   drawn: string[]
+  /** copy key → the drawing it was placed next to (a redraw puts a new drawing next to where the person put that one) */
+  near: Map<string, string>
+  /** copy key → the sentence whose `drawAgain` drew it */
+  again: Map<string, string>
   /** crossing arrows, plus arrows through pictograms (weighted): the layout with the least is kept */
   crossings: number
 }
 
+/** Some actor may be drawn more than once: one repeats (`repeat`, `layout.actors: repeat`), or a sentence says `drawAgain`. */
+export const drawsCopies = (m: Pick<DsModel, 'actors' | 'sentences'>) => m.actors.some((a) => a.repeat) || m.sentences.some((s) => s.drawAgain?.length)
+
 function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: Offset[], g: DsGeometry): Layout {
   const cell = new Map<string, [number, number]>()
   const taken = new Set<string>()
+  const nextTo = new Map<string, string>()
   const put = (id: string, c: number, r: number) => {
     cell.set(id, [c, r])
     taken.add(`${c},${r}`)
   }
   const near = (id: string, partner: string) => {
+    nextTo.set(id, partner)
     const [pc, pr] = cell.get(partner)!
     for (const [dc, dr] of pref) if (!taken.has(`${pc + dc},${pr + dr}`)) return put(id, pc + dc, pr + dr)
     let c = pc + 1
@@ -216,7 +227,8 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
     put(id, c, pr)
   }
   const cast = new Map<string, DsCast>()
-  if (m.actors.some((a) => a.repeat)) placeWithCopies(m, sentences, order, g, cell, put, near, cast)
+  const again = new Map<string, string>()
+  if (drawsCopies(m)) placeWithCopies(m, sentences, order, g, cell, put, near, cast, again)
   else {
     // every actor drawn once (the book's rule)
     put(order[0], 0, 0)
@@ -295,7 +307,7 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
   const all = [...actor.values(), ...object.values()]
   let through = 0
   for (const [p, q] of segs) for (const b of all) if (!samePt(centre(b), p) && !samePt(centre(b), q) && segmentHitsBox(p, q, b, -10)) through++
-  return { actor, object, cast, drawn: [...cell.keys()], crossings: countCrossings(segs) + 2 * through }
+  return { actor, object, cast, drawn: [...cell.keys()], near: nextTo, again, crossings: countCrossings(segs) + 2 * through }
 }
 const samePt = (a: Pt, b: Pt) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5
 
@@ -312,6 +324,9 @@ function crossesAny(p: Pt, q: Pt, lines: Array<[Pt, Pt]>): boolean {
  * Each other actor of the sentence uses its nearest drawing when that one is at most REUSE_CELLS cells away and the
  * arrow to it crosses nothing drawn before and runs through no other actor; else a repeated actor is drawn again next
  * to the sentence (an actor that does not repeat always uses its one drawing). Deterministic.
+ * A sentence's `drawAgain` actors are left out of where it is drawn and always drawn again next to it (recorded in
+ * `again`); later sentences use their nearest drawing, as for any actor (an actor that does not repeat uses only the
+ * drawings `drawAgain` asked for).
  */
 function placeWithCopies(
   m: DsModel,
@@ -322,6 +337,7 @@ function placeWithCopies(
   put: (id: string, c: number, r: number) => void,
   near: (id: string, partner: string) => void,
   cast: Map<string, DsCast>,
+  again: Map<string, string>,
 ): void {
   const repeats = new Set(m.actors.filter((a) => a.repeat).map((a) => a.id))
   const copies = new Map<string, string[]>()
@@ -370,21 +386,24 @@ function placeWithCopies(
   let previous: string[] = []
   for (const s of sentences) {
     const members = [s.actor, ...receiversOf(s)]
+    const forced = new Set((s.drawAgain ?? []).filter((id) => members.includes(id)))
     const chosen = new Map<string, string>()
-    // where to draw the sentence: the member drawn nearest to the previous sentence
+    // where to draw the sentence: the member drawn nearest to the previous sentence (not one drawn again for it)
     let anchor: { id: string; key: string; d: number } | undefined
     for (const id of members) {
-      const hit = nearest(id, previous)
+      const hit = forced.has(id) ? undefined : nearest(id, previous)
       if (hit && (!anchor || hit.d < anchor.d)) anchor = { id, ...hit }
     }
     if (!anchor) anchor = { id: s.actor, key: draw(s.actor, undefined), d: 0 }
     else if (anchor.d > REUSE_CELLS && repeats.has(anchor.id) && previous.length) anchor = { id: anchor.id, key: draw(anchor.id, previous[previous.length - 1]), d: 0 }
     chosen.set(anchor.id, anchor.key)
+    if (forced.has(anchor.id)) again.set(anchor.key, s.id)
     for (const id of members) {
       if (chosen.has(id)) continue
-      const hit = nearest(id, [anchor.key])
+      const hit = forced.has(id) ? undefined : nearest(id, [anchor.key])
       const reuse = hit && (!repeats.has(id) || (hit.d <= REUSE_CELLS && clean(anchor.key, hit.key)))
       chosen.set(id, reuse ? hit.key : draw(id, anchor.key))
+      if (forced.has(id)) again.set(chosen.get(id)!, s.id)
     }
     const c: DsCast = { actor: chosen.get(s.actor)!, to: receiversOf(s).map((r) => chosen.get(r)!) }
     for (const r of c.to) lines.push([at(c.actor), at(r)])
@@ -432,7 +451,7 @@ function bestLayout(m: DsModel): { sentences: DsSentence[]; order: string[]; bes
 export function dsCasting(raw: DomainStoryContent | DsModel): { drawn: string[]; cast: Map<string, DsCast> } {
   const m = 'dsModel' in raw ? raw : normalizeDomainStory(raw)
   const { order, best } = bestLayout(m)
-  return { drawn: m.actors.some((a) => a.repeat) ? best.drawn : order, cast: best.cast }
+  return { drawn: drawsCopies(m) ? best.drawn : order, cast: best.cast }
 }
 
 export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}): Item[] {
@@ -443,6 +462,9 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   const { sentences, order, best } = bestLayout(m)
 
   const items: Item[] = []
+  // item id → the item it was placed next to: a hint for the redraw (`near`, never stored — diagrams/redraw.ts), so a
+  // new drawing lands next to where the person put its neighbour, not where this layout put it
+  const nearOf = new Map<string, string>()
   // an icon the file brings travels on the item, so the page and the snapshot draw it without the file
   const ownIcon = (kind: string) => (m.icons?.[kind] ? { icon: m.icons[kind] } : {})
   const actorItem = new Map<string, Item>()
@@ -453,14 +475,22 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     if (!s.objectText && s.traces.length) actorTraces.set(key, [...(actorTraces.get(key) ?? []), ...s.traces])
   }
   // every actor once: in order of first appearance; repeated actors: every drawing, in the order the story needed them
-  const drawings = m.actors.some((a) => a.repeat) ? best.drawn : order
+  const drawings = drawsCopies(m) ? best.drawn : order
+  // a later drawing of the actor: `<scope>.actor.<id>.<n>`
+  const actorId = (key: string) => {
+    const { id, copy } = parseCopyKey(key)
+    return copy > 1 ? `${itemId('actor', id)}.${copy}` : itemId('actor', id)
+  }
   drawings.forEach((key, i) => {
     const { id, copy } = parseCopyKey(key)
     const a = m.actors.find((x) => x.id === id)!
     const b = best.actor.get(key)!
     const traces = actorTraces.get(key)
-    // a later drawing of the actor: `<scope>.actor.<id>.<n>`, marked as an occurrence (as EventStorming marks a person drawn again)
-    const it = make({ id: copy > 1 ? `${itemId('actor', a.id)}.${copy}` : itemId('actor', a.id), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: 'actor', ...(copy > 1 ? { occurrence: true } : {}), ...(traces ? { traces } : {}) } }, now)
+    const again = copy > 1 ? best.again.get(key) : undefined
+    // marked as an occurrence (as EventStorming marks a person drawn again); `drawAgain`: the sentence that asked for it
+    const it = make({ id: actorId(key), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: 'actor', ...(copy > 1 ? { occurrence: true } : {}), ...(again ? { drawAgain: again } : {}), ...(traces ? { traces } : {}) } }, now)
+    const partner = best.near.get(key)
+    if (partner) nearOf.set(it.id, actorId(partner))
     actorItem.set(key, it)
     items.push(it)
   })
@@ -476,6 +506,7 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     if (box && s.objectText) {
       const o = make({ id: itemId('object', s.id), type: 'card', ...box, text: s.objectText, role: 'work-object', order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ...ownIcon(s.objectKind), ds: 'object', ...(s.object ? { workObject: s.object } : {}), ...(s.traces.length ? { traces: s.traces } : {}), ...(s.note ? { note: s.note } : {}), ...(self ? { self: true } : {}) } }, now)
       objectItem.set(s.id, o)
+      nearOf.set(o.id, from.id)
       items.push(o)
       items.push(arrow(scope, from.id, o.id, now, s.verb, 'activity', { key: s.id, data: { ...base, ...facing(from, o) } }))
       // to itself: no return arrow (it would run back over the activity arrow) — the object beside the actor says it
@@ -530,7 +561,10 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     const note = make({ id: itemId('note', n.id), type: 'text', x: at.x, y: at.y, w: nw, h: nh, text: n.text, role: 'annotation', data: { element: n.id, on: n.on, ds: 'annotation' } }, now)
     placed.push(note)
     items.push(note)
-    if (target) items.push(arrow(scope, note.id, target.id, now, undefined, 'annotation-link', { data: { ds: true, ...facing(note, target) } }))
+    if (target) {
+      nearOf.set(note.id, target.id)
+      items.push(arrow(scope, note.id, target.id, now, undefined, 'annotation-link', { data: { ds: true, ...facing(note, target) } }))
+    }
   }
 
   // Groups: a rounded outline around the members (drawn first, so it sits behind them), kept apart (groupOutlines).
@@ -579,7 +613,7 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   const facets = [m.scope.granularity, m.scope.time, m.scope.purity].filter(Boolean)
   if (facets.length) legend.push(make({ id: itemId('scope', 'scope'), type: 'text', x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(' · ')}`, role: 'scope', data: { scope: m.scope } }, now))
 
-  return offsetAll([...shifted, ...legend], opts.at)
+  return offsetAll([...shifted, ...legend], opts.at).map((i) => (nearOf.has(i.id) ? withHints(i, { near: nearOf.get(i.id) }) : i))
 }
 
 export interface GroupInput {

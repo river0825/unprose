@@ -293,7 +293,8 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const cardsOn = new Map<string, Item[]>()
   for (const c of items) if (isAnnotationCard(c) && c.target) cardsOn.set(c.target, [...(cardsOn.get(c.target) ?? []), c])
   const num = (c: Item) => (calloutOf(c) !== undefined ? circled(calloutOf(c)!) : '•')
-  // a domain-story actor drawn more than once (layout.actors: repeat): listed once, on its first drawing, with the others' ids
+  // a domain-story actor drawn more than once (layout.actors: repeat, or a sentence's drawAgain): listed once, on its first
+  // drawing, with the others' ids — and the sentence whose drawAgain asked for one
   const actorKey = (i: Item) => `${i.parent ?? ''}|${String(i.data?.element)}`
   const firstDrawing = new Map<string, Item>()
   const laterDrawings = new Map<string, Item[]>()
@@ -305,7 +306,7 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const meta = (i: Item): string[] => {
     const f: string[] = []
     const again = i.data?.ds === 'actor' && !i.data.occurrence ? laterDrawings.get(actorKey(i)) : undefined
-    if (again?.length) f.push(`drawn ${again.length + 1} times: also ${[...again].sort((a, b) => (a.id < b.id ? -1 : 1)).map((a) => `#${a.id}`).join(' ')}`)
+    if (again?.length) f.push(`drawn ${again.length + 1} times: also ${[...again].sort((a, b) => (a.id < b.id ? -1 : 1)).map((a) => `#${a.id}${typeof a.data?.drawAgain === 'string' ? ` (drawAgain in ${a.data.drawAgain})` : ''}`).join(' ')}`)
     const notes = cardsOn.get(i.id)
     if (notes?.length) f.push(`annotation ${notes.map(num).join('')}`)
     if (i.data?.pivotal) f.push('pivotal')

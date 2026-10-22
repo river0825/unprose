@@ -13,7 +13,8 @@ import { sameWorkObject } from '../web/src/diagrams/sameObject.js'
 
 const now = 'T'
 
-// main's output for this story (v0.27.1), pinned: with every actor drawn once (the default) nothing may move
+// main's output for this story (v0.27.1), pinned: with every actor drawn once (the default) nothing may move (the note's
+// id is named after what it is on since — note-clerk, was note-1 — so it and its dashed line have new ids, same places)
 const small: DomainStoryContent = {
   actors: ['Customer', { id: 'clerk', text: 'Clerk' }, { text: 'Policy system', kind: 'system' }],
   workObjects: [{ id: 'form', text: 'application form' }, { text: 'policy' }],
@@ -27,8 +28,8 @@ const small: DomainStoryContent = {
   annotations: [{ on: 'clerk', text: 'Only in office hours' }],
   groups: [{ id: 'back', text: 'Back office', members: ['enter', 'Policy system'] }],
 }
-const PINNED_BOXES = [["p.group.back",875,186,475,328],["p.actor.customer",40,216,132,100],["p.actor.clerk",615,216,132,100],["p.actor.policy-system",1190,216,132,100],["p.object.send",328,216,132,100],["p.object.check",928,216,132,100],["p.object.enter",903,392,132,100],["p.object.notify",615,40,132,100],["p.note.note-1",601,356,160,40],["p.legend-title.legend",40,604,560,24],["p.legend.l0",40,640,110,88],["p.legend.l1",170,640,110,88],["p.legend.l2",300,640,110,88],["p.legend.l3",430,640,110,88],["p.legend.l4",570,640,260,88]]
-const PINNED_ARROWS = [["p.arrow.6f9e25","p.actor.customer","p.object.send"],["p.arrow.ab1e89","p.object.send","p.actor.clerk"],["p.arrow.3f8f15","p.actor.clerk","p.object.check"],["p.arrow.fd7116","p.actor.clerk","p.object.enter"],["p.arrow.4c24a7","p.object.enter","p.actor.policy-system"],["p.arrow.84c1d4","p.actor.clerk","p.actor.customer"],["p.arrow.783648","p.actor.policy-system","p.object.notify"],["p.arrow.71d1f6","p.object.notify","p.actor.customer"],["p.arrow.3284f1","p.note.note-1","p.actor.clerk"]]
+const PINNED_BOXES = [["p.group.back",875,186,475,328],["p.actor.customer",40,216,132,100],["p.actor.clerk",615,216,132,100],["p.actor.policy-system",1190,216,132,100],["p.object.send",328,216,132,100],["p.object.check",928,216,132,100],["p.object.enter",903,392,132,100],["p.object.notify",615,40,132,100],["p.note.note-clerk",601,356,160,40],["p.legend-title.legend",40,604,560,24],["p.legend.l0",40,640,110,88],["p.legend.l1",170,640,110,88],["p.legend.l2",300,640,110,88],["p.legend.l3",430,640,110,88],["p.legend.l4",570,640,260,88]]
+const PINNED_ARROWS = [["p.arrow.6f9e25","p.actor.customer","p.object.send"],["p.arrow.ab1e89","p.object.send","p.actor.clerk"],["p.arrow.3f8f15","p.actor.clerk","p.object.check"],["p.arrow.fd7116","p.actor.clerk","p.object.enter"],["p.arrow.4c24a7","p.object.enter","p.actor.policy-system"],["p.arrow.84c1d4","p.actor.clerk","p.actor.customer"],["p.arrow.783648","p.actor.policy-system","p.object.notify"],["p.arrow.71d1f6","p.object.notify","p.actor.customer"],["p.arrow.3690f1","p.note.note-clerk","p.actor.clerk"]]
 
 // a long story that keeps coming back to Customer and Sales rep
 const long: DomainStoryContent = {

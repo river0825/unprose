@@ -79,6 +79,26 @@ export interface Item {
   updatedAt: string
 }
 
+/**
+ * What a template tells the redraw about a drawn item, never stored on a board: `near` — the item it was placed next
+ * to (a domain story's new actor drawing, a work object, a note), so a redraw puts a new item next to where the person
+ * put that one (diagrams/redraw.ts). Every path that writes drawn items takes the hints off first (`withoutHints`).
+ */
+export interface DrawHints {
+  near?: string
+}
+const HINTS = ['near'] as const
+
+export const withHints = <T extends object>(it: T, hints: DrawHints): T & DrawHints => ({ ...it, ...hints })
+
+/** The item without a template's hints (the same object when it has none). */
+export function withoutHints<T extends object>(it: T): T {
+  if (!HINTS.some((k) => k in it)) return it
+  const out = { ...it } as Record<string, unknown>
+  for (const k of HINTS) delete out[k]
+  return out as T
+}
+
 export interface Board {
   id: string
   title: string

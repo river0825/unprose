@@ -2393,9 +2393,9 @@ var require_stringifyNumber = __commonJS({
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
         return String(value);
-      const num2 = typeof value === "number" ? value : Number(value);
-      if (!isFinite(num2))
-        return isNaN(num2) ? ".nan" : num2 < 0 ? "-.inf" : ".inf";
+      const num3 = typeof value === "number" ? value : Number(value);
+      if (!isFinite(num3))
+        return isNaN(num3) ? ".nan" : num3 < 0 ? "-.inf" : ".inf";
       let n = Object.is(value, -0) ? "-0" : JSON.stringify(value);
       if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n) && !n.includes("e")) {
         let i = n.indexOf(".");
@@ -2435,8 +2435,8 @@ var require_float = __commonJS({
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
       resolve: (str6) => parseFloat(str6),
       stringify(node3) {
-        const num2 = Number(node3.value);
-        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node3);
+        const num3 = Number(node3.value);
+        return isFinite(num3) ? num3.toExponential() : stringifyNumber.stringifyNumber(node3);
       }
     };
     var float = {
@@ -2875,8 +2875,8 @@ var require_float2 = __commonJS({
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
       resolve: (str6) => parseFloat(str6.replace(/_/g, "")),
       stringify(node3) {
-        const num2 = Number(node3.value);
-        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node3);
+        const num3 = Number(node3.value);
+        return isFinite(num3) ? num3.toExponential() : stringifyNumber.stringifyNumber(node3);
       }
     };
     var float = {
@@ -3078,23 +3078,23 @@ var require_timestamp = __commonJS({
     function parseSexagesimal(str6, asBigInt) {
       const sign = str6[0];
       const parts2 = sign === "-" || sign === "+" ? str6.substring(1) : str6;
-      const num2 = (n) => asBigInt ? BigInt(n) : Number(n);
-      const res = parts2.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num2(60) + num2(p), num2(0));
-      return sign === "-" ? num2(-1) * res : res;
+      const num3 = (n) => asBigInt ? BigInt(n) : Number(n);
+      const res = parts2.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num3(60) + num3(p), num3(0));
+      return sign === "-" ? num3(-1) * res : res;
     }
     function stringifySexagesimal(node3) {
       let { value } = node3;
-      let num2 = (n) => n;
+      let num3 = (n) => n;
       if (typeof value === "bigint")
-        num2 = (n) => BigInt(n);
+        num3 = (n) => BigInt(n);
       else if (isNaN(value) || !isFinite(value))
         return stringifyNumber.stringifyNumber(node3);
       let sign = "";
       if (value < 0) {
         sign = "-";
-        value *= num2(-1);
+        value *= num3(-1);
       }
-      const _60 = num2(60);
+      const _60 = num3(60);
       const parts2 = [value % _60];
       if (value < 60) {
         parts2.unshift(0);
@@ -21211,12 +21211,12 @@ var require_sha256 = __commonJS({
       }
       exports2.hmac = hmac;
       function fillBuffer(buffer, hmac2, info, counter) {
-        var num2 = counter[0];
-        if (num2 === 0) {
+        var num3 = counter[0];
+        if (num3 === 0) {
           throw new Error("hkdf: cannot expand more");
         }
         hmac2.reset();
-        if (num2 > 1) {
+        if (num3 > 1) {
           hmac2.update(buffer);
         }
         if (info) {
@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.29.0";
+    VERSION2 = "0.30.0";
   }
 });
 
@@ -36708,6 +36708,14 @@ var init_annotations = __esm({
 });
 
 // packages/canvas/dist/model.js
+function withoutHints(it) {
+  if (!HINTS.some((k2) => k2 in it))
+    return it;
+  const out = { ...it };
+  for (const k2 of HINTS)
+    delete out[k2];
+  return out;
+}
 function layoutLock(items, id) {
   const it = items[id];
   if (!it)
@@ -36724,11 +36732,13 @@ function layoutLock(items, id) {
   }
   return void 0;
 }
-var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, LAYOUT_LOCK, ownLock;
+var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, HINTS, withHints, LAYOUT_LOCK, ownLock;
 var init_model = __esm({
   "packages/canvas/dist/model.js"() {
     WAIT_MAX_SEC = 1800;
     WAIT_DEFAULT_SEC = 300;
+    HINTS = ["near"];
+    withHints = (it, hints) => ({ ...it, ...hints });
     LAYOUT_LOCK = "layout";
     ownLock = (it) => it?.data?.lock === LAYOUT_LOCK;
   }
@@ -60157,22 +60167,27 @@ function normalizeDomainStory(raw) {
     const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
     const declared = s.object ? find(workObjects, s.object) : void 0;
     const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
+    const actor = actorRef(s.actor, id, "actor");
+    const receivers = to.map((r) => actorRef(r, id, "to"));
+    const again = s.drawAgain === void 0 ? [] : Array.isArray(s.drawAgain) ? s.drawAgain : [s.drawAgain];
     return {
       id,
       seq,
-      actor: actorRef(s.actor, id, "actor"),
+      actor,
       verb: s.verb,
       ...declared ? { object: declared.id } : {},
       ...s.object ? { objectText: declared?.text ?? s.object } : {},
       objectKind: declared?.kind ?? "document",
-      to: to.map((r) => actorRef(r, id, "to")),
+      to: receivers,
       ...s.toLabel ? { toLabel: s.toLabel } : {},
+      ...again.length ? { drawAgain: [...new Set(again.map((r) => find(actors, r)?.id ?? r))] } : {},
       ...s.note ? { note: s.note } : {},
       traces: s.traces ?? []
     };
   });
+  const elementOf = (ref2) => find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
   const elementRef = (ref2, element, field) => {
-    const hit = find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
+    const hit = elementOf(ref2);
     if (!hit)
       unresolved.push({ element, field, ref: ref2 });
     return hit;
@@ -60181,8 +60196,8 @@ function normalizeDomainStory(raw) {
     const id = alloc(g2.id, g2.text, "group");
     return { id, text: g2.text, members: g2.members.map((m2) => elementRef(m2, id, "members")).filter((x2) => !!x2), ...g2.color ? { color: g2.color } : {} };
   });
-  const annotations = c2.annotations.flatMap((a, i) => {
-    const id = alloc(a.id, `note-${i + 1}`, "note");
+  const annotations = c2.annotations.flatMap((a) => {
+    const id = alloc(a.id, `note-${elementOf(a.on) ?? a.on}`, "note");
     const on = elementRef(a.on, id, "on");
     return on ? [{ id, on, text: a.text }] : [];
   });
@@ -60221,6 +60236,18 @@ function checkDomainStory(content) {
     }
     if (!s.objectText)
       out.push({ rule: "sentence-without-object", severity: "info", element: s.id, message: `${circled(s.seq)} "${s.verb}": no work object \u2014 a sentence is actor \u2192 activity \u2192 work object`, page: QUICK_START2 });
+  }
+  const met = /* @__PURE__ */ new Set();
+  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq)) {
+    const members2 = [s.actor, ...s.to.filter((r) => r !== s.actor)];
+    for (const ref2 of s.drawAgain ?? []) {
+      if (!members2.includes(ref2))
+        out.push({ rule: "draw-again-not-in-sentence", severity: "warning", element: s.id, message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}": drawAgain names "${actorName(ref2)}", who is not in this sentence, so nothing is drawn again for it \u2014 name its actor or a receiver (${members2.map(actorName).join(", ")})`, page: "docs/diagrams.md \xA76b" });
+      else if (!met.has(ref2))
+        out.push({ rule: "draw-again-first-appearance", severity: "info", element: s.id, message: `${circled(s.seq)}: drawAgain names "${actorName(ref2)}", who first appears here \u2014 there is no drawing yet to draw again; this is its first one (drop drawAgain, or move it to a later sentence)`, page: "docs/diagrams.md \xA76b" });
+    }
+    for (const id of members2)
+      met.add(id);
   }
   const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
   seqs.forEach((n, i) => {
@@ -60320,6 +60347,8 @@ var init_domainStory = __esm({
         to: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
         /** Label of the arrow to the receiver, e.g. "to", "with" (Egon.io labels both arrows). */
         toLabel: external_exports.string().optional(),
+        /** Actor(s) of this sentence (its actor or a receiver, id or text) to draw again for it, next to the sentence. */
+        drawAgain: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
         note: external_exports.string().optional(),
         traces: external_exports.array(traceSchema).optional()
       })).min(1),
@@ -60441,11 +60470,13 @@ function countCrossings(segs) {
 function layoutWith(m2, sentences, order, pref, g2) {
   const cell2 = /* @__PURE__ */ new Map();
   const taken = /* @__PURE__ */ new Set();
+  const nextTo = /* @__PURE__ */ new Map();
   const put = (id, c2, r) => {
     cell2.set(id, [c2, r]);
     taken.add(`${c2},${r}`);
   };
   const near = (id, partner) => {
+    nextTo.set(id, partner);
     const [pc, pr] = cell2.get(partner);
     for (const [dc, dr] of pref)
       if (!taken.has(`${pc + dc},${pr + dr}`))
@@ -60456,8 +60487,9 @@ function layoutWith(m2, sentences, order, pref, g2) {
     put(id, c2, pr);
   };
   const cast = /* @__PURE__ */ new Map();
-  if (m2.actors.some((a) => a.repeat))
-    placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast);
+  const again = /* @__PURE__ */ new Map();
+  if (drawsCopies(m2))
+    placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast, again);
   else {
     put(order[0], 0, 0);
     for (const s of sentences) {
@@ -60539,7 +60571,7 @@ function layoutWith(m2, sentences, order, pref, g2) {
     for (const b2 of all)
       if (!samePt(centre(b2), p) && !samePt(centre(b2), q2) && segmentHitsBox(p, q2, b2, -10))
         through++;
-  return { actor, object: object3, cast, drawn: [...cell2.keys()], crossings: countCrossings(segs) + 2 * through };
+  return { actor, object: object3, cast, drawn: [...cell2.keys()], near: nextTo, again, crossings: countCrossings(segs) + 2 * through };
 }
 function crossesAny(p, q2, lines) {
   for (const l of lines)
@@ -60547,7 +60579,7 @@ function crossesAny(p, q2, lines) {
       return true;
   return false;
 }
-function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast) {
+function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast, again) {
   const repeats = new Set(m2.actors.filter((a) => a.repeat).map((a) => a.id));
   const copies = /* @__PURE__ */ new Map();
   let last;
@@ -60601,10 +60633,11 @@ function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast) {
   let previous = [];
   for (const s of sentences) {
     const members2 = [s.actor, ...receiversOf(s)];
+    const forced = new Set((s.drawAgain ?? []).filter((id) => members2.includes(id)));
     const chosen = /* @__PURE__ */ new Map();
     let anchor2;
     for (const id of members2) {
-      const hit = nearest(id, previous);
+      const hit = forced.has(id) ? void 0 : nearest(id, previous);
       if (hit && (!anchor2 || hit.d < anchor2.d))
         anchor2 = { id, ...hit };
     }
@@ -60613,12 +60646,16 @@ function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast) {
     else if (anchor2.d > REUSE_CELLS && repeats.has(anchor2.id) && previous.length)
       anchor2 = { id: anchor2.id, key: draw(anchor2.id, previous[previous.length - 1]), d: 0 };
     chosen.set(anchor2.id, anchor2.key);
+    if (forced.has(anchor2.id))
+      again.set(anchor2.key, s.id);
     for (const id of members2) {
       if (chosen.has(id))
         continue;
-      const hit = nearest(id, [anchor2.key]);
+      const hit = forced.has(id) ? void 0 : nearest(id, [anchor2.key]);
       const reuse = hit && (!repeats.has(id) || hit.d <= REUSE_CELLS && clean(anchor2.key, hit.key));
       chosen.set(id, reuse ? hit.key : draw(id, anchor2.key));
+      if (forced.has(id))
+        again.set(chosen.get(id), s.id);
     }
     const c2 = { actor: chosen.get(s.actor), to: receiversOf(s).map((r) => chosen.get(r)) };
     for (const r of c2.to)
@@ -60661,7 +60698,7 @@ function bestLayout(m2) {
 function dsCasting(raw) {
   const m2 = "dsModel" in raw ? raw : normalizeDomainStory(raw);
   const { order, best } = bestLayout(m2);
-  return { drawn: m2.actors.some((a) => a.repeat) ? best.drawn : order, cast: best.cast };
+  return { drawn: drawsCopies(m2) ? best.drawn : order, cast: best.cast };
 }
 function renderDomainStory(raw, opts = {}) {
   const m2 = normalizeDomainStory(raw);
@@ -60670,6 +60707,7 @@ function renderDomainStory(raw, opts = {}) {
   const itemId = (role, element) => `${scope}.${role}.${element}`;
   const { sentences, order, best } = bestLayout(m2);
   const items = [];
+  const nearOf = /* @__PURE__ */ new Map();
   const ownIcon = (kind) => m2.icons?.[kind] ? { icon: m2.icons[kind] } : {};
   const actorItem = /* @__PURE__ */ new Map();
   const actorTraces = /* @__PURE__ */ new Map();
@@ -60678,13 +60716,21 @@ function renderDomainStory(raw, opts = {}) {
     if (!s.objectText && s.traces.length)
       actorTraces.set(key, [...actorTraces.get(key) ?? [], ...s.traces]);
   }
-  const drawings = m2.actors.some((a) => a.repeat) ? best.drawn : order;
+  const drawings = drawsCopies(m2) ? best.drawn : order;
+  const actorId = (key) => {
+    const { id, copy } = parseCopyKey(key);
+    return copy > 1 ? `${itemId("actor", id)}.${copy}` : itemId("actor", id);
+  };
   drawings.forEach((key, i) => {
     const { id, copy } = parseCopyKey(key);
     const a = m2.actors.find((x2) => x2.id === id);
     const b2 = best.actor.get(key);
     const traces2 = actorTraces.get(key);
-    const it = make({ id: copy > 1 ? `${itemId("actor", a.id)}.${copy}` : itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...copy > 1 ? { occurrence: true } : {}, ...traces2 ? { traces: traces2 } : {} } }, now);
+    const again = copy > 1 ? best.again.get(key) : void 0;
+    const it = make({ id: actorId(key), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...copy > 1 ? { occurrence: true } : {}, ...again ? { drawAgain: again } : {}, ...traces2 ? { traces: traces2 } : {} } }, now);
+    const partner = best.near.get(key);
+    if (partner)
+      nearOf.set(it.id, actorId(partner));
     actorItem.set(key, it);
     items.push(it);
   });
@@ -60699,6 +60745,7 @@ function renderDomainStory(raw, opts = {}) {
     if (box && s.objectText) {
       const o = make({ id: itemId("object", s.id), type: "card", ...box, text: s.objectText, role: "work-object", order: s.seq, data: { element: s.id, seq: s.seq, sentence: read, kind: s.objectKind, ...ownIcon(s.objectKind), ds: "object", ...s.object ? { workObject: s.object } : {}, ...s.traces.length ? { traces: s.traces } : {}, ...s.note ? { note: s.note } : {}, ...self ? { self: true } : {} } }, now);
       objectItem.set(s.id, o);
+      nearOf.set(o.id, from.id);
       items.push(o);
       items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
       receiversOf(s).forEach((r, k2) => {
@@ -60735,8 +60782,10 @@ function renderDomainStory(raw, opts = {}) {
     const note = make({ id: itemId("note", n.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n.text, role: "annotation", data: { element: n.id, on: n.on, ds: "annotation" } }, now);
     placed.push(note);
     items.push(note);
-    if (target)
+    if (target) {
+      nearOf.set(note.id, target.id);
       items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
+    }
   }
   const outlines = [];
   const drawingsIn = (id, members2) => {
@@ -60782,7 +60831,7 @@ function renderDomainStory(raw, opts = {}) {
   const facets = [m2.scope.granularity, m2.scope.time, m2.scope.purity].filter(Boolean);
   if (facets.length)
     legend2.push(make({ id: itemId("scope", "scope"), type: "text", x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(" \xB7 ")}`, role: "scope", data: { scope: m2.scope } }, now));
-  return offsetAll([...shifted, ...legend2], opts.at);
+  return offsetAll([...shifted, ...legend2], opts.at).map((i) => nearOf.has(i.id) ? withHints(i, { near: nearOf.get(i.id) }) : i);
 }
 function groupOutlines(groups) {
   const out = /* @__PURE__ */ new Map();
@@ -60849,9 +60898,10 @@ function groupOutlines(groups) {
     }
   return new Map([...out].map(([id, o]) => [id, { box: o.box, ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, overlaps: o.overlaps }]));
 }
-var ICON_W, ICON_H, BASE, DS_SPACING, DS_VERB_FONT, SEQ_ROOM, VERB_AIR, VERB_CAP, CUT_X, CUT_Y, NOTE_MIN_W, NOTE_MAX_W, NOTE_MIN_H, GROUP_PAD_X, GROUP_PAD_TOP, GROUP_PAD_BOTTOM, GROUP_NEST, GROUP_TITLE_H, centre, overlaps, receiversOf, PREFERENCES, SLOTS, copyKey, parseCopyKey, REUSE_CELLS, samePt, union2, withTitle, intersects;
+var ICON_W, ICON_H, BASE, DS_SPACING, DS_VERB_FONT, SEQ_ROOM, VERB_AIR, VERB_CAP, CUT_X, CUT_Y, NOTE_MIN_W, NOTE_MAX_W, NOTE_MIN_H, GROUP_PAD_X, GROUP_PAD_TOP, GROUP_PAD_BOTTOM, GROUP_NEST, GROUP_TITLE_H, centre, overlaps, receiversOf, PREFERENCES, SLOTS, copyKey, parseCopyKey, REUSE_CELLS, drawsCopies, samePt, union2, withTitle, intersects;
 var init_domain_story = __esm({
   "packages/canvas/dist/templates/domain-story.js"() {
+    init_model();
     init_domainStory();
     init_textMetrics();
     init_edgeLabel();
@@ -60891,6 +60941,7 @@ var init_domain_story = __esm({
       return i > 0 ? { id: key.slice(0, i), copy: Number(key.slice(i + 1)) } : { id: key, copy: 1 };
     };
     REUSE_CELLS = 2;
+    drawsCopies = (m2) => m2.actors.some((a) => a.repeat) || m2.sentences.some((s) => s.drawAgain?.length);
     samePt = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
     union2 = (bs) => {
       const x0 = Math.min(...bs.map((b2) => b2.x));
@@ -61366,13 +61417,13 @@ function frameOf(board, key) {
 function growFrame(frame, drawn, placed, pad = 20) {
   if (placed.has(frame.id))
     return void 0;
-  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
-  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) }) }] : [it]);
+  const num3 = (v2) => typeof v2 === "number" ? v2 : 0;
+  const boxes = drawn.filter((it) => it.type !== "arrow" && it.parent === frame.id).flatMap((it) => isUiScreen(it) ? [it, { ...it, ...uiGutterOf({ x: num3(it.x), y: num3(it.y), w: num3(it.w), h: num3(it.h) }) }] : [it]);
   if (!boxes.length)
     return void 0;
-  const [fx, fy, fw, fh] = [num2(frame.x), num2(frame.y), num2(frame.w), num2(frame.h)];
-  const w2 = Math.max(fw, ...boxes.map((b2) => num2(b2.x) + num2(b2.w) + pad - fx));
-  const h = Math.max(fh, ...boxes.map((b2) => num2(b2.y) + num2(b2.h) + pad - fy));
+  const [fx, fy, fw, fh] = [num3(frame.x), num3(frame.y), num3(frame.w), num3(frame.h)];
+  const w2 = Math.max(fw, ...boxes.map((b2) => num3(b2.x) + num3(b2.w) + pad - fx));
+  const h = Math.max(fh, ...boxes.map((b2) => num3(b2.y) + num3(b2.h) + pad - fy));
   return w2 > fw || h > fh ? { kind: "update", id: frame.id, patch: { w: w2, h } } : void 0;
 }
 function esItemFor(board, esKey, element) {
@@ -61382,13 +61433,13 @@ function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ ne
   const frame = frameOf(board, usmKey);
   if (!frame)
     throw new Error(`no story-map frame keyed "${usmKey}" on this board \u2014 draw the story map first (awd design draw <file>)`);
-  const num2 = (v2) => typeof v2 === "number" ? v2 : 0;
+  const num3 = (v2) => typeof v2 === "number" ? v2 : 0;
   const already = new Set(Object.values(board.items).map((it) => it.data?.pending?.trace?.from).filter(Boolean));
   const fresh = candidates.filter((c2) => !already.has(c2.traces[0]?.from));
   const children = Object.values(board.items).filter((it) => it.parent === frame.id);
-  const fx = num2(frame.x);
-  const fy = num2(frame.y);
-  const bottom = Math.max(fy + PAD2, ...children.map((c2) => num2(c2.y) + num2(c2.h)));
+  const fx = num3(frame.x);
+  const fy = num3(frame.y);
+  const bottom = Math.max(fy + PAD2, ...children.map((c2) => num3(c2.y) + num3(c2.h)));
   const y2 = bottom + GAP2 * 2;
   const stamp = { createdBy: "agent", updatedBy: "agent", updatedAt: now };
   const ops = [];
@@ -61422,10 +61473,10 @@ function proposalOps(board, candidates, usmKey, esKey, now = (/* @__PURE__ */ ne
     }
   });
   const need2 = y2 + CARD_H2 + PAD2 - fy;
-  if (fresh.length && need2 > num2(frame.h))
+  if (fresh.length && need2 > num3(frame.h))
     ops.push({ kind: "update", id: frame.id, patch: { h: need2 } });
   const right = fx + PAD2 + fresh.length * (CARD_W3 + GAP2) + PAD2 - fx;
-  if (fresh.length && right > num2(frame.w))
+  if (fresh.length && right > num3(frame.w))
     ops.push({ kind: "update", id: frame.id, patch: { w: right } });
   return { ops, proposed: fresh.length, skipped: candidates.length - fresh.length };
 }
@@ -61533,7 +61584,12 @@ function originsOf(changes) {
   return out;
 }
 function redrawInputs(changes) {
-  return { placed: placedByUser(changes.filter((c2) => c2.author === "user")), origins: originsOf(changes), removed: removedByUser(changes) };
+  const placed = placedByUser(changes.filter((c2) => c2.author === "user"));
+  for (const ch of changes)
+    for (const op of ch.ops)
+      if (op.kind === "add" && op.item && placed.has(renamedFromOf(op.item) ?? ""))
+        placed.add(op.item.id);
+  return { placed, origins: originsOf(changes), removed: removedByUser(changes) };
 }
 function redrawInputsFromJson(j2) {
   const out = emptyRedrawInputs();
@@ -61581,8 +61637,54 @@ function same(a, b2) {
   const kb = Object.keys(b2).filter((k2) => b2[k2] !== void 0);
   return ka.length === kb.length && ka.every((k2) => same(a[k2], b2[k2]));
 }
-function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
+function freeSpot(b2, boxes, from) {
+  const hit = (c2) => boxes.some((o) => c2.x < o.x + o.w + GAP3 && o.x < c2.x + c2.w + GAP3 && c2.y < o.y + o.h + GAP3 && o.y < c2.y + c2.h + GAP3);
+  if (!hit(b2))
+    return { box: b2, nudged: false };
+  const a0 = Math.atan2(b2.y + b2.h / 2 - from.y, b2.x + b2.w / 2 - from.x);
+  const step = Math.max(40, Math.round(Math.min(b2.w, b2.h) / 2));
+  for (let ring = 1; ring <= 30; ring++)
+    for (let k2 = 0; k2 < 12; k2++) {
+      const a = a0 + Math.ceil(k2 / 2) * (k2 % 2 ? 1 : -1) * Math.PI / 6;
+      const c2 = { ...b2, x: Math.round(b2.x + Math.cos(a) * ring * step), y: Math.round(b2.y + Math.sin(a) * ring * step) };
+      if (!hit(c2))
+        return { box: c2, nudged: true };
+    }
+  return { box: b2, nudged: false };
+}
+function renamedNotes(board, drawn, drawnIds, prefix) {
+  const fresh = drawn.filter((d) => !board[d.id] && isOnNote(d));
+  const stale = Object.values(board).filter((it) => it.id.startsWith(prefix) && !drawnIds.has(it.id) && isOnNote(it) && !pendingOf(it));
+  const on = (it) => it.data.on;
+  const out = /* @__PURE__ */ new Map();
+  const used = /* @__PURE__ */ new Set();
+  const match = (d, o) => void (o && (out.set(d.id, o.id), used.add(o.id)));
+  for (const d of fresh)
+    match(d, stale.find((o) => !used.has(o.id) && on(o) === on(d) && o.text === d.text));
+  for (const d of fresh) {
+    if (out.has(d.id))
+      continue;
+    const mine = fresh.filter((x2) => !out.has(x2.id) && on(x2) === on(d));
+    const theirs = stale.filter((o) => !used.has(o.id) && on(o) === on(d));
+    if (mine.length === 1 && theirs.length === 1)
+      match(d, theirs[0]);
+  }
+  const links = Object.values(board).filter((a) => a.type === "arrow" && !drawnIds.has(a.id));
+  for (const d of drawn) {
+    const from = d.type === "arrow" && !board[d.id] && d.from ? out.get(d.from) : void 0;
+    if (from)
+      match(d, links.find((a) => a.from === from && a.to === d.to && !used.has(a.id)));
+  }
+  return out;
+}
+function explainRedraw(board, given, inputs, scope = { prefix: SCOPE }) {
   const { placed, origins, removed } = inputs;
+  const hints = /* @__PURE__ */ new Map();
+  const drawn = given.map((d) => {
+    if (typeof d.near === "string")
+      hints.set(d.id, d.near);
+    return withoutHints(d);
+  });
   const drawnIds = new Set(drawn.map((d) => d.id));
   const held = /* @__PURE__ */ new Set();
   const ops = [];
@@ -61603,6 +61705,35 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
       plan.settled.push({ id: it.id, label: label(it), why: p.kind === "remove" && p.deleted ? 'you deleted it and the file no longer has it: gone for good (the "kept removed" mark is cleared)' : "the file now has it" });
     }
   }
+  const inFrame = (it) => {
+    if (!scope.frame)
+      return scope.prefix === SCOPE;
+    const seen = /* @__PURE__ */ new Set();
+    for (let p = it.parent ? board[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board[p.parent] : void 0) {
+      if (p.id === scope.frame)
+        return true;
+      seen.add(p.id);
+    }
+    return false;
+  };
+  const keepOf = (id) => !board[id] ? void 0 : lockOf(board, id) ? "locked" : placed.has(id) ? "moved" : typeof board[id].data?.placedNear === "string" ? "near" : void 0;
+  const renamed = renamedNotes(board, drawn, drawnIds, scope.prefix);
+  const renamedTo = new Map([...renamed].map(([to, from]) => [from, to]));
+  const drawnById = new Map(drawn.map((d) => [d.id, d]));
+  const landed = /* @__PURE__ */ new Map();
+  const at3 = (id) => landed.get(id) ?? (keepOf(id) ? board[id] : drawnById.get(id) ?? board[id]);
+  const shiftOf = (id) => {
+    const d = drawnById.get(id);
+    const f = at3(id);
+    if (!d || !f || f === d)
+      return void 0;
+    const [dx, dy] = [num2(f.x) - num2(d.x), num2(f.y) - num2(d.y)];
+    return dx || dy ? { dx, dy } : void 0;
+  };
+  const obstacles = (self) => [
+    ...drawn.filter((d) => d.id !== self && solid(d)).map((d) => boxOf(at3(d.id) ?? d)),
+    ...Object.values(board).filter((it) => !drawnIds.has(it.id) && !it.id.startsWith(scope.prefix) && solid(it) && inFrame(it)).map(boxOf)
+  ];
   const keptLayout = /* @__PURE__ */ new Set();
   const updates = [];
   for (const d of drawn) {
@@ -61616,18 +61747,43 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
       continue;
     }
     if (!was) {
-      updates.push({ kind: "add", item: d });
-      plan.added.push({ id: d.id, label: label(d) });
+      const from = renamed.get(d.id);
+      const old = from ? board[from] : void 0;
+      let item = old ? withPresentation(d, old) : d;
+      const why = [];
+      if (old && from) {
+        if (d.type !== "arrow")
+          item = { ...item, data: { ...item.data ?? {}, renamedFrom: from } };
+        why.push(`replaces ${from} (${d.type === "arrow" ? "the line of a renamed note" : "the same note, renamed"})`);
+        const kept = keepOf(from);
+        if (kept && d.type !== "arrow") {
+          item = { ...item, ...Object.fromEntries(GEOMETRY.filter((k2) => k2 in old).map((k2) => [k2, old[k2]])) };
+          landed.set(d.id, item);
+          why.push(kept === "moved" ? "keeps where you put it" : kept === "locked" ? "keeps its place (locked)" : "keeps its place");
+        }
+      }
+      const anchor2 = hints.get(d.id);
+      const shift = !landed.has(d.id) && anchor2 && solid(d) ? shiftOf(anchor2) : void 0;
+      if (anchor2 && shift) {
+        const a = boxOf(at3(anchor2));
+        const spot = freeSpot({ ...boxOf(d), x: num2(d.x) + shift.dx, y: num2(d.y) + shift.dy }, obstacles(d.id), { x: a.x + a.w / 2, y: a.y + a.h / 2 });
+        item = { ...item, x: spot.box.x, y: spot.box.y, data: { ...item.data ?? {}, placedNear: anchor2 } };
+        landed.set(d.id, item);
+        why.push(`placed next to "${label(board[anchor2] ?? drawnById.get(anchor2))}", where ${placed.has(anchor2) ? "you put it" : "it is on the board"}${spot.nudged ? " (moved aside to a free spot)" : ""}`);
+      }
+      updates.push({ kind: "add", item });
+      plan.added.push({ id: d.id, label: label(d), ...why.length ? { why: why.join("; ") } : {} });
       continue;
     }
     const patch = withPresentation(d, was);
     const lock = lockOf(board, d.id);
-    const keep = lock ? "locked" : placed.has(d.id) ? "moved" : void 0;
+    const keep = keepOf(d.id);
     if (keep)
       keptLayout.add(d.id);
     const geometry = GEOMETRY.filter((k2) => k2 in patch && !same(patch[k2], was[k2]));
     if (keep && geometry.length) {
-      const line = { id: d.id, label: label(was), why: keep === "locked" ? `${lock === "frame" ? "its frame is locked" : "locked"}: keeps ${geometry.join(", ")}` : `you moved it: keeps ${geometry.join(", ")}` };
+      const near = keep === "near" ? `placed next to "${label(board[String(was.data?.placedNear)])}" when it was added` : "";
+      const line = { id: d.id, label: label(was), why: keep === "locked" ? `${lock === "frame" ? "its frame is locked" : "locked"}: keeps ${geometry.join(", ")}` : `${near || "you moved it"}: keeps ${geometry.join(", ")}` };
       (keep === "locked" ? plan.keptLocked : plan.keptMoved).push(line);
     }
     const op = { kind: "update", id: d.id, patch };
@@ -61639,6 +61795,13 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
     }
     plan.updated.push({ id: d.id, label: label(was), why: changed.join(", ") });
     updates.push(final);
+  }
+  for (const c2 of Object.values(board)) {
+    const to = c2.type === "comment" && typeof c2.target === "string" ? renamedTo.get(c2.target) : void 0;
+    if (!to || held.has(c2.id))
+      continue;
+    updates.push({ kind: "update", id: c2.id, patch: { target: to } });
+    plan.updated.push({ id: c2.id, label: label(c2), why: `its thread was on ${c2.target}, which is now ${to}: it follows` });
   }
   const drawers = new Set([...origins?.values() ?? []].filter((o) => o.author === "agent" && isRedrawNote(o.note)).map((o) => o.by ?? ""));
   const addedBy = (it) => {
@@ -61675,19 +61838,8 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
     }
     ops.push({ kind: "remove", id: it.id });
     const lock = lockOf(board, it.id);
-    plan.removed.push({ id: it.id, label: label(it), why: `no longer in the file${lock ? " (a lock keeps the position, not the item)" : ""}` });
+    plan.removed.push({ id: it.id, label: label(it), why: renamedTo.has(it.id) ? `renamed: now ${renamedTo.get(it.id)}` : `no longer in the file${lock ? " (a lock keeps the position, not the item)" : ""}` });
   }
-  const inFrame = (it) => {
-    if (!scope.frame)
-      return scope.prefix === SCOPE;
-    const seen = /* @__PURE__ */ new Set();
-    for (let p = it.parent ? board[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board[p.parent] : void 0) {
-      if (p.id === scope.frame)
-        return true;
-      seen.add(p.id);
-    }
-    return false;
-  };
   const endIn = (id) => !!id && (id.startsWith(scope.prefix) || id === scope.frame || !!board[id] && inFrame(board[id]));
   for (const it of Object.values(board)) {
     if (it.type === "comment" || drawnIds.has(it.id) || held.has(it.id) || scope.keep?.has(it.id) || it.id === scope.frame)
@@ -61703,7 +61855,7 @@ function explainRedraw(board, drawn, inputs, scope = { prefix: SCOPE }) {
   const result = [...keepUserLayout(updates, keptLayout), ...ops];
   const frame = scope.frame ? board[scope.frame] : void 0;
   if (frame) {
-    const grow = growFrame(frame, drawn, keptLayout);
+    const grow = growFrame(frame, drawn.map((d) => landed.get(d.id) ?? (keepOf(d.id) === "near" ? board[d.id] : d)), keptLayout);
     if (grow) {
       result.push(grow);
       if (!plan.updated.some((l) => l.id === frame.id)) {
@@ -61736,7 +61888,7 @@ function planLines(plan, o = {}) {
   }
   return out;
 }
-var GEOMETRY, SCOPE, pendingOf, node2, wireOf, sameWire, PRESENTATION, isRedrawNote, emptyRedrawInputs, label, IGNORED, mergedData, changedKeys, lockOf, KEPT_REMOVED, SECTIONS;
+var GEOMETRY, SCOPE, pendingOf, node2, wireOf, sameWire, PRESENTATION, isRedrawNote, renamedFromOf, emptyRedrawInputs, label, IGNORED, mergedData, changedKeys, lockOf, KEPT_REMOVED, num2, boxOf, solid, GAP3, isOnNote, SECTIONS;
 var init_redraw = __esm({
   "packages/canvas/dist/diagrams/redraw.js"() {
     init_annotations();
@@ -61754,8 +61906,9 @@ var init_redraw = __esm({
       const w2 = wireOf(drawn);
       return !!w2 && node2(w2.from) === node2(want.from) && node2(w2.to) === node2(want.to) && (want.event === void 0 || w2.event === want.event);
     };
-    PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy", "hidden"];
+    PRESENTATION = ["seenBy", "seenByAgents", "agentState", "fromSide", "toSide", "bend", "lock", "lockedBy", "hidden", "renamedFrom", "placedNear"];
     isRedrawNote = (note) => !!note && /^(awd design draw|design_draw|awd graph|awd studio)\b/.test(note);
+    renamedFromOf = (it) => typeof it?.data?.renamedFrom === "string" ? it.data.renamedFrom : void 0;
     emptyRedrawInputs = () => ({ placed: /* @__PURE__ */ new Set(), origins: /* @__PURE__ */ new Map(), removed: /* @__PURE__ */ new Map() });
     label = (it) => {
       const t = String(it?.text ?? it?.label ?? "").replace(/\s+/g, " ").trim();
@@ -61766,6 +61919,11 @@ var init_redraw = __esm({
     changedKeys = (patch, was) => Object.keys(patch).filter((k2) => !IGNORED.has(k2) && !same(k2 === "data" && was.type === "comment" ? mergedData(was.data, patch.data) : patch[k2], was[k2]));
     lockOf = (board, id) => layoutLock(board, id);
     KEPT_REMOVED = "you deleted it \u2014 the file still has it; propose the file change?";
+    num2 = (v2) => typeof v2 === "number" ? v2 : 0;
+    boxOf = (it) => ({ x: num2(it.x), y: num2(it.y), w: num2(it.w), h: num2(it.h) });
+    solid = (it) => it.type !== "arrow" && it.type !== "comment" && it.type !== "frame" && it.type !== "lane";
+    GAP3 = 16;
+    isOnNote = (it) => it.type !== "comment" && it.role === "annotation" && typeof it.data?.on === "string";
     SECTIONS = [
       ["added", "+", "added"],
       ["updated", "~", "updated"],
@@ -62544,7 +62702,7 @@ function toEgon(content, opts = {}) {
   const COL4 = 250;
   const at3 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
   const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
-  const repeats = m2.actors.some((a) => a.repeat);
+  const repeats = drawsCopies(m2);
   const casting = repeats ? dsCasting(m2) : void 0;
   const firstSeen = [];
   if (casting)
@@ -63726,26 +63884,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num2 = +value;
-                if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
+                const num3 = +value;
+                if (!Number.isInteger(num3) || num3 < 8 || num3 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num2;
+                value = num3;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num2 = +value;
-              if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
+              const num3 = +value;
+              if (!Number.isInteger(num3) || num3 < 8 || num3 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num2;
+              value = num3;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -64459,8 +64617,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num2 = buf.readUInt32BE(0);
-        if (num2 > Math.pow(2, 53 - 32) - 1) {
+        const num3 = buf.readUInt32BE(0);
+        if (num3 > Math.pow(2, 53 - 32) - 1) {
           const error62 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -64471,7 +64629,7 @@ var require_receiver = __commonJS({
           cb(error62);
           return;
         }
-        this._payloadLength = num2 * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num3 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -70978,7 +71136,7 @@ ${CLOSE}`
 If a \`domain-storytelling\` skill is available to you, load it first \u2014 it carries the method with the book's pages. First settle the scope with me, because every sentence is judged by it: the granularity \u2014 coarse-grained (the whole process at a glance: what happens, not how), medium-grained, or fine-grained (one part in detail, how exactly it is done) \u2014 as-is or to-be, and pure (no software) or digitalized (software systems are actors). Keep every sentence at that one level (mixing levels is a bad smell; "clicks button" is too fine for any story); detail that belongs to another level is another story. If the domain has not been told without software yet, say that the usual way is a pure as-is story first, and ask whether to start there.
 Write design/<name>.domain-story.yaml: the scope, every actor once, one work object per activity, and numbered sentences "actor \u2014 verb \u2014 work object \u2014 to actor". While you write, hold each sentence against these:
 - One concrete case, no "if" or "or": tell the usual case, put a variation in a note, give an alternative that matters its own story.
-- What does not happen is not a sentence. Say which case this story tells in a note on the whole story (an \`annotations\` entry on its first work object: "assumption: Casey matches for the first time"); say where a sentence would not happen in a note on that sentence ("variation: already sent \u2192 \u2462 does not happen"); wrap a stretch that is sometimes skipped in a \`groups\` outline ("optional: \u2026"); keep the rule itself ("only once per contact") in an EventStorming policy or the story map's acceptance and link to it; a rejected alternative goes to the decisions kanban. One sentence per note \u2014 the detail goes into the sentence's \`note\`.
+- What does not happen is not a sentence. Say which case this story tells in a note on the whole story (an \`annotations\` entry on its first work object: "assumption: Casey matches for the first time"); say where a sentence would not happen in a note on that sentence ("variation: already sent \u2192 \u2462 does not happen"); wrap a stretch that is sometimes skipped in a \`groups\` outline ("optional: \u2026"); keep the rule itself ("only once per contact") in an EventStorming policy or the story map's acceptance and link to it; a rejected alternative goes to the decisions kanban. One sentence per note \u2014 the detail goes into the sentence's \`note\`. A note is named after what it is on: give a second note on the same element an \`id\`, so adding a note never moves another one on the board.
 - An actor plays an active part (a person, a group, a software system) and is named by its role; what is only carried along or acted on is a work object.
 - Model intent, not screens: no user-asks / system-answers pairs and no arrows from a system back to itself. Each activity should push the story forward \u2014 what is the person after, and how does the system help?
 - A work object is something an actor creates, works with or hands over, named in the words the people use and never hidden inside a verb ("searches for a seat in" hides the seat). When the same thing comes back, it is drawn again under the same name (it may say its state: "signed contract"); an outcome on its own ("check passed") is not a thing.
@@ -80037,7 +80195,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.29.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.30.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -80691,7 +80849,7 @@ var init_mcp2 = __esm({
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[], color?: 'orange'|'blue'|'yellow'|'pale-yellow'|'lilac'|'green'|'pink'|'red'|'purple' (a pale wash to tell groups apart)}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 the built-in kinds are generic and a work object without a \`kind\` is a document, so draw your own for the domain's things under \`icons\` (an outline on 24 \xD7 24 of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`; one per kind of thing, the main work object first, three to seven in a story). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, drawAgain?: <actor>|<actor>[], note?, traces?}], groups?: [{id?, text, members: <element>[], color?: 'orange'|'blue'|'yellow'|'pale-yellow'|'lilac'|'green'|'pink'|'red'|'purple' (a pale wash to tell groups apart)}], annotations?: [{id?, on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture; \`drawAgain: <actor>\` on a sentence draws that actor again for that sentence, next to it, whatever the layout picks \u2014 for a long line across a board the person arranged), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 the built-in kinds are generic and a work object without a \`kind\` is a document, so draw your own for the domain's things under \`icons\` (an outline on 24 \xD7 24 of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`; one per kind of thing, the main work object first, three to seven in a story). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
