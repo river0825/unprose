@@ -73,7 +73,7 @@ canvas tools alone). Its instructions open with what Unprose is for, so an agent
 | `canvas_diff` | `id, since, from: person\|others\|all\|[names]` (older spelling `author: user\|others\|agent\|all`), `frame?, kinds?, summary?, last?, limit?, cursor?, maxChars?` | human-readable lines for every change after `since` (`person`, the default: the person's changes from any of their pages; `others`: the person and the other agents, never you; a list of names: only theirs); moves within a lane fold into one line; `summary: true` = counts by who × kind × frame + the last lines; capped and paged ([Reading big boards](#reading-big-boards)) |
 | `canvas_wait` | `id, since, timeoutSec = 300 (≤ 1800), quietSec = 2.5, wake = meaningful, from = person\|others\|[names], listen = mine\|all, untilMention = false, frame?, kinds?, summary?, maxChars?` | `from: person` (default) wakes on the person's changes — from any of their pages, a browser signed in through the tunnel included — and on another agent asking you; `from: others` also on the other agents' changes (never yours). Block until the user has changed something **and stopped for `quietSec`** (or pressed "Hand to agent"); returns the diff lines and new seq. Only what is for you wakes you — the board's responder, @mentions of you, another agent asking you, proposals to files you hold (`listen: 'all'`: everything); the first wait on a board starts with its context note ([Several agents on one board](#several-agents-on-one-board)). `wake: meaningful` (default) wakes on comments, adds, removals, renames, connections, recolours and handoff; pure moves / resizes / reroutes and read receipts neither wake nor restart the quiet window and come back folded into one `moved N items: …` line. `any` wakes on every change (one line each); `handoff` waits for the button only. While pending the board shows "agent is watching". `frame`, `kinds` and `from: [names]` narrow what wakes you; `summary: true` and `maxChars` keep a burst short. `untilMention: true` wakes only when you are addressed personally (an @mention, a reply in a thread you were mentioned or asked in, a proposal to files you hold). Nothing for you within `timeoutSec`: one line, `nothing new on b_x (seq 93; 2 change(s) for others) — wait again with since: 93` ([Watching cheaply](#watching-cheaply)) |
 | `canvas_snapshot` | `id, frame?, ids?, scale?, maxPx? = 2000, theme? = light\|dark, format? = png\|svg` | **see the board**: a server-side picture of a diagram frame, items or the whole board as the page draws it — a PNG image (resvg), else the SVG text; the result names the renderer ([Seeing the board](#seeing-the-board)) |
-| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden / on a card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban), comments covering an item or another card, or outside their target's frame — each with a suggestion; the same list is in the frame panel |
+| `canvas_check_layout` | `id, frame?, limit?` | overlaps, text likely cut off, wire labels cut / hidden, lines through a pictogram or card, items outside their frame / off their lane, oversized items, items drawn elsewhere than stored (kanban), comments covering an item or another card, or outside their target's frame — each with a suggestion; the same list is in the frame panel |
 | `canvas_approve` | `code, scope?, name?, board?` | **local agent only** (never on `/mcp`): approve a connect request by the pairing code the person read out; logged on `board` ([Who may approve and manage](#who-may-approve-and-manage)) |
 | `canvas_focus` | `id, ids?, frame?, note?` | **"look here"**: use it whenever you ask the person to look at something. Their open page shows "Agent wants to show you …" with **Go** (or jumps at once with *Follow agent* on) and fits the view to the items / the diagram frame. Nothing is stored on the board. Returns how many pages got it and a link that opens right there (`?focus=` / `?frame=`) |
 | `canvas_files` | `id, path?` | the files behind a board (a workflow's yaml, agents, prompts, scripts; a diagram frame's design file), as the last redraw put them on the board: each with its sha-1 `base`, line count and source; with `path`, that file's exact text. See [Proposals and saving](#proposals-and-saving) |
@@ -263,8 +263,9 @@ snapshot of frame studio-kanban: 1248×764 px at scale 1, 6 items, board region 
 checked, wires, lines }`, `src/layoutCheck.ts`) is pure geometry on the positions as drawn: items overlapping their siblings,
 text likely cut off (the same text metrics), items outside their parent or off their lane, items 3× the median of
 their siblings or far larger than the template sticky (160×110), wire labels that do not fit beside their wire (cut
-with …, or only a dot — [Wires → Wire labels](#wires)) or were dragged onto a card, labels and domain-story number
-circles that sit on each other or on a pictogram, domain-story group outlines that intersect (kind `group`), items drawn elsewhere than
+with …, or only a dot — [Wires → Wire labels](#wires)), labels and domain-story number circles that sit on each
+other or on a pictogram, a line that runs through a pictogram or card (kind `wire-through`: a domain-story line no
+detour clears, or any line folded through one by hand), domain-story group outlines that intersect (kind `group`), items drawn elsewhere than
 stored (a kanban card's x / y are not where it shows — its stored y only orders the column), and comments: one whose box covers an item
 (kind `comment-covers` — a frame or lane is the paper a comment sits on, a UI-mock screen is the product; the fix names the screen's
 gutter, docs/diagrams.md §6c; also a card lying on another card — a stale note stacked on live ones —, told once per pair on the
@@ -1126,7 +1127,7 @@ Nodes and agents may carry a `detail` object; the template copies it to `item.da
   "groups": [{ "text": "Booking", "members": ["ticket"] }], "annotations": [{ "on": "Cashier", "text": "Cash only" }] }
 ```
 
-Actors (`role: actor`, blue cards with a pictogram) appear once on the top row; each sentence gets its own
+Actors (`role: actor`, blue cards with a pictogram) appear once on the top row (with `layout: { actors: repeat }` a domain-story frame draws an actor again where the story comes back to it — docs/diagrams.md §6b); each sentence gets its own
 work-object card (`role: work-object`, or `activity-node` when it has none) on the row below, in sequence order;
 `activity` arrows are labelled `① verb`, `activity-to` arrows go on to the receiver. Annotations
 (`role: annotation`), group outlines (`role: group`), a legend and the scope complete it. Cards carry
@@ -1280,7 +1281,8 @@ diagrams* (the traces, with their relation and the other diagram's kind) and *Dr
 is headed by its word. The settings button says *Lines* (**W**) for everything but traces and *Traces* (**Shift+W**).
 
 How the board draws these lines (`web/src/flow/route.ts`, `ItemEdge.tsx`, `catchAll.ts`). All of it is a way of
-looking: nothing here is stored on the board, and a copied image shows what is shown.
+looking: nothing here is stored on the board — except the folds a person puts in a line (below) — and a copied
+image shows what is shown.
 
 - **Sides and routes.** A side the person (or a template) chose is kept. Otherwise every pair of sides is tried —
   facing sides (right → left, bottom → top …), one side into a perpendicular one (one bend), and a loop under or
@@ -1293,9 +1295,9 @@ looking: nothing here is stored on the board, and a copied image shows what is s
   backing, and **never covers a card**: it is tried along the wire's runs (the run out of the source first), then
   beside the line; when it does not fit it is wrapped to two lines, then cut with **…** (the whole label is in its
   tooltip and shows while the wire is selected); when not even a short cut fits — two cards 40 px apart — only a
-  small **dot** sits on the wire, and hovering or selecting it shows the label. A label the person dragged
-  (`data.bend`) stays where they put it. Agents steer a label with one supported field on the arrow, set by
-  `canvas_apply` like any data:
+  small **dot** sits on the wire, and hovering or selecting it shows the label. A folded line's label is placed the
+  same way, along its runs. Agents steer a label with one supported field on the arrow, set by `canvas_apply` like
+  any data:
 
   ```json
   { "kind": "update", "id": "<arrow id>", "patch": { "data": { "label": { "at": 0.3, "short": "updates" } } } }
@@ -1303,8 +1305,22 @@ looking: nothing here is stored on the board, and a copied image shows what is s
 
   `at` (0 … 1, 0 = the source end) is where along the wire to try first; `short` is the text shown when the whole
   label does not fit (keep the full one in `label`). Anything else in `data.label` is ignored. `canvas_check_layout`
-  reports a label that is cut, hidden as a dot or dragged onto a card (`[label]`), with how far to move a card or a
-  `short` to give.
+  reports a label that is cut or hidden as a dot (`[label]`), with how far to move a card or a `short` to give.
+- **Folding a line by hand** (`web/src/flow/folds.ts`; any line — a workflow wire, a domain-story activity, an
+  annotation link). Select the line: a small handle sits in the middle of each run — drag it to fold the line
+  there; a round handle sits at each fold — drag it to move the fold (it snaps level or plumb with the next point,
+  so a run can be made exactly straight), double-click it to take the fold out. Dragging the label (or the grip of
+  an unlabelled line) folds the line where you drop it. The line runs straight from fold to fold with a slightly
+  rounded corner, and its ends aim at the nearest fold. One ordinary, undoable change; a redraw keeps it. Stored as
+  `data.bend: [{ x, y }, …]` in board coordinates, from the source end — agents can set or clear it with
+  `canvas_apply` (`"bend": null` straightens the line). An older board's single `data.bend: { x, y }` (once a curve
+  through that point) is one fold. A folded line no longer takes the automatic routes above.
+- **A domain-story line keeps off the pictograms.** Its arrows are straight (§6b in docs/diagrams.md); when one would
+  run through a pictogram, an annotation or a card that is not one of its ends, the board folds it once (twice if
+  once is not enough) around it — the shortest way that clears every box and crosses the fewest other story lines.
+  The page, `canvas_snapshot` and the layout check draw the same detour; it is not stored, so it follows when
+  pictograms move. Folds the person made win. A line no detour can clear, or one folded through a box by hand, is
+  reported by `canvas_check_layout` (`[wire-through]`, with a fold point or a move to make).
 - **Selecting** a block brings its wires forward and fades the rest; hovering changes nothing.
 - **One button in the bottom-right corner** says what is drawn (`Traces: selected · Lines: all · Notes: badges`)
   and opens the settings below — the notes part is under [Notes](#notes); Escape or a click elsewhere closes them.

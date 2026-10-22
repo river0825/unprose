@@ -2,7 +2,7 @@
 // overlap their siblings, text that is likely cut off, items outside their parent or off their lane, items far
 // larger than their siblings (or than the template's sticky), and items the page draws somewhere other than their
 // stored coordinates (kanban stacking), wire labels and domain-story number circles that collide with each other or
-// with a card, domain-story group outlines that intersect, comments that cover an item or lie outside the diagram
+// with a card, domain-story lines (and lines folded by hand) that run through a pictogram or a card, domain-story group outlines that intersect, comments that cover an item or lie outside the diagram
 // frame their target is in. What a hidden frame holds is not drawn, so not checked. Each finding says what to do in
 // plain words. Shared by the server (`GET /api/boards/:id/layout`, MCP `canvas_check_layout`) and the web's frame panel.
 import { isAnnotationDraft } from './annotations.js'
@@ -11,13 +11,13 @@ import { diagramFrameId, diagramOf, type Board, type Item } from './model.js'
 import { shownBoard, shownDifferences } from './shown.js'
 import { fitText, measure } from './textMetrics.js'
 import { EDGE_LABEL, labelControl, labelHits, labelLines, labelSize } from './edgeLabel.js'
-import { DS_SEQ, labelObstacles, planWires, seqBox, wireText } from './wireGeometry.js'
+import { DS_SEQ, foldsOf, labelObstacles, planWires, runsThrough, seqBox, wireText } from './wireGeometry.js'
 import { isUiScreen, uiGutterOf } from './diagrams/uiMock.js'
 /** The template sticky (templates/util.ts STICKY_W × STICKY_H) — not imported: util.ts pulls node:crypto, and the web bundles this file. */
 const STICKY_W = 160
 const STICKY_H = 110
 
-export type LayoutKind = 'overlap' | 'clipped' | 'group' | 'label' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout' | 'comment-covers' | 'comment-outside'
+export type LayoutKind = 'overlap' | 'clipped' | 'group' | 'label' | 'wire-through' | 'outside-parent' | 'off-lane' | 'oversized' | 'moved-by-layout' | 'comment-covers' | 'comment-outside'
 
 export interface LayoutFinding {
   /** the item the finding is about */
@@ -56,7 +56,7 @@ export class LayoutError extends Error {
   }
 }
 
-const KINDS: LayoutKind[] = ['clipped', 'overlap', 'group', 'label', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout', 'comment-covers', 'comment-outside']
+const KINDS: LayoutKind[] = ['clipped', 'overlap', 'group', 'label', 'wire-through', 'off-lane', 'outside-parent', 'oversized', 'moved-by-layout', 'comment-covers', 'comment-outside']
 
 /** Overlaps smaller than this (in both directions) are hairline touches, not overlaps. */
 const OVERLAP_TOL = 6
@@ -295,17 +295,28 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
         add(w, { kind: 'label', message: `${seqName(w)} of the arrow ${nameOf(a)} → ${nameOf(z)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf(z)} so the arrow leaves ${nameOf(a)} at another angle)`, others: on.map((o) => o.id) })
       }
     }
+    // a line through a pictogram or a card: a domain-story line no detour could take round it (its route is the page's
+    // exactly), or a line the person folded through one (the page draws a folded line as planned too)
+    const folds = foldsOf(w.data)
+    if (planned && (planned.shape.ds || folds.length)) {
+      const through = runsThrough(planned.shape.points, obstacles, w.from, w.to)
+      if (through.length) {
+        const names = through.slice(0, 3).map((o) => nameOf(shown.items[o.id])).join(', ')
+        const at = (o: { x: number; y: number; w: number; h: number }) => `(${r(o.x + o.w + 40)}, ${r(o.y - 40)})`
+        add(w, {
+          kind: 'wire-through',
+          message: `the ${planned.shape.ds ? 'line' : 'wire'} ${nameOf(a)} → ${nameOf(z)} runs through ${names}${folds.length ? ' (where it was folded, data.bend)' : ''}`,
+          suggestion: folds.length
+            ? `move its folds (data.bend) so it goes round ${names}, or move ${names} off it`
+            : `move ${names} off the line, or fold the line round it (data.bend: [{ "x": …, "y": … }, …] on the arrow — e.g. a fold at ${at(through[0])})`,
+          others: through.map((o) => o.id),
+        })
+      }
+    }
     const label = planned?.label
     if (!label || !text) continue
     const what = `label "${short(text, 32)}" of the wire ${nameOf(a)} → ${nameOf(z)}`
     if (label.mode !== 'dot') marks.push({ wire: w, what, box: { x: label.x - label.w / 2, y: label.y - label.h / 2, w: label.w, h: label.h }, circle: false })
-    if (label.dragged) {
-      const covered = labelHits(label.x, label.y, label.w, label.h, obstacles, 0)
-      if (!covered.length) continue
-      const names = covered.slice(0, 3).map((b) => nameOf(shown.items[b.id])).join(', ')
-      add(w, { kind: 'label', message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: 'drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire', others: covered.map((b) => b.id) })
-      continue
-    }
     if (label.mode !== 'dot' && label.mode !== 'cut') continue
     // the room between the two ends, and what the whole label needs
     const gapX = Math.max(z.x - (a.x + a.w), a.x - (z.x + z.w))
@@ -336,8 +347,8 @@ export function checkLayout(board: Board, opts: { frame?: string; limit?: number
       const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y)
       if (ox <= MARK_TOL || oy <= MARK_TOL) continue
       const z = shown.items[m2.wire.to!]
-      const fix = m2.wire.data?.bend
-        ? 'drag that label onto a free stretch of its wire, or clear data.bend'
+      const fix = foldsOf(m1.wire.data).length || foldsOf(m2.wire.data).length
+        ? 'fold one of the two wires elsewhere (data.bend) so they part, or give one label a short form in data.label.short'
         : m1.wire.from === m2.wire.from
           ? `the two arrows leave ${nameOf(shown.items[m1.wire.from!])} at nearly the same angle: move ${nameOf(z)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story`
           : `move ${nameOf(z)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`

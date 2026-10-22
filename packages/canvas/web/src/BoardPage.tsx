@@ -840,11 +840,17 @@ function BoardInner({ id }: { id: string }) {
     [board, commit],
   )
 
+  // a wire's folds (data.bend: the points it runs through, flow/folds.ts); none left: the key goes
   const bend = useCallback(
-    (iid: string, point: { x: number; y: number }) => {
+    (iid: string, points: Array<{ x: number; y: number }>) => {
       const it = board?.items[iid]
       if (!it) return
-      void commit([{ kind: 'update', id: iid, patch: { data: { ...it.data, bend: { x: Math.round(point.x), y: Math.round(point.y) } } } }], 'rerouted an arrow')
+      const { bend: had, ...rest } = it.data ?? {}
+      const next = points.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }))
+      if (JSON.stringify(next) === JSON.stringify(Array.isArray(had) ? had : had ? [had] : [])) return
+      const before = Array.isArray(had) ? had.length : had ? 1 : 0
+      const note = next.length > before ? 'folded an arrow' : next.length === before ? 'moved a fold' : next.length ? 'removed a fold' : 'straightened an arrow'
+      void commit([{ kind: 'update', id: iid, patch: { data: next.length ? { ...rest, bend: next } : rest } }], note)
     },
     [board, commit],
   )
@@ -1163,7 +1169,7 @@ function BoardInner({ id }: { id: string }) {
       startEdit: (id) => latest.current.startEdit(id),
       commitLabel: (id, label) => latest.current.commitLabel(id, label),
       resize: (id, rect) => latest.current.resize(id, rect),
-      bend: (id, point) => latest.current.bend(id, point),
+      bend: (id, points) => latest.current.bend(id, points),
       setCommentOpen: (id, open) => latest.current.setCommentOpen(id, open),
       cancelEdit: () => latest.current.cancelEdit(),
       commitText: (id, text, andContinue) => latest.current.commitText(id, text, andContinue),

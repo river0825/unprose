@@ -22,8 +22,8 @@ export interface EditApi {
   openMenu: (id: string, x: number, y: number) => void
   /** end of a resize gesture; `rect` is relative to the node's parent, as React Flow reports it */
   resize: (id: string, rect: Rect) => void
-  /** move a wire's single bend point (flow coordinates) */
-  bend: (id: string, point: { x: number; y: number }) => void
+  /** set the points a wire is folded at, source end to target end (flow coordinates; empty: straightened — flow/folds.ts) */
+  bend: (id: string, points: Array<{ x: number; y: number }>) => void
   /** expand or fold a comment (a per-viewer preference); expanding marks it read */
   setCommentOpen: (id: string, open: boolean) => void
   /** add a reply to a comment thread; empty text is ignored */

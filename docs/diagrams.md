@@ -317,7 +317,8 @@ into scenarios — never the story: no actor or sentence is dropped to make the 
 end with the story read back; tell it to the person before you call it done.
 
 **Notation (as the site states it).**
-- **Actors**: "a person, a group of people, or a software system". **Every actor appears only once** in a story.
+- **Actors**: "a person, a group of people, or a software system". **Every actor appears only once** in a story —
+  the board's default; a long story may let actors repeat (below, "Repeated actors").
 - **Work objects**: what actors "create, work with, and exchange … documents, physical things, and digital
   objects". **For every activity, a separate work object** is drawn.
 - **Activities**: arrows "labeled with verbs from the domain language"; "the sentences can be brought into an
@@ -362,9 +363,11 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   activity is a straight arrow with its **sequence number in a circle at its origin** and the **verb beside the
   line**; an onward arrow ("to", "into", …) takes the work object on to the receiver. Arrows float: they aim
   from pictogram to pictogram and start at the icon's edge, so the arrows leaving one actor spread around it.
-  Groups are dashed rounded outlines; annotations are text notes with a bracket and a dashed line; the legend
-  shows the icons and the numbered arrow, and the scope closes the frame.
-- **Layout**: actors appear once and are **placed freely** on a coarse grid — the first sentence's actor on the
+  An arrow that would run through another pictogram is folded around it by the board (and a person can fold any
+  arrow by hand — docs/canvas.md "Folding a line by hand"); the number and the verb stay on its first run.
+  Groups are dashed rounded outlines; annotations are text notes with a bracket and a dashed line to what they
+  explain; the legend shows the icons and the numbered arrow, and the scope closes the frame.
+- **Layout**: actors appear once (unless they repeat, below) and are **placed freely** on a coarse grid — the first sentence's actor on the
   left, each new actor in a free cell next to the actor it first works with (right first, then below / above);
   a work object at the middle of the way from its actor to its receiver(s), spread sideways when several share
   that way; a sentence without a receiver puts its object in a free slot around its actor. A few placement
@@ -378,6 +381,26 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   (460 × 330 px actor pitch; long verbs may crowd). `gapX` / `gapY` (px, 240–2000 / 180–2000) set the actor
   grid's pitch outright. Spacing only changes positions, never ids, so a redraw still keeps what the person
   moved or locked ("What a redraw keeps").
+- **Repeated actors** (`layout: { actors: repeat }`, or `repeat: true` on one actor; our addition to the book's rule,
+  `once` is the default). A long story keeps coming back to its early actors — the customer who ordered pays at the
+  end — and with every actor drawn once, those sentences are long arrows back across the picture that cross other
+  arrows and run through pictograms. An actor that repeats is still **declared once** in the file and keeps its name;
+  the board draws it again where the story continues, the way a work object is drawn again for every sentence.
+  Sentence by sentence, the sentence is drawn next to the drawing of one of its actors nearest to the previous
+  sentence's; another actor of the sentence uses its nearest drawing when that one is at most two grid cells away
+  and the arrow to it crosses no arrow drawn before and runs through no other actor — else it is drawn again next
+  to the sentence (an actor that does not repeat always uses its one drawing). On a 17-sentence order-to-cash story
+  that took the crossings from 7 to 0, the lines through pictograms from 4 to 0, and the longest arrow from 1,449 to
+  734 px (4 actors drawn twice or three times). Deterministic. The first drawing keeps the id `<key>.actor.<id>`,
+  later ones are `<key>.actor.<id>.2`, `.3` … (`data.occurrence: true`, as EventStorming marks a person drawn
+  again), numbered in the order the story needs them, so a redraw keeps what the person moved. What reads the
+  actors knows: an **annotation** on an actor and a **trace** to it go to its first drawing; a **group** naming an
+  actor takes the drawings of it that the group's own sentences use (its first drawing when they use none);
+  **replay** brings a drawing in with the first sentence that uses it; selecting one drawing lights up the others,
+  and the Inspector lists them ("Same actor, also drawn for ⑭ …"); `canvas_read_board` lists the actor once ("drawn
+  3 times: also #… #…"). **Egon.io**: each drawing exports as an Egon actor of the same name (Egon lets a modeller
+  place an actor again); importing a story with several Egon actors of one name and icon gives one actor with
+  `repeat: true`.
 - **No collisions.** The layout makes sure nothing is drawn on top of something else:
   - an actor that **sends to itself** (`actor: cl, to: cl`) gets its work object **beside** it, in a free slot whose
     arrow passes no other pictogram, and **no return arrow** (it would run back over the activity arrow); the lint

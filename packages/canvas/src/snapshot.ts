@@ -737,7 +737,8 @@ function drawArrow(c: Ctx, it: Item): string {
   let width = 1.4
   let dash = ''
   let marker = 'ink2'
-  if (ds && it.role === 'annotation-link') ((stroke = p.ink3), (dash = '5 5'), (marker = ''))
+  // a domain story's annotation link: dashed, no arrowhead, dark enough to follow on a zoomed-out board (the page draws it alike)
+  if (ds && it.role === 'annotation-link') ((stroke = p.ink2), (width = 1.5), (dash = '6 4'), (marker = ''))
   else if (ds) ((stroke = p.ink), (width = 1.6), (marker = 'ink'))
   else if (it.role === 'trace') ((stroke = p.ink3), (dash = '2 4'), (marker = 'ink3'), (width = 1.2))
   else if (it.role === 'owns' || it.role === 'delegates') ((stroke = p.agent), (dash = it.role === 'owns' ? '3 5' : '6 4'), (marker = 'agent'))

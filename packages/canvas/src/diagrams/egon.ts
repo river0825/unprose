@@ -11,6 +11,7 @@
 import { idAllocator } from './ids.js'
 import { normalizeDomainStory, type DomainStoryContent } from './domainStory.js'
 import { dsGlyphMarkup, parseDsIcon } from './dsIcons.js'
+import { dsCasting, parseCopyKey } from '../templates/domain-story.js'
 
 type Obj = { id: string; type: string; name?: string; text?: string; x?: number; y?: number; width?: number; height?: number; number?: number | null; source?: string; target?: string; children?: string[]; waypoints?: Array<{ x: number; y: number }>; pickedColor?: string }
 
@@ -38,12 +39,24 @@ export function fromEgon(file: unknown): EgonImport {
   const alloc = idAllocator()
   const ours = new Map<string, string>() // Egon id → our element id
 
-  const actors = objs.filter((o) => o.type.startsWith(ACTOR)).map((o, i) => {
+  // An actor Egon draws more than once (the same name and icon: Egon lets a modeller place it again) is one actor
+  // that repeats (`repeat: true`, docs/diagrams.md §6b): the board draws it again where the story needs it.
+  const actors: Array<{ id: string; text: string; kind: string; repeat?: boolean }> = []
+  const byNameAndIcon = new Map<string, (typeof actors)[number]>()
+  objs.filter((o) => o.type.startsWith(ACTOR)).forEach((o, i) => {
     const icon = o.type.slice(ACTOR.length) || 'Person'
-    const text = (o.name ?? '').trim() || `${icon} ${i + 1}`
-    const id = alloc(undefined, text, 'actor')
-    ours.set(o.id, id)
-    return { id, text, kind: lowerIcon(icon) }
+    const named = (o.name ?? '').trim()
+    const text = named || `${icon} ${i + 1}`
+    const same = named ? byNameAndIcon.get(`${lowerIcon(icon)}|${named}`) : undefined
+    if (same) {
+      same.repeat = true
+      ours.set(o.id, same.id)
+      return
+    }
+    const a = { id: alloc(undefined, text, 'actor'), text, kind: lowerIcon(icon) }
+    if (named) byNameAndIcon.set(`${a.kind}|${named}`, a)
+    ours.set(o.id, a.id)
+    actors.push(a)
   })
   const workObjects = objs.filter((o) => o.type.startsWith(OBJECT)).map((o, i) => {
     const icon = o.type.slice(OBJECT.length) || 'Document'
@@ -124,21 +137,35 @@ export function toEgon(content: DomainStoryContent, opts: { title?: string; desc
   const at = (col: number, row: number) => ({ x: 100 + col * COL, y: 100 + row * 200 })
   const center = (o: Obj) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 })
 
+  // one Egon actor per drawing: every actor once, or — a story whose actors repeat — each drawing the board makes of it,
+  // under the same name (Egon allows an actor to be placed again)
+  const repeats = m.actors.some((a) => a.repeat)
+  const casting = repeats ? dsCasting(m) : undefined
   const firstSeen: string[] = []
-  for (const s of [...m.sentences].sort((a, b) => a.seq - b.seq)) for (const a of [s.actor, ...s.to]) if (!firstSeen.includes(a)) firstSeen.push(a)
-  for (const a of m.actors) if (!firstSeen.includes(a.id)) firstSeen.push(a.id)
-  firstSeen.forEach((aid, i) => {
-    const a = m.actors.find((x) => x.id === aid)!
+  if (casting) firstSeen.push(...casting.drawn)
+  else {
+    for (const s of [...m.sentences].sort((a, b) => a.seq - b.seq)) for (const a of [s.actor, ...s.to]) if (!firstSeen.includes(a)) firstSeen.push(a)
+    for (const a of m.actors) if (!firstSeen.includes(a.id)) firstSeen.push(a.id)
+  }
+  firstSeen.forEach((key, i) => {
+    const a = m.actors.find((x) => x.id === parseCopyKey(key).id)!
     const o: Obj = { id: id('shape'), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at(i, 0), pickedColor: 'black' }
-    shapeOf.set(a.id, o)
+    shapeOf.set(key, o)
     objs.push(o)
   })
+  // the drawing of actor `aid` that sentence `sid` uses (its only one unless actors repeat)
+  const drawingOf = (sid: string, aid: string): string => {
+    const c = casting?.cast.get(sid)
+    if (!c) return aid
+    if (parseCopyKey(c.actor).id === aid) return c.actor
+    return c.to.find((k) => parseCopyKey(k).id === aid) ?? aid
+  }
   const seqs = [...new Set(m.sentences.map((s) => s.seq))].sort((a, b) => a - b)
   const icons = { actors: new Set(m.actors.map((a) => capIcon(a.kind))), workObjects: new Set<string>() }
   for (const s of m.sentences) {
     const col = seqs.indexOf(s.seq)
     const stack = m.sentences.filter((x) => x.seq === s.seq).indexOf(s)
-    const actor = shapeOf.get(s.actor)!
+    const actor = shapeOf.get(drawingOf(s.id, s.actor))!
     if (s.objectText) {
       icons.workObjects.add(capIcon(s.objectKind))
       const wo: Obj = { id: id('shape'), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at(col, 1 + stack), pickedColor: 'black' }
@@ -146,12 +173,12 @@ export function toEgon(content: DomainStoryContent, opts: { title?: string; desc
       shapeOf.set(s.id, wo)
       objs.push({ id: id('connection'), type: 'domainStory:activity', name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: 'black' })
       for (const r of s.to) {
-        const to = shapeOf.get(r)!
+        const to = shapeOf.get(drawingOf(s.id, r))!
         objs.push({ id: id('connection'), type: 'domainStory:activity', name: s.toLabel ?? '', number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: 'black' })
       }
     } else {
       for (const r of s.to.length ? s.to : []) {
-        const to = shapeOf.get(r)!
+        const to = shapeOf.get(drawingOf(s.id, r))!
         objs.push({ id: id('connection'), type: 'domainStory:activity', name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: 'black' })
       }
     }

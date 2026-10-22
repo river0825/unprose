@@ -222,7 +222,9 @@ export function StickyNode({ data, selected }: NodeProps<ItemNode>) {
 export function TextNode({ data, selected }: NodeProps<ItemNode>) {
   const { item, pulse } = data
   return (
-    <Shell item={item} pulse={pulse} selected={selected} resizable className={`text-item ${item.role ?? ''}`} handles={false}>
+    // a domain-story annotation keeps its side handles: its dashed link to what it explains is drawn from one of them
+    // (without a handle React Flow drops the edge, and the link was not drawn at all)
+    <Shell item={item} pulse={pulse} selected={selected} resizable className={`text-item ${item.role ?? ''}`} handles={item.data?.ds === 'annotation'}>
       <Text item={item} placeholder="Text" />
     </Shell>
   )

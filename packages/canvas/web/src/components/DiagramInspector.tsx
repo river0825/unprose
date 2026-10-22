@@ -9,7 +9,7 @@ import { KIND_NAMES, diagramOf, membersOf, type DiagramInfo } from '../diagrams/
 import { grammarRule, neighboursOf, roleInfo, type Finding } from '../diagrams/es'
 import { FINDING_KINDS, useFrameFindings } from '../diagrams/findings'
 import { tracesOf } from '../diagrams/traces'
-import { sameWorkObject } from '../diagrams/sameObject'
+import { sameWorkObject, sentencesAt } from '../diagrams/sameObject'
 import { pendingOf, type Pending } from '../inspector/pending'
 import { deletedOf, describeDeleted } from '../diagrams/deleteProposal'
 import { MODELS, type DiscussModel } from '../inspector/detail'
@@ -99,7 +99,7 @@ export function DiagramFramePanel({ board, diagram, onSelect, onOpenFile }: { bo
   )
 }
 
-const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', group: 'groups overlap', label: 'wire label', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere', 'comment-covers': 'comment covers', 'comment-outside': 'comment outside' }
+const LAYOUT_TAGS: Record<LayoutKind, string> = { overlap: 'overlap', clipped: 'cut off', group: 'groups overlap', label: 'wire label', 'outside-parent': 'outside', 'off-lane': 'off lane', oversized: 'too big', 'moved-by-layout': 'drawn elsewhere', 'comment-covers': 'comment covers', 'comment-outside': 'comment outside', 'wire-through': 'line through' }
 
 /** The layout check (src/layoutCheck.ts): what overlaps, is cut off, sticks out or is far too big in this frame — the same findings agents get. */
 function LayoutFindings({ board, diagramKey, onSelect }: { board: Board; diagramKey: string; onSelect: (id: string) => void }) {
@@ -236,7 +236,20 @@ export function DiagramElementPanel({
           <span className="muted">Sentence</span> {item.data.sentence}
         </p>
       ) : null}
-      {same.length ? (
+      {same.length && item.data?.ds === 'actor' ? (
+        <div className="dg-nb dg-same" title="This story lets actors repeat (layout.actors: repeat): the actor is drawn again where the story comes back to it — these are the same actor">
+          <span className="muted">Same actor, also drawn for</span>{' '}
+          {same.map((o) => {
+            const said = sentencesAt(board, o)
+            const name = said[0] ?? o.text ?? o.id
+            return (
+              <PanelLink key={o.id} id={o.id} name={name} className="wire-block" onSelect={onSelect}>
+                {said.length > 1 ? `${said[0]} …` : name}
+              </PanelLink>
+            )
+          })}
+        </div>
+      ) : same.length ? (
         <div className="dg-nb dg-same" title="A domain story draws a work object once per sentence that touches it: these are the same thing">
           <span className="muted">Same work object, also in</span>{' '}
           {same.map((o) => (

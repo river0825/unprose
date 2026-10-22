@@ -293,8 +293,19 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const cardsOn = new Map<string, Item[]>()
   for (const c of items) if (isAnnotationCard(c) && c.target) cardsOn.set(c.target, [...(cardsOn.get(c.target) ?? []), c])
   const num = (c: Item) => (calloutOf(c) !== undefined ? circled(calloutOf(c)!) : '•')
+  // a domain-story actor drawn more than once (layout.actors: repeat): listed once, on its first drawing, with the others' ids
+  const actorKey = (i: Item) => `${i.parent ?? ''}|${String(i.data?.element)}`
+  const firstDrawing = new Map<string, Item>()
+  const laterDrawings = new Map<string, Item[]>()
+  for (const i of items) {
+    if (i.data?.ds !== 'actor' || typeof i.data.element !== 'string') continue
+    if (i.data.occurrence) laterDrawings.set(actorKey(i), [...(laterDrawings.get(actorKey(i)) ?? []), i])
+    else firstDrawing.set(actorKey(i), i)
+  }
   const meta = (i: Item): string[] => {
     const f: string[] = []
+    const again = i.data?.ds === 'actor' && !i.data.occurrence ? laterDrawings.get(actorKey(i)) : undefined
+    if (again?.length) f.push(`drawn ${again.length + 1} times: also ${[...again].sort((a, b) => (a.id < b.id ? -1 : 1)).map((a) => `#${a.id}`).join(' ')}`)
     const notes = cardsOn.get(i.id)
     if (notes?.length) f.push(`annotation ${notes.map(num).join('')}`)
     if (i.data?.pivotal) f.push('pivotal')
@@ -314,6 +325,11 @@ export function outline(board: Board, opts: OutlineOptions = {}): string {
   const line = (i: Item, indent: string) => {
     printed.add(i.id)
     if (i.role === 'pivotal') return // a bare marker line; the event carries the flag
+    // a later drawing of an actor: its first drawing's line names it (unless that one is left out)
+    if (i.data?.ds === 'actor' && i.data.occurrence && !threadsOn.get(i.id)?.length) {
+      const first = firstDrawing.get(actorKey(i))
+      if (first && (keep(first.id) || context.has(first.id))) return
+    }
     if (!keep(i.id) && !context.has(i.id)) return
     const role = i.type === 'ui' ? String((i.data?.ui as { type?: string } | undefined)?.type ?? i.role ?? 'ui') : (i.role ?? i.type)
     const f = meta(i)

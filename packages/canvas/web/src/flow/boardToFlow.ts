@@ -5,7 +5,8 @@ import { KIND_NAMES, diagramData } from '../diagrams/frame'
 import { findingCount } from '../diagrams/findings'
 import { autoSides, planSides, planWindow, type Box } from './route'
 import { catchAllWires, wireBadges, type WireBadge } from './catchAll'
-import { planWires } from '../../../src/wireGeometry'
+import { foldsOf, planWires } from '../../../src/wireGeometry'
+import { foldsKey } from './folds'
 import type { PlacedLabel, Pt } from '../../../src/edgeLabel'
 import type { CommentShown } from './notesView'
 import type { ItemMarks } from './annotationsView'
@@ -13,8 +14,12 @@ import type { ClickOn } from './clickableView'
 import { calloutOf, isAnnotationDraft, todoOf } from '../../../src/annotations'
 import { isHiddenFrame } from '../../../src/hidden'
 
-/** A domain-story wire's number circle and verb, placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use the same), with the end boxes they were placed for. */
-export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; from: Box; to: Box }
+/**
+ * A domain-story wire's number circle, verb and the points it runs through (the person's folds, or the detour that keeps
+ * it off a pictogram), placed for the whole board (src/wireGeometry.ts planWires — the snapshot and the layout check use
+ * the same), with the end boxes and the folds (flow/folds.ts foldsKey) they were placed for.
+ */
+export interface DsWirePlan { seq?: Pt; label?: PlacedLabel; via?: Pt[]; from: Box; to: Box; folds: string }
 
 /** A diagram frame's header (docs/diagrams.md §1): its kind, key, and how many grammar findings it has. */
 export interface DiagramBadge { kind: string; name: string; key: string; findings?: number }
@@ -219,8 +224,9 @@ export function boardToFlow(board: Board, pulse: ReadonlySet<string>, comments: 
           // a workflow wire edited on the board is a proposal until the AI changes the file (docs/studio.md §7)
           ...(it.data?.pending && it.role !== 'trace' ? { className: (it.data.pending as { kind?: string }).kind === 'remove' ? 'wire-pending remove' : 'wire-pending' } : {}),
           // ownership / delegation links on the workflow board are intent, not flow: draw them dashed and quieter
-          // a domain story's annotation link: a dashed line to what the note explains, no arrowhead
-          ...(it.data?.ds && it.role === 'annotation-link' ? { className: 'ds-note-link', style: { strokeDasharray: '5 5', stroke: 'var(--ink-3)', strokeWidth: 1.2 } } : {}),
+          // a domain story's annotation link: a dashed line to what the note explains, no arrowhead — in the second ink
+          // and 1.5 px, so it still shows on a big story seen whole
+          ...(it.data?.ds && it.role === 'annotation-link' ? { className: 'ds-note-link', style: { strokeDasharray: '6 4', stroke: 'var(--ink-2)', strokeWidth: 1.5 } } : {}),
           ...(it.data?.ds && it.role === 'annotation-link'
             ? {}
             : it.data?.ds
@@ -271,7 +277,15 @@ function planDsWires(board: Board, edges: Edge[], stacked: Map<string, { x: numb
     const p = plan.get(e.id)
     const it = (e.data as { item: Item }).item
     if (!p) continue
-    ;(e.data as { dsPlan?: DsWirePlan }).dsPlan = { ...(p.seq ? { seq: p.seq } : {}), ...(p.label ? { label: p.label } : {}), from: boxOf(items[it.from!], stacked), to: boxOf(items[it.to!], stacked) }
+    const via = p.shape.via
+    ;(e.data as { dsPlan?: DsWirePlan }).dsPlan = {
+      ...(p.seq ? { seq: p.seq } : {}),
+      ...(p.label ? { label: p.label } : {}),
+      ...(via?.length ? { via } : {}),
+      from: boxOf(items[it.from!], stacked),
+      to: boxOf(items[it.to!], stacked),
+      folds: foldsKey(foldsOf(it.data)),
+    }
   }
 }
 

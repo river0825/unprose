@@ -6,6 +6,32 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-10-22
+
+### Added
+- **Fold a line by hand** (docs/canvas.md "Folding a line by hand"), any line — a workflow wire, a domain-story
+  activity, an annotation link. Select it: drag the small handle in the middle of a run to fold the line there, drag
+  a fold to move it (it snaps level or plumb with the next point), double-click a fold to take it out; dragging the
+  label folds the line where you drop it. Several folds per line, straight runs with a slightly rounded corner,
+  undoable, kept by a redraw; agents set them as `data.bend: [{ x, y }, …]`. A single bend from an older board (a
+  curve through one point) is now one fold.
+- **A domain-story arrow is folded around a pictogram it would run through** — the shortest way that clears every
+  box and crosses the fewest other story lines; the number and the verb stay on its first run. The page, the
+  snapshot and the layout check draw the same; the layout check reports a line still through a box
+  (`wire-through`).
+- **A domain story may draw an actor more than once** (docs/diagrams.md §6b "Repeated actors"). `layout: { actors:
+  repeat }` in the file (or `repeat: true` on one actor) draws an actor again where the story comes back to it —
+  as a work object is drawn for every sentence — instead of a long arrow back to its one drawing. The actor is still
+  declared once; `once` (the book's rule) stays the default and draws exactly as before. On a 17-sentence story the
+  crossings went from 7 to 0 and the lines through pictograms from 4 to 0. Later drawings are `<key>.actor.<id>.2`,
+  `.3` …; annotations and traces go to the first, replay brings each in with its sentence, selecting one lights up
+  the others, agents read the actor once ("drawn 3 times"), and Egon.io gets one actor per drawing (and gives
+  several Egon actors of one name back as one actor that repeats).
+
+### Fixed
+- **A domain story's annotation links were not drawn at all**: the note had no handle for its dashed line to start
+  from, so the line was dropped. They are drawn again, a little darker (1.5 px, ink-2, dashed 6 / 4).
+
 ## [0.27.1] — 2026-10-21
 
 ### Fixed
@@ -996,7 +1022,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.27.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/river0825/unprose/compare/v0.27.1...v0.28.0
 [0.27.1]: https://github.com/river0825/unprose/compare/v0.27.0...v0.27.1
 [0.27.0]: https://github.com/river0825/unprose/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/river0825/unprose/compare/v0.25.0...v0.26.0

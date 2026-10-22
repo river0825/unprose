@@ -5,6 +5,7 @@ import { EDGE_LABEL, labelControl, labelHits, labelLines, placeEdgeLabel, type L
 import { defaultFont, measure } from '../src/textMetrics.js'
 import { renderSnapshot } from '../src/snapshot.js'
 import { checkLayout, layoutLines } from '../src/layoutCheck.js'
+import { labelObstacles, planWires } from '../src/wireGeometry.js'
 import type { Board, Item } from '../src/model.js'
 
 const NOW = '2026-10-02T00:00:00.000Z'
@@ -116,9 +117,15 @@ test('layout check: a label with no room says how far to move a card or what sho
   assert.equal(checkLayout(roomy).findings.filter((x) => x.kind === 'label').length, 0)
 })
 
-test('layout check: a label dragged onto a card (data.bend) is reported', () => {
+test('a folded wire\'s label is placed along its runs, never on a card nor pinned to the fold (data.bend)', () => {
+  // the fold (an older board's single data.bend point) sits on a card: the wire turns there, its label does not
   const b = board([...Object.values(contactLoop.items).filter((i) => i.id !== 'w-roomy'), wire('w-roomy', 'configuration-conflicts', 'far', 'informs', { bend: { x: 680, y: 50 } })])
-  const f = checkLayout(b).findings.find((x) => x.id === 'w-roomy')
-  assert.equal(f?.kind, 'label')
-  assert.match(f!.message, /covers .*dragged there/)
+  const plan = planWires(b).get('w-roomy')!
+  assert.deepEqual(plan.shape.via, [{ x: 680, y: 50 }])
+  const l = plan.label!
+  assert.ok(l && l.mode !== 'dot')
+  assert.notDeepEqual({ x: l.x, y: l.y }, { x: 680, y: 50 })
+  assert.deepEqual(labelHits(l.x, l.y, l.w, l.h, labelObstacles(b), 0), [], 'the label covers no card')
+  const f = checkLayout(b).findings.filter((x) => x.id === 'w-roomy' && x.kind === 'label')
+  assert.equal(f.length, 0)
 })

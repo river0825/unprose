@@ -167,9 +167,36 @@ const PREFERENCES: Offset[][] = [
 ]
 const SLOTS: Offset[] = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]]
 
+/**
+ * Which drawing of its actors a sentence uses: copy keys. An actor's first (often only) drawing has the actor's id as
+ * its key; a repeated actor's later drawings are `<id>#2`, `<id>#3` …, numbered in the order the story needs them.
+ */
+export interface DsCast {
+  actor: string
+  /** the receivers (never the actor itself) */
+  to: string[]
+}
+/** The copy key of actor `id`'s `k`th drawing (1-based). */
+const copyKey = (id: string, k: number) => (k === 1 ? id : `${id}#${k}`)
+/** The actor a copy key draws, and which drawing of it it is. */
+export const parseCopyKey = (key: string): { id: string; copy: number } => {
+  const i = key.lastIndexOf('#')
+  return i > 0 ? { id: key.slice(0, i), copy: Number(key.slice(i + 1)) } : { id: key, copy: 1 }
+}
+/**
+ * A repeated actor is used again only when the sentence can be drawn next to that drawing: at most this many grid cells
+ * away (a longer arrow runs back across the story), crossing no arrow drawn before and through no other actor.
+ */
+const REUSE_CELLS = 2
+
 interface Layout {
+  /** copy key → box */
   actor: Map<string, Box>
   object: Map<string, Box> // sentence id → work-object box
+  /** sentence id → the drawings of its actors it uses */
+  cast: Map<string, DsCast>
+  /** copy keys in the order they were drawn */
+  drawn: string[]
   /** crossing arrows, plus arrows through pictograms (weighted): the layout with the least is kept */
   crossings: number
 }
@@ -181,7 +208,6 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
     cell.set(id, [c, r])
     taken.add(`${c},${r}`)
   }
-  put(order[0], 0, 0)
   const near = (id: string, partner: string) => {
     const [pc, pr] = cell.get(partner)!
     for (const [dc, dr] of pref) if (!taken.has(`${pc + dc},${pr + dr}`)) return put(id, pc + dc, pr + dr)
@@ -189,15 +215,22 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
     while (taken.has(`${c},${pr}`)) c++
     put(id, c, pr)
   }
-  for (const s of sentences) {
-    const cast = [s.actor, ...receiversOf(s)]
-    for (const id of cast) {
-      if (cell.has(id)) continue
-      const partner = cast.find((p) => cell.has(p)) ?? [...cell.keys()][cell.size - 1]
-      near(id, partner)
+  const cast = new Map<string, DsCast>()
+  if (m.actors.some((a) => a.repeat)) placeWithCopies(m, sentences, order, g, cell, put, near, cast)
+  else {
+    // every actor drawn once (the book's rule)
+    put(order[0], 0, 0)
+    for (const s of sentences) {
+      const members = [s.actor, ...receiversOf(s)]
+      for (const id of members) {
+        if (cell.has(id)) continue
+        const partner = members.find((p) => cell.has(p)) ?? [...cell.keys()][cell.size - 1]
+        near(id, partner)
+      }
+      cast.set(s.id, { actor: s.actor, to: receiversOf(s) })
     }
+    for (const id of order) if (!cell.has(id)) near(id, [...cell.keys()][cell.size - 1])
   }
-  for (const id of order) if (!cell.has(id)) near(id, [...cell.keys()][cell.size - 1])
 
   const actor = new Map<string, Box>()
   for (const [id, [c, r]] of cell) actor.set(id, { x: c * g.cellW, y: r * g.cellH, w: ICON_W, h: ICON_H })
@@ -206,16 +239,16 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
   const boxes: Box[] = [...actor.values()]
   const free = (b: Box) => !boxes.some((o) => overlaps(o, b))
   const wayCount = new Map<string, number>()
-  const wayKey = (s: DsSentence) => [s.actor, ...receiversOf(s).sort()].join('>')
+  const wayKey = (s: DsSentence) => [cast.get(s.id)!.actor, ...[...cast.get(s.id)!.to].sort()].join('>')
   const wayIndex = new Map<string, number>()
   for (const s of sentences) if (s.objectText && receiversOf(s).length) wayCount.set(wayKey(s), (wayCount.get(wayKey(s)) ?? 0) + 1)
   const object = new Map<string, Box>()
   for (const s of sentences) {
     if (!s.objectText) continue
-    const a = centre(actor.get(s.actor)!)
+    const a = centre(actor.get(cast.get(s.id)!.actor)!)
     let at: Pt
     let perp: Pt
-    const recv = receiversOf(s)
+    const recv = cast.get(s.id)!.to
     if (recv.length) {
       const rs = recv.map((r) => centre(actor.get(r)!))
       const t = { x: rs.reduce((v, p) => v + p.x, 0) / rs.length, y: rs.reduce((v, p) => v + p.y, 0) / rs.length }
@@ -232,7 +265,7 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
       perp = { x: 0, y: 1 }
       at = { x: a.x + g.slot, y: a.y }
       // a free slot whose arrow from the actor passes no other pictogram; else the first free one
-      const own = actor.get(s.actor)!
+      const own = actor.get(cast.get(s.id)!.actor)!
       const slots = SLOTS.map(([dx, dy]) => ({ x: a.x + dx * g.slot, y: a.y + dy * g.slot * 0.75 })).filter((c) => free({ x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }))
       at = slots.find((c) => !boxes.some((o) => o !== own && segmentHitsBox(a, c, o, -10))) ?? slots[0] ?? at
     }
@@ -250,20 +283,116 @@ function layoutWith(m: DsModel, sentences: DsSentence[], order: string[], pref: 
 
   const segs: Array<[Pt, Pt]> = []
   for (const s of sentences) {
-    const a = centre(actor.get(s.actor)!)
+    const c = cast.get(s.id)!
+    const a = centre(actor.get(c.actor)!)
     const o = object.get(s.id)
     if (o) {
       segs.push([a, centre(o)])
-      for (const r of receiversOf(s)) segs.push([centre(o), centre(actor.get(r)!)])
-    } else for (const r of receiversOf(s)) segs.push([a, centre(actor.get(r)!)])
+      for (const r of c.to) segs.push([centre(o), centre(actor.get(r)!)])
+    } else for (const r of c.to) segs.push([a, centre(actor.get(r)!)])
   }
   // arrows running through a pictogram that is not one of their ends weigh as much as two crossings
   const all = [...actor.values(), ...object.values()]
   let through = 0
   for (const [p, q] of segs) for (const b of all) if (!samePt(centre(b), p) && !samePt(centre(b), q) && segmentHitsBox(p, q, b, -10)) through++
-  return { actor, object, crossings: countCrossings(segs) + 2 * through }
+  return { actor, object, cast, drawn: [...cell.keys()], crossings: countCrossings(segs) + 2 * through }
 }
 const samePt = (a: Pt, b: Pt) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5
+
+/** Does segment p→q properly cross any of `lines` (sharing an end does not count)? */
+function crossesAny(p: Pt, q: Pt, lines: Array<[Pt, Pt]>): boolean {
+  for (const l of lines) if (countCrossings([[p, q], l]) > 0) return true
+  return false
+}
+
+/**
+ * Actors placed when some may repeat (`layout.actors: repeat`, or an actor's `repeat: true`). Sentence by sentence:
+ * the sentence is drawn where the story is — next to the drawing of one of its actors nearest to the previous
+ * sentence's (a repeated actor whose only drawings are far from there is drawn again next to the previous sentence).
+ * Each other actor of the sentence uses its nearest drawing when that one is at most REUSE_CELLS cells away and the
+ * arrow to it crosses nothing drawn before and runs through no other actor; else a repeated actor is drawn again next
+ * to the sentence (an actor that does not repeat always uses its one drawing). Deterministic.
+ */
+function placeWithCopies(
+  m: DsModel,
+  sentences: DsSentence[],
+  order: string[],
+  g: DsGeometry,
+  cell: Map<string, [number, number]>,
+  put: (id: string, c: number, r: number) => void,
+  near: (id: string, partner: string) => void,
+  cast: Map<string, DsCast>,
+): void {
+  const repeats = new Set(m.actors.filter((a) => a.repeat).map((a) => a.id))
+  const copies = new Map<string, string[]>()
+  let last: string | undefined
+  const draw = (id: string, partner: string | undefined): string => {
+    const list = copies.get(id) ?? []
+    const key = copyKey(id, list.length + 1)
+    list.push(key)
+    copies.set(id, list)
+    if (partner) near(key, partner)
+    else if (last) near(key, last)
+    else put(key, 0, 0)
+    last = key
+    return key
+  }
+  const dist = (a: string, b: string) => {
+    const [ac, ar] = cell.get(a)!
+    const [bc, br] = cell.get(b)!
+    return Math.max(Math.abs(ac - bc), Math.abs(ar - br))
+  }
+  const at = (key: string): Pt => {
+    const [c, r] = cell.get(key)!
+    return { x: c * g.cellW + ICON_W / 2, y: r * g.cellH + ICON_H / 2 }
+  }
+  const lines: Array<[Pt, Pt]> = []
+  const clean = (a: string, b: string) => {
+    const [p, q] = [at(a), at(b)]
+    if (crossesAny(p, q, lines)) return false
+    for (const k of cell.keys()) {
+      if (k === a || k === b) continue
+      const c = at(k)
+      if (segmentHitsBox(p, q, { x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }, -10)) return false
+    }
+    return true
+  }
+  // the drawing of `id` nearest to `to` (the first drawn on a tie)
+  const nearest = (id: string, to: string[]) => {
+    let best: string | undefined
+    let d = Infinity
+    for (const k of copies.get(id) ?? []) {
+      const e = to.length ? Math.min(...to.map((t) => dist(k, t))) : 0
+      if (e < d) ((best = k), (d = e))
+    }
+    return best === undefined ? undefined : { key: best, d }
+  }
+  let previous: string[] = []
+  for (const s of sentences) {
+    const members = [s.actor, ...receiversOf(s)]
+    const chosen = new Map<string, string>()
+    // where to draw the sentence: the member drawn nearest to the previous sentence
+    let anchor: { id: string; key: string; d: number } | undefined
+    for (const id of members) {
+      const hit = nearest(id, previous)
+      if (hit && (!anchor || hit.d < anchor.d)) anchor = { id, ...hit }
+    }
+    if (!anchor) anchor = { id: s.actor, key: draw(s.actor, undefined), d: 0 }
+    else if (anchor.d > REUSE_CELLS && repeats.has(anchor.id) && previous.length) anchor = { id: anchor.id, key: draw(anchor.id, previous[previous.length - 1]), d: 0 }
+    chosen.set(anchor.id, anchor.key)
+    for (const id of members) {
+      if (chosen.has(id)) continue
+      const hit = nearest(id, [anchor.key])
+      const reuse = hit && (!repeats.has(id) || (hit.d <= REUSE_CELLS && clean(anchor.key, hit.key)))
+      chosen.set(id, reuse ? hit.key : draw(id, anchor.key))
+    }
+    const c: DsCast = { actor: chosen.get(s.actor)!, to: receiversOf(s).map((r) => chosen.get(r)!) }
+    for (const r of c.to) lines.push([at(c.actor), at(r)])
+    cast.set(s.id, c)
+    previous = [c.actor, ...c.to]
+  }
+  for (const id of order) if (!copies.has(id)) draw(id, undefined)
+}
 
 /** The side of `from` that faces `to`, and the side of `to` that faces back. */
 function facing(from: Box, to: Box): { fromSide: string; toSide: string } {
@@ -275,13 +404,9 @@ function facing(from: Box, to: Box): { fromSide: string; toSide: string } {
   return dy >= 0 ? { fromSide: 'bottom', toSide: 'top' } : { fromSide: 'top', toSide: 'bottom' }
 }
 
-export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}): Item[] {
-  const m = normalizeDomainStory(raw)
-  const now = opts.now ?? new Date().toISOString()
-  const scope = opts.scope ?? 'ds'
-  const itemId = (role: string, element: string) => `${scope}.${role}.${element}`
+/** The layout the board draws: each placement preference tried, the fewest crossings kept (the first on a tie). */
+function bestLayout(m: DsModel): { sentences: DsSentence[]; order: string[]; best: Layout } {
   const sentences = [...m.sentences].sort((a, b) => a.seq - b.seq)
-
   // Actors in order of first appearance (actor, then receivers, sentence by sentence).
   const order: string[] = []
   const seen = (id: string) => void (order.includes(id) || order.push(id))
@@ -290,14 +415,32 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     s.to.forEach(seen)
   }
   for (const a of m.actors) seen(a.id)
-
-  // Try each placement preference; keep the fewest crossings (the first on a tie).
   const g = dsGeometry(m)
   let best = layoutWith(m, sentences, order, PREFERENCES[0], g)
   for (const pref of PREFERENCES.slice(1)) {
     const l = layoutWith(m, sentences, order, pref, g)
     if (l.crossings < best.crossings) best = l
   }
+  return { sentences, order, best }
+}
+
+/**
+ * How the board casts a story: every drawing of an actor (copy keys, see DsCast — one per actor unless actors repeat), in
+ * the order they are drawn, and which drawings each sentence uses. For Egon.io export and anything else that must draw
+ * the actors the way the board does.
+ */
+export function dsCasting(raw: DomainStoryContent | DsModel): { drawn: string[]; cast: Map<string, DsCast> } {
+  const m = 'dsModel' in raw ? raw : normalizeDomainStory(raw)
+  const { order, best } = bestLayout(m)
+  return { drawn: m.actors.some((a) => a.repeat) ? best.drawn : order, cast: best.cast }
+}
+
+export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}): Item[] {
+  const m = normalizeDomainStory(raw)
+  const now = opts.now ?? new Date().toISOString()
+  const scope = opts.scope ?? 'ds'
+  const itemId = (role: string, element: string) => `${scope}.${role}.${element}`
+  const { sentences, order, best } = bestLayout(m)
 
   const items: Item[] = []
   // an icon the file brings travels on the item, so the page and the snapshot draw it without the file
@@ -305,13 +448,20 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   const actorItem = new Map<string, Item>()
   // Traces of sentences without a work object ride on their actor (an arrow cannot be a trace's end).
   const actorTraces = new Map<string, DsSentence['traces']>()
-  for (const s of sentences) if (!s.objectText && s.traces.length) actorTraces.set(s.actor, [...(actorTraces.get(s.actor) ?? []), ...s.traces])
-  order.forEach((id, i) => {
+  for (const s of sentences) {
+    const key = best.cast.get(s.id)!.actor
+    if (!s.objectText && s.traces.length) actorTraces.set(key, [...(actorTraces.get(key) ?? []), ...s.traces])
+  }
+  // every actor once: in order of first appearance; repeated actors: every drawing, in the order the story needed them
+  const drawings = m.actors.some((a) => a.repeat) ? best.drawn : order
+  drawings.forEach((key, i) => {
+    const { id, copy } = parseCopyKey(key)
     const a = m.actors.find((x) => x.id === id)!
-    const b = best.actor.get(id)!
-    const traces = actorTraces.get(id)
-    const it = make({ id: itemId('actor', a.id), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: 'actor', ...(traces ? { traces } : {}) } }, now)
-    actorItem.set(id, it)
+    const b = best.actor.get(key)!
+    const traces = actorTraces.get(key)
+    // a later drawing of the actor: `<scope>.actor.<id>.<n>`, marked as an occurrence (as EventStorming marks a person drawn again)
+    const it = make({ id: copy > 1 ? `${itemId('actor', a.id)}.${copy}` : itemId('actor', a.id), type: 'card', ...b, text: a.text, role: 'actor', order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: 'actor', ...(copy > 1 ? { occurrence: true } : {}), ...(traces ? { traces } : {}) } }, now)
+    actorItem.set(key, it)
     items.push(it)
   })
 
@@ -319,7 +469,8 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   for (const s of sentences) {
     const read = readSentence(m, s)
     const base = { seq: s.seq, sentence: read, ds: true }
-    const from = actorItem.get(s.actor)!
+    const c = best.cast.get(s.id)!
+    const from = actorItem.get(c.actor)!
     const box = best.object.get(s.id)
     const self = s.to.includes(s.actor)
     if (box && s.objectText) {
@@ -328,15 +479,15 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
       items.push(o)
       items.push(arrow(scope, from.id, o.id, now, s.verb, 'activity', { key: s.id, data: { ...base, ...facing(from, o) } }))
       // to itself: no return arrow (it would run back over the activity arrow) — the object beside the actor says it
-      for (const r of receiversOf(s)) {
-        const to = actorItem.get(r)!
+      receiversOf(s).forEach((r, k) => {
+        const to = actorItem.get(c.to[k])!
         items.push(arrow(scope, o.id, to.id, now, s.toLabel, 'activity-to', { key: `${s.id}:to:${r}`, data: { sentence: read, ds: true, ...facing(o, to) } }))
-      }
+      })
     } else {
       // no work object: one numbered arrow from actor to actor (the sentence's element id rides on it); an actor
       // acting on itself without a work object has nothing to point at (the lint says so)
       for (const [k, r] of receiversOf(s).entries()) {
-        const to = actorItem.get(r)!
+        const to = actorItem.get(c.to[k])!
         items.push(arrow(scope, from.id, to.id, now, s.verb, 'activity', { key: `${s.id}${k ? `:${r}` : ''}`, data: { ...base, element: s.id, ...facing(from, to) } }))
       }
     }
@@ -384,7 +535,17 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
 
   // Groups: a rounded outline around the members (drawn first, so it sits behind them), kept apart (groupOutlines).
   const outlines: Item[] = []
-  const memberItems = (members: string[]) => members.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b): b is Item => !!b)
+  // an actor in a group: the drawings of it that the group's sentences use (its first drawing when they use none)
+  const drawingsIn = (id: string, members: string[]): Item[] => {
+    const used = new Set<string>()
+    for (const s of sentences) {
+      if (!members.includes(s.id) && !(s.object && members.includes(s.object))) continue
+      const c = best.cast.get(s.id)!
+      for (const k of [c.actor, ...c.to]) if (parseCopyKey(k).id === id) used.add(k)
+    }
+    return used.size > 1 || (used.size === 1 && !used.has(id)) ? [...used].map((k) => actorItem.get(k)!).filter(Boolean) : [actorItem.get(id)!]
+  }
+  const memberItems = (members: string[]) => members.flatMap((id) => (actorItem.has(id) ? drawingsIn(id, members) : [objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)])).filter((b): b is Item => !!b)
   const shaped = groupOutlines(m.groups.map((g) => ({ id: g.id, members: [...new Set(memberItems(g.members).map((i) => i.id))], boxes: memberItems(g.members) })))
   for (const g of m.groups) {
     const o = shaped.get(g.id)

@@ -8,6 +8,9 @@
 //   actor → activity → work object (→ to another actor). "The sentences can be brought into an order by
 //   numbering them" — the number sits at the origin of the activity arrow.
 // - "Every actor appears only once in the domain story. But for every activity, we draw a separate work object."
+//   That is the default. A long story whose sentences keep coming back to an early actor ends up with long arrows
+//   across the picture, so a story may let actors repeat (`layout.actors: repeat`, or `repeat: true` on one actor):
+//   the actor is still declared once, and the board draws it again where the story continues (templates/domain-story.ts).
 // - Textual annotations complement the sentences; "a group is represented as an outline that clusters parts
 //   of a story" (repetition, optional parts, locations, organisations, subdomains).
 // - Scope: granularity (coarse ↔ fine), point in time (as-is / to-be), domain purity (pure / digitalized).
@@ -37,6 +40,18 @@ const named = () =>
     }),
   ])
 
+const actorSchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string().optional(),
+    text: z.string().min(1),
+    /** person | group | system (custom icon names allowed) */
+    kind: z.string().optional(),
+    /** draw this actor again where the story comes back to it, instead of an arrow back to its one copy */
+    repeat: z.boolean().optional(),
+  }),
+])
+
 export const domainStorySchema = z.object({
   scope: z
     .object({
@@ -45,7 +60,7 @@ export const domainStorySchema = z.object({
       purity: z.enum(['pure', 'digitalized']).optional(),
     })
     .optional(),
-  actors: z.array(named()).min(1),
+  actors: z.array(actorSchema).min(1),
   workObjects: z.array(named()).default([]),
   sentences: z
     .array(
@@ -80,12 +95,21 @@ export const domainStorySchema = z.object({
       gapX: z.number().min(240).max(2000).optional(),
       /** vertical pitch of the actor grid in px */
       gapY: z.number().min(180).max(2000).optional(),
+      /** `once` (default, the book's rule): every actor is drawn once; `repeat`: an actor the story comes back to from
+       * far away is drawn again there (as a work object is drawn for every sentence) */
+      actors: z.enum(['once', 'repeat']).optional(),
     })
     .optional(),
 })
 export type DomainStoryContent = z.input<typeof domainStorySchema>
 
-export interface DsActor { id: string; text: string; kind: string }
+export interface DsActor {
+  id: string
+  text: string
+  kind: string
+  /** may be drawn more than once (the actor's own `repeat`, or the story's `layout.actors: repeat`) */
+  repeat?: boolean
+}
 export interface DsWorkObject { id: string; text: string; kind: string }
 export interface DsSentence {
   id: string
@@ -112,7 +136,7 @@ export interface DsModel {
   /** The story's own icons by kind name (absent: only the built-in ones). */
   icons?: Record<string, string>
   /** Drawing spacing from the file's `layout` (absent: the default, `normal`). */
-  layout?: { spacing?: 'compact' | 'normal' | 'roomy'; gapX?: number; gapY?: number }
+  layout?: { spacing?: 'compact' | 'normal' | 'roomy'; gapX?: number; gapY?: number; actors?: 'once' | 'repeat' }
   /** References that matched nothing (unknown actors are still drawn, as persons). */
   unresolved: Array<{ element: string; field: string; ref: string }>
   /** Marks a normalized model (vs raw content). */
@@ -123,8 +147,11 @@ export interface DsModel {
 export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
   const c = domainStorySchema.parse(raw)
   const alloc = idAllocator()
-  const asNamed = (v: string | { id?: string; text: string; kind?: string }) => (typeof v === 'string' ? { text: v } : v)
-  const actors: DsActor[] = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, 'actor'), text: a.text, kind: a.kind ?? 'person' }))
+  const asNamed = <T extends { id?: string; text: string; kind?: string }>(v: string | T): T => (typeof v === 'string' ? ({ text: v } as T) : v)
+  const repeatAll = c.layout?.actors === 'repeat'
+  const actors: DsActor[] = c.actors
+    .map((v) => asNamed<{ id?: string; text: string; kind?: string; repeat?: boolean }>(v))
+    .map((a) => ({ id: alloc(a.id, a.text, 'actor'), text: a.text, kind: a.kind ?? 'person', ...(a.repeat ?? repeatAll ? { repeat: true } : {}) }))
   const workObjects: DsWorkObject[] = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, 'object'), text: o.text, kind: o.kind ?? 'document' }))
   const unresolved: DsModel['unresolved'] = []
   const find = <T extends { id: string; text: string }>(list: T[], ref: string) => list.find((x) => x.id === ref) ?? list.find((x) => x.text === ref) ?? list.find((x) => x.id === slugify(ref))
@@ -132,7 +159,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const hit = find(actors, ref)
     if (hit) return hit.id
     unresolved.push({ element, field, ref })
-    const added = { id: alloc(undefined, ref, 'actor'), text: ref, kind: 'person' }
+    const added: DsActor = { id: alloc(undefined, ref, 'actor'), text: ref, kind: 'person', ...(repeatAll ? { repeat: true } : {}) }
     actors.push(added)
     return added.id
   }

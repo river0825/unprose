@@ -7,7 +7,7 @@ Unprose to discuss designs with a person on a shared canvas.
 
 - **Files are the truth.** Each diagram is a file: `design/<name>.<kind>.yaml` (kinds `es`, `story-map`,
   `kanban`, `wireframe`, `domain-story`, `journey`) or a workflow yaml. The canvas board is a projection.
-  Domain stories (docs/diagrams.md §6b): actors appear once, every activity gets its own work object; `awd design
+  Domain stories (docs/diagrams.md §6b): actors appear once (a long story may set `layout: { actors: repeat }` so the board draws an actor again where the story comes back to it), every activity gets its own work object; `awd design
   import-egon` / `export-egon` exchange them with Egon.io.
 - **You edit, the person directs.** Change files after they agree; say which files you changed.
 - **Other agents propose; you apply.** A remote agent (through `/mcp`) cannot write the files, so it proposes an

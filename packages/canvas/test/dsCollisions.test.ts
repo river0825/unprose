@@ -235,21 +235,27 @@ test('the layout check finds each problem on a deliberately broken board, in pla
     picto('obj1', 400, 0),
     picto('obj2', 400, 0), // the same spot as obj1 (the Codex report)
     picto('obj3', 400, 300),
-    picto('blocker', 150, 10), // right at the start of the arrows out of the actor
+    // right at the start of the arrows out of the actor, just below their line: the line clears it, the number circles do not
+    picto('blocker', 150, 56),
     wire('w1', 'actor', 'obj1', { role: 'activity', label: 'lints', data: { ds: true, seq: 7 } }),
     wire('w2', 'actor', 'obj2', { role: 'activity', label: 'redraws', data: { ds: true, seq: 8 } }),
-    // a plain wire's label dragged onto a number circle
+    // a plain wire folded (data.bend) so that it runs through the blocker
     wire('w3', 'actor', 'obj3', { label: 'checks the whole thing', data: { bend: { x: 175, y: 48 } } }),
+    // a plain wire's label steered (data.label.at) onto the number circle of the activity beside it
+    picto('teller', 0, 1100, 'actor'),
+    picto('paper', 400, 1100),
+    wire('w5', 'teller', 'paper', { role: 'activity', label: 'files', data: { ds: true, seq: 9 } }),
+    wire('w6', 'teller', 'paper', { label: 'checks', data: { label: { at: 0.1 } } }),
     // two groups crossing each other
     { ...base, id: 'g1', type: 'frame', x: -30, y: -40, w: 600, h: 200, text: 'Group one', data: { ds: 'group', members: ['actor', 'obj1'] } } as Item,
     { ...base, id: 'g2', type: 'frame', x: 300, y: -20, w: 300, h: 460, text: 'Group two', data: { ds: 'group', members: ['obj1', 'obj3'] } } as Item,
     // a note whose box is too small for its text
     { ...base, id: 'n1', type: 'text', role: 'annotation', x: 700, y: 0, w: 200, h: 64, text: 'A long review note · 審查備註 that does not fit the fixed 64 px box the old layout gave every note, so its end is cut off', data: { ds: 'annotation' } } as Item,
-    // other kinds: two workflow wires whose labels were dragged onto each other
+    // other kinds: two workflow wires folded at the same spot, so their labels land on each other
     picto('p', 0, 700, 'none'),
     picto('q', 400, 700, 'none'),
-    wire('x1', 'p', 'q', { label: 'first label', data: { bend: { x: 266, y: 760 } } }),
-    wire('x2', 'q', 'p', { label: 'second label', data: { bend: { x: 270, y: 762 } } }),
+    wire('x1', 'p', 'q', { label: 'first label', data: { bend: [{ x: 266, y: 640 }] } }),
+    wire('x2', 'p', 'q', { label: 'second label', data: { bend: [{ x: 266, y: 640 }] } }),
   ]
   const b = toBoard(items)
   const r = checkLayout(b)
@@ -267,13 +273,19 @@ test('the layout check finds each problem on a deliberately broken board, in pla
   assert.ok(by('label', 'w1').some((f) => /number circle 7 .* sits on card "blocker"/.test(f.message) && /move card "blocker"/.test(f.suggestion)), layoutLines(r, b).join('\n'))
   // two arrows leaving at the same angle with no free spot for their circles: the circles collide
   assert.ok(by('label', 'w2').some((f) => /number circle 8 .* collides with number circle 7/.test(f.message) && /spread/.test(f.suggestion)), layoutLines(r, b).join('\n'))
-  // a label dragged onto a number circle
-  assert.ok(r.findings.some((f) => f.kind === 'label' && /label "checks the whole thing".*collides with number circle|number circle .* collides with label "checks the whole thing"/.test(f.message)), layoutLines(r, b).join('\n'))
+  // a plain wire's label on a number circle
+  assert.ok(r.findings.some((f) => f.kind === 'label' && /label "checks".*collides with number circle 9|number circle 9 .* collides with label "checks"/.test(f.message)), layoutLines(r, b).join('\n'))
+  // a line folded through a card
+  const through = by('wire-through', 'w3')
+  assert.equal(through.length, 1, layoutLines(r, b).join('\n'))
+  assert.match(through[0].message, /the wire card "actor" → card "obj3" runs through card "blocker" \(where it was folded, data\.bend\)/)
+  assert.match(through[0].suggestion, /move its folds \(data\.bend\)/)
+  assert.deepEqual(through[0].others, ['blocker'])
   // other kinds: labels on each other
   const x = r.findings.filter((f) => f.kind === 'label' && (f.id === 'x1' || f.id === 'x2') && /overlaps label/.test(f.message))
-  assert.equal(x.length, 1)
-  assert.match(x[0].suggestion, /drag that label onto a free stretch|clear data.bend/)
-  assert.ok(r.wires >= 5)
+  assert.equal(x.length, 1, layoutLines(r, b).join('\n'))
+  assert.match(x[0].suggestion, /fold one of the two wires elsewhere \(data\.bend\)/)
+  assert.ok(r.wires >= 7)
   assert.match(layoutLines(r, b)[0], /\d+ items and \d+ wires checked/)
 })
 

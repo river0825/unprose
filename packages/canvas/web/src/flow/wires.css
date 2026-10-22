@@ -131,3 +131,28 @@
 .canvas-wrap:has(.run-drawer:not(.open)) .react-flow__panel.bottom.right {
   margin-bottom: 60px;
 }
+
+/* Folding a line by hand (flow/folds.ts, ItemEdge.tsx): on a selected wire, a handle at each fold and a smaller,
+   quieter one in the middle of each run. They share .edge-grip, so "Copy as image" leaves them out (capture.css). */
+.edge-grip.wire-fold,
+.edge-grip.wire-fold-add {
+  touch-action: none;
+}
+.edge-grip.wire-fold {
+  z-index: 1700;
+  width: 10px;
+  height: 10px;
+  border-width: 1.5px;
+  cursor: move;
+}
+.edge-grip.wire-fold-add {
+  z-index: 1650;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--ink-3);
+  opacity: 0.8;
+}
+.edge-grip.wire-fold-add:hover {
+  border-color: var(--marker);
+  opacity: 1;
+}

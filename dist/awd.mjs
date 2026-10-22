@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.27.1";
+    VERSION2 = "0.28.0";
   }
 });
 
@@ -60123,7 +60123,8 @@ function normalizeDomainStory(raw) {
   const c2 = domainStorySchema.parse(raw);
   const alloc = idAllocator();
   const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
-  const actors = c2.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const repeatAll = c2.layout?.actors === "repeat";
+  const actors = c2.actors.map((v2) => asNamed(v2)).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person", ...a.repeat ?? repeatAll ? { repeat: true } : {} }));
   const workObjects = c2.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
   const unresolved = [];
   const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
@@ -60132,7 +60133,7 @@ function normalizeDomainStory(raw) {
     if (hit)
       return hit.id;
     unresolved.push({ element, field, ref: ref2 });
-    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person", ...repeatAll ? { repeat: true } : {} };
     actors.push(added);
     return added.id;
   };
@@ -60254,7 +60255,7 @@ function checkDomainStory(content) {
   out.push(...reviewDomainStory(m2));
   return out;
 }
-var DS_ACTOR_KINDS, DS_GRANULARITY, named2, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
+var DS_ACTOR_KINDS, DS_GRANULARITY, named2, actorSchema, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
@@ -60272,13 +60273,24 @@ var init_domainStory = __esm({
         kind: external_exports.string().optional()
       })
     ]);
+    actorSchema = external_exports.union([
+      external_exports.string(),
+      external_exports.object({
+        id: external_exports.string().optional(),
+        text: external_exports.string().min(1),
+        /** person | group | system (custom icon names allowed) */
+        kind: external_exports.string().optional(),
+        /** draw this actor again where the story comes back to it, instead of an arrow back to its one copy */
+        repeat: external_exports.boolean().optional()
+      })
+    ]);
     domainStorySchema = external_exports.object({
       scope: external_exports.object({
         granularity: external_exports.enum(DS_GRANULARITY).optional(),
         time: external_exports.enum(["as-is", "to-be"]).optional(),
         purity: external_exports.enum(["pure", "digitalized"]).optional()
       }).optional(),
-      actors: external_exports.array(named2()).min(1),
+      actors: external_exports.array(actorSchema).min(1),
       workObjects: external_exports.array(named2()).default([]),
       sentences: external_exports.array(external_exports.object({
         id: external_exports.string().optional(),
@@ -60307,7 +60319,10 @@ var init_domainStory = __esm({
         /** horizontal pitch of the actor grid in px (overrides the spacing's) */
         gapX: external_exports.number().min(240).max(2e3).optional(),
         /** vertical pitch of the actor grid in px */
-        gapY: external_exports.number().min(180).max(2e3).optional()
+        gapY: external_exports.number().min(180).max(2e3).optional(),
+        /** `once` (default, the book's rule): every actor is drawn once; `repeat`: an actor the story comes back to from
+         * far away is drawn again there (as a work object is drawn for every sentence) */
+        actors: external_exports.enum(["once", "repeat"]).optional()
       }).optional()
     });
     QUICK_START2 = "domainstorytelling.org/quick-start-guide";
@@ -60415,7 +60430,6 @@ function layoutWith(m2, sentences, order, pref, g2) {
     cell2.set(id, [c2, r]);
     taken.add(`${c2},${r}`);
   };
-  put(order[0], 0, 0);
   const near = (id, partner) => {
     const [pc, pr] = cell2.get(partner);
     for (const [dc, dr] of pref)
@@ -60426,25 +60440,32 @@ function layoutWith(m2, sentences, order, pref, g2) {
       c2++;
     put(id, c2, pr);
   };
-  for (const s of sentences) {
-    const cast = [s.actor, ...receiversOf(s)];
-    for (const id of cast) {
-      if (cell2.has(id))
-        continue;
-      const partner = cast.find((p) => cell2.has(p)) ?? [...cell2.keys()][cell2.size - 1];
-      near(id, partner);
+  const cast = /* @__PURE__ */ new Map();
+  if (m2.actors.some((a) => a.repeat))
+    placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast);
+  else {
+    put(order[0], 0, 0);
+    for (const s of sentences) {
+      const members2 = [s.actor, ...receiversOf(s)];
+      for (const id of members2) {
+        if (cell2.has(id))
+          continue;
+        const partner = members2.find((p) => cell2.has(p)) ?? [...cell2.keys()][cell2.size - 1];
+        near(id, partner);
+      }
+      cast.set(s.id, { actor: s.actor, to: receiversOf(s) });
     }
+    for (const id of order)
+      if (!cell2.has(id))
+        near(id, [...cell2.keys()][cell2.size - 1]);
   }
-  for (const id of order)
-    if (!cell2.has(id))
-      near(id, [...cell2.keys()][cell2.size - 1]);
   const actor = /* @__PURE__ */ new Map();
   for (const [id, [c2, r]] of cell2)
     actor.set(id, { x: c2 * g2.cellW, y: r * g2.cellH, w: ICON_W, h: ICON_H });
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
   const wayCount = /* @__PURE__ */ new Map();
-  const wayKey = (s) => [s.actor, ...receiversOf(s).sort()].join(">");
+  const wayKey = (s) => [cast.get(s.id).actor, ...[...cast.get(s.id).to].sort()].join(">");
   const wayIndex = /* @__PURE__ */ new Map();
   for (const s of sentences)
     if (s.objectText && receiversOf(s).length)
@@ -60453,10 +60474,10 @@ function layoutWith(m2, sentences, order, pref, g2) {
   for (const s of sentences) {
     if (!s.objectText)
       continue;
-    const a = centre(actor.get(s.actor));
+    const a = centre(actor.get(cast.get(s.id).actor));
     let at3;
     let perp;
-    const recv = receiversOf(s);
+    const recv = cast.get(s.id).to;
     if (recv.length) {
       const rs = recv.map((r) => centre(actor.get(r)));
       const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
@@ -60470,7 +60491,7 @@ function layoutWith(m2, sentences, order, pref, g2) {
     } else {
       perp = { x: 0, y: 1 };
       at3 = { x: a.x + g2.slot, y: a.y };
-      const own2 = actor.get(s.actor);
+      const own2 = actor.get(cast.get(s.id).actor);
       const slots = SLOTS.map(([dx, dy]) => ({ x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 })).filter((c2) => free({ x: c2.x - ICON_W / 2, y: c2.y - ICON_H / 2, w: ICON_W, h: ICON_H }));
       at3 = slots.find((c2) => !boxes.some((o) => o !== own2 && segmentHitsBox(a, c2, o, -10))) ?? slots[0] ?? at3;
     }
@@ -60486,14 +60507,15 @@ function layoutWith(m2, sentences, order, pref, g2) {
   }
   const segs = [];
   for (const s of sentences) {
-    const a = centre(actor.get(s.actor));
+    const c2 = cast.get(s.id);
+    const a = centre(actor.get(c2.actor));
     const o = object3.get(s.id);
     if (o) {
       segs.push([a, centre(o)]);
-      for (const r of receiversOf(s))
+      for (const r of c2.to)
         segs.push([centre(o), centre(actor.get(r))]);
     } else
-      for (const r of receiversOf(s))
+      for (const r of c2.to)
         segs.push([a, centre(actor.get(r))]);
   }
   const all = [...actor.values(), ...object3.values()];
@@ -60502,7 +60524,96 @@ function layoutWith(m2, sentences, order, pref, g2) {
     for (const b2 of all)
       if (!samePt(centre(b2), p) && !samePt(centre(b2), q2) && segmentHitsBox(p, q2, b2, -10))
         through++;
-  return { actor, object: object3, crossings: countCrossings(segs) + 2 * through };
+  return { actor, object: object3, cast, drawn: [...cell2.keys()], crossings: countCrossings(segs) + 2 * through };
+}
+function crossesAny(p, q2, lines) {
+  for (const l of lines)
+    if (countCrossings([[p, q2], l]) > 0)
+      return true;
+  return false;
+}
+function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast) {
+  const repeats = new Set(m2.actors.filter((a) => a.repeat).map((a) => a.id));
+  const copies = /* @__PURE__ */ new Map();
+  let last;
+  const draw = (id, partner) => {
+    const list3 = copies.get(id) ?? [];
+    const key = copyKey(id, list3.length + 1);
+    list3.push(key);
+    copies.set(id, list3);
+    if (partner)
+      near(key, partner);
+    else if (last)
+      near(key, last);
+    else
+      put(key, 0, 0);
+    last = key;
+    return key;
+  };
+  const dist = (a, b2) => {
+    const [ac, ar] = cell2.get(a);
+    const [bc, br] = cell2.get(b2);
+    return Math.max(Math.abs(ac - bc), Math.abs(ar - br));
+  };
+  const at3 = (key) => {
+    const [c2, r] = cell2.get(key);
+    return { x: c2 * g2.cellW + ICON_W / 2, y: r * g2.cellH + ICON_H / 2 };
+  };
+  const lines = [];
+  const clean = (a, b2) => {
+    const [p, q2] = [at3(a), at3(b2)];
+    if (crossesAny(p, q2, lines))
+      return false;
+    for (const k2 of cell2.keys()) {
+      if (k2 === a || k2 === b2)
+        continue;
+      const c2 = at3(k2);
+      if (segmentHitsBox(p, q2, { x: c2.x - ICON_W / 2, y: c2.y - ICON_H / 2, w: ICON_W, h: ICON_H }, -10))
+        return false;
+    }
+    return true;
+  };
+  const nearest = (id, to) => {
+    let best;
+    let d = Infinity;
+    for (const k2 of copies.get(id) ?? []) {
+      const e = to.length ? Math.min(...to.map((t) => dist(k2, t))) : 0;
+      if (e < d)
+        best = k2, d = e;
+    }
+    return best === void 0 ? void 0 : { key: best, d };
+  };
+  let previous = [];
+  for (const s of sentences) {
+    const members2 = [s.actor, ...receiversOf(s)];
+    const chosen = /* @__PURE__ */ new Map();
+    let anchor2;
+    for (const id of members2) {
+      const hit = nearest(id, previous);
+      if (hit && (!anchor2 || hit.d < anchor2.d))
+        anchor2 = { id, ...hit };
+    }
+    if (!anchor2)
+      anchor2 = { id: s.actor, key: draw(s.actor, void 0), d: 0 };
+    else if (anchor2.d > REUSE_CELLS && repeats.has(anchor2.id) && previous.length)
+      anchor2 = { id: anchor2.id, key: draw(anchor2.id, previous[previous.length - 1]), d: 0 };
+    chosen.set(anchor2.id, anchor2.key);
+    for (const id of members2) {
+      if (chosen.has(id))
+        continue;
+      const hit = nearest(id, [anchor2.key]);
+      const reuse = hit && (!repeats.has(id) || hit.d <= REUSE_CELLS && clean(anchor2.key, hit.key));
+      chosen.set(id, reuse ? hit.key : draw(id, anchor2.key));
+    }
+    const c2 = { actor: chosen.get(s.actor), to: receiversOf(s).map((r) => chosen.get(r)) };
+    for (const r of c2.to)
+      lines.push([at3(c2.actor), at3(r)]);
+    cast.set(s.id, c2);
+    previous = [c2.actor, ...c2.to];
+  }
+  for (const id of order)
+    if (!copies.has(id))
+      draw(id, void 0);
 }
 function facing(from, to) {
   const a = centre(from);
@@ -60513,11 +60624,7 @@ function facing(from, to) {
     return dx >= 0 ? { fromSide: "right", toSide: "left" } : { fromSide: "left", toSide: "right" };
   return dy >= 0 ? { fromSide: "bottom", toSide: "top" } : { fromSide: "top", toSide: "bottom" };
 }
-function renderDomainStory(raw, opts = {}) {
-  const m2 = normalizeDomainStory(raw);
-  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
-  const scope = opts.scope ?? "ds";
-  const itemId = (role, element) => `${scope}.${role}.${element}`;
+function bestLayout(m2) {
   const sentences = [...m2.sentences].sort((a, b2) => a.seq - b2.seq);
   const order = [];
   const seen = (id) => void (order.includes(id) || order.push(id));
@@ -60534,26 +60641,44 @@ function renderDomainStory(raw, opts = {}) {
     if (l.crossings < best.crossings)
       best = l;
   }
+  return { sentences, order, best };
+}
+function dsCasting(raw) {
+  const m2 = "dsModel" in raw ? raw : normalizeDomainStory(raw);
+  const { order, best } = bestLayout(m2);
+  return { drawn: m2.actors.some((a) => a.repeat) ? best.drawn : order, cast: best.cast };
+}
+function renderDomainStory(raw, opts = {}) {
+  const m2 = normalizeDomainStory(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "ds";
+  const itemId = (role, element) => `${scope}.${role}.${element}`;
+  const { sentences, order, best } = bestLayout(m2);
   const items = [];
   const ownIcon = (kind) => m2.icons?.[kind] ? { icon: m2.icons[kind] } : {};
   const actorItem = /* @__PURE__ */ new Map();
   const actorTraces = /* @__PURE__ */ new Map();
-  for (const s of sentences)
+  for (const s of sentences) {
+    const key = best.cast.get(s.id).actor;
     if (!s.objectText && s.traces.length)
-      actorTraces.set(s.actor, [...actorTraces.get(s.actor) ?? [], ...s.traces]);
-  order.forEach((id, i) => {
+      actorTraces.set(key, [...actorTraces.get(key) ?? [], ...s.traces]);
+  }
+  const drawings = m2.actors.some((a) => a.repeat) ? best.drawn : order;
+  drawings.forEach((key, i) => {
+    const { id, copy } = parseCopyKey(key);
     const a = m2.actors.find((x2) => x2.id === id);
-    const b2 = best.actor.get(id);
-    const traces2 = actorTraces.get(id);
-    const it = make({ id: itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...traces2 ? { traces: traces2 } : {} } }, now);
-    actorItem.set(id, it);
+    const b2 = best.actor.get(key);
+    const traces2 = actorTraces.get(key);
+    const it = make({ id: copy > 1 ? `${itemId("actor", a.id)}.${copy}` : itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...copy > 1 ? { occurrence: true } : {}, ...traces2 ? { traces: traces2 } : {} } }, now);
+    actorItem.set(key, it);
     items.push(it);
   });
   const objectItem = /* @__PURE__ */ new Map();
   for (const s of sentences) {
     const read = readSentence(m2, s);
     const base = { seq: s.seq, sentence: read, ds: true };
-    const from = actorItem.get(s.actor);
+    const c2 = best.cast.get(s.id);
+    const from = actorItem.get(c2.actor);
     const box = best.object.get(s.id);
     const self = s.to.includes(s.actor);
     if (box && s.objectText) {
@@ -60561,13 +60686,13 @@ function renderDomainStory(raw, opts = {}) {
       objectItem.set(s.id, o);
       items.push(o);
       items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
-      for (const r of receiversOf(s)) {
-        const to = actorItem.get(r);
+      receiversOf(s).forEach((r, k2) => {
+        const to = actorItem.get(c2.to[k2]);
         items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
-      }
+      });
     } else {
       for (const [k2, r] of receiversOf(s).entries()) {
-        const to = actorItem.get(r);
+        const to = actorItem.get(c2.to[k2]);
         items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
       }
     }
@@ -60599,14 +60724,26 @@ function renderDomainStory(raw, opts = {}) {
       items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
   }
   const outlines = [];
-  const memberItems = (members2) => members2.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
-  const shaped = groupOutlines(m2.groups.map((g3) => ({ id: g3.id, members: [...new Set(memberItems(g3.members).map((i) => i.id))], boxes: memberItems(g3.members) })));
-  for (const g3 of m2.groups) {
-    const o = shaped.get(g3.id);
+  const drawingsIn = (id, members2) => {
+    const used = /* @__PURE__ */ new Set();
+    for (const s of sentences) {
+      if (!members2.includes(s.id) && !(s.object && members2.includes(s.object)))
+        continue;
+      const c2 = best.cast.get(s.id);
+      for (const k2 of [c2.actor, ...c2.to])
+        if (parseCopyKey(k2).id === id)
+          used.add(k2);
+    }
+    return used.size > 1 || used.size === 1 && !used.has(id) ? [...used].map((k2) => actorItem.get(k2)).filter(Boolean) : [actorItem.get(id)];
+  };
+  const memberItems = (members2) => members2.flatMap((id) => actorItem.has(id) ? drawingsIn(id, members2) : [objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)]).filter((b2) => !!b2);
+  const shaped = groupOutlines(m2.groups.map((g2) => ({ id: g2.id, members: [...new Set(memberItems(g2.members).map((i) => i.id))], boxes: memberItems(g2.members) })));
+  for (const g2 of m2.groups) {
+    const o = shaped.get(g2.id);
     if (!o)
       continue;
     const extra = { ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, ...o.overlaps.length ? { overlaps: o.overlaps } : {} };
-    outlines.push(make({ id: itemId("group", g3.id), type: "frame", ...o.box, text: g3.text, color: "grey", role: "group", data: { element: g3.id, members: g3.members, ds: "group", ...extra } }, now));
+    outlines.push(make({ id: itemId("group", g2.id), type: "frame", ...o.box, text: g2.text, color: "grey", role: "group", data: { element: g2.id, members: g2.members, ds: "group", ...extra } }, now));
   }
   const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
   const minX = Math.min(...all.map((i) => i.x));
@@ -60697,7 +60834,7 @@ function groupOutlines(groups) {
     }
   return new Map([...out].map(([id, o]) => [id, { box: o.box, ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, overlaps: o.overlaps }]));
 }
-var ICON_W, ICON_H, BASE, DS_SPACING, DS_VERB_FONT, SEQ_ROOM, VERB_AIR, VERB_CAP, CUT_X, CUT_Y, NOTE_MIN_W, NOTE_MAX_W, NOTE_MIN_H, GROUP_PAD_X, GROUP_PAD_TOP, GROUP_PAD_BOTTOM, GROUP_NEST, GROUP_TITLE_H, centre, overlaps, receiversOf, PREFERENCES, SLOTS, samePt, union2, withTitle, intersects;
+var ICON_W, ICON_H, BASE, DS_SPACING, DS_VERB_FONT, SEQ_ROOM, VERB_AIR, VERB_CAP, CUT_X, CUT_Y, NOTE_MIN_W, NOTE_MAX_W, NOTE_MIN_H, GROUP_PAD_X, GROUP_PAD_TOP, GROUP_PAD_BOTTOM, GROUP_NEST, GROUP_TITLE_H, centre, overlaps, receiversOf, PREFERENCES, SLOTS, copyKey, parseCopyKey, REUSE_CELLS, samePt, union2, withTitle, intersects;
 var init_domain_story = __esm({
   "packages/canvas/dist/templates/domain-story.js"() {
     init_domainStory();
@@ -60733,6 +60870,12 @@ var init_domain_story = __esm({
       [[1, 1], [1, -1], [1, 0], [0, 1], [0, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [2, 1], [2, -1], [0, 2]]
     ];
     SLOTS = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]];
+    copyKey = (id, k2) => k2 === 1 ? id : `${id}#${k2}`;
+    parseCopyKey = (key) => {
+      const i = key.lastIndexOf("#");
+      return i > 0 ? { id: key.slice(0, i), copy: Number(key.slice(i + 1)) } : { id: key, copy: 1 };
+    };
+    REUSE_CELLS = 2;
     samePt = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
     union2 = (bs) => {
       const x0 = Math.min(...bs.map((b2) => b2.x));
@@ -62306,12 +62449,23 @@ function fromEgon(file2) {
   const byId = new Map(objs.map((o) => [o.id, o]));
   const alloc = idAllocator();
   const ours = /* @__PURE__ */ new Map();
-  const actors = objs.filter((o) => o.type.startsWith(ACTOR)).map((o, i) => {
+  const actors = [];
+  const byNameAndIcon = /* @__PURE__ */ new Map();
+  objs.filter((o) => o.type.startsWith(ACTOR)).forEach((o, i) => {
     const icon = o.type.slice(ACTOR.length) || "Person";
-    const text3 = (o.name ?? "").trim() || `${icon} ${i + 1}`;
-    const id = alloc(void 0, text3, "actor");
-    ours.set(o.id, id);
-    return { id, text: text3, kind: lowerIcon(icon) };
+    const named3 = (o.name ?? "").trim();
+    const text3 = named3 || `${icon} ${i + 1}`;
+    const same2 = named3 ? byNameAndIcon.get(`${lowerIcon(icon)}|${named3}`) : void 0;
+    if (same2) {
+      same2.repeat = true;
+      ours.set(o.id, same2.id);
+      return;
+    }
+    const a = { id: alloc(void 0, text3, "actor"), text: text3, kind: lowerIcon(icon) };
+    if (named3)
+      byNameAndIcon.set(`${a.kind}|${named3}`, a);
+    ours.set(o.id, a.id);
+    actors.push(a);
   });
   const workObjects = objs.filter((o) => o.type.startsWith(OBJECT)).map((o, i) => {
     const icon = o.type.slice(OBJECT.length) || "Document";
@@ -62374,26 +62528,40 @@ function toEgon(content, opts = {}) {
   const COL4 = 250;
   const at3 = (col, row) => ({ x: 100 + col * COL4, y: 100 + row * 200 });
   const center = (o) => ({ x: (o.x ?? 0) + 38, y: (o.y ?? 0) + 38 });
+  const repeats = m2.actors.some((a) => a.repeat);
+  const casting = repeats ? dsCasting(m2) : void 0;
   const firstSeen = [];
-  for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq))
-    for (const a of [s.actor, ...s.to])
-      if (!firstSeen.includes(a))
-        firstSeen.push(a);
-  for (const a of m2.actors)
-    if (!firstSeen.includes(a.id))
-      firstSeen.push(a.id);
-  firstSeen.forEach((aid, i) => {
-    const a = m2.actors.find((x2) => x2.id === aid);
+  if (casting)
+    firstSeen.push(...casting.drawn);
+  else {
+    for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq))
+      for (const a of [s.actor, ...s.to])
+        if (!firstSeen.includes(a))
+          firstSeen.push(a);
+    for (const a of m2.actors)
+      if (!firstSeen.includes(a.id))
+        firstSeen.push(a.id);
+  }
+  firstSeen.forEach((key, i) => {
+    const a = m2.actors.find((x2) => x2.id === parseCopyKey(key).id);
     const o = { id: id("shape"), type: `${ACTOR}${capIcon(a.kind)}`, name: a.text, ...at3(i, 0), pickedColor: "black" };
-    shapeOf.set(a.id, o);
+    shapeOf.set(key, o);
     objs.push(o);
   });
+  const drawingOf = (sid, aid) => {
+    const c2 = casting?.cast.get(sid);
+    if (!c2)
+      return aid;
+    if (parseCopyKey(c2.actor).id === aid)
+      return c2.actor;
+    return c2.to.find((k2) => parseCopyKey(k2).id === aid) ?? aid;
+  };
   const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
   const icons = { actors: new Set(m2.actors.map((a) => capIcon(a.kind))), workObjects: /* @__PURE__ */ new Set() };
   for (const s of m2.sentences) {
     const col = seqs.indexOf(s.seq);
     const stack = m2.sentences.filter((x2) => x2.seq === s.seq).indexOf(s);
-    const actor = shapeOf.get(s.actor);
+    const actor = shapeOf.get(drawingOf(s.id, s.actor));
     if (s.objectText) {
       icons.workObjects.add(capIcon(s.objectKind));
       const wo = { id: id("shape"), type: `${OBJECT}${capIcon(s.objectKind)}`, name: s.objectText, ...at3(col, 1 + stack), pickedColor: "black" };
@@ -62401,12 +62569,12 @@ function toEgon(content, opts = {}) {
       shapeOf.set(s.id, wo);
       objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
       for (const r of s.to) {
-        const to = shapeOf.get(r);
+        const to = shapeOf.get(drawingOf(s.id, r));
         objs.push({ id: id("connection"), type: "domainStory:activity", name: s.toLabel ?? "", number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: "black" });
       }
     } else {
       for (const r of s.to.length ? s.to : []) {
-        const to = shapeOf.get(r);
+        const to = shapeOf.get(drawingOf(s.id, r));
         objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: "black" });
       }
     }
@@ -62448,6 +62616,7 @@ var init_egon = __esm({
     init_ids2();
     init_domainStory();
     init_dsIcons();
+    init_domain_story();
     ACTOR = "domainStory:actor";
     OBJECT = "domainStory:workObject";
     lowerIcon = (icon) => icon.toLowerCase();
@@ -79845,7 +80014,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.27.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.28.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -80080,7 +80249,7 @@ ${svg2}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot), wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story lines (and lines folded by hand, data.bend) that run through a pictogram or a card, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -80491,7 +80660,7 @@ var init_mcp2 = __esm({
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.

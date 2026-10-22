@@ -719,24 +719,24 @@ var require_validation = __commonJS({
       return code >= 1e3 && code <= 1014 && code !== 1004 && code !== 1005 && code !== 1006 || code >= 3e3 && code <= 4999;
     }
     function _isValidUTF8(buf) {
-      const len = buf.length;
+      const len2 = buf.length;
       let i = 0;
-      while (i < len) {
+      while (i < len2) {
         if ((buf[i] & 128) === 0) {
           i++;
         } else if ((buf[i] & 224) === 192) {
-          if (i + 1 === len || (buf[i + 1] & 192) !== 128 || (buf[i] & 254) === 192) {
+          if (i + 1 === len2 || (buf[i + 1] & 192) !== 128 || (buf[i] & 254) === 192) {
             return false;
           }
           i += 2;
         } else if ((buf[i] & 240) === 224) {
-          if (i + 2 >= len || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || buf[i] === 224 && (buf[i + 1] & 224) === 128 || // Overlong
+          if (i + 2 >= len2 || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || buf[i] === 224 && (buf[i + 1] & 224) === 128 || // Overlong
           buf[i] === 237 && (buf[i + 1] & 224) === 160) {
             return false;
           }
           i += 3;
         } else if ((buf[i] & 248) === 240) {
-          if (i + 3 >= len || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || (buf[i + 3] & 192) !== 128 || buf[i] === 240 && (buf[i + 1] & 240) === 128 || // Overlong
+          if (i + 3 >= len2 || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || (buf[i + 3] & 192) !== 128 || buf[i] === 240 && (buf[i + 1] & 240) === 128 || // Overlong
           buf[i] === 244 && buf[i + 1] > 143 || buf[i] > 244) {
             return false;
           }
@@ -4290,7 +4290,7 @@ var require_applyReviver = __commonJS({
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
         if (Array.isArray(val)) {
-          for (let i = 0, len = val.length; i < len; ++i) {
+          for (let i = 0, len2 = val.length; i < len2; ++i) {
             const v0 = val[i];
             const v1 = applyReviver(reviver, val, String(i), v0);
             if (v1 === void 0)
@@ -5773,8 +5773,8 @@ ${indent}${line}` : "\n";
         return start + end;
       } else {
         if (!reqNewline) {
-          const len = lines2.reduce((sum, line) => sum + line.length + 2, 2);
-          reqNewline = ctx.options.lineWidth > 0 && len > ctx.options.lineWidth;
+          const len2 = lines2.reduce((sum, line) => sum + line.length + 2, 2);
+          reqNewline = ctx.options.lineWidth > 0 && len2 > ctx.options.lineWidth;
         }
         if (reqNewline) {
           let str3 = start;
@@ -12052,14 +12052,14 @@ var require_codegen = __commonJS({
       }
       // end the current self-balancing block
       endBlock(nodeCount) {
-        const len = this._blockStarts.pop();
-        if (len === void 0)
+        const len2 = this._blockStarts.pop();
+        if (len2 === void 0)
           throw new Error("CodeGen: not in self-balancing block");
-        const toClose = this._nodes.length - len;
+        const toClose = this._nodes.length - len2;
         if (toClose < 0 || nodeCount !== void 0 && toClose !== nodeCount) {
           throw new Error(`CodeGen: wrong number of nodes: ${toClose} vs ${nodeCount} expected`);
         }
-        this._nodes.length = len;
+        this._nodes.length = len2;
         return this;
       }
       // `function` heading (or definition if funcBody is passed)
@@ -12925,8 +12925,8 @@ var require_code2 = __commonJS({
       validateItems(() => gen.break());
       return valid;
       function validateItems(notValid) {
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-        gen.forRange("i", 0, len, (i) => {
+        const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
+        gen.forRange("i", 0, len2, (i) => {
           cxt.subschema({
             keyword,
             dataProp: i,
@@ -14390,9 +14390,9 @@ var require_utils = __commonJS({
       let input2 = path16;
       const output2 = [];
       let nextSlash = -1;
-      let len = 0;
-      while (len = input2.length) {
-        if (len === 1) {
+      let len2 = 0;
+      while (len2 = input2.length) {
+        if (len2 === 1) {
           if (input2 === ".") {
             break;
           } else if (input2 === "/") {
@@ -14402,7 +14402,7 @@ var require_utils = __commonJS({
             output2.push(input2);
             break;
           }
-        } else if (len === 2) {
+        } else if (len2 === 2) {
           if (input2[0] === ".") {
             if (input2[1] === ".") {
               break;
@@ -14416,7 +14416,7 @@ var require_utils = __commonJS({
               break;
             }
           }
-        } else if (len === 3) {
+        } else if (len2 === 3) {
           if (input2 === "/..") {
             if (output2.length !== 0) {
               output2.pop();
@@ -16192,14 +16192,14 @@ var require_ucs2length = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str3) {
-      const len = str3.length;
+      const len2 = str3.length;
       let length = 0;
       let pos = 0;
       let value;
-      while (pos < len) {
+      while (pos < len2) {
         length++;
         value = str3.charCodeAt(pos++);
-        if (value >= 55296 && value <= 56319 && pos < len) {
+        if (value >= 55296 && value <= 56319 && pos < len2) {
           value = str3.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
@@ -16236,8 +16236,8 @@ var require_limitLength = __commonJS({
       code(cxt) {
         const { keyword, data, schemaCode, it } = cxt;
         const op = keyword === "maxLength" ? codegen_1.operators.GT : codegen_1.operators.LT;
-        const len = it.opts.unicode === false ? (0, codegen_1._)`${data}.length` : (0, codegen_1._)`${(0, util_1.useFunc)(cxt.gen, ucs2length_1.default)}(${data})`;
-        cxt.fail$data((0, codegen_1._)`${len} ${op} ${schemaCode}`);
+        const len2 = it.opts.unicode === false ? (0, codegen_1._)`${data}.length` : (0, codegen_1._)`${(0, util_1.useFunc)(cxt.gen, ucs2length_1.default)}(${data})`;
+        cxt.fail$data((0, codegen_1._)`${len2} ${op} ${schemaCode}`);
       }
     };
     exports.default = def2;
@@ -16624,8 +16624,8 @@ var require_additionalItems = __commonJS({
     var codegen_1 = require_codegen();
     var util_1 = require_util();
     var error62 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+      message: ({ params: { len: len2 } }) => (0, codegen_1.str)`must NOT have more than ${len2} items`,
+      params: ({ params: { len: len2 } }) => (0, codegen_1._)`{limit: ${len2}}`
     };
     var def2 = {
       keyword: "additionalItems",
@@ -16646,17 +16646,17 @@ var require_additionalItems = __commonJS({
     function validateAdditionalItems(cxt, items) {
       const { gen, schema, data, keyword, it } = cxt;
       it.items = true;
-      const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+      const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
       if (schema === false) {
         cxt.setParams({ len: items.length });
-        cxt.pass((0, codegen_1._)`${len} <= ${items.length}`);
+        cxt.pass((0, codegen_1._)`${len2} <= ${items.length}`);
       } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-        const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items.length}`);
+        const valid = gen.var("valid", (0, codegen_1._)`${len2} <= ${items.length}`);
         gen.if((0, codegen_1.not)(valid), () => validateItems(valid));
         cxt.ok(valid);
       }
       function validateItems(valid) {
-        gen.forRange("i", items.length, len, (i) => {
+        gen.forRange("i", items.length, len2, (i) => {
           cxt.subschema({ keyword, dataProp: i, dataPropType: util_1.Type.Num }, valid);
           if (!it.allErrors)
             gen.if((0, codegen_1.not)(valid), () => gen.break());
@@ -16699,11 +16699,11 @@ var require_items = __commonJS({
         it.items = util_1.mergeEvaluated.items(gen, schArr.length, it.items);
       }
       const valid = gen.name("valid");
-      const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+      const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
       schArr.forEach((sch, i) => {
         if ((0, util_1.alwaysValidSchema)(it, sch))
           return;
-        gen.if((0, codegen_1._)`${len} > ${i}`, () => cxt.subschema({
+        gen.if((0, codegen_1._)`${len2} > ${i}`, () => cxt.subschema({
           keyword,
           schemaProp: i,
           dataProp: i
@@ -16752,8 +16752,8 @@ var require_items2020 = __commonJS({
     var code_1 = require_code2();
     var additionalItems_1 = require_additionalItems();
     var error62 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+      message: ({ params: { len: len2 } }) => (0, codegen_1.str)`must NOT have more than ${len2} items`,
+      params: ({ params: { len: len2 } }) => (0, codegen_1._)`{limit: ${len2}}`
     };
     var def2 = {
       keyword: "items",
@@ -16806,7 +16806,7 @@ var require_contains = __commonJS({
         } else {
           min = 1;
         }
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+        const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
         cxt.setParams({ min, max });
         if (max === void 0 && min === 0) {
           (0, util_1.checkStrictMode)(it, `"minContains" == 0 without "maxContains": "contains" keyword ignored`);
@@ -16818,9 +16818,9 @@ var require_contains = __commonJS({
           return;
         }
         if ((0, util_1.alwaysValidSchema)(it, schema)) {
-          let cond = (0, codegen_1._)`${len} >= ${min}`;
+          let cond = (0, codegen_1._)`${len2} >= ${min}`;
           if (max !== void 0)
-            cond = (0, codegen_1._)`${cond} && ${len} <= ${max}`;
+            cond = (0, codegen_1._)`${cond} && ${len2} <= ${max}`;
           cxt.pass(cond);
           return;
         }
@@ -16843,7 +16843,7 @@ var require_contains = __commonJS({
           validateItems(schValid, () => gen.if(schValid, () => checkLimits(count)));
         }
         function validateItems(_valid, block) {
-          gen.forRange("i", 0, len, (i) => {
+          gen.forRange("i", 0, len2, (i) => {
             cxt.subschema({
               keyword: "contains",
               dataProp: i,
@@ -22552,8 +22552,8 @@ var $ZodCreditCard = /* @__PURE__ */ $constructor("$ZodCreditCard", (inst, def2)
 });
 function isIso7064Mod97(iban3) {
   let remainder = 0;
-  const len = iban3.length;
-  for (let i = 4; i < len; i++) {
+  const len2 = iban3.length;
+  for (let i = 4; i < len2; i++) {
     const code = iban3.charCodeAt(i);
     remainder = (code >= 65 ? remainder * 100 + (code - 55) : remainder * 10 + (code - 48)) % 97;
   }
@@ -32583,20 +32583,20 @@ function generateChecks(doc, ctx, schema, accessor) {
         break;
       case "min_length": {
         const min = numericOperand(def2.minimum, "min_length");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${min} && ${currentAccessor}.length < ${def2.minimum * 2}`);
-        doc.write(`if (${len} < ${min}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${min} && ${currentAccessor}.length < ${def2.minimum * 2}`);
+        doc.write(`if (${len2} < ${min}) return INVALID;`);
         break;
       }
       case "max_length": {
         const max = numericOperand(def2.maximum, "max_length");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length > ${max}`);
-        doc.write(`if (${len} > ${max}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length > ${max}`);
+        doc.write(`if (${len2} > ${max}) return INVALID;`);
         break;
       }
       case "length_equals": {
         const exact = numericOperand(def2.length, "length_equals");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${exact} && ${currentAccessor}.length <= ${def2.length * 2}`);
-        doc.write(`if (${len} !== ${exact}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${exact} && ${currentAccessor}.length <= ${def2.length * 2}`);
+        doc.write(`if (${len2} !== ${exact}) return INVALID;`);
         break;
       }
       case "min_size":
@@ -35287,11 +35287,11 @@ function foldObjects(members2) {
     for (const key of object3.required ?? [])
       required2.add(key);
   }
-  const folded = { type: "object", properties };
+  const folded2 = { type: "object", properties };
   if (required2.size)
-    folded.required = [...required2];
+    folded2.required = [...required2];
   if (objects.every((object3) => object3.additionalProperties === false)) {
-    folded.additionalProperties = false;
+    folded2.additionalProperties = false;
   } else {
     const constraints = [];
     for (const object3 of objects) {
@@ -35300,11 +35300,11 @@ function foldObjects(members2) {
         constraints.push(constraint);
     }
     if (constraints.length === 1)
-      folded.additionalProperties = constraints[0];
+      folded2.additionalProperties = constraints[0];
     else if (constraints.length > 1)
-      folded.additionalProperties = { allOf: constraints };
+      folded2.additionalProperties = { allOf: constraints };
   }
-  return folded;
+  return folded2;
 }
 function foldIntersection(json4) {
   const allOf = json4.allOf;
@@ -35314,9 +35314,9 @@ function foldIntersection(json4) {
     if (key in json4)
       return;
   const unions = allOf.filter((m2) => UNION_KEYS.some((k2) => Array.isArray(m2[k2])));
-  let folded = null;
+  let folded2 = null;
   if (!unions.length) {
-    folded = foldObjects(allOf);
+    folded2 = foldObjects(allOf);
   } else {
     const union4 = unions[0];
     const keyword = UNION_KEYS.find((k2) => Array.isArray(union4[k2]));
@@ -35326,12 +35326,12 @@ function foldIntersection(json4) {
     const branches = union4[keyword].map((branch) => foldObjects([...rest, branch]));
     if (branches.some((b2) => !b2))
       return;
-    folded = { [keyword]: branches };
+    folded2 = { [keyword]: branches };
   }
-  if (!folded)
+  if (!folded2)
     return;
   delete json4.allOf;
-  assignProps(json4, folded);
+  assignProps(json4, folded2);
 }
 function finalize(ctx, schema) {
   const root = ctx.seen.get(schema);
@@ -39305,13 +39305,24 @@ var named = () => external_exports.union([
     kind: external_exports.string().optional()
   })
 ]);
+var actorSchema = external_exports.union([
+  external_exports.string(),
+  external_exports.object({
+    id: external_exports.string().optional(),
+    text: external_exports.string().min(1),
+    /** person | group | system (custom icon names allowed) */
+    kind: external_exports.string().optional(),
+    /** draw this actor again where the story comes back to it, instead of an arrow back to its one copy */
+    repeat: external_exports.boolean().optional()
+  })
+]);
 var domainStorySchema = external_exports.object({
   scope: external_exports.object({
     granularity: external_exports.enum(DS_GRANULARITY).optional(),
     time: external_exports.enum(["as-is", "to-be"]).optional(),
     purity: external_exports.enum(["pure", "digitalized"]).optional()
   }).optional(),
-  actors: external_exports.array(named()).min(1),
+  actors: external_exports.array(actorSchema).min(1),
   workObjects: external_exports.array(named()).default([]),
   sentences: external_exports.array(external_exports.object({
     id: external_exports.string().optional(),
@@ -39340,14 +39351,18 @@ var domainStorySchema = external_exports.object({
     /** horizontal pitch of the actor grid in px (overrides the spacing's) */
     gapX: external_exports.number().min(240).max(2e3).optional(),
     /** vertical pitch of the actor grid in px */
-    gapY: external_exports.number().min(180).max(2e3).optional()
+    gapY: external_exports.number().min(180).max(2e3).optional(),
+    /** `once` (default, the book's rule): every actor is drawn once; `repeat`: an actor the story comes back to from
+     * far away is drawn again there (as a work object is drawn for every sentence) */
+    actors: external_exports.enum(["once", "repeat"]).optional()
   }).optional()
 });
 function normalizeDomainStory(raw) {
   const c = domainStorySchema.parse(raw);
   const alloc = idAllocator();
   const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
-  const actors = c.actors.map(asNamed).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person" }));
+  const repeatAll = c.layout?.actors === "repeat";
+  const actors = c.actors.map((v2) => asNamed(v2)).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person", ...a.repeat ?? repeatAll ? { repeat: true } : {} }));
   const workObjects = c.workObjects.map(asNamed).map((o) => ({ id: alloc(o.id, o.text, "object"), text: o.text, kind: o.kind ?? "document" }));
   const unresolved = [];
   const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
@@ -39356,7 +39371,7 @@ function normalizeDomainStory(raw) {
     if (hit2)
       return hit2.id;
     unresolved.push({ element, field, ref: ref2 });
-    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person" };
+    const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person", ...repeatAll ? { repeat: true } : {} };
     actors.push(added);
     return added.id;
   };
@@ -40921,8 +40936,22 @@ function outline(board, opts = {}) {
     if (isAnnotationCard(c) && c.target)
       cardsOn.set(c.target, [...cardsOn.get(c.target) ?? [], c]);
   const num2 = (c) => calloutOf(c) !== void 0 ? circled(calloutOf(c)) : "\u2022";
+  const actorKey = (i) => `${i.parent ?? ""}|${String(i.data?.element)}`;
+  const firstDrawing = /* @__PURE__ */ new Map();
+  const laterDrawings = /* @__PURE__ */ new Map();
+  for (const i of items) {
+    if (i.data?.ds !== "actor" || typeof i.data.element !== "string")
+      continue;
+    if (i.data.occurrence)
+      laterDrawings.set(actorKey(i), [...laterDrawings.get(actorKey(i)) ?? [], i]);
+    else
+      firstDrawing.set(actorKey(i), i);
+  }
   const meta3 = (i) => {
     const f = [];
+    const again = i.data?.ds === "actor" && !i.data.occurrence ? laterDrawings.get(actorKey(i)) : void 0;
+    if (again?.length)
+      f.push(`drawn ${again.length + 1} times: also ${[...again].sort((a, b2) => a.id < b2.id ? -1 : 1).map((a) => `#${a.id}`).join(" ")}`);
     const notes = cardsOn.get(i.id);
     if (notes?.length)
       f.push(`annotation ${notes.map(num2).join("")}`);
@@ -40951,6 +40980,11 @@ function outline(board, opts = {}) {
     printed.add(i.id);
     if (i.role === "pivotal")
       return;
+    if (i.data?.ds === "actor" && i.data.occurrence && !threadsOn.get(i.id)?.length) {
+      const first = firstDrawing.get(actorKey(i));
+      if (first && (keep(first.id) || context.has(first.id)))
+        return;
+    }
     if (!keep(i.id) && !context.has(i.id))
       return;
     const role = i.type === "ui" ? String(i.data?.ui?.type ?? i.role ?? "ui") : i.role ?? i.type;
@@ -41170,7 +41204,7 @@ function containerOf(board, item) {
 }
 function summarize(board, changes, opts = {}) {
   const lines2 = [];
-  const folded = /* @__PURE__ */ new Map();
+  const folded2 = /* @__PURE__ */ new Map();
   const find = finder(board, changes);
   for (const ch of changes) {
     if (isBookkeeping(ch))
@@ -41280,7 +41314,7 @@ function summarize(board, changes, opts = {}) {
       if (patch.data !== void 0 && meaning(patch.data) !== meaning(was?.data))
         parts2.push(`data changed: ${short3(JSON.stringify(meaningOf(patch.data)), 120)}`);
       if (opts.collapseMoves && isLayoutOnly(op, was) && !parts2.some((p) => p.startsWith("moved from"))) {
-        folded.set(op.id, { seq: ch.seq, author: who3, resized: resized || (folded.get(op.id)?.resized ?? false) });
+        folded2.set(op.id, { seq: ch.seq, author: who3, resized: resized || (folded2.get(op.id)?.resized ?? false) });
         continue;
       }
       if (parts2.length)
@@ -41289,17 +41323,17 @@ function summarize(board, changes, opts = {}) {
     if (ch.note && ch.ops.length === 0)
       lines2.push(`${prefix} ${ch.note}`);
   }
-  if (folded.size)
-    lines2.push(foldedLine(board, changes, folded));
+  if (folded2.size)
+    lines2.push(foldedLine(board, changes, folded2));
   return lines2;
 }
-function foldedLine(board, changes, folded) {
-  const all = [...folded.values()];
+function foldedLine(board, changes, folded2) {
+  const all = [...folded2.values()];
   const seqs = all.map((f) => f.seq);
   const lo = Math.min(...seqs);
   const hi = Math.max(...seqs);
   const authors = [...new Set(all.map((f) => f.author))].join("/");
-  const names = [...folded.keys()].map((id) => {
+  const names = [...folded2.keys()].map((id) => {
     const it = board.items[id] ?? changes.find((c) => c.before[id])?.before[id];
     return short3(it?.type === "arrow" ? nameOf(it, board) : it?.text, 30) || id;
   });
@@ -44455,7 +44489,7 @@ function nearestFree(at3, w2, h, boxes, step, start = { x: 0, y: 1 }) {
 }
 function countCrossings(segs) {
   const same3 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
-  const orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
+  const orient2 = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
   let n4 = 0;
   for (let i = 0; i < segs.length; i++)
     for (let j2 = i + 1; j2 < segs.length; j2++) {
@@ -44463,7 +44497,7 @@ function countCrossings(segs) {
       const [c, d] = segs[j2];
       if (same3(a, c) || same3(a, d) || same3(b2, c) || same3(b2, d))
         continue;
-      if (orient(a, b2, c) * orient(a, b2, d) < 0 && orient(c, d, a) * orient(c, d, b2) < 0)
+      if (orient2(a, b2, c) * orient2(a, b2, d) < 0 && orient2(c, d, a) * orient2(c, d, b2) < 0)
         n4++;
     }
   return n4;
@@ -44475,6 +44509,12 @@ var PREFERENCES = [
   [[1, 1], [1, -1], [1, 0], [0, 1], [0, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [2, 1], [2, -1], [0, 2]]
 ];
 var SLOTS = [[1, 0], [1, 0.8], [1, -0.8], [0, 1], [0, -1], [-1, 0.8], [-1, -0.8], [-1, 0], [1.6, 0], [0, 1.7], [0, -1.7]];
+var copyKey = (id, k2) => k2 === 1 ? id : `${id}#${k2}`;
+var parseCopyKey = (key) => {
+  const i = key.lastIndexOf("#");
+  return i > 0 ? { id: key.slice(0, i), copy: Number(key.slice(i + 1)) } : { id: key, copy: 1 };
+};
+var REUSE_CELLS = 2;
 function layoutWith(m2, sentences, order, pref, g2) {
   const cell2 = /* @__PURE__ */ new Map();
   const taken = /* @__PURE__ */ new Set();
@@ -44482,7 +44522,6 @@ function layoutWith(m2, sentences, order, pref, g2) {
     cell2.set(id, [c, r2]);
     taken.add(`${c},${r2}`);
   };
-  put(order[0], 0, 0);
   const near = (id, partner) => {
     const [pc, pr] = cell2.get(partner);
     for (const [dc, dr] of pref)
@@ -44493,25 +44532,32 @@ function layoutWith(m2, sentences, order, pref, g2) {
       c++;
     put(id, c, pr);
   };
-  for (const s of sentences) {
-    const cast = [s.actor, ...receiversOf(s)];
-    for (const id of cast) {
-      if (cell2.has(id))
-        continue;
-      const partner = cast.find((p) => cell2.has(p)) ?? [...cell2.keys()][cell2.size - 1];
-      near(id, partner);
+  const cast = /* @__PURE__ */ new Map();
+  if (m2.actors.some((a) => a.repeat))
+    placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast);
+  else {
+    put(order[0], 0, 0);
+    for (const s of sentences) {
+      const members2 = [s.actor, ...receiversOf(s)];
+      for (const id of members2) {
+        if (cell2.has(id))
+          continue;
+        const partner = members2.find((p) => cell2.has(p)) ?? [...cell2.keys()][cell2.size - 1];
+        near(id, partner);
+      }
+      cast.set(s.id, { actor: s.actor, to: receiversOf(s) });
     }
+    for (const id of order)
+      if (!cell2.has(id))
+        near(id, [...cell2.keys()][cell2.size - 1]);
   }
-  for (const id of order)
-    if (!cell2.has(id))
-      near(id, [...cell2.keys()][cell2.size - 1]);
   const actor = /* @__PURE__ */ new Map();
   for (const [id, [c, r2]] of cell2)
     actor.set(id, { x: c * g2.cellW, y: r2 * g2.cellH, w: ICON_W, h: ICON_H });
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
   const wayCount = /* @__PURE__ */ new Map();
-  const wayKey = (s) => [s.actor, ...receiversOf(s).sort()].join(">");
+  const wayKey = (s) => [cast.get(s.id).actor, ...[...cast.get(s.id).to].sort()].join(">");
   const wayIndex = /* @__PURE__ */ new Map();
   for (const s of sentences)
     if (s.objectText && receiversOf(s).length)
@@ -44520,15 +44566,15 @@ function layoutWith(m2, sentences, order, pref, g2) {
   for (const s of sentences) {
     if (!s.objectText)
       continue;
-    const a = centre(actor.get(s.actor));
+    const a = centre(actor.get(cast.get(s.id).actor));
     let at3;
     let perp;
-    const recv = receiversOf(s);
+    const recv = cast.get(s.id).to;
     if (recv.length) {
       const rs = recv.map((r2) => centre(actor.get(r2)));
       const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
-      const len = Math.hypot(t.x - a.x, t.y - a.y);
-      perp = len ? { x: -(t.y - a.y) / len, y: (t.x - a.x) / len } : { x: 0, y: 1 };
+      const len2 = Math.hypot(t.x - a.x, t.y - a.y);
+      perp = len2 ? { x: -(t.y - a.y) / len2, y: (t.x - a.x) / len2 } : { x: 0, y: 1 };
       const n4 = wayCount.get(wayKey(s)) ?? 1;
       const k2 = wayIndex.get(wayKey(s)) ?? 0;
       wayIndex.set(wayKey(s), k2 + 1);
@@ -44537,7 +44583,7 @@ function layoutWith(m2, sentences, order, pref, g2) {
     } else {
       perp = { x: 0, y: 1 };
       at3 = { x: a.x + g2.slot, y: a.y };
-      const own2 = actor.get(s.actor);
+      const own2 = actor.get(cast.get(s.id).actor);
       const slots = SLOTS.map(([dx, dy]) => ({ x: a.x + dx * g2.slot, y: a.y + dy * g2.slot * 0.75 })).filter((c) => free({ x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }));
       at3 = slots.find((c) => !boxes.some((o) => o !== own2 && segmentHitsBox(a, c, o, -10))) ?? slots[0] ?? at3;
     }
@@ -44553,14 +44599,15 @@ function layoutWith(m2, sentences, order, pref, g2) {
   }
   const segs = [];
   for (const s of sentences) {
-    const a = centre(actor.get(s.actor));
+    const c = cast.get(s.id);
+    const a = centre(actor.get(c.actor));
     const o = object3.get(s.id);
     if (o) {
       segs.push([a, centre(o)]);
-      for (const r2 of receiversOf(s))
+      for (const r2 of c.to)
         segs.push([centre(o), centre(actor.get(r2))]);
     } else
-      for (const r2 of receiversOf(s))
+      for (const r2 of c.to)
         segs.push([a, centre(actor.get(r2))]);
   }
   const all = [...actor.values(), ...object3.values()];
@@ -44569,9 +44616,98 @@ function layoutWith(m2, sentences, order, pref, g2) {
     for (const b2 of all)
       if (!samePt(centre(b2), p) && !samePt(centre(b2), q2) && segmentHitsBox(p, q2, b2, -10))
         through++;
-  return { actor, object: object3, crossings: countCrossings(segs) + 2 * through };
+  return { actor, object: object3, cast, drawn: [...cell2.keys()], crossings: countCrossings(segs) + 2 * through };
 }
 var samePt = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
+function crossesAny(p, q2, lines2) {
+  for (const l of lines2)
+    if (countCrossings([[p, q2], l]) > 0)
+      return true;
+  return false;
+}
+function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast) {
+  const repeats = new Set(m2.actors.filter((a) => a.repeat).map((a) => a.id));
+  const copies = /* @__PURE__ */ new Map();
+  let last;
+  const draw = (id, partner) => {
+    const list3 = copies.get(id) ?? [];
+    const key = copyKey(id, list3.length + 1);
+    list3.push(key);
+    copies.set(id, list3);
+    if (partner)
+      near(key, partner);
+    else if (last)
+      near(key, last);
+    else
+      put(key, 0, 0);
+    last = key;
+    return key;
+  };
+  const dist = (a, b2) => {
+    const [ac, ar] = cell2.get(a);
+    const [bc, br] = cell2.get(b2);
+    return Math.max(Math.abs(ac - bc), Math.abs(ar - br));
+  };
+  const at3 = (key) => {
+    const [c, r2] = cell2.get(key);
+    return { x: c * g2.cellW + ICON_W / 2, y: r2 * g2.cellH + ICON_H / 2 };
+  };
+  const lines2 = [];
+  const clean2 = (a, b2) => {
+    const [p, q2] = [at3(a), at3(b2)];
+    if (crossesAny(p, q2, lines2))
+      return false;
+    for (const k2 of cell2.keys()) {
+      if (k2 === a || k2 === b2)
+        continue;
+      const c = at3(k2);
+      if (segmentHitsBox(p, q2, { x: c.x - ICON_W / 2, y: c.y - ICON_H / 2, w: ICON_W, h: ICON_H }, -10))
+        return false;
+    }
+    return true;
+  };
+  const nearest = (id, to) => {
+    let best;
+    let d = Infinity;
+    for (const k2 of copies.get(id) ?? []) {
+      const e = to.length ? Math.min(...to.map((t) => dist(k2, t))) : 0;
+      if (e < d)
+        best = k2, d = e;
+    }
+    return best === void 0 ? void 0 : { key: best, d };
+  };
+  let previous = [];
+  for (const s of sentences) {
+    const members2 = [s.actor, ...receiversOf(s)];
+    const chosen = /* @__PURE__ */ new Map();
+    let anchor3;
+    for (const id of members2) {
+      const hit2 = nearest(id, previous);
+      if (hit2 && (!anchor3 || hit2.d < anchor3.d))
+        anchor3 = { id, ...hit2 };
+    }
+    if (!anchor3)
+      anchor3 = { id: s.actor, key: draw(s.actor, void 0), d: 0 };
+    else if (anchor3.d > REUSE_CELLS && repeats.has(anchor3.id) && previous.length)
+      anchor3 = { id: anchor3.id, key: draw(anchor3.id, previous[previous.length - 1]), d: 0 };
+    chosen.set(anchor3.id, anchor3.key);
+    for (const id of members2) {
+      if (chosen.has(id))
+        continue;
+      const hit2 = nearest(id, [anchor3.key]);
+      const reuse = hit2 && (!repeats.has(id) || hit2.d <= REUSE_CELLS && clean2(anchor3.key, hit2.key));
+      chosen.set(id, reuse ? hit2.key : draw(id, anchor3.key));
+    }
+    const c = { actor: chosen.get(s.actor), to: receiversOf(s).map((r2) => chosen.get(r2)) };
+    for (const r2 of c.to)
+      lines2.push([at3(c.actor), at3(r2)]);
+    cast.set(s.id, c);
+    previous = [c.actor, ...c.to];
+  }
+  for (const id of order)
+    if (!copies.has(id))
+      draw(id, void 0);
+}
 function facing(from, to) {
   const a = centre(from);
   const b2 = centre(to);
@@ -44581,11 +44717,7 @@ function facing(from, to) {
     return dx >= 0 ? { fromSide: "right", toSide: "left" } : { fromSide: "left", toSide: "right" };
   return dy >= 0 ? { fromSide: "bottom", toSide: "top" } : { fromSide: "top", toSide: "bottom" };
 }
-function renderDomainStory(raw, opts = {}) {
-  const m2 = normalizeDomainStory(raw);
-  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
-  const scope = opts.scope ?? "ds";
-  const itemId = (role, element) => `${scope}.${role}.${element}`;
+function bestLayout(m2) {
   const sentences = [...m2.sentences].sort((a, b2) => a.seq - b2.seq);
   const order = [];
   const seen = (id) => void (order.includes(id) || order.push(id));
@@ -44602,26 +44734,39 @@ function renderDomainStory(raw, opts = {}) {
     if (l.crossings < best.crossings)
       best = l;
   }
+  return { sentences, order, best };
+}
+function renderDomainStory(raw, opts = {}) {
+  const m2 = normalizeDomainStory(raw);
+  const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const scope = opts.scope ?? "ds";
+  const itemId = (role, element) => `${scope}.${role}.${element}`;
+  const { sentences, order, best } = bestLayout(m2);
   const items = [];
   const ownIcon = (kind) => m2.icons?.[kind] ? { icon: m2.icons[kind] } : {};
   const actorItem = /* @__PURE__ */ new Map();
   const actorTraces = /* @__PURE__ */ new Map();
-  for (const s of sentences)
+  for (const s of sentences) {
+    const key = best.cast.get(s.id).actor;
     if (!s.objectText && s.traces.length)
-      actorTraces.set(s.actor, [...actorTraces.get(s.actor) ?? [], ...s.traces]);
-  order.forEach((id, i) => {
+      actorTraces.set(key, [...actorTraces.get(key) ?? [], ...s.traces]);
+  }
+  const drawings = m2.actors.some((a) => a.repeat) ? best.drawn : order;
+  drawings.forEach((key, i) => {
+    const { id, copy } = parseCopyKey(key);
     const a = m2.actors.find((x2) => x2.id === id);
-    const b2 = best.actor.get(id);
-    const traces2 = actorTraces.get(id);
-    const it = make({ id: itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...traces2 ? { traces: traces2 } : {} } }, now);
-    actorItem.set(id, it);
+    const b2 = best.actor.get(key);
+    const traces2 = actorTraces.get(key);
+    const it = make({ id: copy > 1 ? `${itemId("actor", a.id)}.${copy}` : itemId("actor", a.id), type: "card", ...b2, text: a.text, role: "actor", order: i, data: { element: a.id, kind: a.kind, ...ownIcon(a.kind), ds: "actor", ...copy > 1 ? { occurrence: true } : {}, ...traces2 ? { traces: traces2 } : {} } }, now);
+    actorItem.set(key, it);
     items.push(it);
   });
   const objectItem = /* @__PURE__ */ new Map();
   for (const s of sentences) {
     const read = readSentence(m2, s);
     const base = { seq: s.seq, sentence: read, ds: true };
-    const from = actorItem.get(s.actor);
+    const c = best.cast.get(s.id);
+    const from = actorItem.get(c.actor);
     const box = best.object.get(s.id);
     const self = s.to.includes(s.actor);
     if (box && s.objectText) {
@@ -44629,13 +44774,13 @@ function renderDomainStory(raw, opts = {}) {
       objectItem.set(s.id, o);
       items.push(o);
       items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
-      for (const r2 of receiversOf(s)) {
-        const to = actorItem.get(r2);
+      receiversOf(s).forEach((r2, k2) => {
+        const to = actorItem.get(c.to[k2]);
         items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r2}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
-      }
+      });
     } else {
       for (const [k2, r2] of receiversOf(s).entries()) {
-        const to = actorItem.get(r2);
+        const to = actorItem.get(c.to[k2]);
         items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r2}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
       }
     }
@@ -44667,14 +44812,26 @@ function renderDomainStory(raw, opts = {}) {
       items.push(arrow(scope, note.id, target.id, now, void 0, "annotation-link", { data: { ds: true, ...facing(note, target) } }));
   }
   const outlines = [];
-  const memberItems = (members2) => members2.map((id) => actorItem.get(id) ?? objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)).filter((b2) => !!b2);
-  const shaped = groupOutlines(m2.groups.map((g3) => ({ id: g3.id, members: [...new Set(memberItems(g3.members).map((i) => i.id))], boxes: memberItems(g3.members) })));
-  for (const g3 of m2.groups) {
-    const o = shaped.get(g3.id);
+  const drawingsIn = (id, members2) => {
+    const used = /* @__PURE__ */ new Set();
+    for (const s of sentences) {
+      if (!members2.includes(s.id) && !(s.object && members2.includes(s.object)))
+        continue;
+      const c = best.cast.get(s.id);
+      for (const k2 of [c.actor, ...c.to])
+        if (parseCopyKey(k2).id === id)
+          used.add(k2);
+    }
+    return used.size > 1 || used.size === 1 && !used.has(id) ? [...used].map((k2) => actorItem.get(k2)).filter(Boolean) : [actorItem.get(id)];
+  };
+  const memberItems = (members2) => members2.flatMap((id) => actorItem.has(id) ? drawingsIn(id, members2) : [objectItem.get(id) ?? [...objectItem.values()].find((o) => o.data?.workObject === id)]).filter((b2) => !!b2);
+  const shaped = groupOutlines(m2.groups.map((g2) => ({ id: g2.id, members: [...new Set(memberItems(g2.members).map((i) => i.id))], boxes: memberItems(g2.members) })));
+  for (const g2 of m2.groups) {
+    const o = shaped.get(g2.id);
     if (!o)
       continue;
     const extra = { ...o.nestedIn ? { nestedIn: o.nestedIn } : {}, ...o.overlaps.length ? { overlaps: o.overlaps } : {} };
-    outlines.push(make({ id: itemId("group", g3.id), type: "frame", ...o.box, text: g3.text, color: "grey", role: "group", data: { element: g3.id, members: g3.members, ds: "group", ...extra } }, now));
+    outlines.push(make({ id: itemId("group", g2.id), type: "frame", ...o.box, text: g2.text, color: "grey", role: "group", data: { element: g2.id, members: g2.members, ds: "group", ...extra } }, now));
   }
   const all = [...outlines, ...items.filter((i) => i.type !== "arrow")];
   const minX = Math.min(...all.map((i) => i.x));
@@ -52834,7 +52991,7 @@ import os4 from "node:os";
 import path8 from "node:path";
 
 // packages/canvas/dist/version.js
-var VERSION = "0.27.1";
+var VERSION = "0.28.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -54997,10 +55154,10 @@ var ZodString2 = class _ZodString2 extends ZodType2 {
       ...errorUtil.errToObj(message)
     });
   }
-  length(len, message) {
+  length(len2, message) {
     return this._addCheck({
       kind: "length",
-      value: len,
+      value: len2,
       ...errorUtil.errToObj(message)
     });
   }
@@ -55863,10 +56020,10 @@ var ZodArray2 = class _ZodArray extends ZodType2 {
       maxLength: { value: maxLength, message: errorUtil.toString(message) }
     });
   }
-  length(len, message) {
+  length(len2, message) {
     return new _ZodArray({
       ...this._def,
-      exactLength: { value: len, message: errorUtil.toString(message) }
+      exactLength: { value: len2, message: errorUtil.toString(message) }
     });
   }
   nonempty(message) {
@@ -61734,7 +61891,7 @@ var CONTENT_HELP = `content shape per kind (see docs/canvas.md for full examples
 - wireframe: { screens: [{name, w?, elements: [{role: box|button|input|heading|paragraph|image|nav|list|table|label, text?, x: 0..11, y: row, w: 1..12, h?: rows, note?}]}] }
 - ui-mock (docs/diagrams.md \xA76c \u2014 real-looking screens, one board item per element; no HTML): { device?: desktop|laptop|tablet|phone, theme?: light|dark, tokens?: { accent?: '#hex', radius?, font?: sans|serif|mono|rounded }, screens: [{ id?, name, device?, theme?, w?, h?, pad?, gap?, note?, traces?, body: [<node>] }], flows?: [{ from: '<screen>' | '<screen>/<element>', to: '<screen>', label? }] }; <node> = { type, id?, text?, children?, \u2026props } \u2014 layout: stack | row (children take span: 1..12, w, or share the rest; justify: start|center|end|between; align) | grid (cols); drawn containers: card (text = title; variant flat|elevated) | section (pad 24, bg: surface|muted|accent) | navbar (text = brand, items = links, active, children at the right); elements: heading (level 1..4) | text (variant muted|small|code) | link | button (variant primary|secondary|ghost|danger|link, icon, size sm|md|lg) | input | textarea | select | search (label/text, placeholder, value, hint) | checkbox | radio | toggle (checked) | badge (tone neutral|info|success|warning|danger) | avatar | icon | divider | image (ratio '16:9', h) | table (columns, rows; a cell '[Done]' is a status badge) | list (items: [text | {text, meta, icon, badge}]) | stat (value, delta) | alert (tone) | progress (value 0..100) | tabs | breadcrumb (items, active) | pagination | spacer | empty | chart (variant bar|line, rows: [[numbers]]) | sidebar (items with icon/badge, active). Every node may carry note, goto: <screen id>, traces. Element ids are unique per screen and referenced as '<screen>/<element>'. Prefer \`awd design draw design/<name>.ui.yaml\`; changes on the board come back as proposals with a diff to apply, until you edit the file and redraw: words edited (data.pending.kind 'text'; a table cell or list item adds sub: ['rows', r, c] | ['items', i]), an element deleted (kind 'remove' \u2014 it stays on the board, struck), an element added (kind 'add' with node { type, id, text } \u2014 write it with that id, at the end of parent.element or right after after.element). Lint findings are on the elements as data.ui.findings.
 - workflow: { name?, nodes: [{id, kind: trigger|script|ai|gate|human|outcome, label?, config?}], edges: [{from, to, label?, condition?}] }  (the output of \`awd graph --json\`)
-- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system'})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px } }  \u2014 every actor appears once, every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
+- domain-story (Domain Storytelling, domainstorytelling.org; docs/diagrams.md \xA76b \u2014 pictographic sentences read left \u2192 right by number). ${DOMAIN_STORY_METHOD} ${LAYOUT_NEVER_THE_STORY} Shape: { scope?: { granularity?: 'coarse-grained'|'medium-grained'|'fine-grained', time?: 'as-is'|'to-be', purity?: 'pure'|'digitalized' }, actors: (string|{id?, text, kind?: 'person'|'group'|'system', repeat?: boolean})[], workObjects?: (string|{id?, text, kind?: 'document'|'thing'|'digital'|'email'|'call'|'conversation'|'info'|'folder'})[], sentences: [{id?, seq?, actor, verb, object?, to?: <actor>|<actor>[], toLabel?, note?, traces?}], groups?: [{id?, text, members: <element>[]}], annotations?: [{on: <element>, text}], icons?: { <name>: '<svg viewBox="0 0 24 24">\u2026</svg>' }, layout?: { spacing?: 'compact'|'normal'|'roomy', gapX?: px, gapY?: px, actors?: 'once'|'repeat' } }  \u2014 every actor appears once (the default; a long story whose sentences keep coming back to an early actor may set \`layout: { actors: repeat }\`, or \`repeat: true\` on that actor, so the board draws it again where the story continues instead of an arrow back across the picture), every activity gets its own work object (the same thing keeps its name each time it comes back). State the scope; give each kind of work object an icon that says what it is \u2014 a built-in kind, or your own under \`icons\` (a line drawing of path / circle / ellipse / rect / line / polyline / polygon, used as a \`kind\`). Prefer \`awd design draw design/<name>.domain-story.yaml\`; \`awd design import-egon\` / \`export-egon\` move stories to and from Egon.io.
 - kanban: { columns: [{name, wip?}], cards: [{id?, title, column, labels?, size?: XS|S|M|L|XL, assignee?, description?}] }  \u2014 columns are lanes, cards stack inside; a card's column is its parent. When the user drags a card to another column, canvas_diff / canvas_wait report \`card "<title>" [<id>]: moved from <A> \u2192 <B>\`; the workflow runtime reads the same moves from GET /api/boards/:id/cards?since=N. Use kanban to replace Trello as the source of events.
 - freeform: { items: [{type?: sticky|text|frame|lane|arrow|comment|card, text?, x?, y?, w?, h?, color?, role?, parent?, from?, to?, label?, target?, data?}] }
 Text on cards (docs/diagrams.md "Bilingual boards"): keep it short \u2014 about 32 characters (12 CJK) per language on an EventStorming sticky, 40 / 15 on a story, 50 / 20 on a kanban card, 20 / 8 on a person or domain-story actor. For two languages write a short bilingual title ("Order placed \xB7 \u8A02\u55AE\u5DF2\u6210\u7ACB") and put the full text where the kind keeps longer text: kanban description, story acceptance, wireframe / ui-mock note, domain-story sentence note or annotations, EventStorming definitions (term + text) or hotspots. Never set w / h / fontSize to make text fit; keep ids ASCII slugs.
@@ -61857,7 +62014,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.27.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.28.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -62092,7 +62249,7 @@ ${svg}`);
   });
   server.registerTool("canvas_check_layout", {
     title: "Check the layout of a board or frame",
-    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot) or that were dragged onto a card, wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
+    description: "Pure geometry, in words: items overlapping their siblings, text likely cut off in its box (the same text metrics the page uses), wire labels that do not fit beside their wire (cut with \u2026, or only a dot), wire labels and domain-story number circles that collide with each other or sit on a pictogram, domain-story lines (and lines folded by hand, data.bend) that run through a pictogram or a card, domain-story group outlines that intersect \u2014 with how far to move a card or a data.label.short to give, items outside their frame or off their lane, items oversized against their siblings or the template size (do not scale stickies up to fill space), items the page draws somewhere else than their stored coordinates (kanban cards stack in their column; x/y you set there are not where they show), and comments that cover an item (a note on a UI-mock screen instead of in the gutter beside it) or lie outside the diagram frame their target is in (information, not a defect). Each finding says what to do. Run it after drawing with canvas_apply / canvas_add_items, and fix what it finds before asking the person to look. The same findings show in the frame panel on the page.",
     inputSchema: {
       id: external_exports.string().describe("board id"),
       frame: external_exports.string().optional().describe("a diagram key or frame / lane id; default the whole board"),
@@ -62894,6 +63051,27 @@ function floatingEnd(a, b2) {
   const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
   return { x: ca.x + dx * t, y: ca.y + dy * t };
 }
+function floatingEndTo(a, p) {
+  return floatingEnd(a, { x: p.x, y: p.y, w: 0, h: 0 });
+}
+function foldedPath(pts, r2 = 8) {
+  const f = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+  if (!pts.length)
+    return "";
+  let d = `M${f(pts[0].x)} ${f(pts[0].y)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [a, b2, c] = [pts[i - 1], pts[i], pts[i + 1]];
+    const k2 = Math.min(r2, Math.hypot(b2.x - a.x, b2.y - a.y) / 2, Math.hypot(c.x - b2.x, c.y - b2.y) / 2);
+    const u3 = (p, q2) => {
+      const l = Math.hypot(q2.x - p.x, q2.y - p.y) || 1;
+      return { x: (q2.x - p.x) / l, y: (q2.y - p.y) / l };
+    };
+    const [ua, uc] = [u3(b2, a), u3(b2, c)];
+    d += k2 > 0 ? `L${f(b2.x + ua.x * k2)} ${f(b2.y + ua.y * k2)}Q${f(b2.x)} ${f(b2.y)} ${f(b2.x + uc.x * k2)} ${f(b2.y + uc.y * k2)}` : `L${f(b2.x)} ${f(b2.y)}`;
+  }
+  const z3 = pts[pts.length - 1];
+  return pts.length > 1 ? `${d}L${f(z3.x)} ${f(z3.y)}` : d;
+}
 function autoSides(a, b2) {
   const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
   const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
@@ -62916,42 +63094,183 @@ function routePoints(p1, s1, p2, s2) {
   }
   return h1 ? [p1, { x: p2.x, y: p1.y }, p2] : [p1, { x: p1.x, y: p2.y }, p2];
 }
+function foldsOf(data) {
+  const b2 = data?.bend;
+  const list3 = Array.isArray(b2) ? b2 : b2 && typeof b2 === "object" ? [b2] : [];
+  return list3.filter((p) => typeof p?.x === "number" && typeof p?.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y)).map((p) => ({ x: p.x, y: p.y }));
+}
 var n2 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+function folded(p1, via, p2, ds, auto) {
+  const points = [p1, ...via, p2];
+  return { d: foldedPath(points, ds ? 4 : 8), points, p1, p2, ds, via, ...auto ? { auto } : {} };
+}
 function wireShape(b2, it) {
   const from = it.from ? b2.items[it.from] : void 0;
   const to = it.to ? b2.items[it.to] : void 0;
   if (!from || !to)
     return void 0;
+  const ds = !!it.data?.ds;
+  const folds = foldsOf(it.data);
+  if (folds.length)
+    return folded(floatingEndTo(from, folds[0]), folds, floatingEndTo(to, folds[folds.length - 1]), ds);
   const auto = autoSides(from, to);
   const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
   const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
-  const ds = !!it.data?.ds;
   const p1 = ds ? floatingEnd(from, to) : anchor2(from, s1);
   const p2 = ds ? floatingEnd(to, from) : anchor2(to, s2);
-  const bend = it.data?.bend;
-  if (!ds && typeof bend?.x === "number" && typeof bend.y === "number") {
-    const bp = { x: bend.x, y: bend.y };
-    return { d: `M${n2(p1.x)} ${n2(p1.y)}Q${n2(2 * bp.x - (p1.x + p2.x) / 2)} ${n2(2 * bp.y - (p1.y + p2.y) / 2)} ${n2(p2.x)} ${n2(p2.y)}`, points: [p1, bp, p2], p1, p2, ds, bend: bp };
-  }
   const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
-  return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds };
+  return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds, via: [] };
+}
+function segmentHits(p, q2, b2, pad = 0) {
+  const [x0, y0, x1, y1] = [b2.x - pad, b2.y - pad, b2.x + b2.w + pad, b2.y + b2.h + pad];
+  if (x1 <= x0 || y1 <= y0)
+    return false;
+  let t0 = 0;
+  let t1 = 1;
+  const dx = q2.x - p.x;
+  const dy = q2.y - p.y;
+  for (const [pp, qq] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
+    if (pp === 0) {
+      if (qq < 0)
+        return false;
+      continue;
+    }
+    const r2 = qq / pp;
+    if (pp < 0)
+      t0 = Math.max(t0, r2);
+    else
+      t1 = Math.min(t1, r2);
+    if (t0 > t1)
+      return false;
+  }
+  return true;
+}
+var THROUGH_PAD = -6;
+var CLEAR_PAD = 2;
+var DETOUR_GAP = 30;
+var CROSS_COST = 60;
+function runsThrough(points, boxes, fromId, toId) {
+  const out = [];
+  for (const o of boxes) {
+    for (let i = 0; i < points.length - 1; i++) {
+      if (i === 0 && o.id === fromId || i === points.length - 2 && o.id === toId)
+        continue;
+      if (segmentHits(points[i], points[i + 1], o, THROUGH_PAD)) {
+        out.push(o);
+        break;
+      }
+    }
+  }
+  return out;
+}
+var len = (pts) => pts.reduce((v2, p, i) => i ? v2 + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0, 0);
+var samePt2 = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
+var orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
+function crossingsWith(a, others) {
+  let k2 = 0;
+  for (const o of others)
+    for (let i = 0; i < a.length - 1; i++)
+      for (let j2 = 0; j2 < o.length - 1; j2++) {
+        const [p, q2, r2, s] = [a[i], a[i + 1], o[j2], o[j2 + 1]];
+        if (samePt2(p, r2) || samePt2(p, s) || samePt2(q2, r2) || samePt2(q2, s))
+          continue;
+        if (orient(p, q2, r2) * orient(p, q2, s) < 0 && orient(r2, s, p) * orient(r2, s, q2) < 0)
+          k2++;
+      }
+  return k2;
+}
+var overlapsBox = (o, x0, y0, x1, y1) => o.x < x1 && o.x + o.w > x0 && o.y < y1 && o.y + o.h > y0;
+var cornersOf = (b2, g2) => [
+  { x: b2.x - g2, y: b2.y - g2 },
+  { x: b2.x + b2.w + g2, y: b2.y - g2 },
+  { x: b2.x + b2.w + g2, y: b2.y + b2.h + g2 },
+  { x: b2.x - g2, y: b2.y + b2.h + g2 }
+];
+function detourOf(from, to, boxes, others) {
+  const s = floatingEnd(from, to);
+  const t = floatingEnd(to, from);
+  const [x0, y0, x1, y1] = [Math.min(s.x, t.x), Math.min(s.y, t.y), Math.max(s.x, t.x), Math.max(s.y, t.y)];
+  const hit2 = boxes.filter((o) => o.id !== from.id && o.id !== to.id && overlapsBox(o, x0 - 1, y0 - 1, x1 + 1, y1 + 1) && segmentHits(s, t, o, THROUGH_PAD));
+  if (!hit2.length)
+    return void 0;
+  const L2 = Math.hypot(t.x - s.x, t.y - s.y) || 1;
+  const [ux, uy] = [(t.x - s.x) / L2, (t.y - s.y) / L2];
+  const [nx, ny] = [-uy, ux];
+  const singles = [];
+  const beside = (h) => {
+    const c = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
+    const along = Math.max(0, Math.min(L2, (c.x - s.x) * ux + (c.y - s.y) * uy));
+    const off = (c.x - s.x) * nx + (c.y - s.y) * ny;
+    const ext = Math.abs(nx) * (h.w / 2) + Math.abs(ny) * (h.h / 2) + DETOUR_GAP;
+    return { along, lo: off - ext, hi: off + ext };
+  };
+  for (const h of hit2) {
+    singles.push(...cornersOf(h, DETOUR_GAP));
+    const { along, lo, hi } = beside(h);
+    for (const d of [hi, lo])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  if (hit2.length > 1) {
+    const bs = hit2.map(beside);
+    const along = bs.reduce((v2, b2) => v2 + b2.along, 0) / bs.length;
+    for (const d of [Math.max(...bs.map((b2) => b2.hi)), Math.min(...bs.map((b2) => b2.lo))])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  const pts = [s, t, ...singles];
+  const bx0 = Math.min(...pts.map((p) => p.x)) - DETOUR_GAP;
+  const by0 = Math.min(...pts.map((p) => p.y)) - DETOUR_GAP;
+  const bx1 = Math.max(...pts.map((p) => p.x)) + DETOUR_GAP;
+  const by1 = Math.max(...pts.map((p) => p.y)) + DETOUR_GAP;
+  const near = boxes.filter((o) => overlapsBox(o, bx0, by0, bx1, by1));
+  const clear = (route) => {
+    for (let i = 0; i < route.length - 1; i++)
+      for (const o of near) {
+        if (i === 0 && o.id === from.id || i === route.length - 2 && o.id === to.id)
+          continue;
+        if (segmentHits(route[i], route[i + 1], o, CLEAR_PAD))
+          return false;
+      }
+    return true;
+  };
+  const lines2 = typeof others === "function" ? others() : others;
+  let best;
+  const tryVia = (via) => {
+    const route = [floatingEndTo(from, via[0]), ...via, floatingEndTo(to, via[via.length - 1])];
+    if (!clear(route))
+      return;
+    const score = len(route) + CROSS_COST * crossingsWith(route, lines2);
+    if (!best || score < best.score - 1e-6)
+      best = { via, score };
+  };
+  for (const v2 of singles)
+    tryVia([v2]);
+  if (!best) {
+    const corners = hit2.flatMap((h) => cornersOf(h, DETOUR_GAP));
+    for (const a of corners)
+      for (const b2 of corners)
+        if (a !== b2)
+          tryVia([a, b2]);
+  }
+  return best?.via.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
 }
 function dsSeqAt(s, along = 24) {
-  const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
-  const d = Math.min(along, len / 3);
-  return { x: s.p1.x + (s.p2.x - s.p1.x) / len * d, y: s.p1.y + (s.p2.y - s.p1.y) / len * d };
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const d = Math.min(along, len2 / 3);
+  return { x: s.p1.x + (q2.x - s.p1.x) / len2 * d, y: s.p1.y + (q2.y - s.p1.y) / len2 * d };
 }
 var DS_SEQ = 22;
 function dsVerbAt(s) {
-  const len = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y) || 1;
-  const ux = (s.p2.x - s.p1.x) / len;
-  const uy = (s.p2.y - s.p1.y) / len;
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const ux = (q2.x - s.p1.x) / len2;
+  const uy = (q2.y - s.p1.y) / len2;
   let nx = -uy;
   let ny = ux;
   if (ny > 0 || ny === 0 && nx > 0)
     nx = -nx, ny = -ny;
-  const along = Math.min(24, len / 3);
-  const t = Math.max(len / 2, Math.min(len - 20, along + 44));
+  const along = Math.min(24, len2 / 3);
+  const t = Math.max(len2 / 2, Math.min(len2 - 20, along + 44));
   return { x: s.p1.x + ux * t + nx * 13, y: s.p1.y + uy * t + ny * 13 };
 }
 var wireText = (it) => it.role === "trace" ? "" : (it.label ?? it.text ?? "").trim();
@@ -62965,11 +63284,6 @@ function wireLabel(it, shape, boxes) {
   const ctl = labelControl(it.data);
   const ds = shape.ds && it.role !== "annotation-link";
   const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
-  if (shape.bend) {
-    const whole = labelLines(text3, EDGE_LABEL.maxW, font);
-    const { w: w2, h } = labelSize(whole.lines, font);
-    return { mode: whole.cut ? "cut" : "full", x: shape.bend.x, y: shape.bend.y, w: w2, h, lines: whole.lines, text: text3.replace(/\s+/g, " ").trim(), font, dragged: true };
-  }
   const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
   return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
 }
@@ -62978,30 +63292,53 @@ function planWires(b2, ids) {
   const out = /* @__PURE__ */ new Map();
   const wanted = ids ? new Set(ids) : void 0;
   const wires = Object.values(b2.items).filter((it) => it.type === "arrow" && (!wanted || wanted.has(it.id))).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
-  const obstacles = labelObstacles(b2);
+  const obstacles = labelObstacles(b2).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
   const seqOf = (it) => typeof it.data?.seq === "number" ? it.data.seq : Infinity;
-  const ds = [];
+  const bySeq = (x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1);
+  const lines2 = [];
   for (const it of wires) {
     const shape = wireShape(b2, it);
     if (!shape)
       continue;
     out.set(it.id, { shape });
-    if (shape.ds && it.role !== "annotation-link")
-      ds.push({ it, shape });
-    else
-      out.get(it.id).label = wireLabel(it, shape, obstacles);
+    if (shape.ds)
+      lines2.push({ it, shape });
   }
-  ds.sort((x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1));
+  lines2.sort(bySeq);
+  const byId = new Map(obstacles.map((o) => [o.id, o]));
+  const ends = lines2.flatMap((l) => [b2.items[l.it.from], b2.items[l.it.to]]);
+  const reach = 400;
+  const [lx0, ly0] = [Math.min(...ends.map((e) => e.x)) - reach, Math.min(...ends.map((e) => e.y)) - reach];
+  const [lx1, ly1] = [Math.max(...ends.map((e) => e.x + e.w)) + reach, Math.max(...ends.map((e) => e.y + e.h)) + reach];
+  const nearLines = lines2.length ? obstacles.filter((o) => overlapsBox(o, lx0, ly0, lx1, ly1)) : [];
+  for (const line of lines2) {
+    if (line.shape.via.length)
+      continue;
+    const from = byId.get(line.it.from) ?? { ...b2.items[line.it.from], id: line.it.from };
+    const to = byId.get(line.it.to) ?? { ...b2.items[line.it.to], id: line.it.to };
+    const via = detourOf(from, to, nearLines, () => lines2.filter((l) => l !== line).map((l) => l.shape.points));
+    if (!via)
+      continue;
+    line.shape = folded(floatingEndTo(from, via[0]), via, floatingEndTo(to, via[via.length - 1]), true, true);
+    out.get(line.it.id).shape = line.shape;
+  }
+  for (const it of wires) {
+    const planned = out.get(it.id);
+    if (planned && (!planned.shape.ds || it.role === "annotation-link"))
+      planned.label = wireLabel(it, planned.shape, obstacles);
+  }
+  const ds = lines2.filter((l) => l.it.role !== "annotation-link");
   const titles = Object.values(b2.items).filter((g2) => g2.type === "frame" && g2.data?.ds === "group" && g2.text).map((g2) => ({ x: g2.x, y: g2.y - 24, w: measure(g2.text, 13.5, 600) + 6, h: 20 }));
   const circles = [];
   for (const { it, shape } of ds) {
     if (it.role !== "activity" || typeof it.data?.seq !== "number")
       continue;
-    const len = Math.hypot(shape.p2.x - shape.p1.x, shape.p2.y - shape.p1.y);
+    const q2 = shape.points[1] ?? shape.p2;
+    const len2 = Math.hypot(q2.x - shape.p1.x, q2.y - shape.p1.y);
     const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
-    const along = (d) => ({ x: shape.p1.x + (shape.p2.x - shape.p1.x) / (len || 1) * d, y: shape.p1.y + (shape.p2.y - shape.p1.y) / (len || 1) * d });
+    const along = (d) => ({ x: shape.p1.x + (q2.x - shape.p1.x) / (len2 || 1) * d, y: shape.p1.y + (q2.y - shape.p1.y) / (len2 || 1) * d });
     let at3 = dsSeqAt(shape);
-    for (let d = Math.min(24, len / 3); d <= Math.max(24, len * 0.42); d += 8) {
+    for (let d = Math.min(24, len2 / 3); d <= Math.max(24, len2 * 0.42); d += 8) {
       const p = along(d);
       if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
         at3 = p;
@@ -63704,7 +64041,7 @@ function drawArrow(c, it) {
   let dash = "";
   let marker = "ink2";
   if (ds && it.role === "annotation-link")
-    stroke = p.ink3, dash = "5 5", marker = "";
+    stroke = p.ink2, width = 1.5, dash = "6 4", marker = "";
   else if (ds)
     stroke = p.ink, width = 1.6, marker = "ink";
   else if (it.role === "trace")
@@ -63849,7 +64186,7 @@ var LayoutError = class extends Error {
     this.status = status;
   }
 };
-var KINDS = ["clipped", "overlap", "group", "label", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
+var KINDS = ["clipped", "overlap", "group", "label", "wire-through", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
 var OVERLAP_TOL = 6;
 var CONTAINER_COVER = 25;
 var OUTSIDE_TOL = 6;
@@ -64063,20 +64400,26 @@ function checkLayout(board, opts = {}) {
         add2(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
       }
     }
+    const folds = foldsOf(w2.data);
+    if (planned && (planned.shape.ds || folds.length)) {
+      const through = runsThrough(planned.shape.points, obstacles, w2.from, w2.to);
+      if (through.length) {
+        const names = through.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        const at3 = (o) => `(${r(o.x + o.w + 40)}, ${r(o.y - 40)})`;
+        add2(w2, {
+          kind: "wire-through",
+          message: `the ${planned.shape.ds ? "line" : "wire"} ${nameOf2(a)} \u2192 ${nameOf2(z3)} runs through ${names}${folds.length ? " (where it was folded, data.bend)" : ""}`,
+          suggestion: folds.length ? `move its folds (data.bend) so it goes round ${names}, or move ${names} off it` : `move ${names} off the line, or fold the line round it (data.bend: [{ "x": \u2026, "y": \u2026 }, \u2026] on the arrow \u2014 e.g. a fold at ${at3(through[0])})`,
+          others: through.map((o) => o.id)
+        });
+      }
+    }
     const label2 = planned?.label;
     if (!label2 || !text3)
       continue;
     const what = `label "${short4(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
     if (label2.mode !== "dot")
       marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
-    if (label2.dragged) {
-      const covered = labelHits(label2.x, label2.y, label2.w, label2.h, obstacles, 0);
-      if (!covered.length)
-        continue;
-      const names = covered.slice(0, 3).map((b2) => nameOf2(shown.items[b2.id])).join(", ");
-      add2(w2, { kind: "label", message: `${what} covers ${names}: it was dragged there (data.bend)`, suggestion: "drag the label onto a free stretch of the wire, or clear data.bend so the label is placed automatically beside the wire", others: covered.map((b2) => b2.id) });
-      continue;
-    }
     if (label2.mode !== "dot" && label2.mode !== "cut")
       continue;
     const gapX = Math.max(z3.x - (a.x + a.w), a.x - (z3.x + z3.w));
@@ -64104,7 +64447,7 @@ function checkLayout(board, opts = {}) {
       if (ox <= MARK_TOL || oy <= MARK_TOL)
         continue;
       const z3 = shown.items[m2.wire.to];
-      const fix = m2.wire.data?.bend ? "drag that label onto a free stretch of its wire, or clear data.bend" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
+      const fix = foldsOf(m1.wire.data).length || foldsOf(m2.wire.data).length ? "fold one of the two wires elsewhere (data.bend) so they part, or give one label a short form in data.label.short" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
       add2(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
     }
   const paper = (it) => it.type === "frame" || it.type === "lane";
@@ -64392,9 +64735,9 @@ function createRasterizer(over = {}) {
     const res = await d.fetch(url2, { signal: AbortSignal.timeout(d.timeoutMs), redirect: "follow", headers: { "user-agent": userAgent("snapshot") } });
     if (!res.ok)
       throw new Error(`${res.status} ${res.statusText} for ${url2}`);
-    const len = Number(res.headers.get("content-length") ?? 0);
-    if (len > MAX_TARBALL)
-      throw new Error(`the tarball is ${len} bytes \u2014 too big`);
+    const len2 = Number(res.headers.get("content-length") ?? 0);
+    if (len2 > MAX_TARBALL)
+      throw new Error(`the tarball is ${len2} bytes \u2014 too big`);
     const tgz = Buffer.from(await res.arrayBuffer());
     if (tgz.length > MAX_TARBALL)
       throw new Error(`the tarball is ${tgz.length} bytes \u2014 too big`);
