@@ -1,10 +1,12 @@
 # Publish the project website (site/) to GitHub Pages on every push to main.
-# Static files, no build: the only step fills the footer's version from package.json.
+# Static files, no build and no npm install: plain node makes the release notes from CHANGELOG.md
+# (scripts/site-release-notes.mjs → site/releases/, and the home pages' "What's new"), then the footer
+# gets the version from package.json.
 name: pages
 on:
   push:
     branches: [main]
-    paths: [site/**, package.json, .github/workflows/pages.yml]
+    paths: [site/**, CHANGELOG.md, package.json, scripts/site-release-notes.mjs, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +28,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: release notes from CHANGELOG.md
+        run: node scripts/site-release-notes.mjs
       - name: stamp the version
         run: |
           set -euo pipefail
