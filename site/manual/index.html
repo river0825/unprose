@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unprose manual: install, connect your agent, run your first session</title>
+<meta name="description" content="How to use Unprose: install it, connect Claude Code, Codex or any MCP agent, run your first session on a board, and everything you can do there.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f0f1f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161b" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Unprose manual">
+<meta property="og:description" content="From installing Unprose to your first conversation with your agent on a board.">
+<meta property="og:image" content="https://river0825.github.io/unprose/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" hreflang="en" href="https://river0825.github.io/unprose/manual/">
+<link rel="alternate" hreflang="zh-Hant-TW" href="https://river0825.github.io/unprose/zh-TW/manual/">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="Unprose home"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="14" height="12" rx="2" fill="#ffb648"/><rect x="15" y="15" width="14" height="12" rx="2" fill="#7dbdff"/></svg>Unprose</a>
+    <nav class="site-nav" aria-label="Main">
+      <a class="wide" href="../#how">How it works</a>
+      <a class="wide" href="../#diagrams">Diagrams</a>
+      <a href="./" aria-current="page">Manual</a>
+      <a href="../releases/">Release notes</a>
+      <a href="https://github.com/river0825/unprose">GitHub</a>
+      <a href="../zh-TW/manual/" lang="zh-Hant-TW" hreflang="zh-Hant-TW">中文</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap manual">
+  <div class="manual-head">
+    <h1>Unprose manual</h1>
+    <p class="lede">From installing Unprose to your first conversation with your agent on a board, then the rest of what you can do there. The first four chapters take about five minutes.</p>
+  </div>
+
+  <div class="manual-body">
+    <nav class="toc" aria-labelledby="toc-title">
+      <details open>
+        <summary id="toc-title">On this page</summary>
+        <p class="toc-group">Getting started</p>
+        <ol class="toc-steps">
+          <li><a href="#pieces">How the pieces fit</a></li>
+          <li><a href="#connect">Install and connect your agent</a></li>
+          <li><a href="#first-session">Your first session</a></li>
+          <li><a href="#next">Where to go next</a></li>
+        </ol>
+        <p class="toc-group">Reference</p>
+        <ul>
+          <li><a href="#board">Working on the board</a></li>
+          <li><a href="#diagrams">Choosing a diagram</a></li>
+          <li><a href="#several-agents">Several agents on one board</a></li>
+          <li><a href="#updating">Updating</a></li>
+          <li><a href="#safety">Who can reach your canvas</a></li>
+          <li><a href="#trouble">When something goes wrong</a></li>
+        </ul>
+      </details>
+    </nav>
+
+    <div class="doc">
+
+<section id="pieces" aria-labelledby="pieces-title">
+  <h2 id="pieces-title"><span class="ch" aria-hidden="true">1</span>How the pieces fit</h2>
+  <p>Unprose has three parts. You install them once and then talk to your agent as usual.</p>
+  <dl class="parts">
+    <div><dt>The canvas</dt><dd>A small server on your machine. Its page, <code>http://localhost:4400</code>, is where you see the boards, select things and comment.</dd></div>
+    <div><dt>The <code>unprose</code> MCP server</dt><dd>Gives your agent the canvas tools: draw a diagram, read the board, wait for your comments, answer in a thread.</dd></div>
+    <div><dt>Design files</dt><dd>Each diagram is a file in your repo, <code>design/&lt;name&gt;.&lt;kind&gt;.yaml</code>. The board is drawn from it, so every change is an ordinary git diff.</dd></div>
+  </dl>
+  <p>Boards are stored with the project they belong to, in <code>&lt;project&gt;/.unprose/boards/</code>. Commit the <code>*.json</code> snapshots with your project; the change logs stay local.</p>
+  <p class="need"><strong>You need</strong> Node.js 20 or later, git, and an agent: Claude Code, Codex, or any client that speaks MCP. There is no <code>npm install</code>: the repository and the plugin ship a ready-to-run build.</p>
+</section>
+
+<section id="connect" aria-labelledby="connect-title">
+  <h2 id="connect-title"><span class="ch" aria-hidden="true">2</span>Install and connect your agent</h2>
+  <p>Pick the agent you use. Each way ends with the same check: your agent can see the canvas.</p>
+
+  <div class="picker" data-picker>
+    <div class="picker-tabs" role="tablist" aria-label="Your agent" hidden>
+      <button type="button" role="tab" id="tab-plugin" aria-controls="connect-plugin">Claude Code plugin</button>
+      <button type="button" role="tab" id="tab-claude" aria-controls="connect-claude">Claude Code, by hand</button>
+      <button type="button" role="tab" id="tab-codex" aria-controls="connect-codex">Codex</button>
+      <button type="button" role="tab" id="tab-other" aria-controls="connect-other">Other MCP clients</button>
+      <button type="button" role="tab" id="tab-remote" aria-controls="connect-remote">Another machine or the cloud</button>
+    </div>
+
+    <div class="panel" id="connect-plugin" role="tabpanel" aria-labelledby="tab-plugin">
+      <h3>Claude Code plugin</h3>
+      <p>No clone needed. The plugin adds the Unprose skill and the <code>/unprose:</code> commands, and starts the canvas for you. In Claude Code:</p>
+      <div class="code"><pre><code>/plugin marketplace add river0825/unprose
+/plugin install unprose@unprose</code></pre></div>
+      <p>Then start a new session, or run <code>/reload-plugins</code>. At the start of every session the plugin makes sure a canvas is running on <code>http://localhost:4400</code>: it starts one if nothing answers there, and restarts it on the new version after an update.</p>
+      <ul>
+        <li>A canvas you started yourself from somewhere else, or a remote one, is never touched. If its version differs you get a one-line note.</li>
+        <li>To start the canvas yourself, turn off the plugin option <code>canvas_autostart</code> in <code>/config</code> (or set <code>AWD_CANVAS_AUTOSTART=0</code>). To use another canvas, set the <code>canvas_url</code> option.</li>
+      </ul>
+      <p class="check"><strong>Check:</strong> type <code>/unprose:</code> in Claude Code. You should see the Unprose commands, starting with <code>/unprose:help</code>.</p>
+    </div>
+
+    <div class="panel" id="connect-claude" role="tabpanel" aria-labelledby="tab-claude">
+      <h3>Claude Code, by hand</h3>
+      <p>Clone Unprose and start the canvas:</p>
+      <div class="code"><pre><code>git clone https://github.com/river0825/unprose &amp;&amp; cd unprose
+node scripts/canvas.mjs</code></pre></div>
+      <p>Keep that running. In a second terminal, from the same folder, register the MCP server:</p>
+      <div class="code"><pre><code>claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"</code></pre></div>
+      <p class="check"><strong>Check:</strong> open Claude Code in any project and type <code>/mcp</code>. <code>unprose</code> should be listed as connected. If the canvas is not running, it shows as failed with <code>unprose MCP: cannot reach &lt;url&gt;</code>: start the canvas, then try again.</p>
+    </div>
+
+    <div class="panel" id="connect-codex" role="tabpanel" aria-labelledby="tab-codex">
+      <h3>Codex</h3>
+      <p>Clone Unprose and start the canvas, and keep it running:</p>
+      <div class="code"><pre><code>git clone https://github.com/river0825/unprose &amp;&amp; cd unprose
+node scripts/canvas.mjs</code></pre></div>
+      <p>Add the server to <code>~/.codex/config.toml</code>, with the absolute path of your clone:</p>
+      <div class="code"><pre><code>[mcp_servers.unprose]
+command = "node"
+args = ["/path/to/unprose/scripts/mcp.mjs"]
+env = { AWD_CANVAS_URL = "http://localhost:4400" }
+tool_timeout_sec = 1900</code></pre></div>
+      <p><code>tool_timeout_sec</code> matters: your agent waits for your comments for up to 30 minutes at a time, and Codex's default of 60 seconds cuts that short.</p>
+      <p>Codex reads project instructions from <code>AGENTS.md</code>. Copy Unprose's <a href="https://github.com/river0825/unprose/blob/main/AGENTS.md"><code>AGENTS.md</code></a> into the project you are designing, or reference it from that project's own <code>AGENTS.md</code>.</p>
+      <p class="check"><strong>Check:</strong> ask Codex <em>"What can Unprose do?"</em>. It answers from the <code>unprose_help</code> tool. The start prompts (<code>eventstorm</code>, <code>storymap</code> and the rest) are offered as MCP prompts.</p>
+    </div>
+
+    <div class="panel" id="connect-other" role="tabpanel" aria-labelledby="tab-other">
+      <h3>Other MCP clients</h3>
+      <p>Start the canvas as in the Codex tab, then add a stdio server: command <code>node</code>, argument <code>/path/to/unprose/scripts/mcp.mjs</code>, environment <code>AWD_CANVAS_URL=http://localhost:4400</code>. The JSON form most clients accept:</p>
+      <div class="code"><pre><code>{ "mcpServers": { "unprose": {
+  "command": "node",
+  "args": ["/path/to/unprose/scripts/mcp.mjs"],
+  "env": { "AWD_CANVAS_URL": "http://localhost:4400" } } } }</code></pre></div>
+      <p>Raise the client's per-request timeout if it has one; the MCP SDK's default is 60 seconds, shorter than the agent's wait for your comments. Copy <code>AGENTS.md</code> into your project if the client reads it.</p>
+      <p>An agent without MCP can still use the command line, <code>node /path/to/unprose/scripts/awd.mjs design …</code>, and the canvas's HTTP API (<a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md#http-api">docs/canvas.md</a>).</p>
+    </div>
+
+    <div class="panel" id="connect-remote" role="tabpanel" aria-labelledby="tab-remote">
+      <h3>Another machine or the cloud</h3>
+      <p>The canvas serves MCP itself at <code>https://&lt;your canvas&gt;/mcp</code>, so an agent elsewhere needs nothing installed. Make the canvas reachable first (a tunnel or a server), and set <code>UNPROSE_PUBLIC_URL</code> on it so its setup lines use that address. Then connect the agent:</p>
+      <dl class="clients">
+        <div><dt>Claude Code</dt><dd><div class="code"><pre><code>claude mcp add --transport http unprose https://canvas.example.com/mcp</code></pre></div>then <code>/mcp</code> → <strong>unprose</strong> → <strong>Authenticate</strong>.</dd></div>
+        <div><dt>claude.ai</dt><dd>Settings → Connectors → <strong>Add custom connector</strong>, URL <code>https://canvas.example.com/mcp</code> → <strong>Connect</strong>.</dd></div>
+        <div><dt>ChatGPT</dt><dd>Settings → Connectors → (developer mode) <strong>Create</strong>, MCP server URL <code>https://canvas.example.com/mcp</code>, authentication <strong>OAuth</strong>.</dd></div>
+        <div><dt>Codex</dt><dd><div class="code"><pre><code>[mcp_servers.unprose]
+url = "https://canvas.example.com/mcp"
+bearer_token_env_var = "UNPROSE_TOKEN"
+tool_timeout_sec = 1900</code></pre></div></dd></div>
+      </dl>
+      <p><strong>Let it in.</strong> When an agent connects, its browser shows a one-time <strong>pairing code</strong>, and every open canvas page shows <em>"&lt;agent&gt; wants to connect"</em>. Type the code and press <strong>Allow</strong>; on the canvas's own machine one click is enough. Or make a token yourself: board list → <strong>Agents</strong> (<code>http://localhost:4400/agents</code>) → <strong>New token</strong>, read or read-and-draw, for all projects or some. You can change its access or revoke it there at any time.</p>
+      <p>A remote agent cannot write your files. It reads them from the board and <strong>proposes</strong> edits, which the agent holding the files applies after you agree (<a href="#several-agents">Several agents on one board</a>).</p>
+      <p class="aside">The claude.ai and ChatGPT steps follow those products' connector setup and have not yet been run against a live canvas. The OAuth flow itself was tested end to end with the MCP SDK's client, the one Claude Code uses.</p>
+    </div>
+  </div>
+</section>
+
+<section id="first-session" aria-labelledby="first-title">
+  <h2 id="first-title"><span class="ch" aria-hidden="true">3</span>Your first session</h2>
+  <p>Open your agent in a project you want to design. These four steps take you from a question to a changed file.</p>
+
+  <ol class="session">
+    <li>
+      <h3>Ask your agent for a diagram</h3>
+      <p class="turn you"><span class="who">You</span>Draw an EventStorming of our signup flow in Unprose.</p>
+      <p class="turn agent"><span class="who">Agent</span>Writes <code>design/signup.es.yaml</code> in your repo, checks it, draws it on a board and gives you the link.</p>
+      <p>Not sure what to ask? In Claude Code, type <code>/unprose:</code> for the ways to start (<a href="#commands">the list</a>). In Codex and other clients, the same are MCP prompts, or ask <em>"What can Unprose do?"</em>.</p>
+    </li>
+    <li>
+      <h3>Open the board</h3>
+      <p>Go to <code>http://localhost:4400</code> and pick the board. The board list groups boards by project. In an EventStorming, events, commands, systems and policies read left to right in time.</p>
+    </li>
+    <li>
+      <h3>Point at something and ask</h3>
+      <p>Click a box, open the <strong>Chat</strong> tab in the side panel, type your question and press <strong>Ask AI</strong> (<span class="nowrap">or <kbd>⌘</kbd> <kbd>Enter</kbd></span>). You can also select several items, or nothing at all to ask about the whole board.</p>
+      <p class="turn you"><span class="who">You</span>What happens if the email never arrives?</p>
+      <figure class="shot"><a class="frame" href="../assets/manual-step3-comment.webp"><img src="../assets/manual-step3-comment.webp" width="1600" height="900" loading="lazy" alt="The command 'Send verification email' is selected; the Chat tab shows the question 'What happens if the email never arrives?' and the Ask AI button."></a></figure>
+      <p>Every message shows where it is:</p>
+      <ul class="receipts" aria-label="Message states"><li>Sent</li><li>Seen by agent</li><li>Agent is working…</li><li>Needs you</li></ul>
+    </li>
+    <li>
+      <h3>Agree, and the file changes</h3>
+      <p class="turn agent"><span class="who">Agent</span>Answers in the same thread. When a change is agreed, it updates <code>design/signup.es.yaml</code>, checks it and redraws the board. Here it added the command <em>Resend email</em>.</p>
+      <figure class="shot"><a class="frame" href="../assets/manual-step4-reply.webp"><img src="../assets/manual-step4-reply.webp" width="1600" height="900" loading="lazy" alt="The agent's reply in the thread explains that it added a 'Resend email' command and a hotspot about rate limits; the new blue command 'Resend email' is selected on the board."></a></figure>
+      <p>A redraw keeps what you moved on the board, and what you deleted stays deleted.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="next" aria-labelledby="next-title">
+  <h2 id="next-title"><span class="ch" aria-hidden="true">4</span>Where to go next</h2>
+  <ul class="next">
+    <li><strong>Decide what to build first.</strong> Run <code>/unprose:storymap</code>: the agent proposes stories from your EventStorming and cuts a first release.</li>
+    <li><strong>Turn a release into work.</strong> <code>/unprose:kanban</code> makes a kanban whose cards trace back to their stories.</li>
+    <li><strong>Talk about a screen.</strong> <code>/unprose:mockup &lt;screen&gt;</code> draws real-looking UI you can click through; <code>/unprose:wireframe &lt;page&gt;</code> a low-fi sketch.</li>
+    <li><strong>Come back later.</strong> <code>/unprose:review</code> has the agent answer every open comment on a board.</li>
+  </ul>
+  <div class="table-wrap" id="commands">
+    <table>
+      <caption>Ways to start, in Claude Code. Codex and other MCP clients get the same as MCP prompts.</caption>
+      <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>/unprose:help</code></td><td>What Unprose can do, and the command that fits your project</td></tr>
+        <tr><td><code>/unprose:eventstorm &lt;process&gt;</code></td><td>An EventStorming of a process</td></tr>
+        <tr><td><code>/unprose:domain-story &lt;process&gt;</code></td><td>A process told as a domain story: who does what with what</td></tr>
+        <tr><td><code>/unprose:storymap</code></td><td>A story map from the EventStorming, with a first release</td></tr>
+        <tr><td><code>/unprose:kanban</code></td><td>A kanban of a release's stories, traced to the story map</td></tr>
+        <tr><td><code>/unprose:mockup &lt;screen&gt;</code></td><td>A screen as real-looking UI, to discuss on the canvas</td></tr>
+        <tr><td><code>/unprose:wireframe &lt;page&gt;</code></td><td>A wireframe of a page or screen</td></tr>
+        <tr><td><code>/unprose:critique</code></td><td>Reads a domain story as a Domain Storytelling reviewer and says what to improve; changes nothing</td></tr>
+        <tr><td><code>/unprose:review</code></td><td>Answers every open comment on a board</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="board" class="ref" aria-labelledby="board-title">
+  <h2 id="board-title">Working on the board</h2>
+  <p>Press <kbd>?</kbd> on any board for the full list of keyboard shortcuts. <kbd>⌘</kbd> is <kbd>Ctrl</kbd> on Windows and Linux.</p>
+
+  <h3 id="find">Find your way</h3>
+  <ul>
+    <li><kbd>⌘</kbd> <kbd>K</kbd> (or <strong>Go to…</strong> in the header): type a few letters of a diagram's title or an item's text, then <kbd>Enter</kbd>.</li>
+    <li><kbd>1</kbd> fits the whole board; <kbd>2</kbd> brings the view back to your selection; <kbd>⌥</kbd> <kbd>←</kbd> goes back to where you were before a jump.</li>
+    <li><strong>Copy link</strong> in any item's right-click menu gives a link that opens the board on that item; a diagram frame's link opens the board fitted to it.</li>
+    <li>When the agent wants to show you something, the page says <em>"Agent wants to show you …"</em> with <strong>Go</strong> and <strong>Dismiss</strong>. Tick <strong>Follow agent</strong> to go there without being asked.</li>
+  </ul>
+
+  <h3 id="select">Select, move and add</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Do this</th><th scope="col">To</th></tr></thead>
+      <tbody>
+        <tr><td>Drag on empty paper, or inside a frame, lane or column</td><td>Select everything the box touches</td></tr>
+        <tr><td><kbd>Shift</kbd> drag, or <kbd>Shift</kbd> / <kbd>⌘</kbd> click</td><td>Add to the selection</td></tr>
+        <tr><td>Drag a frame, lane or column by its title or border</td><td>Move it with everything inside</td></tr>
+        <tr><td><kbd>Space</kbd> drag, middle-button drag, two-finger scroll</td><td>Pan the board</td></tr>
+        <tr><td>Arrow keys (<kbd>Shift</kbd> for bigger steps)</td><td>Nudge the selection</td></tr>
+        <tr><td>Double-click empty paper, or <kbd>S</kbd></td><td>Add a sticky (<kbd>T</kbd> text, <kbd>F</kbd> frame, <kbd>C</kbd> comment)</td></tr>
+        <tr><td>Double-click an item, or <kbd>Enter</kbd></td><td>Edit its text</td></tr>
+        <tr><td>Right-click or long-press</td><td>The item menu, with <strong>Annotate…</strong> and <strong>Add TODO…</strong></td></tr>
+        <tr><td><kbd>⌘</kbd> <kbd>Z</kbd> / <kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>Undo / redo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="talk">Talk to the agent</h3>
+  <p>Every chat is anchored to what you selected: one item, several, a whole diagram, or lines of a file. To ask about lines, open the <strong>Files</strong> tab, click a line number (<kbd>Shift</kbd> click to extend) and choose <strong>Comment</strong> or <strong>Ask AI</strong>. <strong>Expand</strong> opens the file in a large source view, where you can also edit it.</p>
+  <figure class="shot"><a class="frame" href="../assets/manual-source-dialog.webp"><img src="../assets/manual-source-dialog.webp" width="1600" height="851" loading="lazy" alt="The source view of design/runner-example.workflow.yaml with lines 13 to 15 selected and a comment on them: 'Should unclear also ask for steps to reproduce?', marked Sent."></a></figure>
+  <p>Your agent wakes once you stop for a moment, so a few quick moves and a comment arrive together. <strong>Hand to agent</strong> in the header sends them at once.</p>
+
+  <h3 id="proposals">Proposals: nothing changes until you agree</h3>
+  <p>The canvas never writes a file. Text you edit in the source view (<strong>Ask AI to apply</strong>), a wire you drag in a workflow, or another agent's suggested edit each becomes a <strong>proposal</strong>: a diff in the thread, signed with who made it, with <strong>Agree</strong> and <strong>Decline</strong>. After you agree, the agent that holds the files applies it, checks it and redraws; the thread says <em>"Applied to &lt;file&gt;"</em>.</p>
+  <figure class="shot narrow"><a class="frame" href="../assets/proposal.webp"><img src="../assets/proposal.webp" width="940" height="1046" loading="lazy" alt="A proposal in the board's Chat: proposed edit to design/holds.es.yaml, +3 −0, by codex-b, with the diff and the buttons Agree and Decline."></a></figure>
+
+  <h3 id="annotations">Annotations and TODOs</h3>
+  <ul>
+    <li><strong>An annotation says what an item is for.</strong> Right-click an item → <strong>Annotate…</strong>. Your words go to the agent holding the file; it checks them against the design and, if they fit, writes them into the file at once. They appear as numbered cards beside the diagram. <kbd>Shift</kbd> <kbd>A</kbd> shows or hides them.</li>
+    <li><strong>A TODO is something to confirm with someone else</strong>, such as finance or the backend team. Right-click → <strong>Add TODO…</strong>. No agent answers a TODO. When you check it off with an answer, the answer is posted as <em>"Confirmed: …"</em> and reaches the agent that answers the board, which decides whether the design changes. <kbd>Shift</kbd> <kbd>T</kbd> shows or hides them.</li>
+  </ul>
+
+  <h3 id="play">Play a story or a screen</h3>
+  <ul>
+    <li><strong>Play story</strong> on a domain story's header tells it sentence by sentence.</li>
+    <li><strong>Play</strong> on a UI mock walks through its screens. <strong>Clickable</strong> (<kbd>Shift</kbd> <kbd>G</kbd>) outlines every element a click leads from; <kbd>⌥</kbd> click follows it.</li>
+  </ul>
+
+  <h3 id="tidy">Keep a big board readable</h3>
+  <ul>
+    <li>Right-click a frame → <strong>Hide contents</strong> folds a diagram nobody uses into a strip; <strong>Show</strong> brings it back.</li>
+    <li><strong>Lock position</strong> (item menu) or <strong>Lock layout</strong> (frame menu) keeps redraws from moving things.</li>
+    <li><kbd>W</kbd> cycles the lines inside diagrams, <kbd>Shift</kbd> <kbd>W</kbd> the traces between them, <kbd>Shift</kbd> <kbd>N</kbd> the comments.</li>
+    <li><kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>C</kbd>, or <strong>Copy as image</strong> in the menu, copies the selection as a picture.</li>
+  </ul>
+</section>
+
+<section id="diagrams" class="ref" aria-labelledby="diagrams-title">
+  <h2 id="diagrams-title">Choosing a diagram</h2>
+  <p>Pick by the shape of the question. Each diagram is one file in <code>design/</code>; several can share a board, and <em>traces</em> link them.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">When you want to discuss</th><th scope="col">Use</th><th scope="col">File</th></tr></thead>
+      <tbody>
+        <tr><td>How the system behaves over time, and what does not happen and why</td><td>EventStorming</td><td><code>&lt;name&gt;.es.yaml</code></td></tr>
+        <tr><td>One concrete case of who does what with what</td><td>Domain story</td><td><code>&lt;name&gt;.domain-story.yaml</code></td></tr>
+        <tr><td>What to build first</td><td>Story map</td><td><code>&lt;name&gt;.story-map.yaml</code></td></tr>
+        <tr><td>The work, column by column</td><td>Kanban</td><td><code>&lt;name&gt;.kanban.yaml</code></td></tr>
+        <tr><td>A page or a screen</td><td>UI mock or wireframe</td><td><code>&lt;name&gt;.ui.yaml</code>, <code>&lt;name&gt;.wireframe.yaml</code></td></tr>
+        <tr><td>A person's path through a product</td><td>User journey</td><td><code>&lt;name&gt;.journey.yaml</code></td></tr>
+        <tr><td>An agent pipeline</td><td>Workflow</td><td><code>&lt;name&gt;.workflow.yaml</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A rule or a comparison ("only once per contact") is not a story: it belongs in a definition, a policy or a hotspot. The file format of each kind: <a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">docs/diagrams.md</a>.</p>
+</section>
+
+<section id="several-agents" class="ref" aria-labelledby="agents-title">
+  <h2 id="agents-title">Several agents on one board</h2>
+  <p>Claude Code on your laptop, Codex on another machine and a cloud agent can work on the same board. A few rules keep it clear who does what.</p>
+  <ul>
+    <li><strong>Give each agent a short name</strong> with <code>UNPROSE_AGENT_NAME</code>, such as <code>codex-b</code>. Its changes carry the name, and you mention it as <code>@codex-b</code>.</li>
+    <li><strong>You pick who answers.</strong> The board header's <strong>Answered by</strong> menu sends your comments to one agent, to studio, or to any. Write <code>@codex-b</code> in a comment to send that thread to one agent. If the agent is not waiting, the header says <em>"codex-b is away — your comments wait for it"</em>.</li>
+    <li><strong>One agent holds each diagram's files</strong>: the one that drew it. Only it redraws. The others propose edits, which it applies after you agree. Each frame shows its holder, for example <em>Files: team-notes · held by codex-b</em>.</li>
+    <li><strong>Hand the files over</strong> from the board panel → <strong>Hand over files</strong>, when another agent should lead.</li>
+    <li><strong>The Context note</strong> at the top of the side panel tells every agent what was discussed before it joined.</li>
+    <li><strong>Only you approve a change.</strong> Another agent's "yes" is never your consent, and agents pause after six messages in a row without you.</li>
+  </ul>
+  <p>A worked example with two machines: <a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md#two-machines-one-board">docs/agents-setup.md → Two machines, one board</a>.</p>
+</section>
+
+<section id="updating" class="ref" aria-labelledby="updating-title">
+  <h2 id="updating-title">Updating</h2>
+  <p>The version at the bottom of the canvas's left rail says <strong>update</strong> when a newer release is out. Click it for the release notes and <strong>Upgrade</strong>, which runs the right command for how you installed Unprose and restarts the canvas; the page reconnects by itself. Upgrade only works from a page opened on the canvas's own machine; through a tunnel you get the command to run instead.</p>
+  <p>From a terminal, <code>claude plugin update unprose@unprose</code> works too: a canvas started by the plugin notices the new version within about ten seconds and restarts on it. A clone updates with <code>git pull</code>. What changed in each version: <a href="../releases/">release notes</a>.</p>
+</section>
+
+<section id="safety" class="ref" aria-labelledby="safety-title">
+  <h2 id="safety-title">Who can reach your canvas</h2>
+  <p>On its own machine (<code>http://localhost…</code>) the canvas needs no sign-in. Everything that comes from elsewhere, through a tunnel or the local network, needs a token or a browser signed in with a pairing code. Tokens are stored only as hashes, in <code>~/.awd/agents.json</code>. Upgrading, registering projects and moving boards work only on the machine itself.</p>
+</section>
+
+<section id="trouble" class="ref" aria-labelledby="trouble-title">
+  <h2 id="trouble-title">When something goes wrong</h2>
+  <dl class="faq">
+    <div><dt><code>/mcp</code> shows <code>unprose</code> as failed: <em>cannot reach &lt;url&gt;</em></dt><dd>The canvas is not running, or <code>AWD_CANVAS_URL</code> points elsewhere. Start it with <code>node scripts/canvas.mjs</code> in your clone, or let the plugin start it, and check the address.</dd></div>
+    <div><dt>Codex stops waiting for comments after a minute</dt><dd>Set <code>tool_timeout_sec = 1900</code> in its <code>[mcp_servers.unprose]</code> table. If a client gives up anyway, nothing breaks: the agent waits again from where it was.</dd></div>
+    <div><dt>Claude Code over the remote <code>/mcp</code> stops waiting after five minutes</dt><dd>Its idle limit, <code>CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT</code>, ends quiet calls. Raise it.</dd></div>
+    <div><dt>A script of your own gets HTTP 403 through a Cloudflare tunnel</dt><dd>Cloudflare blocks requests without a <code>User-Agent</code> or with a script's default one before they reach the canvas. Send your own, such as <code>curl -A "my-agent/1.0"</code>. Unprose's own clients already do.</dd></div>
+    <div><dt>The plugin says a canvas is already running, <em>not started by the plugin</em></dt><dd>You started that canvas yourself, so the plugin leaves it alone. Restart it to get the new version.</dd></div>
+    <div><dt>The header says <em>"&lt;agent&gt; is away"</em></dt><dd>That agent is not waiting on the board, so your comments queue for it. Ask it, in its own session, to look at the board, or pick another agent under <strong>Answered by</strong>.</dd></div>
+  </dl>
+  <p>Still stuck, or missing something? Press <kbd>?</kbd> on a board → <strong>Report a problem</strong> or <strong>Suggest a feature</strong>. It opens a GitHub issue with your version filled in; you check it and submit it yourself, and the canvas never posts anything. Issues are public, so leave out board content. Or go straight to <a href="https://github.com/river0825/unprose/issues/new/choose">GitHub issues</a>.</p>
+</section>
+
+<section class="ref more" aria-labelledby="more-title">
+  <h2 id="more-title">Further reading</h2>
+  <ul>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">Agent setup</a>: every client, remote canvases, waiting cheaply</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">Diagrams</a>: the file format of each kind</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">Canvas and MCP tools</a>: every tool, the HTTP API, remote agents</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/studio.md">Studio</a>: always-on agent sessions behind <strong>Ask AI</strong></li>
+  </ul>
+</section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap foot">
+    <div>
+      <a class="brand" href="../"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="14" height="12" rx="2" fill="#ffb648"/><rect x="15" y="15" width="14" height="12" rx="2" fill="#7dbdff"/></svg>Unprose</a>
+      <p style="margin-top:10px">A shared board for designing with AI agents. Open source under the <a href="https://github.com/river0825/unprose/blob/main/LICENSE">Apache-2.0</a> license.</p>
+      <p><a href="../zh-TW/manual/" lang="zh-Hant-TW" hreflang="zh-Hant-TW">繁體中文版</a></p>
+    </div>
+    <nav aria-label="Documentation">
+      <h2>Docs</h2>
+      <ul>
+        <li><a href="./">Manual</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">Agent setup</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">Diagrams</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">Canvas and MCP tools</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Project">
+      <h2>Project</h2>
+      <ul>
+        <li><a href="https://github.com/river0825/unprose">GitHub</a></li>
+        <li><a href="../releases/">Release notes</a><span data-version></span></li>
+        <li><a href="https://github.com/river0825/unprose/issues/new/choose">Report a problem</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>
+<script src="../assets/manual.js"></script>
+</body>
+</html>

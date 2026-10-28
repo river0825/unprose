@@ -255,6 +255,7 @@ ${v.intro.length ? `<div class="rn-intro">${renderBlocks(v.intro)}</div>\n` : ''
     <a class="brand" href="../">${LOGO}Unprose</a>
     <nav class="site-nav" aria-label="Main">
       <a href="../#start">Get started</a>
+      <a href="../manual/">Manual</a>
       <a href="./" aria-current="page">Release notes</a>
       <a href="${REPO}">GitHub</a>
       <a href="../zh-TW/" lang="zh-Hant-TW" hreflang="zh-Hant-TW">中文</a>

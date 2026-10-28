@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           v="$(node -p "require('./package.json').version")"
-          for f in site/index.html site/zh-TW/index.html; do
+          for f in site/index.html site/zh-TW/index.html site/manual/index.html site/zh-TW/manual/index.html; do
             sed -i "s#<span data-version></span>#<span data-version> · v$v</span>#" "$f"
           done
       - uses: actions/configure-pages@v5

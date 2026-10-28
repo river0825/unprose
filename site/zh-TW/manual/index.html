@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unprose 使用說明：安裝、連接 agent、第一次 session</title>
+<meta name="description" content="Unprose 使用說明：安裝、連接 Claude Code、Codex 或任何 MCP agent、在 board 上進行第一次 session，以及 board 上能做的所有事。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f0f1f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161b" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Unprose 使用說明">
+<meta property="og:description" content="從安裝 Unprose，到第一次和 agent 在 board 上討論。">
+<meta property="og:image" content="https://river0825.github.io/unprose/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" hreflang="en" href="https://river0825.github.io/unprose/manual/">
+<link rel="alternate" hreflang="zh-Hant-TW" href="https://river0825.github.io/unprose/zh-TW/manual/">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到內容</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="Unprose 首頁"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="14" height="12" rx="2" fill="#ffb648"/><rect x="15" y="15" width="14" height="12" rx="2" fill="#7dbdff"/></svg>Unprose</a>
+    <nav class="site-nav" aria-label="主選單">
+      <a class="wide" href="../#how">怎麼運作</a>
+      <a class="wide" href="../#diagrams">支援的圖</a>
+      <a href="./" aria-current="page">使用說明</a>
+      <a href="../../releases/">更新說明</a>
+      <a href="https://github.com/river0825/unprose">GitHub</a>
+      <a href="../../manual/" lang="en" hreflang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap manual">
+  <div class="manual-head">
+    <h1>Unprose 使用說明</h1>
+    <p class="lede">從安裝 Unprose，到第一次和 agent 在 board 上討論，再到 board 上其他能做的事。前四章大約五分鐘。</p>
+  </div>
+
+  <div class="manual-body">
+    <nav class="toc" aria-labelledby="toc-title">
+      <details open>
+        <summary id="toc-title">本頁內容</summary>
+        <p class="toc-group">開始使用</p>
+        <ol class="toc-steps">
+          <li><a href="#pieces">各部分怎麼搭在一起</a></li>
+          <li><a href="#connect">安裝並連接你的 agent</a></li>
+          <li><a href="#first-session">第一次 session</a></li>
+          <li><a href="#next">接下來可以做什麼</a></li>
+        </ol>
+        <p class="toc-group">參考</p>
+        <ul>
+          <li><a href="#board">在 board 上操作</a></li>
+          <li><a href="#diagrams">選哪一種圖</a></li>
+          <li><a href="#several-agents">同一張 board 上的多個 agent</a></li>
+          <li><a href="#updating">更新</a></li>
+          <li><a href="#safety">誰能連到你的 canvas</a></li>
+          <li><a href="#trouble">出問題時</a></li>
+        </ul>
+      </details>
+    </nav>
+
+    <div class="doc">
+
+<section id="pieces" aria-labelledby="pieces-title">
+  <h2 id="pieces-title"><span class="ch" aria-hidden="true">1</span>各部分怎麼搭在一起</h2>
+  <p>Unprose 由三個部分組成。裝好一次之後，照平常的方式跟你的 agent 對話就好。</p>
+  <dl class="parts">
+    <div><dt>Canvas</dt><dd>在你電腦上跑的小型 server。它的頁面 <code>http://localhost:4400</code> 就是你看 board、選取東西、留言的地方。</dd></div>
+    <div><dt><code>unprose</code> MCP server</dt><dd>讓你的 agent 能使用 canvas 的工具：畫圖、讀 board、等你留言、在對話串裡回答。</dd></div>
+    <div><dt>設計檔</dt><dd>每張圖都是 repo 裡的一個檔案：<code>design/&lt;name&gt;.&lt;kind&gt;.yaml</code>。Board 依照它畫出來，所以每次修改都是一般的 git diff。</dd></div>
+  </dl>
+  <p>Board 存在它所屬的專案裡：<code>&lt;專案&gt;/.unprose/boards/</code>。把 <code>*.json</code> 快照跟專案一起 commit；變更紀錄只留在本機。</p>
+  <p class="need"><strong>你需要</strong> Node.js 20 以上、git，以及一個 agent：Claude Code、Codex，或任何支援 MCP 的 client。不用 <code>npm install</code>：repo 和 plugin 都附有可直接執行的 build。</p>
+</section>
+
+<section id="connect" aria-labelledby="connect-title">
+  <h2 id="connect-title"><span class="ch" aria-hidden="true">2</span>安裝並連接你的 agent</h2>
+  <p>選你用的 agent。每一種方式最後都做同一件檢查：你的 agent 看得到 canvas。</p>
+
+  <div class="picker" data-picker>
+    <div class="picker-tabs" role="tablist" aria-label="你的 agent" hidden>
+      <button type="button" role="tab" id="tab-plugin" aria-controls="connect-plugin">Claude Code plugin</button>
+      <button type="button" role="tab" id="tab-claude" aria-controls="connect-claude">Claude Code（手動）</button>
+      <button type="button" role="tab" id="tab-codex" aria-controls="connect-codex">Codex</button>
+      <button type="button" role="tab" id="tab-other" aria-controls="connect-other">其他 MCP client</button>
+      <button type="button" role="tab" id="tab-remote" aria-controls="connect-remote">另一台電腦或雲端</button>
+    </div>
+
+    <div class="panel" id="connect-plugin" role="tabpanel" aria-labelledby="tab-plugin">
+      <h3>Claude Code plugin</h3>
+      <p>不用 clone。Plugin 會加入 Unprose skill 和 <code>/unprose:</code> 指令，並幫你啟動 canvas。在 Claude Code 裡輸入：</p>
+      <div class="code"><pre><code>/plugin marketplace add river0825/unprose
+/plugin install unprose@unprose</code></pre></div>
+      <p>接著開一個新的 session，或執行 <code>/reload-plugins</code>。每次 session 開始時，plugin 會確認 <code>http://localhost:4400</code> 有 canvas 在跑：沒有回應就啟動一個，更新後會用新版本重啟。</p>
+      <ul>
+        <li>你從別處自己啟動的 canvas，或遠端的 canvas，一律不動。版本不同時只會提示一行。</li>
+        <li>想自己啟動 canvas，在 <code>/config</code> 關掉 plugin 選項 <code>canvas_autostart</code>（或設 <code>AWD_CANVAS_AUTOSTART=0</code>）。要連到別的 canvas，設 <code>canvas_url</code> 選項。</li>
+      </ul>
+      <p class="check"><strong>檢查：</strong>在 Claude Code 輸入 <code>/unprose:</code>，應該會看到 Unprose 的指令，第一個是 <code>/unprose:help</code>。</p>
+    </div>
+
+    <div class="panel" id="connect-claude" role="tabpanel" aria-labelledby="tab-claude">
+      <h3>Claude Code（手動）</h3>
+      <p>Clone Unprose 並啟動 canvas：</p>
+      <div class="code"><pre><code>git clone https://github.com/river0825/unprose &amp;&amp; cd unprose
+node scripts/canvas.mjs</code></pre></div>
+      <p>讓它繼續跑著。在同一個資料夾開第二個終端機，註冊 MCP server：</p>
+      <div class="code"><pre><code>claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scripts/mcp.mjs"</code></pre></div>
+      <p class="check"><strong>檢查：</strong>在任何專案打開 Claude Code，輸入 <code>/mcp</code>，<code>unprose</code> 應該顯示為已連線。Canvas 沒在跑的話，它會顯示失敗並附上 <code>unprose MCP: cannot reach &lt;url&gt;</code>：先啟動 canvas 再試一次。</p>
+    </div>
+
+    <div class="panel" id="connect-codex" role="tabpanel" aria-labelledby="tab-codex">
+      <h3>Codex</h3>
+      <p>Clone Unprose、啟動 canvas，讓它繼續跑著：</p>
+      <div class="code"><pre><code>git clone https://github.com/river0825/unprose &amp;&amp; cd unprose
+node scripts/canvas.mjs</code></pre></div>
+      <p>把 server 加到 <code>~/.codex/config.toml</code>，路徑填你 clone 下來的絕對路徑：</p>
+      <div class="code"><pre><code>[mcp_servers.unprose]
+command = "node"
+args = ["/path/to/unprose/scripts/mcp.mjs"]
+env = { AWD_CANVAS_URL = "http://localhost:4400" }
+tool_timeout_sec = 1900</code></pre></div>
+      <p><code>tool_timeout_sec</code> 很重要：agent 每次會等你的留言最多 30 分鐘，Codex 預設的 60 秒會把它中途切斷。</p>
+      <p>Codex 從 <code>AGENTS.md</code> 讀專案指示。把 Unprose 的 <a href="https://github.com/river0825/unprose/blob/main/AGENTS.md"><code>AGENTS.md</code></a> 複製到你要設計的專案，或在那個專案自己的 <code>AGENTS.md</code> 裡引用它。</p>
+      <p class="check"><strong>檢查：</strong>問 Codex「Unprose 能做什麼？」，它會用 <code>unprose_help</code> 工具回答。開始用的提示（<code>eventstorm</code>、<code>storymap</code> 等）以 MCP prompt 的形式提供。</p>
+    </div>
+
+    <div class="panel" id="connect-other" role="tabpanel" aria-labelledby="tab-other">
+      <h3>其他 MCP client</h3>
+      <p>照 Codex 分頁啟動 canvas，再加一個 stdio server：指令 <code>node</code>，參數 <code>/path/to/unprose/scripts/mcp.mjs</code>，環境變數 <code>AWD_CANVAS_URL=http://localhost:4400</code>。大多數 client 接受的 JSON 格式：</p>
+      <div class="code"><pre><code>{ "mcpServers": { "unprose": {
+  "command": "node",
+  "args": ["/path/to/unprose/scripts/mcp.mjs"],
+  "env": { "AWD_CANVAS_URL": "http://localhost:4400" } } } }</code></pre></div>
+      <p>如果 client 有單次請求的逾時設定，把它調高：MCP SDK 預設 60 秒，比 agent 等你留言的時間短。Client 會讀 <code>AGENTS.md</code> 的話，也把它複製到你的專案。</p>
+      <p>不支援 MCP 的 agent 仍然可以用命令列 <code>node /path/to/unprose/scripts/awd.mjs design …</code> 和 canvas 的 HTTP API（<a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md#http-api">docs/canvas.md</a>，英文）。</p>
+    </div>
+
+    <div class="panel" id="connect-remote" role="tabpanel" aria-labelledby="tab-remote">
+      <h3>另一台電腦或雲端</h3>
+      <p>Canvas 自己就在 <code>https://&lt;你的 canvas&gt;/mcp</code> 提供 MCP，別處的 agent 不用安裝任何東西。先讓 canvas 能從外面連到（tunnel 或 server），並在 canvas 上設 <code>UNPROSE_PUBLIC_URL</code>，讓它顯示的設定指令用這個網址。接著連接 agent：</p>
+      <dl class="clients">
+        <div><dt>Claude Code</dt><dd><div class="code"><pre><code>claude mcp add --transport http unprose https://canvas.example.com/mcp</code></pre></div>再到 <code>/mcp</code> → <strong>unprose</strong> → <strong>Authenticate</strong>。</dd></div>
+        <div><dt>claude.ai</dt><dd>Settings → Connectors → <strong>Add custom connector</strong>，URL 填 <code>https://canvas.example.com/mcp</code> → <strong>Connect</strong>。</dd></div>
+        <div><dt>ChatGPT</dt><dd>Settings → Connectors →（developer mode）<strong>Create</strong>，MCP server URL 填 <code>https://canvas.example.com/mcp</code>，驗證方式選 <strong>OAuth</strong>。</dd></div>
+        <div><dt>Codex</dt><dd><div class="code"><pre><code>[mcp_servers.unprose]
+url = "https://canvas.example.com/mcp"
+bearer_token_env_var = "UNPROSE_TOKEN"
+tool_timeout_sec = 1900</code></pre></div></dd></div>
+      </dl>
+      <p><strong>讓它進來。</strong>Agent 連線時，它的瀏覽器會顯示一次性的<strong>配對碼</strong>，每個開著的 canvas 頁面都會出現「&lt;agent&gt; wants to connect」。輸入配對碼、按 <strong>Allow</strong>；在 canvas 所在的電腦上按一下就好。也可以自己建 token：board 列表 → <strong>Agents</strong>（<code>http://localhost:4400/agents</code>）→ <strong>New token</strong>，選唯讀或可讀可畫、全部專案或部分專案。之後隨時可以在那裡改權限或撤銷。</p>
+      <p>遠端 agent 不能寫你的檔案。它從 board 讀檔案，然後<strong>提出修改</strong>，等你同意後由持有檔案的 agent 套用（見<a href="#several-agents">同一張 board 上的多個 agent</a>）。</p>
+      <p class="aside">claude.ai 和 ChatGPT 的步驟照這兩個產品的 connector 設定方式寫成，還沒有對真實的 canvas 實際跑過。OAuth 流程本身已用 MCP SDK 的 client（Claude Code 用的就是它）完整測試過。</p>
+    </div>
+  </div>
+</section>
+
+<section id="first-session" aria-labelledby="first-title">
+  <h2 id="first-title"><span class="ch" aria-hidden="true">3</span>第一次 session</h2>
+  <p>在你想設計的專案裡打開 agent。下面四步，從一個問題走到檔案被修改。</p>
+
+  <ol class="session">
+    <li>
+      <h3>請 agent 畫一張圖</h3>
+      <p class="turn you"><span class="who">你</span>在 Unprose 上畫一張我們註冊流程的 EventStorming。</p>
+      <p class="turn agent"><span class="who">Agent</span>在你的 repo 寫出 <code>design/signup.es.yaml</code>、檢查、畫到 board 上，然後給你連結。</p>
+      <p>不知道要問什麼？在 Claude Code 輸入 <code>/unprose:</code>，會列出開始的方式（<a href="#commands">完整列表</a>）。在 Codex 和其他 client 裡，同樣的東西是 MCP prompt，或直接問「Unprose 能做什麼？」。</p>
+    </li>
+    <li>
+      <h3>打開 board</h3>
+      <p>到 <code>http://localhost:4400</code> 選那張 board。Board 列表依專案分組。EventStorming 裡的 event、command、system、policy 依時間由左往右排。</p>
+    </li>
+    <li>
+      <h3>指著某個東西發問</h3>
+      <p>點一個方塊，打開側邊欄的 <strong>Chat</strong> 分頁，輸入問題，按 <strong>Ask AI</strong>（<span class="nowrap">或 <kbd>⌘</kbd> <kbd>Enter</kbd></span>）。也可以選好幾個項目，或什麼都不選，針對整張 board 發問。</p>
+      <p class="turn you"><span class="who">你</span>如果驗證信一直沒收到會怎樣？</p>
+      <figure class="shot"><a class="frame" href="../../assets/manual-step3-comment.webp"><img src="../../assets/manual-step3-comment.webp" width="1600" height="900" loading="lazy" alt="選取了 command「Send verification email」，Chat 分頁裡輸入了問題「What happens if the email never arrives?」，旁邊是 Ask AI 按鈕。"></a><figcaption>畫面內容為英文示範。</figcaption></figure>
+      <p>每則訊息都會顯示目前狀態：</p>
+      <ul class="receipts" aria-label="訊息狀態" lang="en"><li>Sent</li><li>Seen by agent</li><li>Agent is working…</li><li>Needs you</li></ul>
+    </li>
+    <li>
+      <h3>你同意了，檔案才改</h3>
+      <p class="turn agent"><span class="who">Agent</span>在同一個對話串回答。修改談定之後，它更新 <code>design/signup.es.yaml</code>、檢查、重畫 board。這裡它加了 command <em>Resend email</em>。</p>
+      <figure class="shot"><a class="frame" href="../../assets/manual-step4-reply.webp"><img src="../../assets/manual-step4-reply.webp" width="1600" height="900" loading="lazy" alt="Agent 在對話串裡說明它加了「Resend email」command 和一個關於發送頻率的 hotspot；board 上新的藍色 command「Resend email」被選取。"></a></figure>
+      <p>重畫會保留你在 board 上移動過的位置，你刪掉的東西也不會回來。</p>
+    </li>
+  </ol>
+</section>
+
+<section id="next" aria-labelledby="next-title">
+  <h2 id="next-title"><span class="ch" aria-hidden="true">4</span>接下來可以做什麼</h2>
+  <ul class="next">
+    <li><strong>決定先做什麼。</strong>執行 <code>/unprose:storymap</code>：agent 從你的 EventStorming 提出 story，並切出第一個 release。</li>
+    <li><strong>把 release 變成工作。</strong><code>/unprose:kanban</code> 做出一張 kanban，每張卡都連回它的 story。</li>
+    <li><strong>討論一個畫面。</strong><code>/unprose:mockup &lt;畫面&gt;</code> 畫出可以點著走的擬真 UI；<code>/unprose:wireframe &lt;頁面&gt;</code> 畫低擬真草圖。</li>
+    <li><strong>晚點再回來。</strong><code>/unprose:review</code> 讓 agent 回答 board 上每一則還沒回的留言。</li>
+  </ul>
+  <div class="table-wrap" id="commands">
+    <table>
+      <caption>Claude Code 裡開始的方式。Codex 和其他 MCP client 以 MCP prompt 的形式取得同樣的內容。</caption>
+      <thead><tr><th scope="col">指令</th><th scope="col">做什麼</th></tr></thead>
+      <tbody>
+        <tr><td><code>/unprose:help</code></td><td>Unprose 能做什麼，以及適合你專案的指令</td></tr>
+        <tr><td><code>/unprose:eventstorm &lt;流程&gt;</code></td><td>一個流程的 EventStorming</td></tr>
+        <tr><td><code>/unprose:domain-story &lt;流程&gt;</code></td><td>把流程講成 domain story：誰用什麼做了什麼</td></tr>
+        <tr><td><code>/unprose:storymap</code></td><td>從 EventStorming 做出 story map，含第一個 release</td></tr>
+        <tr><td><code>/unprose:kanban</code></td><td>一個 release 的 story 做成 kanban，連回 story map</td></tr>
+        <tr><td><code>/unprose:mockup &lt;畫面&gt;</code></td><td>擬真 UI 畫面，在 canvas 上討論</td></tr>
+        <tr><td><code>/unprose:wireframe &lt;頁面&gt;</code></td><td>頁面或畫面的 wireframe</td></tr>
+        <tr><td><code>/unprose:critique</code></td><td>以 Domain Storytelling 審閱者的角度讀 domain story，說哪裡可以改進；不做任何修改</td></tr>
+        <tr><td><code>/unprose:review</code></td><td>回答 board 上每一則還沒回的留言</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="board" class="ref" aria-labelledby="board-title">
+  <h2 id="board-title">在 board 上操作</h2>
+  <p>在任何 board 按 <kbd>?</kbd> 可以看完整的鍵盤快捷鍵（英文）。Windows 和 Linux 上 <kbd>⌘</kbd> 是 <kbd>Ctrl</kbd>。介面目前是英文，下面的按鈕名稱照畫面上的寫。</p>
+
+  <h3 id="find">找到你要的地方</h3>
+  <ul>
+    <li><kbd>⌘</kbd> <kbd>K</kbd>（或標題列的 <strong>Go to…</strong>）：輸入圖的標題或項目文字的幾個字，按 <kbd>Enter</kbd>。</li>
+    <li><kbd>1</kbd> 顯示整張 board；<kbd>2</kbd> 把畫面帶回你選取的東西；<kbd>⌥</kbd> <kbd>←</kbd> 回到跳轉前的位置。</li>
+    <li>任何項目的右鍵選單裡有 <strong>Copy link</strong>，連結會打開 board 並停在那個項目；圖框的連結會把畫面縮放到整個圖框。</li>
+    <li>Agent 想讓你看某個東西時，頁面會出現「Agent wants to show you …」，附 <strong>Go</strong> 和 <strong>Dismiss</strong>。勾選 <strong>Follow agent</strong> 就會直接跳過去，不再詢問。</li>
+  </ul>
+
+  <h3 id="select">選取、移動、新增</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">這樣做</th><th scope="col">結果</th></tr></thead>
+      <tbody>
+        <tr><td>在空白處、或圖框／lane／欄位裡面拖曳</td><td>選取框碰到的所有東西</td></tr>
+        <tr><td><kbd>Shift</kbd> 拖曳，或 <kbd>Shift</kbd>／<kbd>⌘</kbd> 點擊</td><td>加進目前的選取</td></tr>
+        <tr><td>拖曳圖框、lane 或欄位的標題或邊框</td><td>連同裡面的東西一起移動</td></tr>
+        <tr><td><kbd>Space</kbd> 拖曳、滑鼠中鍵拖曳、雙指捲動</td><td>平移 board</td></tr>
+        <tr><td>方向鍵（加 <kbd>Shift</kbd> 移得更多）</td><td>微調選取的位置</td></tr>
+        <tr><td>在空白處點兩下，或 <kbd>S</kbd></td><td>新增便利貼（<kbd>T</kbd> 文字、<kbd>F</kbd> 圖框、<kbd>C</kbd> 留言）</td></tr>
+        <tr><td>點兩下項目，或 <kbd>Enter</kbd></td><td>編輯文字</td></tr>
+        <tr><td>右鍵或長按</td><td>項目選單，裡面有 <strong>Annotate…</strong> 和 <strong>Add TODO…</strong></td></tr>
+        <tr><td><kbd>⌘</kbd> <kbd>Z</kbd>／<kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>復原／重做</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="talk">和 agent 對話</h3>
+  <p>每段對話都綁在你選取的東西上：一個項目、好幾個、整張圖，或檔案裡的幾行。要針對某幾行發問，打開 <strong>Files</strong> 分頁，點行號（<kbd>Shift</kbd> 點擊延伸範圍），再選 <strong>Comment</strong> 或 <strong>Ask AI</strong>。<strong>Expand</strong> 會用大的原始碼視窗打開檔案，在那裡也能編輯。</p>
+  <figure class="shot"><a class="frame" href="../../assets/manual-source-dialog.webp"><img src="../../assets/manual-source-dialog.webp" width="1600" height="851" loading="lazy" alt="design/runner-example.workflow.yaml 的原始碼視窗，選取了第 13 到 15 行，旁邊有一則留言「Should unclear also ask for steps to reproduce?」，狀態為 Sent。"></a></figure>
+  <p>你停下來一會兒，agent 才會被叫醒，所以幾個快速的移動和一則留言會一起送到。標題列的 <strong>Hand to agent</strong> 會立刻送出。</p>
+
+  <h3 id="proposals">提案：你同意之前什麼都不會改</h3>
+  <p>Canvas 從不寫檔案。你在原始碼視窗改的文字（<strong>Ask AI to apply</strong>）、你在 workflow 裡拖的連線、另一個 agent 建議的修改，都會變成一個<strong>提案</strong>：對話串裡的一段 diff，標明是誰提的，附 <strong>Agree</strong> 和 <strong>Decline</strong>。你同意之後，持有檔案的 agent 套用、檢查、重畫；對話串會出現「Applied to &lt;file&gt;」。</p>
+  <figure class="shot narrow"><a class="frame" href="../../assets/proposal.webp"><img src="../../assets/proposal.webp" width="940" height="1046" loading="lazy" alt="Board Chat 裡的一個提案：codex-b 對 design/holds.es.yaml 提出的修改，+3 −0，附 diff 和 Agree、Decline 按鈕。"></a></figure>
+
+  <h3 id="annotations">註解與 TODO</h3>
+  <ul>
+    <li><strong>註解說明一個項目是做什麼用的。</strong>在項目上按右鍵 → <strong>Annotate…</strong>。你寫的內容會送到持有檔案的 agent；它對照設計檢查，合理的話立刻寫進檔案，在圖旁邊顯示成編號卡片。<kbd>Shift</kbd> <kbd>A</kbd> 切換顯示。</li>
+    <li><strong>TODO 是要跟別人確認的事</strong>，例如財務或後端團隊。右鍵 → <strong>Add TODO…</strong>。沒有 agent 會回答 TODO。你勾掉它並填上答案時，答案會以「Confirmed: …」貼進對話串，送到負責回答這張 board 的 agent，由它判斷設計要不要改。<kbd>Shift</kbd> <kbd>T</kbd> 切換顯示。</li>
+  </ul>
+
+  <h3 id="play">播放 story 或畫面</h3>
+  <ul>
+    <li>Domain story 標題上的 <strong>Play story</strong> 會一句一句把它講出來。</li>
+    <li>UI mock 上的 <strong>Play</strong> 會依序走過各個畫面。<strong>Clickable</strong>（<kbd>Shift</kbd> <kbd>G</kbd>）框出每個點了會跳轉的元素；<kbd>⌥</kbd> 點擊會跟著跳過去。</li>
+  </ul>
+
+  <h3 id="tidy">讓大 board 保持好讀</h3>
+  <ul>
+    <li>在圖框上按右鍵 → <strong>Hide contents</strong>，把沒人在用的圖收成一條；按 <strong>Show</strong> 展開。</li>
+    <li><strong>Lock position</strong>（項目選單）或 <strong>Lock layout</strong>（圖框選單）讓重畫不會移動它們。</li>
+    <li><kbd>W</kbd> 切換圖內的連線，<kbd>Shift</kbd> <kbd>W</kbd> 切換圖與圖之間的 trace，<kbd>Shift</kbd> <kbd>N</kbd> 切換留言。</li>
+    <li><kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>C</kbd>，或選單裡的 <strong>Copy as image</strong>，把選取的東西複製成圖片。</li>
+  </ul>
+</section>
+
+<section id="diagrams" class="ref" aria-labelledby="diagrams-title">
+  <h2 id="diagrams-title">選哪一種圖</h2>
+  <p>依問題的形狀來選。每張圖是 <code>design/</code> 裡的一個檔案；好幾張可以放在同一張 board 上，用 <em>trace</em> 連起來。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">你想討論的是</th><th scope="col">用</th><th scope="col">檔案</th></tr></thead>
+      <tbody>
+        <tr><td>系統隨時間怎麼運作，以及什麼不會發生、為什麼</td><td>EventStorming</td><td><code>&lt;name&gt;.es.yaml</code></td></tr>
+        <tr><td>一個具體案例：誰用什麼做了什麼</td><td>Domain story</td><td><code>&lt;name&gt;.domain-story.yaml</code></td></tr>
+        <tr><td>先做什麼</td><td>Story map</td><td><code>&lt;name&gt;.story-map.yaml</code></td></tr>
+        <tr><td>手上的工作，一欄一欄</td><td>Kanban</td><td><code>&lt;name&gt;.kanban.yaml</code></td></tr>
+        <tr><td>一個頁面或畫面</td><td>UI mock 或 wireframe</td><td><code>&lt;name&gt;.ui.yaml</code>、<code>&lt;name&gt;.wireframe.yaml</code></td></tr>
+        <tr><td>一個人使用產品的歷程</td><td>User journey</td><td><code>&lt;name&gt;.journey.yaml</code></td></tr>
+        <tr><td>一條 agent pipeline</td><td>Workflow</td><td><code>&lt;name&gt;.workflow.yaml</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>規則或比較（「每個聯絡人只能一次」）不是 story：它屬於 definition、policy 或 hotspot。各種圖的檔案格式：<a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">docs/diagrams.md</a>（英文）。</p>
+</section>
+
+<section id="several-agents" class="ref" aria-labelledby="agents-title">
+  <h2 id="agents-title">同一張 board 上的多個 agent</h2>
+  <p>你筆電上的 Claude Code、另一台電腦上的 Codex、雲端的 agent，可以在同一張 board 上工作。幾條規則讓誰做什麼保持清楚。</p>
+  <ul>
+    <li><strong>給每個 agent 一個短名字</strong>：用 <code>UNPROSE_AGENT_NAME</code>，例如 <code>codex-b</code>。它的修改會標上這個名字，你用 <code>@codex-b</code> 提到它。</li>
+    <li><strong>由你決定誰回答。</strong>Board 標題列的 <strong>Answered by</strong> 選單決定你的留言送給哪個 agent、studio，或任何一個。在留言裡寫 <code>@codex-b</code>，就把這個對話串交給那個 agent。它沒在等的時候，標題列會顯示「codex-b is away — your comments wait for it」。</li>
+    <li><strong>每張圖的檔案由一個 agent 持有</strong>：畫出它的那一個。只有它能重畫。其他 agent 提出修改，等你同意後由它套用。每個圖框都會顯示持有者，例如 <em>Files: team-notes · held by codex-b</em>。</li>
+    <li>要換另一個 agent 主導時，從 board 側欄 → <strong>Hand over files</strong> <strong>把檔案交出去</strong>。</li>
+    <li>側欄最上方的 <strong>Context 筆記</strong>告訴每個 agent 它加入前討論過什麼。</li>
+    <li><strong>只有你能核准修改。</strong>另一個 agent 說「好」永遠不等於你的同意；agent 之間在沒有你的情況下連續六則訊息就會暫停。</li>
+  </ul>
+  <p>兩台電腦的完整範例：<a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md#two-machines-one-board">docs/agents-setup.md → Two machines, one board</a>（英文）。</p>
+</section>
+
+<section id="updating" class="ref" aria-labelledby="updating-title">
+  <h2 id="updating-title">更新</h2>
+  <p>有新版本時，canvas 左側欄底部的版本號會顯示 <strong>update</strong>。點它會看到更新說明和 <strong>Upgrade</strong> 按鈕：它會依你安裝 Unprose 的方式執行對的指令，並重啟 canvas，頁面會自己重新連線。Upgrade 只能在 canvas 所在電腦上打開的頁面使用；透過 tunnel 打開時，會改成顯示要手動執行的指令。</p>
+  <p>也可以在終端機執行 <code>claude plugin update unprose@unprose</code>：plugin 啟動的 canvas 大約十秒內會發現新版本並自動重啟。用 clone 安裝的，執行 <code>git pull</code>。每個版本改了什麼：<a href="../../releases/">更新說明</a>（英文）。</p>
+</section>
+
+<section id="safety" class="ref" aria-labelledby="safety-title">
+  <h2 id="safety-title">誰能連到你的 canvas</h2>
+  <p>在 canvas 自己的電腦上（<code>http://localhost…</code>）不需要登入。從其他地方來的連線，不論是 tunnel 還是區域網路，都需要 token，或用配對碼登入過的瀏覽器。Token 只以雜湊值存在 <code>~/.awd/agents.json</code>。升級、註冊專案、搬移 board 只能在那台電腦上做。</p>
+</section>
+
+<section id="trouble" class="ref" aria-labelledby="trouble-title">
+  <h2 id="trouble-title">出問題時</h2>
+  <dl class="faq">
+    <div><dt><code>/mcp</code> 顯示 <code>unprose</code> 失敗：<em>cannot reach &lt;url&gt;</em></dt><dd>Canvas 沒在跑，或 <code>AWD_CANVAS_URL</code> 指到別的地方。在你的 clone 裡執行 <code>node scripts/canvas.mjs</code>，或讓 plugin 幫你啟動，並確認網址。</dd></div>
+    <div><dt>Codex 等留言等一分鐘就放棄</dt><dd>在它的 <code>[mcp_servers.unprose]</code> 設 <code>tool_timeout_sec = 1900</code>。就算 client 還是先放棄了也不會壞：agent 會從原本的位置再等一次。</dd></div>
+    <div><dt>Claude Code 透過遠端 <code>/mcp</code> 等五分鐘就停</dt><dd>這是它的閒置上限 <code>CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT</code>，把它調高。</dd></div>
+    <div><dt>自己寫的 script 透過 Cloudflare tunnel 收到 HTTP 403</dt><dd>Cloudflare 會在請求到達 canvas 之前，擋掉沒有 <code>User-Agent</code> 或用 script 預設值的請求。自己帶一個，例如 <code>curl -A "my-agent/1.0"</code>。Unprose 自己的 client 都已經帶了。</dd></div>
+    <div><dt>Plugin 說已經有 canvas 在跑，<em>not started by the plugin</em></dt><dd>那個 canvas 是你自己啟動的，所以 plugin 不會動它。重啟它就能換成新版本。</dd></div>
+    <div><dt>標題列顯示「&lt;agent&gt; is away」</dt><dd>那個 agent 沒有在 board 上等，你的留言會排隊等它。到它自己的 session 請它看 board，或在 <strong>Answered by</strong> 換一個 agent。</dd></div>
+  </dl>
+  <p>還是卡住，或少了什麼功能？在 board 上按 <kbd>?</kbd> → <strong>Report a problem</strong> 或 <strong>Suggest a feature</strong>。它會打開一個已填好版本號的 GitHub issue，由你檢查後自己送出，canvas 不會代你發文。Issue 是公開的，請不要放 board 的內容。也可以直接到 <a href="https://github.com/river0825/unprose/issues/new/choose">GitHub issues</a>。</p>
+</section>
+
+<section class="ref more" aria-labelledby="more-title">
+  <h2 id="more-title">延伸閱讀（英文）</h2>
+  <ul>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">Agent 設定</a>：每一種 client、遠端 canvas、省成本的等待方式</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">圖</a>：每種圖的檔案格式</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">Canvas 與 MCP 工具</a>：所有工具、HTTP API、遠端 agent</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/docs/studio.md">Studio</a>：<strong>Ask AI</strong> 背後常駐的 agent session</li>
+    <li><a href="https://github.com/river0825/unprose/blob/main/README.zh-TW.md">繁體中文 README</a></li>
+  </ul>
+</section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap foot">
+    <div>
+      <a class="brand" href="../"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="14" height="12" rx="2" fill="#ffb648"/><rect x="15" y="15" width="14" height="12" rx="2" fill="#7dbdff"/></svg>Unprose</a>
+      <p style="margin-top:10px">和 AI agent 一起做設計的共用 board。以 <a href="https://github.com/river0825/unprose/blob/main/LICENSE">Apache-2.0</a> 授權開源。</p>
+      <p><a href="../../manual/" lang="en" hreflang="en">English version</a></p>
+    </div>
+    <nav aria-label="文件">
+      <h2>文件</h2>
+      <ul>
+        <li><a href="./">使用說明</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/README.zh-TW.md">繁體中文 README</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">Agent 設定（英文）</a></li>
+        <li><a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">Canvas 與 MCP 工具（英文）</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="專案">
+      <h2>專案</h2>
+      <ul>
+        <li><a href="https://github.com/river0825/unprose">GitHub</a></li>
+        <li><a href="../../releases/">更新說明</a><span data-version></span></li>
+        <li><a href="https://github.com/river0825/unprose/issues/new/choose">回報問題</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>
+<script src="../../assets/manual.js"></script>
+</body>
+</html>

@@ -33,7 +33,8 @@
       <a class="wide" href="#how">怎麼運作</a>
       <a class="wide" href="#diagrams">支援的圖</a>
       <a class="wide" href="#agents">多個 agent</a>
-      <a href="#start">開始使用</a>
+      <a class="wide" href="#start">開始使用</a>
+      <a href="manual/">使用說明</a>
       <a href="../releases/">更新說明</a>
       <a href="https://github.com/river0825/unprose">GitHub</a>
       <a href="../" lang="en" hreflang="en">English</a>
@@ -49,7 +50,7 @@
       <p class="works-with">給用 Claude Code、Codex 或任何 MCP agent 寫軟體的人。開源（Apache-2.0），在你自己的電腦上執行。</p>
       <div class="cta">
         <a class="btn btn-primary" href="#start">開始使用</a>
-        <a class="btn btn-ghost" href="https://github.com/river0825/unprose">在 GitHub 上查看</a>
+        <a class="btn btn-ghost" href="manual/">閱讀使用說明</a>
       </div>
     </div>
   </section>
@@ -235,11 +236,12 @@ node scripts/canvas.mjs</code></pre></div>
           <div class="code"><pre><code>[mcp_servers.unprose]
 command = "node"
 args = ["/path/to/unprose/scripts/mcp.mjs"]
-env = { AWD_CANVAS_URL = "http://localhost:4400" }</code></pre></div>
+env = { AWD_CANVAS_URL = "http://localhost:4400" }
+tool_timeout_sec = 1900</code></pre></div>
           <p>其他 MCP client：指令 <code>node</code>，參數 <code>/path/to/unprose/scripts/mcp.mjs</code>，環境變數 <code>AWD_CANVAS_URL=http://localhost:4400</code>。</p>
         </article>
       </div>
-      <p class="after">各 client 的細節與注意事項：<a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">docs/agents-setup.md</a>。完整說明：<a href="https://github.com/river0825/unprose/blob/main/README.zh-TW.md">繁體中文 README</a>、<a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">diagrams</a>、<a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">canvas 與 MCP 工具</a>（英文）。</p>
+      <p class="after">從安裝到第一次 session、每一種 agent 的步驟：<a href="manual/">使用說明</a>。各 client 的細節與注意事項：<a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">docs/agents-setup.md</a>。完整說明：<a href="https://github.com/river0825/unprose/blob/main/README.zh-TW.md">繁體中文 README</a>、<a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">diagrams</a>、<a href="https://github.com/river0825/unprose/blob/main/docs/canvas.md">canvas 與 MCP 工具</a>（英文）。</p>
     </div>
   </section>
 
@@ -276,6 +278,7 @@ env = { AWD_CANVAS_URL = "http://localhost:4400" }</code></pre></div>
     <nav aria-label="文件">
       <h2>文件</h2>
       <ul>
+        <li><a href="manual/">使用說明</a></li>
         <li><a href="https://github.com/river0825/unprose/blob/main/README.zh-TW.md">README（繁體中文）</a></li>
         <li><a href="https://github.com/river0825/unprose/blob/main/docs/agents-setup.md">Agent 設定</a></li>
         <li><a href="https://github.com/river0825/unprose/blob/main/docs/diagrams.md">支援的圖</a></li>
