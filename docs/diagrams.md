@@ -51,7 +51,7 @@ content is the template's schema (zod-validated), extended with **stable element
   own diagram, or — with just `'<diagram key>'` — at a whole diagram (its frame; e.g. a kanban card standing
   for a sub-board). `relates` (相關) is the general link when none of the others fits. Drawn as dotted trace
   wires (`role: 'trace'`, label 來自 / 組成 / 畫面 / 相關), never as flow. A target is found by
-  `data.element`, else by the id convention `<key>.<role>.<element id>` (items drawn before a template set
+  `data.element` (a domain story's declared work object: its first card), else by the id convention `<key>.<role>.<element id>` (items drawn before a template set
   `data.element`); `awd design draw` lists every trace it could not draw instead of dropping it.
 - `awd design draw <file> --board <id | title:…> [--canvas URL]` draws or refreshes the frame. A redraw keeps
   what the person placed or locked, keeps receipts, removes stale items **inside that frame only**, and keeps items
@@ -465,7 +465,11 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
 - A sentence **without a work object** is one numbered arrow from actor to actor; its element id rides on that
   arrow, traces into it resolve to its actor, and its own traces are drawn from its actor.
 - Each work object carries its sentence's element id and the sentence read out ("⑤ You approves proposal to
-  AI Agent"); the Inspector shows it. No board item carries "① verb" as text.
+  AI Agent"); the Inspector shows it. No board item carries "① verb" as text. A **declared work object** is drawn
+  once per sentence, so a trace, a note or a group naming it (`<key>/quote`) goes to its first card.
+- **One set of ids per story**: actors, work objects, sentences, groups and notes share it. An `id` another element
+  already has is drawn with `-2` (`quote-2`), and a trace, note or group naming it reaches the first owner; the lint
+  warns (`id-taken`) — give one of them another id.
 - **A note is named after what it is on**: `<key>.note.note-<element>` (`note-clerk`; a second note on the same element
   `note-clerk-2`), so a note inserted into the list moves no other note on the board. Give a second note on one
   element an `id` of its own (`{ id: cash-only, on: clerk, text: … }`): then its place never depends on the order of

@@ -6,6 +6,16 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.30.1] — 2026-10-30
+
+### Fixed
+- **A trace to a domain story's work object is drawn** (docs/diagrams.md §6b). A work object is drawn once per
+  sentence and each card carries its sentence's id, so a trace from another diagram to `<key>/<work object id>` found
+  nothing ("target not found on the board") — and when a sentence had the same id as a work object (both `quote`), the
+  sentence was quietly drawn as `quote-2`. A trace to a declared work object now goes to its first card, as a note or a
+  group on it already did, and `awd design lint` warns when an `id` is already another element's (`id-taken`): a
+  story's actors, work objects, sentences, groups and notes share one set of ids.
+
 ## [0.30.0] — 2026-10-22
 
 ### Added
@@ -1099,7 +1109,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.30.1...HEAD
+[0.30.1]: https://github.com/river0825/unprose/compare/v0.30.0...v0.30.1
 [0.30.0]: https://github.com/river0825/unprose/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/river0825/unprose/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/river0825/unprose/compare/v0.27.1...v0.28.0

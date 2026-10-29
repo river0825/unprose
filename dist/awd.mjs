@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.30.0";
+    VERSION2 = "0.30.1";
   }
 });
 
@@ -60144,7 +60144,18 @@ var init_domainStoryReview = __esm({
 // packages/canvas/dist/diagrams/domainStory.js
 function normalizeDomainStory(raw) {
   const c2 = domainStorySchema.parse(raw);
-  const alloc = idAllocator();
+  const allocate = idAllocator();
+  const owners = /* @__PURE__ */ new Map();
+  const taken = [];
+  const alloc = (explicit, text3, fallback, label2 = text3) => {
+    const id = allocate(explicit, text3, fallback);
+    const what = `${fallback === "object" ? "work object" : fallback} "${label2}"`;
+    const wanted = explicit?.trim();
+    if (wanted && id !== wanted)
+      taken.push({ element: id, wanted, what, owner: owners.get(wanted) ?? `"${wanted}"` });
+    owners.set(id, what);
+    return id;
+  };
   const asNamed = (v2) => typeof v2 === "string" ? { text: v2 } : v2;
   const repeatAll = c2.layout?.actors === "repeat";
   const actors = c2.actors.map((v2) => asNamed(v2)).map((a) => ({ id: alloc(a.id, a.text, "actor"), text: a.text, kind: a.kind ?? "person", ...a.repeat ?? repeatAll ? { repeat: true } : {} }));
@@ -60164,7 +60175,7 @@ function normalizeDomainStory(raw) {
   const sentences = c2.sentences.map((s) => {
     const seq = s.seq ?? next;
     next = Math.max(next, seq + 1);
-    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence");
+    const id = alloc(s.id, `${seq}-${s.verb}`, "sentence", `${circled(seq)} ${s.verb}`);
     const declared = s.object ? find(workObjects, s.object) : void 0;
     const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
     const actor = actorRef(s.actor, id, "actor");
@@ -60201,7 +60212,7 @@ function normalizeDomainStory(raw) {
     const on = elementRef(a.on, id, "on");
     return on ? [{ id, on, text: a.text }] : [];
   });
-  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, dsModel: true };
+  return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, ...taken.length ? { taken } : {}, dsModel: true };
 }
 function readSentence(m2, s) {
   const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
@@ -60222,6 +60233,8 @@ function checkDomainStory(content) {
   const out = [];
   for (const u3 of m2.unresolved)
     out.push({ rule: "unresolved-reference", severity: "warning", element: u3.element, message: `${u3.field} "${u3.ref}" matches no ${u3.field === "actor" || u3.field === "to" ? "actor (drawn as a person)" : "element"}`, page: QUICK_START2 });
+  for (const t of m2.taken ?? [])
+    out.push({ rule: "id-taken", severity: "warning", element: t.element, message: `${t.what} has the id "${t.wanted}", which ${t.owner} already has \u2014 a story's actors, work objects, sentences, groups and notes share one set of ids, so it is drawn as "${t.element}" and a trace, note or group naming "${t.wanted}" reaches ${t.owner} \u2014 give one of them another id`, page: "docs/diagrams.md \xA72" });
   const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   for (const s of m2.sentences) {
     if (s.to.includes(s.actor)) {
@@ -80195,7 +80208,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.30.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.30.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {

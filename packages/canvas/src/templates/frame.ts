@@ -76,9 +76,10 @@ const legacyCardSuffix = (element: string) => element.replace(/[^A-Za-z0-9_-]+/g
 
 /**
  * The item a trace points at. By `data.element` first (the main sticky rather than a repeated
- * person/system occurrence); for items drawn before a template set `data.element`, by the id
- * convention `<key>.<role>.<element>` (kanban: `<key>.card.<sanitised id or title>`). A ref without an
- * element (`'<key>'`) is the diagram's frame.
+ * person/system occurrence); a domain story's declared work object (drawn once per sentence, each card
+ * carrying its sentence's element) is its first card, as for a note or a group on it; for items drawn
+ * before a template set `data.element`, by the id convention `<key>.<role>.<element>` (kanban:
+ * `<key>.card.<sanitised id or title>`). A ref without an element (`'<key>'`) is the diagram's frame.
  */
 export function traceTarget(pool: Item[], ref: { key: string; element?: string }): Item | undefined {
   if (!ref.element) return pool.find((i) => i.id === diagramFrameId(ref.key))
@@ -86,6 +87,9 @@ export function traceTarget(pool: Item[], ref: { key: string; element?: string }
   const byElement = inDiagram.filter((i) => i.data?.element === ref.element)
   const pick = (hits: Item[]) => hits.find((i) => !i.data?.occurrence) ?? hits[0]
   if (byElement.length) return pick(byElement)
+  const seq = (i: Item) => (typeof i.data?.seq === 'number' ? i.data.seq : Infinity)
+  const byWorkObject = inDiagram.filter((i) => i.data?.workObject === ref.element).sort((a, b) => seq(a) - seq(b))
+  if (byWorkObject.length) return byWorkObject[0]
   const suffixes = new Set([ref.element, legacyCardSuffix(ref.element)].filter(Boolean))
   // `<key>.<role>.<element>`: exactly one segment (the role) between the key and the element
   const byId = inDiagram.filter((i) => {

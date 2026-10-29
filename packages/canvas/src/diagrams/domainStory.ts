@@ -147,6 +147,8 @@ export interface DsModel {
   layout?: { spacing?: 'compact' | 'normal' | 'roomy'; gapX?: number; gapY?: number; actors?: 'once' | 'repeat' }
   /** References that matched nothing (unknown actors are still drawn, as persons). */
   unresolved: Array<{ element: string; field: string; ref: string }>
+  /** Explicit ids another element of the story already had: `what` is drawn as `element` (`quote-2`) instead; `owner` has it. */
+  taken?: Array<{ element: string; wanted: string; what: string; owner: string }>
   /** Marks a normalized model (vs raw content). */
   dsModel: true
 }
@@ -154,7 +156,19 @@ export interface DsModel {
 /** Parse + resolve references to ids. Unknown actors are added as persons so the story still draws. */
 export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
   const c = domainStorySchema.parse(raw)
-  const alloc = idAllocator()
+  // actors, work objects, sentences, groups and notes share one set of ids: an explicit id that is already taken is
+  // drawn with -2, and a trace, note or group naming it finds the first owner — the lint says so (id-taken)
+  const allocate = idAllocator()
+  const owners = new Map<string, string>()
+  const taken: NonNullable<DsModel['taken']> = []
+  const alloc = (explicit: string | undefined, text: string, fallback: 'actor' | 'object' | 'sentence' | 'group' | 'note', label = text): string => {
+    const id = allocate(explicit, text, fallback)
+    const what = `${fallback === 'object' ? 'work object' : fallback} "${label}"`
+    const wanted = explicit?.trim()
+    if (wanted && id !== wanted) taken.push({ element: id, wanted, what, owner: owners.get(wanted) ?? `"${wanted}"` })
+    owners.set(id, what)
+    return id
+  }
   const asNamed = <T extends { id?: string; text: string; kind?: string }>(v: string | T): T => (typeof v === 'string' ? ({ text: v } as T) : v)
   const repeatAll = c.layout?.actors === 'repeat'
   const actors: DsActor[] = c.actors
@@ -176,7 +190,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
   const sentences: DsSentence[] = c.sentences.map((s) => {
     const seq = s.seq ?? next
     next = Math.max(next, seq + 1)
-    const id = alloc(s.id, `${seq}-${s.verb}`, 'sentence')
+    const id = alloc(s.id, `${seq}-${s.verb}`, 'sentence', `${circled(seq)} ${s.verb}`)
     const declared = s.object ? find(workObjects, s.object) : undefined
     const to = s.to === undefined ? [] : Array.isArray(s.to) ? s.to : [s.to]
     const actor = actorRef(s.actor, id, 'actor')
@@ -216,7 +230,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
     const on = elementRef(a.on, id, 'on')
     return on ? [{ id, on, text: a.text }] : []
   })
-  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.icons ? { icons: c.icons } : {}), ...(c.layout ? { layout: c.layout } : {}), unresolved, dsModel: true }
+  return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.icons ? { icons: c.icons } : {}), ...(c.layout ? { layout: c.layout } : {}), unresolved, ...(taken.length ? { taken } : {}), dsModel: true }
 }
 
 /** "② Customer sends application form to Clerk" — a sentence read out, as the method intends. */
@@ -233,7 +247,7 @@ export function circled(n: number): string {
 
 const QUICK_START = 'domainstorytelling.org/quick-start-guide'
 
-export type DsRule = 'unresolved-reference' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long' | 'draw-again-not-in-sentence' | 'draw-again-first-appearance'
+export type DsRule = 'unresolved-reference' | 'id-taken' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long' | 'draw-again-not-in-sentence' | 'draw-again-first-appearance'
 
 /** A note longer than this (in display width: a CJK character counts as two) crowds the story (§6b "No collisions"). */
 export const NOTE_RECOMMENDED = 120
@@ -257,6 +271,8 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
   const m = 'dsModel' in content ? content : normalizeDomainStory(content)
   const out: DsFinding[] = []
   for (const u of m.unresolved) out.push({ rule: 'unresolved-reference', severity: 'warning', element: u.element, message: `${u.field} "${u.ref}" matches no ${u.field === 'actor' || u.field === 'to' ? 'actor (drawn as a person)' : 'element'}`, page: QUICK_START })
+  for (const t of m.taken ?? [])
+    out.push({ rule: 'id-taken', severity: 'warning', element: t.element, message: `${t.what} has the id "${t.wanted}", which ${t.owner} already has — a story's actors, work objects, sentences, groups and notes share one set of ids, so it is drawn as "${t.element}" and a trace, note or group naming "${t.wanted}" reaches ${t.owner} — give one of them another id`, page: 'docs/diagrams.md §2' })
   const actorName = (id: string) => m.actors.find((a) => a.id === id)?.text ?? id
   for (const s of m.sentences) {
     if (s.to.includes(s.actor)) {
