@@ -33,7 +33,7 @@ That's it. Open Claude Code in any project and follow **Your first session** bel
 <details>
 <summary><b>Other ways to connect</b> (Claude Code plugin, Codex, other MCP clients)</summary>
 
-- **Claude Code plugin** (adds the Unprose skill too):
+- **Claude Code plugin** (adds the Unprose skill and a Domain Storytelling skill too):
   ```
   /plugin marketplace add river0825/unprose
   /plugin install unprose@unprose
@@ -74,7 +74,9 @@ Not sure what to ask? In Claude Code, type `/unprose:` to see the ways to start:
 | `/unprose:storymap` | a story map from the EventStorming, with a first release |
 | `/unprose:kanban` | a kanban of a release's stories |
 | `/unprose:wireframe <page>` | a wireframe of a page |
+| `/unprose:mockup <screen>` | a screen as real-looking UI you can click through |
 | `/unprose:domain-story <topic>` | a process told as a domain story |
+| `/unprose:critique` | a domain story read by a Domain Storytelling reviewer, who advises and changes nothing |
 | `/unprose:review` | the agent answers every open comment on a board |
 
 Codex and other MCP agents get the same as MCP prompts, or ask "what can Unprose do?".
@@ -107,9 +109,11 @@ Each diagram is one file in `design/`. Several can share one board and link to e
 |---|---|---|---|
 | EventStorming | discuss how the system behaves, step by step | `design/<name>.es.yaml` | <img src="docs/images/thumb-es.png" width="260" alt="EventStorming"> |
 | Story map | decide what to build first (release lines) | `design/<name>.story-map.yaml` | <img src="docs/images/thumb-story-map.png" width="150" alt="Story map"> |
-| Domain Storytelling | tell one concrete scenario in pictographic sentences (import/export with [Egon.io](https://egon.io)) | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
+| Domain Storytelling | tell one concrete scenario in pictographic sentences, replayed one sentence at a time (import/export with [Egon.io](https://egon.io)) | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
 | Kanban | track the work | `design/<name>.kanban.yaml` | <img src="docs/images/thumb-kanban.png" width="260" alt="Kanban"> |
 | Wireframe | sketch a screen | `design/<name>.wireframe.yaml` | <img src="docs/images/thumb-wireframe.png" width="260" alt="Wireframe"> |
+| UI mock | show what a screen will look like: real components and copy at a device size, light or dark | `design/<name>.ui.yaml` | <img src="site/assets/uimock.webp" width="260" alt="UI mock"> |
+| User journey | follow one persona through the stages, with emotions, pains and opportunities | `design/<name>.journey.yaml` | |
 | Workflow | describe an agent pipeline you can run | `<name>.workflow.yaml` | <img src="docs/images/thumb-workflow.png" width="260" alt="Workflow"> |
 
 More views of the same ideas:
@@ -121,6 +125,19 @@ More views of the same ideas:
 
 ![Source dialog with syntax highlighting and a comment on lines 13–15](docs/images/source-dialog.png)
 **Comment on any lines** of a file or prompt, in a large view with syntax highlighting.
+
+Also on the board:
+
+- **Annotations** say what an item is for: a numbered pin on the item and a card with the same number beside the
+  drawing. They live in the design file. Write one yourself (right-click → **Annotate…**) and it becomes a draft
+  the agent holding the files checks and applies. [More](docs/canvas.md#annotations)
+- **TODOs** mark something you still have to confirm with someone else (right-click → **Add TODO…**). Check one
+  off with what you found out, and the agent decides whether the design changes. [More](docs/canvas.md#todos)
+- **Play a UI mock** like a prototype: click through the screens, type into the fields, switch the tabs.
+  **Clickable** shows where every click leads. [More](docs/diagrams.md#play)
+- **Replay a domain story** one sentence at a time (**Play story**). [More](docs/diagrams.md#replay)
+- **Keep a big board readable:** hide a frame's contents, fold a line by hand, choose which traces, comments,
+  annotations and TODOs are drawn, and copy a frame as an image.
 
 ## How it works
 
@@ -143,15 +160,20 @@ More views of the same ideas:
 | **Diagram frame** | One diagram on a board, drawn from one file. |
 | **Trace** | A dotted link between diagrams, e.g. "this story comes from that command". |
 | **Proposal** | A change you made on the board that is not in the file yet. |
+| **Annotation** | A numbered note that says what an item is for. It is kept in the design file, not in a thread. |
+| **TODO** | A note to confirm something with someone else. It lives on the board only. |
+| **Holder** | The agent that has a diagram's files. Only the holder redraws the diagram; other agents propose. |
 | **Studio** | Optional. Gives each board its own agent session, so plain comments get answers. See [docs/studio.md](docs/studio.md). |
 | **herdr** | The terminal workspace Studio uses to run agent sessions in panes. [herdr.dev](https://herdr.dev) |
 | **awd** | The command-line tool: `node scripts/awd.mjs design draw …`, `lint`, `run`, `studio`. |
 
 ## Status
 
-Early and moving fast. Working today: EventStorming, story maps, kanban, wireframes and workflows as
-files; chat on any item, selection, line or board; proposals; read receipts; Studio.
-Remote and cloud agents connect with approval (pairing code or token).
+Early and moving fast. Working today: EventStorming, story maps, domain stories, kanban, wireframes, UI mocks,
+user journeys and workflows as files; chat on any item, selection, line or board; proposals; annotations and
+TODOs; read receipts; Studio.
+Remote and cloud agents connect with approval (pairing code or token); several agents can share a board and hand
+the files over to each other.
 Next: more diagram kinds, Trello / Jira / Linear sync, a hosted option.
 
 More reading: [diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
@@ -190,7 +212,8 @@ Code — applies it, lints, tests and redraws. The canvas itself never writes a 
 write `@codex-b` in a comment to send that thread to one agent; agents can ask each other the same way, and pause after
 a few messages without you. A board's **Context** note (top of the side panel) tells every agent what was discussed.
 Each diagram shows who holds its files (*Files: team-notes · held by codex-b*); proposals go to that agent, which
-applies them after you agree and — if its machine says so — commits and pushes. Name your agents `codex-b`,
+applies them after you agree and — if its machine says so — commits and pushes. Only the holder redraws a diagram;
+to let another agent lead, use **Hand over files…** in the board panel. Name your agents `codex-b`,
 `claude-a`. Details: [docs/canvas.md → Several agents on one board](docs/canvas.md#several-agents-on-one-board),
 a two-machine example: [docs/agents-setup.md](docs/agents-setup.md#two-machines-one-board).
 

@@ -14,7 +14,8 @@
 
 ## 5 分鐘試用
 
-需要 **Node.js 20+**、**git**，以及 **Claude Code**（其他 agent 見下方）。
+需要 **Node.js 20+**、**git**，以及 **Claude Code**（其他 agent 見下方）。不用 `npm install`：
+repo 的 `dist/` 裡已經有可以直接執行的 build。
 
 ```bash
 git clone https://github.com/river0825/unprose && cd unprose
@@ -32,7 +33,7 @@ claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scr
 <details>
 <summary><b>其他連接方式</b>（Claude Code plugin、Codex、其他 MCP client）</summary>
 
-- **Claude Code plugin**（會一併加入 Unprose skill）：
+- **Claude Code plugin**（會一併加入 Unprose skill 和 Domain Storytelling skill）：
   ```
   /plugin marketplace add river0825/unprose
   /plugin install unprose@unprose
@@ -52,6 +53,7 @@ claude mcp add unprose -e AWD_CANVAS_URL=http://localhost:4400 -- node "$PWD/scr
   環境變數 `AWD_CANVAS_URL=http://localhost:4400`。
 
 細節與注意事項：[docs/agents-setup.md](docs/agents-setup.md)。
+要開發 Unprose 本身：`npm install && npm run build`，之後 `scripts/` 裡的啟動程式會改用你的 build。
 </details>
 
 ## 第一次使用
@@ -71,7 +73,9 @@ Agent 會在你的 repo 寫出 `design/signup.es.yaml`，並畫到 board 上。
 | `/unprose:storymap` | 從 EventStorming 產生 story map，並切出第一個 release |
 | `/unprose:kanban` | 把一個 release 的 stories 做成 kanban |
 | `/unprose:wireframe <頁面>` | 畫一個頁面的 wireframe |
+| `/unprose:mockup <畫面>` | 把一個畫面做成接近實際樣子的 UI，可以點著走 |
 | `/unprose:domain-story <主題>` | 把一個流程講成 domain story |
+| `/unprose:critique` | 請 Domain Storytelling 審查者讀一則 domain story，只給建議、不改檔案 |
 | `/unprose:review` | agent 回覆 board 上所有未回覆的留言 |
 
 Codex 和其他 MCP agent 會以 MCP prompts 取得同樣的功能，或直接問「Unprose 能做什麼？」。
@@ -102,9 +106,11 @@ Event、command、system、policy 依時間由左到右排列。
 |---|---|---|---|
 | EventStorming | 一步步討論系統怎麼運作 | `design/<name>.es.yaml` | <img src="docs/images/thumb-es.png" width="260" alt="EventStorming"> |
 | Story map | 決定先做什麼（release 切線） | `design/<name>.story-map.yaml` | <img src="docs/images/thumb-story-map.png" width="150" alt="Story map"> |
-| Domain Storytelling | 用圖示句子講一個具體情境（可與 [Egon.io](https://egon.io) 匯入／匯出） | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
+| Domain Storytelling | 用圖示句子講一個具體情境，可以一句一句重播（可與 [Egon.io](https://egon.io) 匯入／匯出） | `design/<name>.domain-story.yaml` | <img src="docs/images/thumb-domain-story.png" width="260" alt="Domain Storytelling"> |
 | Kanban | 追蹤工作進度 | `design/<name>.kanban.yaml` | <img src="docs/images/thumb-kanban.png" width="260" alt="Kanban"> |
 | Wireframe | 畫出畫面草稿 | `design/<name>.wireframe.yaml` | <img src="docs/images/thumb-wireframe.png" width="260" alt="Wireframe"> |
+| UI mock | 呈現畫面實際會長什麼樣子：真的元件和文案、指定裝置尺寸、淺色或深色 | `design/<name>.ui.yaml` | <img src="site/assets/uimock.webp" width="260" alt="UI mock"> |
+| User journey | 跟著一個 persona 走過各階段，記下情緒、痛點和機會 | `design/<name>.journey.yaml` | |
 | Workflow | 描述一條可以執行的 agent 流程 | `<name>.workflow.yaml` | <img src="docs/images/thumb-workflow.png" width="260" alt="Workflow"> |
 
 同一套概念的其他畫面：
@@ -116,6 +122,18 @@ Event、command、system、policy 依時間由左到右排列。
 
 ![有語法高亮、在第 13–15 行留言的原始檔視窗](docs/images/source-dialog.png)
 **在任何幾行留言**，不論是檔案還是 prompt，都能在有語法高亮的大視窗裡進行。
+
+Board 上還有：
+
+- **註記（Annotation）** 說明一個項目是做什麼用的：項目上有編號圖釘，圖旁邊有同編號的卡片，內容存在設計檔裡。
+  你也可以自己寫（右鍵 → **Annotate…**），它會先是草稿，由持有檔案的 agent 檢查後寫進檔案。[說明](docs/canvas.md#annotations)
+- **TODO** 標出還要找別人確認的事（右鍵 → **Add TODO…**）。勾掉時寫下你問到的結果，agent 再判斷設計要不要改。
+  [說明](docs/canvas.md#todos)
+- **像原型一樣操作 UI mock（Play）**：在畫面之間點著走、在欄位裡打字、切換分頁。**Clickable** 會標出每個點擊通往哪裡。
+  [說明](docs/diagrams.md#play)
+- **重播 domain story**，一次一句（**Play story**）。[說明](docs/diagrams.md#replay)
+- **大張的 board 也看得清楚**：收起一個 frame 的內容、手動折線，選擇要畫出哪些 trace、留言、註記和 TODO，
+  還能把一個 frame 複製成圖片。
 
 ## 運作方式
 
@@ -138,15 +156,19 @@ Event、command、system、policy 依時間由左到右排列。
 | **Diagram frame** | Board 上的一張圖，由一個檔案畫出來。 |
 | **Trace** | 圖與圖之間的虛線連結，例如「這張 story 來自那個 command」。 |
 | **Proposal（提案）** | 你在 board 上做的修改，還沒寫進檔案。 |
+| **Annotation（註記）** | 有編號的說明，寫一個項目是做什麼用的。存在設計檔裡，不是對話串。 |
+| **TODO** | 提醒自己要找別人確認的事，只存在 board 上。 |
+| **Holder（持有者）** | 手上有某張圖的檔案的 agent。只有持有者能重畫那張圖，其他 agent 用提案。 |
 | **Studio** | 選用功能。讓每張 board 有自己的 agent session，一般留言也會有人回覆。見 [docs/studio.md](docs/studio.md)。 |
 | **herdr** | Studio 用來在 pane 中執行 agent session 的終端機工作區。[herdr.dev](https://herdr.dev) |
 | **awd** | 命令列工具：`node scripts/awd.mjs design draw …`、`lint`、`run`、`studio`。 |
 
 ## 目前狀態
 
-仍在早期，變動很快。目前可用：EventStorming、story map、kanban、wireframe 和 workflow 都以檔案保存；
-可以針對項目、選取範圍、某幾行或整張 board 聊天；提案；已讀狀態；Studio。
-遠端與雲端 agent 經核准（配對碼或 token）即可連線。
+仍在早期，變動很快。目前可用：EventStorming、story map、domain story、kanban、wireframe、UI mock、
+user journey 和 workflow 都以檔案保存；可以針對項目、選取範圍、某幾行或整張 board 聊天；提案；註記與 TODO；
+已讀狀態；Studio。
+遠端與雲端 agent 經核准（配對碼或 token）即可連線；多個 agent 可以共用一張 board，並把檔案交接給另一個 agent。
 接下來：更多種類的圖、Trello / Jira / Linear 同步、託管版本。
 
 延伸閱讀（英文）：[diagrams](docs/diagrams.md) · [studio](docs/studio.md) · [canvas API](docs/canvas.md) ·
@@ -181,6 +203,7 @@ runtime），再用新版重新啟動 canvas，頁面會自動重新連線。只
 `@codex-b`，那串討論就只交給那個 agent；agent 之間也能用同樣方式互問，連續幾則都沒有你的回覆時會自動暫停。
 側欄最上面的 **Context** 寫下這塊 board 在談什麼（會議、決定、筆記連結），每個接手的 agent 都會先讀到。每張圖都標出檔案在誰手上
 （*Files: team-notes · held by codex-b*）；提案會交給那個 agent，你同意後由它套用，若它的機器有設定，還會自動 commit、push。
+只有持有者能重畫那張圖；要換另一個 agent 主導，在 board 面板按 **Hand over files…**。
 agent 名字建議取 `codex-b`、`claude-a` 這種。細節見 [docs/canvas.md → Several agents on one board](docs/canvas.md#several-agents-on-one-board)，
 兩台機器的完整例子見 [docs/agents-setup.md](docs/agents-setup.md#two-machines-one-board)。
 
