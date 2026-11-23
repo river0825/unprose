@@ -6,6 +6,7 @@ import type { DiagramKind } from '../model.js'
 import { annotationsIn, diagramKinds, render, unresolvedAnnotations } from '../templates/index.js'
 import { contentSchemaFor, unknownContentFields } from './check.js'
 import { checkDomainStory } from './domainStory.js'
+import { domainStoryLayoutFindings } from './domainStoryLayout.js'
 import { attachUiFindings, clickNoteFindings, isUiScreen, lintUiMock, uiGutterOf } from './uiMock.js'
 import { checkEventStorming } from './grammar.js'
 import type { StoryCandidate } from './proposeStories.js'
@@ -114,7 +115,7 @@ export function lintDesignContent(d: DesignFile): DesignFinding[] {
   const unknown: DesignFinding[] = unknownContentFields(d.kind, d.content).map((u) => ({ severity: 'warning', message: `unknown field \`${u.field}\` at ${u.path} — it is not part of ${d.kind} and will be ignored` }))
   const parsed = schema.safeParse(d.content)
   if (!parsed.success) return [...parsed.error.issues.map((i) => ({ severity: 'error' as const, message: `${i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '(root)'}: ${i.message}` })), ...unknown]
-  if (d.kind === 'domain-story') return [...unknown, ...checkDomainStory(d.content as never).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
+  if (d.kind === 'domain-story') return [...unknown, ...[...checkDomainStory(d.content as never), ...domainStoryLayoutFindings(d.content as never, d.key)].map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))]
   const notes = annotationFindings(d.kind, parsed.data, d.key)
   // the board shows the same findings on the frame (lintUiMock includes the unknown fields); how a note is written, the lint alone
   if (d.kind === 'ui-mock') return [...[...lintUiMock(d.content as never), ...clickNoteFindings(d.content as never)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes]

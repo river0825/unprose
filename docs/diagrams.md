@@ -398,7 +398,15 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   measured room; `roomy` is about 1.55× with more air after each verb; `compact` keeps the earlier fixed grid
   (460 × 330 px actor pitch; long verbs may crowd). `gapX` / `gapY` (px, 240–2000 / 180–2000) set the actor
   grid's pitch outright. Spacing only changes positions, never ids, so a redraw still keeps what the person
-  moved or locked ("What a redraw keeps").
+  moved or locked ("What a redraw keeps"). A redraw after `layout:` changed moves every item nobody moved or locked
+  to the new layout, and `awd design draw` says what happened: `layout: changed in the file (… → …): 29 item(s) moved
+  to the new layout, 1 kept their place`, or that the new setting "places everything where it already was".
+  `awd design draw --relayout` lays the whole frame out again from the file — the items the person moved too (locked
+  ones stay); use it when the person asks for a fresh layout, not by default.
+- **`actors: repeat` that draws nothing again**: an actor is drawn again only where the story comes back to it from
+  more than two grid cells away. In a hub story (most sentences through one actor in the middle) every sentence is
+  near that actor's one drawing, so `repeat` changes nothing — the lint says so (`repeat-no-effect`, info) and names
+  the way to force a copy: `drawAgain: <actor>` on the sentence that should get it.
 - **Repeated actors** (`layout: { actors: repeat }`, or `repeat: true` on one actor; our addition to the book's rule,
   `once` is the default). A long story keeps coming back to its early actors — the customer who ordered pays at the
   end — and with every actor drawn once, those sentences are long arrows back across the picture that cross other
@@ -432,6 +440,20 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
   drawing yet to draw again (`draw-again-first-appearance`). `canvas_read_board` says which sentence asked ("drawn 2
   times: also #… (drawAgain in dial)"). Egon.io gets the drawing as one more actor of the same name; importing it
   back gives that actor `repeat: true` (Egon has no `drawAgain`).
+- **Kinds of note** (ours — the book marks pain points with another colour of note; Egon.io has one kind): `kind:` on
+  an annotation — `note` (the default), `pain`, `assumption`, `decision`:
+
+  ```yaml
+  annotations:
+    - { on: recall, kind: pain, text: The reason lives in one person's memory }
+    - { on: dig, kind: assumption, text: Guessed from the meeting — not yet said by ops }
+    - { on: save-spec, kind: decision, text: Who writes — the requester's assistant, or the PO's? }
+  ```
+
+  A pain point is drawn red, an assumption yellow, an open decision blue (a pale wash and the bracket in that colour,
+  on the page and in the snapshot; the item carries `data.noteKind` and the colour); a plain note stays as it was. The
+  legend names the kinds the story uses. Any other `kind` is a lint error; a note without `kind` whose text starts with
+  the kind in words ("Pain point: …", "痛點：…", "假設：…", "決定 A｜…") gets a hint (`note-kind-in-text`).
 - **No collisions.** The layout makes sure nothing is drawn on top of something else:
   - an actor that **sends to itself** (`actor: cl, to: cl`) gets its work object **beside** it, in a free slot whose
     arrow passes no other pictogram, and **no return arrow** (it would run back over the activity arrow); the lint
@@ -449,6 +471,13 @@ icons: { flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10h14l-5-10V
     would still touch are trimmed apart where their members leave room. Groups that **share members** (neither
     inside the other) cannot have separate outlines: the outline carries `data.overlaps` and the lint warns
     (`groups-overlap`) — keep each shared element in one group, or make one group a sub-group;
+  - **groups that share no member can still overlap**: sentences grouped by number around one actor they all pass
+    through (a hub) interleave on the board, and no trimming can part them. The lint draws the story and says so
+    (`group-outlines-overlap`, a warning; `awd design draw` and `design_draw` print it too): group what sits together
+    (an actor with its work objects), give the story more room, split it, or drop the groups;
+  - **a note's dashed line keeps off pictograms**: a note is placed where the line to what it explains runs through
+    no other pictogram or note (that weighs more than crossing an arrow). What is left — a line through a pictogram
+    that no placement avoids — is a lint warning (`line-through`), the same finding as the board's layout check;
   - **a group's colour** (ours; Egon.io colours a group's outline): `color:` on a group — orange, blue, yellow,
     pale-yellow, lilac, green, pink, red, purple — draws a pale wash of it behind the members and the dashed outline in
     its shade, so groups are told apart at a glance (grey, the default, and white draw no wash). Without `color` in the

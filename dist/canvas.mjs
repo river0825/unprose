@@ -39363,6 +39363,9 @@ function reviewDomainStory(m2) {
 // packages/canvas/dist/diagrams/domainStory.js
 var DS_ACTOR_KINDS = ["person", "group", "system"];
 var DS_GROUP_COLORS = ["orange", "blue", "yellow", "pale-yellow", "lilac", "green", "pink", "red", "purple", "grey", "white"];
+var DS_NOTE_KINDS = ["note", "pain", "assumption", "decision"];
+var DS_NOTE_COLORS = { pain: "red", assumption: "yellow", decision: "blue" };
+var DS_NOTE_LABELS = { pain: "pain point", assumption: "assumption", decision: "open decision" };
 var DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
 var named = () => external_exports.union([
   external_exports.string(),
@@ -39413,7 +39416,8 @@ var domainStorySchema = external_exports.object({
   })).min(1),
   /** `color`: a pale wash behind the group, to tell groups apart (DS_GROUP_COLORS) */
   groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]), color: external_exports.enum(DS_GROUP_COLORS).optional() })).default([]),
-  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+  /** `kind`: note (default) | pain | assumption | decision — a coloured note (DS_NOTE_KINDS) */
+  annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1), kind: external_exports.enum(DS_NOTE_KINDS).optional() })).default([]),
   /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
   icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
   /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
@@ -39496,7 +39500,7 @@ function normalizeDomainStory(raw) {
   const annotations = c.annotations.flatMap((a) => {
     const id = alloc(a.id, `note-${elementOf(a.on) ?? a.on}`, "note");
     const on = elementRef(a.on, id, "on");
-    return on ? [{ id, on, text: a.text }] : [];
+    return on ? [{ id, on, text: a.text, ...a.kind && a.kind !== "note" ? { kind: a.kind } : {} }] : [];
   });
   return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c.icons ? { icons: c.icons } : {}, ...c.layout ? { layout: c.layout } : {}, unresolved, ...taken.length ? { taken } : {}, dsModel: true };
 }
@@ -39508,6 +39512,11 @@ function readSentence(m2, s) {
 function circled(n4) {
   return n4 >= 1 && n4 <= 20 ? String.fromCodePoint(9312 + n4 - 1) : `(${n4})`;
 }
+var NOTE_KIND_WORDS = [
+  [/^\s*(pain(\s*point)?|痛點|痛点)\s*[:：｜|]/i, "pain"],
+  [/^\s*(assumption|assumed|假設|假设)\s*[:：｜|]/i, "assumption"],
+  [/^\s*(decision|open decision|to decide|待決定|待决定|決定|决定)(\s*[A-Za-z0-9]+)?\s*[:：｜|]/i, "decision"]
+];
 var QUICK_START2 = "domainstorytelling.org/quick-start-guide";
 var NOTE_RECOMMENDED = 120;
 function displayWidth(text3) {
@@ -39582,6 +39591,13 @@ function checkDomainStory(content) {
     const w2 = displayWidth(n4.text);
     if (w2 > NOTE_RECOMMENDED)
       out.push({ rule: "note-long", severity: "warning", element: n4.id, message: `note on "${name(n4.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
+  }
+  for (const n4 of m2.annotations) {
+    if (n4.kind)
+      continue;
+    const hit2 = NOTE_KIND_WORDS.find(([re2]) => re2.test(n4.text));
+    if (hit2)
+      out.push({ rule: "note-kind-in-text", severity: "info", element: n4.id, message: `note on "${name(n4.on)}" names its kind in words (${DS_NOTE_LABELS[hit2[1]]}) \u2014 give it \`kind: ${hit2[1]}\` and the board draws it in that kind's colour (kinds: ${DS_NOTE_KINDS.join(", ")})`, page: "docs/diagrams.md \xA76b" });
   }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
@@ -44921,11 +44937,12 @@ function renderDomainStory(raw, opts = {}) {
     const clear = (p) => !placed.some((o) => overlaps(o, { ...p, w: nw, h: nh }));
     const cuts = (p) => segs.filter(([a, b2]) => segmentHitsBox(a, b2, { ...p, w: nw, h: nh }, 4)).length;
     const tc = centre(base);
-    const score = (p) => cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
+    const through = (p) => placed.filter((o) => o !== target && segmentHitsBox({ x: p.x + nw / 2, y: p.y + nh / 2 }, tc, o, 6)).length;
+    const score = (p) => (target ? through(p) * 1200 : 0) + cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
     let at3 = candidates.filter(clear).sort((p, q2) => score(p) - score(q2))[0] ?? candidates[0];
     for (let k2 = 0; !clear(at3) && k2 < 60; k2++)
       at3 = { x: at3.x, y: at3.y + 40 };
-    const note = make({ id: itemId("note", n4.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n4.text, role: "annotation", data: { element: n4.id, on: n4.on, ds: "annotation" } }, now);
+    const note = make({ id: itemId("note", n4.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n4.text, role: "annotation", ...n4.kind ? { color: DS_NOTE_COLORS[n4.kind] } : {}, data: { element: n4.id, on: n4.on, ds: "annotation", ...n4.kind ? { noteKind: n4.kind } : {} } }, now);
     placed.push(note);
     items.push(note);
     if (target) {
@@ -44977,6 +44994,10 @@ function renderDomainStory(raw, opts = {}) {
   const facets = [m2.scope.granularity, m2.scope.time, m2.scope.purity].filter(Boolean);
   if (facets.length)
     legend2.push(make({ id: itemId("scope", "scope"), type: "text", x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(" \xB7 ")}`, role: "scope", data: { scope: m2.scope } }, now));
+  const kinds = [...new Set(m2.annotations.flatMap((n4) => n4.kind ? [n4.kind] : []))].sort();
+  kinds.forEach((k2, i) => {
+    legend2.push(make({ id: itemId("legend", `note-${k2}`), type: "text", x: PAD + i * 170, y: legendY + 140, w: 150, h: 30, text: DS_NOTE_LABELS[k2], role: "annotation", color: DS_NOTE_COLORS[k2], data: { ds: "annotation", noteKind: k2, legend: true } }, now));
+  });
   return offsetAll([...shifted, ...legend2], opts.at).map((i) => nearOf.has(i.id) ? withHints(i, { near: nearOf.get(i.id) }) : i);
 }
 var union2 = (bs) => {
@@ -47588,6 +47609,879 @@ function unknownContentFields(kind, content) {
   return schema ? unknownFields(schema, content) : [];
 }
 
+// packages/canvas/dist/shown.js
+var KANBAN_HEADER = 44;
+var KANBAN_GAP = 12;
+var KANBAN_PAD = 20;
+var FRAME_PAD = 24;
+var isColumn = (it) => it.type === "lane" && it.role === "column";
+var groupKey = (col) => col.parent ?? "";
+function kanbanOrigins(board) {
+  const out = /* @__PURE__ */ new Map();
+  for (const col of Object.values(board.items)) {
+    if (!isColumn(col) || ownLock(col))
+      continue;
+    const k2 = groupKey(col);
+    const o = out.get(k2);
+    out.set(k2, o ? { x: Math.min(o.x, col.x), y: Math.min(o.y, col.y) } : { x: col.x, y: col.y });
+  }
+  return out;
+}
+var cardsOf = (board, col) => Object.values(board.items).filter((it) => it.type === "card" && it.parent === col.id).sort((a, b2) => a.y - b2.y || (a.order ?? 0) - (b2.order ?? 0));
+var lockedKanban = (board, key) => {
+  const f = key ? board.items[key] : void 0;
+  return !!f && f.type === "frame" && ownLock(f);
+};
+function nextFree(start, size2, fixed) {
+  let p = start;
+  for (let moved = true; moved; ) {
+    moved = false;
+    for (const [a, b2] of fixed)
+      if (p < b2 && p + size2 + KANBAN_GAP > a) {
+        p = b2;
+        moved = true;
+      }
+  }
+  return p;
+}
+function stackCards(board, col, x2, top, out) {
+  const cards = cardsOf(board, col);
+  const fixed = cards.filter(ownLock).map((c) => [c.y, c.y + c.h + KANBAN_GAP]);
+  let y2 = top;
+  let bottom = top;
+  for (const card of cards) {
+    if (ownLock(card)) {
+      bottom = Math.max(bottom, card.y + card.h + KANBAN_GAP);
+      continue;
+    }
+    y2 = nextFree(y2, card.h, fixed);
+    out.set(card.id, { x: x2 + KANBAN_PAD, y: y2 });
+    y2 += card.h + KANBAN_GAP;
+    bottom = Math.max(bottom, y2);
+  }
+  return bottom;
+}
+function alignKanban(board, origins = kanbanOrigins(board)) {
+  const columns = Object.values(board.items).filter((c) => isColumn(c) && !lockedKanban(board, groupKey(c)));
+  if (!columns.length)
+    return board;
+  const patched = {};
+  const set2 = (it, p) => {
+    const cur = patched[it.id] ?? it;
+    if (Object.entries(p).every(([k2, v2]) => cur[k2] === v2))
+      return;
+    patched[it.id] = { ...cur, ...p };
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const c of columns)
+    groups.set(groupKey(c), [...groups.get(groupKey(c)) ?? [], c]);
+  for (const [key, cols] of groups) {
+    const origin = origins.get(key) ?? { x: Math.min(...cols.map((c) => c.x)), y: Math.min(...cols.map((c) => c.y)) };
+    cols.sort((a, b2) => a.x - b2.x || (a.order ?? 0) - (b2.order ?? 0));
+    const fixed = cols.filter(ownLock).map((c) => [c.x, c.x + c.w + KANBAN_GAP]);
+    let x2 = origin.x;
+    let right = origin.x;
+    let tallest = 0;
+    const placed = [];
+    for (const col of cols) {
+      const locked = ownLock(col);
+      const cx = locked ? col.x : nextFree(x2, col.w, fixed);
+      const top = (locked ? col.y : origin.y) + KANBAN_HEADER + KANBAN_GAP;
+      const cards = /* @__PURE__ */ new Map();
+      const bottom = stackCards(board, col, cx, top, cards);
+      for (const [id, at3] of cards)
+        set2(board.items[id], at3);
+      if (!locked) {
+        tallest = Math.max(tallest, col.h, bottom - KANBAN_GAP + KANBAN_PAD - origin.y);
+        placed.push({ col, x: cx });
+        x2 = cx + col.w + KANBAN_GAP;
+      }
+      right = Math.max(right, cx + col.w + KANBAN_GAP);
+    }
+    for (const { col, x: cx } of placed)
+      set2(col, { x: cx, y: origin.y, h: tallest });
+    const frame = key ? board.items[key] : void 0;
+    if (frame && frame.type === "frame") {
+      const edge = right - KANBAN_GAP + FRAME_PAD;
+      const bottom = Math.max(origin.y + tallest, ...cols.filter(ownLock).map((c) => c.y + c.h)) + FRAME_PAD;
+      set2(frame, { w: Math.max(frame.w, edge - frame.x), h: Math.max(frame.h, bottom - frame.y) });
+    }
+  }
+  if (!Object.keys(patched).length)
+    return board;
+  return { ...board, items: { ...board.items, ...patched } };
+}
+function shownBoard(board) {
+  return drawnBoard(alignKanban(board));
+}
+function shownDifferences(board) {
+  const shown = shownBoard(board);
+  if (shown === board)
+    return [];
+  const out = [];
+  for (const it of Object.values(board.items)) {
+    if (layoutLock(board.items, it.id) || isHiddenFrame(it))
+      continue;
+    const s = shown.items[it.id];
+    if (!s || s.x === it.x && s.y === it.y && s.w === it.w && s.h === it.h)
+      continue;
+    const why = it.type === "card" && it.parent && isColumn(board.items[it.parent] ?? it) ? `kanban cards stack in their column in the order of their stored y: drawn at ${s.x},${s.y}, stored at ${it.x},${it.y}` : isColumn(it) ? "kanban columns stand side by side and are as tall as the tallest column" : it.type === "frame" ? "the frame grows to hold its kanban" : "drawn elsewhere by the kanban layout";
+    out.push({ id: it.id, stored: { x: it.x, y: it.y, w: it.w, h: it.h }, shown: { x: s.x, y: s.y, w: s.w, h: s.h }, why });
+  }
+  return out;
+}
+
+// packages/canvas/dist/wireGeometry.js
+var SIDES = /* @__PURE__ */ new Set(["top", "right", "bottom", "left"]);
+function anchor2(bx, side) {
+  if (side === "left")
+    return { x: bx.x, y: bx.y + bx.h / 2 };
+  if (side === "right")
+    return { x: bx.x + bx.w, y: bx.y + bx.h / 2 };
+  if (side === "top")
+    return { x: bx.x + bx.w / 2, y: bx.y };
+  return { x: bx.x + bx.w / 2, y: bx.y + bx.h };
+}
+function floatingEnd(a, b2) {
+  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+  const dx = b2.x + b2.w / 2 - ca.x;
+  const dy = b2.y + b2.h / 2 - ca.y;
+  if (!dx && !dy)
+    return ca;
+  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
+  return { x: ca.x + dx * t, y: ca.y + dy * t };
+}
+function floatingEndTo(a, p) {
+  return floatingEnd(a, { x: p.x, y: p.y, w: 0, h: 0 });
+}
+function foldedPath(pts, r2 = 8) {
+  const f = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+  if (!pts.length)
+    return "";
+  let d = `M${f(pts[0].x)} ${f(pts[0].y)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [a, b2, c] = [pts[i - 1], pts[i], pts[i + 1]];
+    const k2 = Math.min(r2, Math.hypot(b2.x - a.x, b2.y - a.y) / 2, Math.hypot(c.x - b2.x, c.y - b2.y) / 2);
+    const u3 = (p, q2) => {
+      const l = Math.hypot(q2.x - p.x, q2.y - p.y) || 1;
+      return { x: (q2.x - p.x) / l, y: (q2.y - p.y) / l };
+    };
+    const [ua, uc] = [u3(b2, a), u3(b2, c)];
+    d += k2 > 0 ? `L${f(b2.x + ua.x * k2)} ${f(b2.y + ua.y * k2)}Q${f(b2.x)} ${f(b2.y)} ${f(b2.x + uc.x * k2)} ${f(b2.y + uc.y * k2)}` : `L${f(b2.x)} ${f(b2.y)}`;
+  }
+  const z3 = pts[pts.length - 1];
+  return pts.length > 1 ? `${d}L${f(z3.x)} ${f(z3.y)}` : d;
+}
+function autoSides(a, b2) {
+  const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
+  const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
+  const gapX = dx > 0 ? b2.x - (a.x + a.w) : a.x - (b2.x + b2.w);
+  const gapY = dy > 0 ? b2.y - (a.y + a.h) : a.y - (b2.y + b2.h);
+  if (gapX >= gapY)
+    return dx >= 0 ? ["right", "left"] : ["left", "right"];
+  return dy >= 0 ? ["bottom", "top"] : ["top", "bottom"];
+}
+function routePoints(p1, s1, p2, s2) {
+  const h1 = s1 === "left" || s1 === "right";
+  const h2 = s2 === "left" || s2 === "right";
+  if (h1 && h2) {
+    const mx = (p1.x + p2.x) / 2;
+    return Math.abs(p1.y - p2.y) < 0.5 ? [p1, p2] : [p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2];
+  }
+  if (!h1 && !h2) {
+    const my = (p1.y + p2.y) / 2;
+    return Math.abs(p1.x - p2.x) < 0.5 ? [p1, p2] : [p1, { x: p1.x, y: my }, { x: p2.x, y: my }, p2];
+  }
+  return h1 ? [p1, { x: p2.x, y: p1.y }, p2] : [p1, { x: p1.x, y: p2.y }, p2];
+}
+function foldsOf(data) {
+  const b2 = data?.bend;
+  const list3 = Array.isArray(b2) ? b2 : b2 && typeof b2 === "object" ? [b2] : [];
+  return list3.filter((p) => typeof p?.x === "number" && typeof p?.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y)).map((p) => ({ x: p.x, y: p.y }));
+}
+var n2 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+function folded(p1, via, p2, ds, auto) {
+  const points = [p1, ...via, p2];
+  return { d: foldedPath(points, ds ? 4 : 8), points, p1, p2, ds, via, ...auto ? { auto } : {} };
+}
+function wireShape(b2, it) {
+  const from = it.from ? b2.items[it.from] : void 0;
+  const to = it.to ? b2.items[it.to] : void 0;
+  if (!from || !to)
+    return void 0;
+  const ds = !!it.data?.ds;
+  const folds = foldsOf(it.data);
+  if (folds.length)
+    return folded(floatingEndTo(from, folds[0]), folds, floatingEndTo(to, folds[folds.length - 1]), ds);
+  const auto = autoSides(from, to);
+  const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
+  const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
+  const p1 = ds ? floatingEnd(from, to) : anchor2(from, s1);
+  const p2 = ds ? floatingEnd(to, from) : anchor2(to, s2);
+  const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
+  return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds, via: [] };
+}
+function segmentHits(p, q2, b2, pad = 0) {
+  const [x0, y0, x1, y1] = [b2.x - pad, b2.y - pad, b2.x + b2.w + pad, b2.y + b2.h + pad];
+  if (x1 <= x0 || y1 <= y0)
+    return false;
+  let t0 = 0;
+  let t1 = 1;
+  const dx = q2.x - p.x;
+  const dy = q2.y - p.y;
+  for (const [pp, qq] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
+    if (pp === 0) {
+      if (qq < 0)
+        return false;
+      continue;
+    }
+    const r2 = qq / pp;
+    if (pp < 0)
+      t0 = Math.max(t0, r2);
+    else
+      t1 = Math.min(t1, r2);
+    if (t0 > t1)
+      return false;
+  }
+  return true;
+}
+var THROUGH_PAD = -6;
+var CLEAR_PAD = 2;
+var DETOUR_GAP = 30;
+var CROSS_COST = 60;
+function runsThrough(points, boxes, fromId, toId) {
+  const out = [];
+  for (const o of boxes) {
+    for (let i = 0; i < points.length - 1; i++) {
+      if (i === 0 && o.id === fromId || i === points.length - 2 && o.id === toId)
+        continue;
+      if (segmentHits(points[i], points[i + 1], o, THROUGH_PAD)) {
+        out.push(o);
+        break;
+      }
+    }
+  }
+  return out;
+}
+var len = (pts) => pts.reduce((v2, p, i) => i ? v2 + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0, 0);
+var samePt2 = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
+var orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
+function crossingsWith(a, others) {
+  let k2 = 0;
+  for (const o of others)
+    for (let i = 0; i < a.length - 1; i++)
+      for (let j2 = 0; j2 < o.length - 1; j2++) {
+        const [p, q2, r2, s] = [a[i], a[i + 1], o[j2], o[j2 + 1]];
+        if (samePt2(p, r2) || samePt2(p, s) || samePt2(q2, r2) || samePt2(q2, s))
+          continue;
+        if (orient(p, q2, r2) * orient(p, q2, s) < 0 && orient(r2, s, p) * orient(r2, s, q2) < 0)
+          k2++;
+      }
+  return k2;
+}
+var overlapsBox = (o, x0, y0, x1, y1) => o.x < x1 && o.x + o.w > x0 && o.y < y1 && o.y + o.h > y0;
+var cornersOf = (b2, g2) => [
+  { x: b2.x - g2, y: b2.y - g2 },
+  { x: b2.x + b2.w + g2, y: b2.y - g2 },
+  { x: b2.x + b2.w + g2, y: b2.y + b2.h + g2 },
+  { x: b2.x - g2, y: b2.y + b2.h + g2 }
+];
+function detourOf(from, to, boxes, others) {
+  const s = floatingEnd(from, to);
+  const t = floatingEnd(to, from);
+  const [x0, y0, x1, y1] = [Math.min(s.x, t.x), Math.min(s.y, t.y), Math.max(s.x, t.x), Math.max(s.y, t.y)];
+  const hit2 = boxes.filter((o) => o.id !== from.id && o.id !== to.id && overlapsBox(o, x0 - 1, y0 - 1, x1 + 1, y1 + 1) && segmentHits(s, t, o, THROUGH_PAD));
+  if (!hit2.length)
+    return void 0;
+  const L2 = Math.hypot(t.x - s.x, t.y - s.y) || 1;
+  const [ux, uy] = [(t.x - s.x) / L2, (t.y - s.y) / L2];
+  const [nx, ny] = [-uy, ux];
+  const singles = [];
+  const beside = (h) => {
+    const c = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
+    const along = Math.max(0, Math.min(L2, (c.x - s.x) * ux + (c.y - s.y) * uy));
+    const off = (c.x - s.x) * nx + (c.y - s.y) * ny;
+    const ext = Math.abs(nx) * (h.w / 2) + Math.abs(ny) * (h.h / 2) + DETOUR_GAP;
+    return { along, lo: off - ext, hi: off + ext };
+  };
+  for (const h of hit2) {
+    singles.push(...cornersOf(h, DETOUR_GAP));
+    const { along, lo, hi } = beside(h);
+    for (const d of [hi, lo])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  if (hit2.length > 1) {
+    const bs = hit2.map(beside);
+    const along = bs.reduce((v2, b2) => v2 + b2.along, 0) / bs.length;
+    for (const d of [Math.max(...bs.map((b2) => b2.hi)), Math.min(...bs.map((b2) => b2.lo))])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  const pts = [s, t, ...singles];
+  const bx0 = Math.min(...pts.map((p) => p.x)) - DETOUR_GAP;
+  const by0 = Math.min(...pts.map((p) => p.y)) - DETOUR_GAP;
+  const bx1 = Math.max(...pts.map((p) => p.x)) + DETOUR_GAP;
+  const by1 = Math.max(...pts.map((p) => p.y)) + DETOUR_GAP;
+  const near = boxes.filter((o) => overlapsBox(o, bx0, by0, bx1, by1));
+  const clear = (route) => {
+    for (let i = 0; i < route.length - 1; i++)
+      for (const o of near) {
+        if (i === 0 && o.id === from.id || i === route.length - 2 && o.id === to.id)
+          continue;
+        if (segmentHits(route[i], route[i + 1], o, CLEAR_PAD))
+          return false;
+      }
+    return true;
+  };
+  const lines2 = typeof others === "function" ? others() : others;
+  let best;
+  const tryVia = (via) => {
+    const route = [floatingEndTo(from, via[0]), ...via, floatingEndTo(to, via[via.length - 1])];
+    if (!clear(route))
+      return;
+    const score = len(route) + CROSS_COST * crossingsWith(route, lines2);
+    if (!best || score < best.score - 1e-6)
+      best = { via, score };
+  };
+  for (const v2 of singles)
+    tryVia([v2]);
+  if (!best) {
+    const corners = hit2.flatMap((h) => cornersOf(h, DETOUR_GAP));
+    for (const a of corners)
+      for (const b2 of corners)
+        if (a !== b2)
+          tryVia([a, b2]);
+  }
+  return best?.via.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+}
+function dsSeqAt(s, along = 24) {
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const d = Math.min(along, len2 / 3);
+  return { x: s.p1.x + (q2.x - s.p1.x) / len2 * d, y: s.p1.y + (q2.y - s.p1.y) / len2 * d };
+}
+var DS_SEQ = 22;
+function dsVerbAt(s) {
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const ux = (q2.x - s.p1.x) / len2;
+  const uy = (q2.y - s.p1.y) / len2;
+  let nx = -uy;
+  let ny = ux;
+  if (ny > 0 || ny === 0 && nx > 0)
+    nx = -nx, ny = -ny;
+  const along = Math.min(24, len2 / 3);
+  const t = Math.max(len2 / 2, Math.min(len2 - 20, along + 44));
+  return { x: s.p1.x + ux * t + nx * 13, y: s.p1.y + uy * t + ny * 13 };
+}
+var wireText = (it) => it.role === "trace" ? "" : (it.label ?? it.text ?? "").trim();
+function labelObstacles(b2) {
+  return Object.values(b2.items).filter((it) => isLabelObstacle(it)).map((it) => ({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h }));
+}
+function wireLabel(it, shape, boxes) {
+  const text3 = wireText(it);
+  if (!text3)
+    return void 0;
+  const ctl = labelControl(it.data);
+  const ds = shape.ds && it.role !== "annotation-link";
+  const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
+  const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
+  return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
+}
+var seqBox = (p) => ({ x: p.x - DS_SEQ / 2, y: p.y - DS_SEQ / 2, w: DS_SEQ, h: DS_SEQ });
+function planWires(b2, ids) {
+  const out = /* @__PURE__ */ new Map();
+  const wanted = ids ? new Set(ids) : void 0;
+  const wires = Object.values(b2.items).filter((it) => it.type === "arrow" && (!wanted || wanted.has(it.id))).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
+  const obstacles = labelObstacles(b2).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
+  const seqOf = (it) => typeof it.data?.seq === "number" ? it.data.seq : Infinity;
+  const bySeq = (x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1);
+  const lines2 = [];
+  for (const it of wires) {
+    const shape = wireShape(b2, it);
+    if (!shape)
+      continue;
+    out.set(it.id, { shape });
+    if (shape.ds)
+      lines2.push({ it, shape });
+  }
+  lines2.sort(bySeq);
+  const byId = new Map(obstacles.map((o) => [o.id, o]));
+  const ends = lines2.flatMap((l) => [b2.items[l.it.from], b2.items[l.it.to]]);
+  const reach = 400;
+  const [lx0, ly0] = [Math.min(...ends.map((e) => e.x)) - reach, Math.min(...ends.map((e) => e.y)) - reach];
+  const [lx1, ly1] = [Math.max(...ends.map((e) => e.x + e.w)) + reach, Math.max(...ends.map((e) => e.y + e.h)) + reach];
+  const nearLines = lines2.length ? obstacles.filter((o) => overlapsBox(o, lx0, ly0, lx1, ly1)) : [];
+  for (const line of lines2) {
+    if (line.shape.via.length)
+      continue;
+    const from = byId.get(line.it.from) ?? { ...b2.items[line.it.from], id: line.it.from };
+    const to = byId.get(line.it.to) ?? { ...b2.items[line.it.to], id: line.it.to };
+    const via = detourOf(from, to, nearLines, () => lines2.filter((l) => l !== line).map((l) => l.shape.points));
+    if (!via)
+      continue;
+    line.shape = folded(floatingEndTo(from, via[0]), via, floatingEndTo(to, via[via.length - 1]), true, true);
+    out.get(line.it.id).shape = line.shape;
+  }
+  for (const it of wires) {
+    const planned = out.get(it.id);
+    if (planned && (!planned.shape.ds || it.role === "annotation-link"))
+      planned.label = wireLabel(it, planned.shape, obstacles);
+  }
+  const ds = lines2.filter((l) => l.it.role !== "annotation-link");
+  const titles = Object.values(b2.items).filter((g2) => g2.type === "frame" && g2.data?.ds === "group" && g2.text).map((g2) => ({ x: g2.x, y: g2.y - 24, w: measure(g2.text, 13.5, 600) + 6, h: 20 }));
+  const circles = [];
+  for (const { it, shape } of ds) {
+    if (it.role !== "activity" || typeof it.data?.seq !== "number")
+      continue;
+    const q2 = shape.points[1] ?? shape.p2;
+    const len2 = Math.hypot(q2.x - shape.p1.x, q2.y - shape.p1.y);
+    const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
+    const along = (d) => ({ x: shape.p1.x + (q2.x - shape.p1.x) / (len2 || 1) * d, y: shape.p1.y + (q2.y - shape.p1.y) / (len2 || 1) * d });
+    let at3 = dsSeqAt(shape);
+    for (let d = Math.min(24, len2 / 3); d <= Math.max(24, len2 * 0.42); d += 8) {
+      const p = along(d);
+      if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
+        at3 = p;
+        break;
+      }
+    }
+    circles.push(seqBox(at3));
+    out.get(it.id).seq = at3;
+  }
+  const placed = [];
+  for (const { it, shape } of ds) {
+    const label2 = wireLabel(it, shape, [...obstacles, ...circles, ...titles, ...placed]);
+    if (!label2)
+      continue;
+    out.get(it.id).label = label2;
+    if (label2.mode !== "dot")
+      placed.push({ x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h });
+  }
+  return out;
+}
+
+// packages/canvas/dist/layoutCheck.js
+var STICKY_W2 = 160;
+var STICKY_H2 = 110;
+var LayoutError = class extends Error {
+  status;
+  constructor(message, status = 404) {
+    super(message);
+    this.status = status;
+  }
+};
+var KINDS = ["clipped", "overlap", "group", "label", "wire-through", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
+var OVERLAP_TOL = 6;
+var CONTAINER_COVER = 25;
+var OUTSIDE_TOL = 6;
+var OVERSIZE_RATIO = 3;
+var OVERSIZE_STICKIES = 3;
+var MOVED_TOL = 8;
+var DECOR_ROLES = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
+var isDsGroup = (it) => it.type === "frame" && it.data?.ds === "group";
+var GROUP_TITLE = 26;
+var MARK_TOL = 2;
+var SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
+var isContainer2 = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
+var isLane = (it) => !!it && it.type === "lane";
+var short4 = (s, n4 = 40) => {
+  const t = (s ?? "").replace(/\s+/g, " ").trim();
+  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
+};
+var nameOf2 = (it) => {
+  const t = short4(it.text);
+  return t ? `${it.role ?? it.type} "${t}"` : `${it.role ?? it.type}`;
+};
+var r = Math.round;
+function scopeOf(board, frame) {
+  if (!frame)
+    return {};
+  const fid = board.items[diagramFrameId(frame)] ? diagramFrameId(frame) : board.items[frame] && isContainer2(board.items[frame]) ? frame : void 0;
+  if (fid)
+    return { root: fid, key: frame };
+  if (board.kind !== "freeform" && frame === board.kind)
+    return { key: frame };
+  throw new LayoutError(`no diagram frame or container "${frame}" on this board`);
+}
+function inside2(board, it, root) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = it;
+  while (cur?.parent && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    if (cur.parent === root)
+      return true;
+    cur = board.items[cur.parent];
+  }
+  return false;
+}
+function checkLayout(board, opts = {}) {
+  const { root, key } = scopeOf(board, opts.frame);
+  const shown = shownBoard(board);
+  const all = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment");
+  const items = root ? all.filter((it) => inside2(shown, it, root)) : all;
+  const inScope = new Set(items.map((i) => i.id));
+  const found = [];
+  const frameOf2 = (it) => diagramOf(board, board.items[it.id] ?? it)?.key;
+  const add2 = (it, f) => found.push({ id: it.id, ...f, ...frameOf2(it) ? { frame: frameOf2(it) } : {} });
+  const byParent = /* @__PURE__ */ new Map();
+  for (const it of items) {
+    if (DECOR_ROLES.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
+      continue;
+    const k2 = it.parent && shown.items[it.parent] ? it.parent : "";
+    byParent.set(k2, [...byParent.get(k2) ?? [], it]);
+  }
+  for (const sibs of byParent.values()) {
+    for (let i = 0; i < sibs.length; i++) {
+      for (let j2 = i + 1; j2 < sibs.length; j2++) {
+        const a = sibs[i];
+        const b2 = sibs[j2];
+        if (isContainer2(a) !== isContainer2(b2))
+          continue;
+        if (isDsGroup(a) && isDsGroup(b2))
+          continue;
+        const ox = Math.min(a.x + a.w, b2.x + b2.w) - Math.max(a.x, b2.x);
+        const oy = Math.min(a.y + a.h, b2.y + b2.h) - Math.max(a.y, b2.y);
+        if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
+          continue;
+        const [first, second] = byReading(a, b2) <= 0 ? [a, b2] : [b2, a];
+        const cover = Math.round(100 * ox * oy / Math.min(a.w * a.h, b2.w * b2.h));
+        if (isContainer2(a) && cover < CONTAINER_COVER)
+          continue;
+        const moveX = second.x >= first.x ? first.x + first.w + 20 - second.x : 0;
+        const moveY = first.y + first.h + 20 - second.y;
+        const how = moveX > 0 && moveX <= moveY ? `move it ${r(moveX)} px right` : `move it ${r(Math.max(moveY, 0))} px down`;
+        add2(second, {
+          kind: "overlap",
+          message: `${nameOf2(second)} overlaps ${nameOf2(first)} (${ox > 0 ? r(ox) : 0}\xD7${r(oy)} px, ${cover}% of the smaller one)`,
+          suggestion: `${how} (to x ${r(second.x + (moveX > 0 && moveX <= moveY ? moveX : 0))}, y ${r(second.y + (moveX > 0 && moveX <= moveY ? 0 : Math.max(moveY, 0)))}), or make one of them smaller`,
+          others: [first.id]
+        });
+      }
+    }
+  }
+  for (const it of items) {
+    if (!it.text?.trim() || DECOR_ROLES.has(it.role ?? "") || it.role === "legend")
+      continue;
+    if (it.type === "lane" && it.role === "column") {
+      const room = it.w - 24 - 40;
+      const need = measure(it.text.split("\n")[0], 13.5, 600);
+      if (need > room + 2)
+        add2(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need - room + 4)} px wider (w ${r(it.w + need - room + 4)}) or shorten the title` });
+      continue;
+    }
+    if (it.type !== "sticky" && it.type !== "card" && it.type !== "text" && !(it.type === "wireframe" && it.role !== "screen" && it.role !== "image" && it.role !== "nav"))
+      continue;
+    if (typeof it.data?.ds === "string" && it.data.ds !== "annotation")
+      continue;
+    const meta3 = it.role === "card" && (Array.isArray(it.data?.labels) && it.data.labels.length || it.data?.size || it.data?.assignee) ? 26 : 0;
+    const fit3 = fitText({ ...it, h: it.h - meta3 });
+    if (!fit3.clipped)
+      continue;
+    const grow = fit3.needH - (it.h - meta3);
+    add2(it, {
+      kind: "clipped",
+      message: `text of ${nameOf2(it)} likely cut off: needs ~${fit3.lines.length} line${fit3.lines.length === 1 ? "" : "s"} at ${fit3.box.font} px, the ${r(it.w)}\xD7${r(it.h)} box fits ${fit3.fits}`,
+      suggestion: `make it ${grow} px taller (h ${r(it.h + grow)}), or wider, or shorten the text`
+    });
+  }
+  for (const it of items) {
+    const p = it.parent ? shown.items[it.parent] : void 0;
+    if (!p || !isContainer2(p) || DECOR_ROLES.has(it.role ?? ""))
+      continue;
+    const out = {
+      left: p.x - it.x,
+      top: p.y - it.y,
+      right: it.x + it.w - (p.x + p.w),
+      bottom: it.y + it.h - (p.y + p.h)
+    };
+    const worst = Math.max(out.left, out.top, out.right, out.bottom);
+    if (worst <= OUTSIDE_TOL)
+      continue;
+    const cx = it.x + it.w / 2;
+    const cy = it.y + it.h / 2;
+    const centreIn = cx >= p.x && cx <= p.x + p.w && cy >= p.y && cy <= p.y + p.h;
+    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
+    const nx = Math.min(Math.max(it.x, p.x + 10), p.x + p.w - it.w - 10);
+    const ny = Math.min(Math.max(it.y, p.y + 10), p.y + p.h - it.h - 10);
+    const fitsIn = it.w <= p.w - 20 && it.h <= p.h - 20;
+    const into = fitsIn ? `move it to x ${r(nx)}, y ${r(ny)}` : `make ${nameOf2(p)} bigger (it is ${r(p.w)}\xD7${r(p.h)}, the item ${r(it.w)}\xD7${r(it.h)})`;
+    if (isLane(p) && !centreIn)
+      add2(it, { kind: "off-lane", message: `${nameOf2(it)} belongs to ${nameOf2(p)} but is drawn outside it (${sides.join(", ")})`, suggestion: `${into}, or set its parent to the lane it is in`, others: [p.id] });
+    else
+      add2(it, { kind: "outside-parent", message: `${nameOf2(it)} sticks out of ${nameOf2(p)}: ${sides.join(", ")}`, suggestion: `${into}${fitsIn ? "" : ""}`, others: [p.id] });
+  }
+  const groups = /* @__PURE__ */ new Map();
+  for (const it of items) {
+    if (isContainer2(it) || SPANNING_ROLES.has(it.role ?? "") || DECOR_ROLES.has(it.role ?? ""))
+      continue;
+    const k2 = `${it.parent ?? ""}|${it.type}|${it.role ?? ""}`;
+    groups.set(k2, [...groups.get(k2) ?? [], it]);
+  }
+  const template = STICKY_W2 * STICKY_H2;
+  for (const sibs of groups.values()) {
+    const areas = sibs.map((s) => s.w * s.h).sort((a, b2) => a - b2);
+    const median = areas[Math.floor(areas.length / 2)];
+    for (const it of sibs) {
+      const area = it.w * it.h;
+      const vsSibs = sibs.length >= 3 && area >= OVERSIZE_RATIO * median;
+      const textH = it.text ? fitText({ ...it, h: 1e4 }).needH : 0;
+      const vsTemplate = (it.type === "sticky" || it.type === "card") && area > OVERSIZE_STICKIES * template && textH <= it.h / 2;
+      if (!vsSibs && !vsTemplate)
+        continue;
+      const typical = sibs.length >= 3 ? sibs.find((s) => s.w * s.h === median) : void 0;
+      const target = typical && vsSibs ? { w: typical.w, h: typical.h, what: "like its siblings" } : { w: STICKY_W2, h: STICKY_H2, what: "(the template sticky)" };
+      const atTarget = it.text ? fitText({ ...it, w: target.w, h: 1e4 }).needH : 0;
+      const size2 = atTarget <= target.h ? `use ${r(target.w)}\xD7${r(target.h)} ${target.what}` : atTarget <= target.h * 2 ? `use ${r(target.w)}\xD7${r(atTarget)} (the usual width, tall enough for its text)` : `its text is long for one ${it.role ?? it.type}: split it into several, or move the detail into a comment or the file, and use ${r(target.w)}\xD7${r(target.h)}`;
+      add2(it, {
+        kind: "oversized",
+        message: vsSibs ? `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / median * 10) / 10}\xD7 the area of its ${sibs.length - 1} siblings (typically ${typical ? `${r(typical.w)}\xD7${r(typical.h)}` : "?"})` : `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / template * 10) / 10}\xD7 a template sticky (${STICKY_W2}\xD7${STICKY_H2})`,
+        suggestion: `${size2}; sizes come from the template \u2014 do not scale stickies up to fill space`
+      });
+    }
+  }
+  const dsGroups = items.filter(isDsGroup);
+  const titled = (g2) => ({ x: g2.x, y: g2.y - GROUP_TITLE, w: g2.w, h: g2.h + GROUP_TITLE });
+  const contains = (o, i) => o.x <= i.x + 1 && o.y <= i.y - GROUP_TITLE + 1 && o.x + o.w >= i.x + i.w - 1 && o.y + o.h >= i.y + i.h - 1;
+  for (let i = 0; i < dsGroups.length; i++)
+    for (let j2 = i + 1; j2 < dsGroups.length; j2++) {
+      const [ga, gb] = byReading(dsGroups[i], dsGroups[j2]) <= 0 ? [dsGroups[i], dsGroups[j2]] : [dsGroups[j2], dsGroups[i]];
+      if (contains(ga, gb) || contains(gb, ga))
+        continue;
+      const ta = titled(ga);
+      const tb = titled(gb);
+      const ox = Math.min(ta.x + ta.w, tb.x + tb.w) - Math.max(ta.x, tb.x);
+      const oy = Math.min(ta.y + ta.h, tb.y + tb.h) - Math.max(ta.y, tb.y);
+      if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
+        continue;
+      const ma = new Set(Array.isArray(ga.data?.members) ? ga.data.members : []);
+      const shared2 = (Array.isArray(gb.data?.members) ? gb.data.members : []).filter((m2) => ma.has(m2));
+      add2(gb, {
+        kind: "group",
+        message: `the outline of ${nameOf2(gb)} overlaps the outline of ${nameOf2(ga)} (${r(ox)}\xD7${r(oy)} px)${shared2.length ? `: they share ${shared2.slice(0, 4).join(", ")}` : ""}`,
+        suggestion: shared2.length ? "a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other \u2014 it is then drawn inside it)" : `move ${nameOf2(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf2(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
+        others: [ga.id]
+      });
+    }
+  const obstacles = labelObstacles(shown);
+  const plan = planWires(shown);
+  const marks = [];
+  let wires = 0;
+  const seqName = (w2) => typeof w2.data?.seq === "number" ? `number circle ${w2.data.seq}` : "number circle";
+  for (const w2 of Object.values(shown.items)) {
+    if (w2.type !== "arrow" || !w2.from || !w2.to || !inScope.has(w2.from) || !inScope.has(w2.to))
+      continue;
+    wires++;
+    const planned = plan.get(w2.id);
+    const a = shown.items[w2.from];
+    const z3 = shown.items[w2.to];
+    const text3 = wireText(w2);
+    if (planned?.seq) {
+      const box = seqBox(planned.seq);
+      marks.push({ wire: w2, what: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)}`, box, circle: true });
+      const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w2.from && o.id !== w2.to);
+      if (on.length) {
+        const names = on.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        add2(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
+      }
+    }
+    const folds = foldsOf(w2.data);
+    if (planned && (planned.shape.ds || folds.length)) {
+      const through = runsThrough(planned.shape.points, obstacles, w2.from, w2.to);
+      if (through.length) {
+        const names = through.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        const at3 = (o) => `(${r(o.x + o.w + 40)}, ${r(o.y - 40)})`;
+        add2(w2, {
+          kind: "wire-through",
+          message: `the ${planned.shape.ds ? "line" : "wire"} ${nameOf2(a)} \u2192 ${nameOf2(z3)} runs through ${names}${folds.length ? " (where it was folded, data.bend)" : ""}`,
+          suggestion: folds.length ? `move its folds (data.bend) so it goes round ${names}, or move ${names} off it` : `move ${names} off the line, or fold the line round it (data.bend: [{ "x": \u2026, "y": \u2026 }, \u2026] on the arrow \u2014 e.g. a fold at ${at3(through[0])})`,
+          others: through.map((o) => o.id)
+        });
+      }
+    }
+    const label2 = planned?.label;
+    if (!label2 || !text3)
+      continue;
+    const what = `label "${short4(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
+    if (label2.mode !== "dot")
+      marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
+    if (label2.mode !== "dot" && label2.mode !== "cut")
+      continue;
+    const gapX = Math.max(z3.x - (a.x + a.w), a.x - (z3.x + z3.w));
+    const gapY = Math.max(z3.y - (a.y + a.h), a.y - (z3.y + z3.h));
+    const whole = labelSize(labelLines(text3, EDGE_LABEL.maxW, label2.font).lines, label2.font);
+    const across = gapX >= gapY;
+    const gap = Math.max(0, across ? gapX : gapY);
+    const need = (across ? whole.w : whole.h) + EDGE_LABEL.gap * 2 + 4;
+    const move = across ? `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.x >= a.x ? "right" : "left"} (to x ${r(z3.x >= a.x ? z3.x + need - gap : z3.x - (need - gap))})` : `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.y >= a.y ? "down" : "up"} (to y ${r(z3.y >= a.y ? z3.y + need - gap : z3.y - (need - gap))})`;
+    const fit3 = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label2.font * 0.55)));
+    const shorter = labelControl(w2.data).short ? "a shorter data.label.short" : "a short form in data.label.short";
+    const instead = `${fit3 >= 3 ? `${shorter} (about ${fit3} characters fit)` : shorter}, or shorten the label`;
+    add2(w2, {
+      kind: "label",
+      message: label2.mode === "dot" ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need)}): the page shows only a dot there, the text on hover` : `${what} is cut to "${label2.lines.join(" ")}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need)})`,
+      suggestion: need - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
+      others: [a.id, z3.id]
+    });
+  }
+  for (let i = 0; i < marks.length; i++)
+    for (let j2 = i + 1; j2 < marks.length; j2++) {
+      const [m1, m2] = [marks[i], marks[j2]];
+      const ox = Math.min(m1.box.x + m1.box.w, m2.box.x + m2.box.w) - Math.max(m1.box.x, m2.box.x);
+      const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y);
+      if (ox <= MARK_TOL || oy <= MARK_TOL)
+        continue;
+      const z3 = shown.items[m2.wire.to];
+      const fix = foldsOf(m1.wire.data).length || foldsOf(m2.wire.data).length ? "fold one of the two wires elsewhere (data.bend) so they part, or give one label a short form in data.label.short" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
+      add2(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
+    }
+  const paper = (it) => it.type === "frame" || it.type === "lane";
+  const coverable = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment" && !paper(it) && it.w > 8 && it.h > 8);
+  const cards = Object.values(shown.items).filter((it) => it.type === "comment" && it.w > 8 && it.h > 8 && shown.items[it.target ?? ""]?.type !== "comment");
+  const uiScreenOf2 = (it) => {
+    const seen = /* @__PURE__ */ new Set();
+    for (let cur = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : void 0) {
+      if (isUiScreen(cur))
+        return cur;
+      seen.add(cur.id);
+    }
+    return void 0;
+  };
+  for (const c of Object.values(shown.items)) {
+    if (c.type !== "comment" || c.w <= 8 || c.h <= 8)
+      continue;
+    const t = c.target ? shown.items[c.target] : void 0;
+    if (t?.type === "comment")
+      continue;
+    if (root && !inside2(shown, c, root) && !(t && inScope.has(t.id)))
+      continue;
+    const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c);
+    const screen = t ? uiScreenOf2(t) : void 0;
+    const gutter = screen ? uiGutterOf(screen) : void 0;
+    const label2 = `comment "${short4(c.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
+    const into = gutter && screen && t ? `move it into the gutter right of ${nameOf2(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) \u2014 notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf2(t)} onto free paper, or add it without x/y so the canvas places it` : "move it onto free paper";
+    const push = (f2) => found.push({ id: c.id, ...f2, severity: "info", ...info?.key ? { frame: info.key } : {} });
+    const covered = coverable.map((it) => ({ it, ox: Math.min(c.x + c.w, it.x + it.w) - Math.max(c.x, it.x), oy: Math.min(c.y + c.h, it.y + it.h) - Math.max(c.y, it.y) })).filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL).sort((a, b2) => byReading(a.it, b2.it));
+    if (covered.length) {
+      const names = covered.slice(0, 3).map((o) => nameOf2(o.it)).join(", ");
+      const more = covered.length > 3 ? ` and ${covered.length - 3} more` : "";
+      const leaves = covered.filter((o) => !isContainer2(o.it));
+      const worst = (leaves.length ? leaves : covered).reduce((a, b2) => a.ox * a.oy >= b2.ox * b2.oy ? a : b2);
+      push({ kind: "comment-covers", message: `${label2} covers ${names}${more} (${r(worst.ox)}\xD7${r(worst.oy)} px on ${nameOf2(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) });
+    }
+    const stacked = cards.filter((o) => o.id !== c.id && (byReading(o, c) || (o.id < c.id ? -1 : 1)) < 0).map((o) => ({ o, ox: Math.min(c.x + c.w, o.x + o.w) - Math.max(c.x, o.x), oy: Math.min(c.y + c.h, o.y + o.h) - Math.max(c.y, o.y) })).filter((s) => s.ox > OVERLAP_TOL && s.oy > OVERLAP_TOL);
+    if (stacked.length) {
+      const names = stacked.slice(0, 3).map((s) => `comment "${short4(s.o.text, 24)}"`).join(", ");
+      const more = stacked.length > 3 ? ` and ${stacked.length - 3} more` : "";
+      push({
+        kind: "comment-covers",
+        message: `${label2} lies on ${names}${more} (${r(stacked[0].ox)}\xD7${r(stacked[0].oy)} px)`,
+        suggestion: `move one of them onto free paper, or add it without x/y so the canvas places it; a note the file no longer has goes with a redraw of its diagram`,
+        others: stacked.map((s) => s.o.id)
+      });
+    }
+    if (!t || !info?.frameId || isAnnotationDraft(c))
+      continue;
+    const f = shown.items[info.frameId];
+    if (!f || isHiddenFrame(f))
+      continue;
+    const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) };
+    if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL)
+      continue;
+    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
+    const nx = Math.min(Math.max(c.x, f.x + 10), f.x + f.w - c.w - 10);
+    const ny = Math.min(Math.max(c.y, f.y + 10), f.y + f.h - c.h - 10);
+    push({
+      kind: "comment-outside",
+      message: `${label2} is outside its frame ${nameOf2(f)}: ${sides.join(", ")}`,
+      suggestion: gutter ? `${into}, or grow the frame to hold the gutter` : `move it inside the frame beside ${nameOf2(t)} (x ${r(nx)}, y ${r(ny)}), or grow the frame`,
+      others: [f.id, t.id]
+    });
+  }
+  for (const d of shownDifferences(board)) {
+    if (!inScope.has(d.id))
+      continue;
+    const it = board.items[d.id];
+    const moved = Math.abs(d.stored.x - d.shown.x) > MOVED_TOL || Math.abs(d.stored.y - d.shown.y) > MOVED_TOL;
+    if (!moved || it.type === "frame")
+      continue;
+    const card = it.type === "card";
+    add2(it, {
+      kind: "moved-by-layout",
+      message: `${nameOf2(it)} is stored at ${r(d.stored.x)},${r(d.stored.y)} but the page draws it at ${r(d.shown.x)},${r(d.shown.y)} (the kanban layout places ${card ? "cards" : "columns"})`,
+      suggestion: card ? "kanban cards stack in their column in the order of their stored y: set y to reorder (x is ignored); to change columns, set parent (or use the cards API)" : "kanban columns stand side by side in the order of their stored x: set x to reorder them; their y and height follow the row"
+    });
+  }
+  const counts = Object.fromEntries(KINDS.map((k2) => [k2, 0]));
+  for (const f of found)
+    counts[f.kind]++;
+  const pos = (id) => shown.items[id] ?? board.items[id];
+  found.sort((a, b2) => KINDS.indexOf(a.kind) - KINDS.indexOf(b2.kind) || byReading(pos(a.id), pos(b2.id)));
+  const limit = opts.limit ?? 200;
+  const h = hiddenOf(board);
+  const within = (id) => !!id && (!root || id === root || inside2(board, board.items[id], root));
+  const hidden = h ? [...h.ids].filter((id) => within(id) || within(h.frameOf.get(id))).length : 0;
+  return { findings: found.slice(0, limit), checked: items.length, wires, ...key ? { frame: key } : {}, counts, ...hidden ? { hidden } : {} };
+}
+function byReading(a, b2) {
+  const ra = Math.round(a.y / 60);
+  const rb = Math.round(b2.y / 60);
+  return ra !== rb ? ra - rb : a.x - b2.x;
+}
+function layoutLines(report, _board, max = 60) {
+  const total = KINDS.reduce((n4, k2) => n4 + report.counts[k2], 0);
+  const where = report.frame ? ` in ${report.frame}` : "";
+  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ""} checked${report.hidden ? `; ${report.hidden} in hidden frames not checked` : ""}`;
+  if (!total)
+    return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`];
+  const parts2 = KINDS.filter((k2) => report.counts[k2]).map((k2) => `${report.counts[k2]} ${k2}`);
+  const shown = report.findings.slice(0, max);
+  const out = [`Layout${where}: ${total} finding(s) \u2014 ${parts2.join(", ")} (${checked}; positions as the page draws them)`];
+  for (const f of shown)
+    out.push(`- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`);
+  if (total > shown.length)
+    out.push(`\u2026 ${total - shown.length} more (pass frame to look at one diagram, or fix these and check again)`);
+  return out;
+}
+
+// packages/canvas/dist/diagrams/domainStoryLayout.js
+var PAGE = "docs/diagrams.md \xA76b";
+function domainStoryLayoutFindings(content, key = "ds") {
+  const m2 = normalizeDomainStory(content);
+  let items;
+  try {
+    items = renderDomainStory(content, { scope: key, now: "1970-01-01T00:00:00.000Z" });
+  } catch {
+    return [];
+  }
+  const out = [];
+  const element = (id) => id.startsWith(`${key}.`) ? id.slice(key.length + 1).replace(/^(group|note|object|actor)\./, "") : id;
+  const board = { id: "lint", title: "", kind: "freeform", seq: 0, createdAt: "", updatedAt: "", items: Object.fromEntries(items.map((i) => [i.id, i])) };
+  const shared2 = (a, b2) => {
+    const ga = m2.groups.find((g2) => g2.id === a);
+    const gb = m2.groups.find((g2) => g2.id === b2);
+    return !!ga && !!gb && ga.members.some((x2) => gb.members.includes(x2));
+  };
+  for (const f of checkLayout(board, { limit: 200 }).findings) {
+    if (f.kind === "group") {
+      const [a, b2] = [element(f.others?.[0] ?? ""), element(f.id)];
+      if (shared2(a, b2))
+        continue;
+      out.push({ rule: "group-outlines-overlap", severity: "warning", element: b2, message: `${f.message}, although the two groups share no member: their members interleave on the board (often sentences grouped by number around one actor they all pass through) \u2014 group what sits together (an actor with its work objects), give the story more room (\`layout: { spacing: roomy }\`), split it into two stories, or drop the groups`, page: PAGE });
+    } else if (f.kind === "wire-through") {
+      out.push({ rule: "line-through", severity: "warning", element: element(f.id), message: `${f.message} \u2014 on the board: ${f.suggestion}`, page: PAGE });
+    }
+  }
+  const asked = m2.layout?.actors === "repeat" ? "`layout.actors: repeat`" : m2.actors.some((a) => a.repeat) ? "`repeat: true`" : void 0;
+  if (asked && !items.some((i) => i.data?.occurrence))
+    out.push({
+      rule: "repeat-no-effect",
+      severity: "info",
+      message: `${asked} draws no actor again in this story: every sentence is drawn within two grid cells of the drawings its actors already have (an actor is drawn again only where the story comes back to it from further away) \u2014 to draw one again anyway, put \`drawAgain: <actor>\` on the sentence that should get the copy`,
+      page: PAGE
+    });
+  return out;
+}
+
 // packages/canvas/dist/diagrams/grammar.js
 function checkEventStorming(content) {
   const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
@@ -47706,7 +48600,7 @@ function lintDesignContent(d) {
   if (!parsed.success)
     return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
   if (d.kind === "domain-story")
-    return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+    return [...unknown2, ...[...checkDomainStory(d.content), ...domainStoryLayoutFindings(d.content, d.key)].map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
   const notes = annotationFindings(d.kind, parsed.data, d.key);
   if (d.kind === "ui-mock")
     return [...[...lintUiMock(d.content), ...clickNoteFindings(d.content)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
@@ -48393,7 +49287,7 @@ function issueUrl(input2) {
 }
 
 // packages/canvas/dist/version.js
-var VERSION = "0.30.1";
+var VERSION = "0.31.0";
 function userAgent(component) {
   return `unprose/${VERSION} (${component.replace(/[^\w .:/-]+/g, " ").trim() || "client"})`;
 }
@@ -62344,7 +63238,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.30.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.31.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c) => {
@@ -63247,457 +64141,6 @@ function summaryText(board, only, hidden) {
   return out.join("\n");
 }
 
-// packages/canvas/dist/shown.js
-var KANBAN_HEADER = 44;
-var KANBAN_GAP = 12;
-var KANBAN_PAD = 20;
-var FRAME_PAD = 24;
-var isColumn = (it) => it.type === "lane" && it.role === "column";
-var groupKey = (col) => col.parent ?? "";
-function kanbanOrigins(board) {
-  const out = /* @__PURE__ */ new Map();
-  for (const col of Object.values(board.items)) {
-    if (!isColumn(col) || ownLock(col))
-      continue;
-    const k2 = groupKey(col);
-    const o = out.get(k2);
-    out.set(k2, o ? { x: Math.min(o.x, col.x), y: Math.min(o.y, col.y) } : { x: col.x, y: col.y });
-  }
-  return out;
-}
-var cardsOf = (board, col) => Object.values(board.items).filter((it) => it.type === "card" && it.parent === col.id).sort((a, b2) => a.y - b2.y || (a.order ?? 0) - (b2.order ?? 0));
-var lockedKanban = (board, key) => {
-  const f = key ? board.items[key] : void 0;
-  return !!f && f.type === "frame" && ownLock(f);
-};
-function nextFree(start, size2, fixed) {
-  let p = start;
-  for (let moved = true; moved; ) {
-    moved = false;
-    for (const [a, b2] of fixed)
-      if (p < b2 && p + size2 + KANBAN_GAP > a) {
-        p = b2;
-        moved = true;
-      }
-  }
-  return p;
-}
-function stackCards(board, col, x2, top, out) {
-  const cards = cardsOf(board, col);
-  const fixed = cards.filter(ownLock).map((c) => [c.y, c.y + c.h + KANBAN_GAP]);
-  let y2 = top;
-  let bottom = top;
-  for (const card of cards) {
-    if (ownLock(card)) {
-      bottom = Math.max(bottom, card.y + card.h + KANBAN_GAP);
-      continue;
-    }
-    y2 = nextFree(y2, card.h, fixed);
-    out.set(card.id, { x: x2 + KANBAN_PAD, y: y2 });
-    y2 += card.h + KANBAN_GAP;
-    bottom = Math.max(bottom, y2);
-  }
-  return bottom;
-}
-function alignKanban(board, origins = kanbanOrigins(board)) {
-  const columns = Object.values(board.items).filter((c) => isColumn(c) && !lockedKanban(board, groupKey(c)));
-  if (!columns.length)
-    return board;
-  const patched = {};
-  const set2 = (it, p) => {
-    const cur = patched[it.id] ?? it;
-    if (Object.entries(p).every(([k2, v2]) => cur[k2] === v2))
-      return;
-    patched[it.id] = { ...cur, ...p };
-  };
-  const groups = /* @__PURE__ */ new Map();
-  for (const c of columns)
-    groups.set(groupKey(c), [...groups.get(groupKey(c)) ?? [], c]);
-  for (const [key, cols] of groups) {
-    const origin = origins.get(key) ?? { x: Math.min(...cols.map((c) => c.x)), y: Math.min(...cols.map((c) => c.y)) };
-    cols.sort((a, b2) => a.x - b2.x || (a.order ?? 0) - (b2.order ?? 0));
-    const fixed = cols.filter(ownLock).map((c) => [c.x, c.x + c.w + KANBAN_GAP]);
-    let x2 = origin.x;
-    let right = origin.x;
-    let tallest = 0;
-    const placed = [];
-    for (const col of cols) {
-      const locked = ownLock(col);
-      const cx = locked ? col.x : nextFree(x2, col.w, fixed);
-      const top = (locked ? col.y : origin.y) + KANBAN_HEADER + KANBAN_GAP;
-      const cards = /* @__PURE__ */ new Map();
-      const bottom = stackCards(board, col, cx, top, cards);
-      for (const [id, at3] of cards)
-        set2(board.items[id], at3);
-      if (!locked) {
-        tallest = Math.max(tallest, col.h, bottom - KANBAN_GAP + KANBAN_PAD - origin.y);
-        placed.push({ col, x: cx });
-        x2 = cx + col.w + KANBAN_GAP;
-      }
-      right = Math.max(right, cx + col.w + KANBAN_GAP);
-    }
-    for (const { col, x: cx } of placed)
-      set2(col, { x: cx, y: origin.y, h: tallest });
-    const frame = key ? board.items[key] : void 0;
-    if (frame && frame.type === "frame") {
-      const edge = right - KANBAN_GAP + FRAME_PAD;
-      const bottom = Math.max(origin.y + tallest, ...cols.filter(ownLock).map((c) => c.y + c.h)) + FRAME_PAD;
-      set2(frame, { w: Math.max(frame.w, edge - frame.x), h: Math.max(frame.h, bottom - frame.y) });
-    }
-  }
-  if (!Object.keys(patched).length)
-    return board;
-  return { ...board, items: { ...board.items, ...patched } };
-}
-function shownBoard(board) {
-  return drawnBoard(alignKanban(board));
-}
-function shownDifferences(board) {
-  const shown = shownBoard(board);
-  if (shown === board)
-    return [];
-  const out = [];
-  for (const it of Object.values(board.items)) {
-    if (layoutLock(board.items, it.id) || isHiddenFrame(it))
-      continue;
-    const s = shown.items[it.id];
-    if (!s || s.x === it.x && s.y === it.y && s.w === it.w && s.h === it.h)
-      continue;
-    const why = it.type === "card" && it.parent && isColumn(board.items[it.parent] ?? it) ? `kanban cards stack in their column in the order of their stored y: drawn at ${s.x},${s.y}, stored at ${it.x},${it.y}` : isColumn(it) ? "kanban columns stand side by side and are as tall as the tallest column" : it.type === "frame" ? "the frame grows to hold its kanban" : "drawn elsewhere by the kanban layout";
-    out.push({ id: it.id, stored: { x: it.x, y: it.y, w: it.w, h: it.h }, shown: { x: s.x, y: s.y, w: s.w, h: s.h }, why });
-  }
-  return out;
-}
-
-// packages/canvas/dist/wireGeometry.js
-var SIDES = /* @__PURE__ */ new Set(["top", "right", "bottom", "left"]);
-function anchor2(bx, side) {
-  if (side === "left")
-    return { x: bx.x, y: bx.y + bx.h / 2 };
-  if (side === "right")
-    return { x: bx.x + bx.w, y: bx.y + bx.h / 2 };
-  if (side === "top")
-    return { x: bx.x + bx.w / 2, y: bx.y };
-  return { x: bx.x + bx.w / 2, y: bx.y + bx.h };
-}
-function floatingEnd(a, b2) {
-  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
-  const dx = b2.x + b2.w / 2 - ca.x;
-  const dy = b2.y + b2.h / 2 - ca.y;
-  if (!dx && !dy)
-    return ca;
-  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
-  return { x: ca.x + dx * t, y: ca.y + dy * t };
-}
-function floatingEndTo(a, p) {
-  return floatingEnd(a, { x: p.x, y: p.y, w: 0, h: 0 });
-}
-function foldedPath(pts, r2 = 8) {
-  const f = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
-  if (!pts.length)
-    return "";
-  let d = `M${f(pts[0].x)} ${f(pts[0].y)}`;
-  for (let i = 1; i < pts.length - 1; i++) {
-    const [a, b2, c] = [pts[i - 1], pts[i], pts[i + 1]];
-    const k2 = Math.min(r2, Math.hypot(b2.x - a.x, b2.y - a.y) / 2, Math.hypot(c.x - b2.x, c.y - b2.y) / 2);
-    const u3 = (p, q2) => {
-      const l = Math.hypot(q2.x - p.x, q2.y - p.y) || 1;
-      return { x: (q2.x - p.x) / l, y: (q2.y - p.y) / l };
-    };
-    const [ua, uc] = [u3(b2, a), u3(b2, c)];
-    d += k2 > 0 ? `L${f(b2.x + ua.x * k2)} ${f(b2.y + ua.y * k2)}Q${f(b2.x)} ${f(b2.y)} ${f(b2.x + uc.x * k2)} ${f(b2.y + uc.y * k2)}` : `L${f(b2.x)} ${f(b2.y)}`;
-  }
-  const z3 = pts[pts.length - 1];
-  return pts.length > 1 ? `${d}L${f(z3.x)} ${f(z3.y)}` : d;
-}
-function autoSides(a, b2) {
-  const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
-  const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
-  const gapX = dx > 0 ? b2.x - (a.x + a.w) : a.x - (b2.x + b2.w);
-  const gapY = dy > 0 ? b2.y - (a.y + a.h) : a.y - (b2.y + b2.h);
-  if (gapX >= gapY)
-    return dx >= 0 ? ["right", "left"] : ["left", "right"];
-  return dy >= 0 ? ["bottom", "top"] : ["top", "bottom"];
-}
-function routePoints(p1, s1, p2, s2) {
-  const h1 = s1 === "left" || s1 === "right";
-  const h2 = s2 === "left" || s2 === "right";
-  if (h1 && h2) {
-    const mx = (p1.x + p2.x) / 2;
-    return Math.abs(p1.y - p2.y) < 0.5 ? [p1, p2] : [p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2];
-  }
-  if (!h1 && !h2) {
-    const my = (p1.y + p2.y) / 2;
-    return Math.abs(p1.x - p2.x) < 0.5 ? [p1, p2] : [p1, { x: p1.x, y: my }, { x: p2.x, y: my }, p2];
-  }
-  return h1 ? [p1, { x: p2.x, y: p1.y }, p2] : [p1, { x: p1.x, y: p2.y }, p2];
-}
-function foldsOf(data) {
-  const b2 = data?.bend;
-  const list3 = Array.isArray(b2) ? b2 : b2 && typeof b2 === "object" ? [b2] : [];
-  return list3.filter((p) => typeof p?.x === "number" && typeof p?.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y)).map((p) => ({ x: p.x, y: p.y }));
-}
-var n2 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
-function folded(p1, via, p2, ds, auto) {
-  const points = [p1, ...via, p2];
-  return { d: foldedPath(points, ds ? 4 : 8), points, p1, p2, ds, via, ...auto ? { auto } : {} };
-}
-function wireShape(b2, it) {
-  const from = it.from ? b2.items[it.from] : void 0;
-  const to = it.to ? b2.items[it.to] : void 0;
-  if (!from || !to)
-    return void 0;
-  const ds = !!it.data?.ds;
-  const folds = foldsOf(it.data);
-  if (folds.length)
-    return folded(floatingEndTo(from, folds[0]), folds, floatingEndTo(to, folds[folds.length - 1]), ds);
-  const auto = autoSides(from, to);
-  const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
-  const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
-  const p1 = ds ? floatingEnd(from, to) : anchor2(from, s1);
-  const p2 = ds ? floatingEnd(to, from) : anchor2(to, s2);
-  const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
-  return { d: points.map((p, i) => `${i ? "L" : "M"}${n2(p.x)} ${n2(p.y)}`).join(""), points, p1, p2, ds, via: [] };
-}
-function segmentHits(p, q2, b2, pad = 0) {
-  const [x0, y0, x1, y1] = [b2.x - pad, b2.y - pad, b2.x + b2.w + pad, b2.y + b2.h + pad];
-  if (x1 <= x0 || y1 <= y0)
-    return false;
-  let t0 = 0;
-  let t1 = 1;
-  const dx = q2.x - p.x;
-  const dy = q2.y - p.y;
-  for (const [pp, qq] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
-    if (pp === 0) {
-      if (qq < 0)
-        return false;
-      continue;
-    }
-    const r2 = qq / pp;
-    if (pp < 0)
-      t0 = Math.max(t0, r2);
-    else
-      t1 = Math.min(t1, r2);
-    if (t0 > t1)
-      return false;
-  }
-  return true;
-}
-var THROUGH_PAD = -6;
-var CLEAR_PAD = 2;
-var DETOUR_GAP = 30;
-var CROSS_COST = 60;
-function runsThrough(points, boxes, fromId, toId) {
-  const out = [];
-  for (const o of boxes) {
-    for (let i = 0; i < points.length - 1; i++) {
-      if (i === 0 && o.id === fromId || i === points.length - 2 && o.id === toId)
-        continue;
-      if (segmentHits(points[i], points[i + 1], o, THROUGH_PAD)) {
-        out.push(o);
-        break;
-      }
-    }
-  }
-  return out;
-}
-var len = (pts) => pts.reduce((v2, p, i) => i ? v2 + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0, 0);
-var samePt2 = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
-var orient = (a, b2, c) => Math.sign((b2.x - a.x) * (c.y - a.y) - (b2.y - a.y) * (c.x - a.x));
-function crossingsWith(a, others) {
-  let k2 = 0;
-  for (const o of others)
-    for (let i = 0; i < a.length - 1; i++)
-      for (let j2 = 0; j2 < o.length - 1; j2++) {
-        const [p, q2, r2, s] = [a[i], a[i + 1], o[j2], o[j2 + 1]];
-        if (samePt2(p, r2) || samePt2(p, s) || samePt2(q2, r2) || samePt2(q2, s))
-          continue;
-        if (orient(p, q2, r2) * orient(p, q2, s) < 0 && orient(r2, s, p) * orient(r2, s, q2) < 0)
-          k2++;
-      }
-  return k2;
-}
-var overlapsBox = (o, x0, y0, x1, y1) => o.x < x1 && o.x + o.w > x0 && o.y < y1 && o.y + o.h > y0;
-var cornersOf = (b2, g2) => [
-  { x: b2.x - g2, y: b2.y - g2 },
-  { x: b2.x + b2.w + g2, y: b2.y - g2 },
-  { x: b2.x + b2.w + g2, y: b2.y + b2.h + g2 },
-  { x: b2.x - g2, y: b2.y + b2.h + g2 }
-];
-function detourOf(from, to, boxes, others) {
-  const s = floatingEnd(from, to);
-  const t = floatingEnd(to, from);
-  const [x0, y0, x1, y1] = [Math.min(s.x, t.x), Math.min(s.y, t.y), Math.max(s.x, t.x), Math.max(s.y, t.y)];
-  const hit2 = boxes.filter((o) => o.id !== from.id && o.id !== to.id && overlapsBox(o, x0 - 1, y0 - 1, x1 + 1, y1 + 1) && segmentHits(s, t, o, THROUGH_PAD));
-  if (!hit2.length)
-    return void 0;
-  const L2 = Math.hypot(t.x - s.x, t.y - s.y) || 1;
-  const [ux, uy] = [(t.x - s.x) / L2, (t.y - s.y) / L2];
-  const [nx, ny] = [-uy, ux];
-  const singles = [];
-  const beside = (h) => {
-    const c = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
-    const along = Math.max(0, Math.min(L2, (c.x - s.x) * ux + (c.y - s.y) * uy));
-    const off = (c.x - s.x) * nx + (c.y - s.y) * ny;
-    const ext = Math.abs(nx) * (h.w / 2) + Math.abs(ny) * (h.h / 2) + DETOUR_GAP;
-    return { along, lo: off - ext, hi: off + ext };
-  };
-  for (const h of hit2) {
-    singles.push(...cornersOf(h, DETOUR_GAP));
-    const { along, lo, hi } = beside(h);
-    for (const d of [hi, lo])
-      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
-  }
-  if (hit2.length > 1) {
-    const bs = hit2.map(beside);
-    const along = bs.reduce((v2, b2) => v2 + b2.along, 0) / bs.length;
-    for (const d of [Math.max(...bs.map((b2) => b2.hi)), Math.min(...bs.map((b2) => b2.lo))])
-      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
-  }
-  const pts = [s, t, ...singles];
-  const bx0 = Math.min(...pts.map((p) => p.x)) - DETOUR_GAP;
-  const by0 = Math.min(...pts.map((p) => p.y)) - DETOUR_GAP;
-  const bx1 = Math.max(...pts.map((p) => p.x)) + DETOUR_GAP;
-  const by1 = Math.max(...pts.map((p) => p.y)) + DETOUR_GAP;
-  const near = boxes.filter((o) => overlapsBox(o, bx0, by0, bx1, by1));
-  const clear = (route) => {
-    for (let i = 0; i < route.length - 1; i++)
-      for (const o of near) {
-        if (i === 0 && o.id === from.id || i === route.length - 2 && o.id === to.id)
-          continue;
-        if (segmentHits(route[i], route[i + 1], o, CLEAR_PAD))
-          return false;
-      }
-    return true;
-  };
-  const lines2 = typeof others === "function" ? others() : others;
-  let best;
-  const tryVia = (via) => {
-    const route = [floatingEndTo(from, via[0]), ...via, floatingEndTo(to, via[via.length - 1])];
-    if (!clear(route))
-      return;
-    const score = len(route) + CROSS_COST * crossingsWith(route, lines2);
-    if (!best || score < best.score - 1e-6)
-      best = { via, score };
-  };
-  for (const v2 of singles)
-    tryVia([v2]);
-  if (!best) {
-    const corners = hit2.flatMap((h) => cornersOf(h, DETOUR_GAP));
-    for (const a of corners)
-      for (const b2 of corners)
-        if (a !== b2)
-          tryVia([a, b2]);
-  }
-  return best?.via.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
-}
-function dsSeqAt(s, along = 24) {
-  const q2 = s.points[1] ?? s.p2;
-  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
-  const d = Math.min(along, len2 / 3);
-  return { x: s.p1.x + (q2.x - s.p1.x) / len2 * d, y: s.p1.y + (q2.y - s.p1.y) / len2 * d };
-}
-var DS_SEQ = 22;
-function dsVerbAt(s) {
-  const q2 = s.points[1] ?? s.p2;
-  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
-  const ux = (q2.x - s.p1.x) / len2;
-  const uy = (q2.y - s.p1.y) / len2;
-  let nx = -uy;
-  let ny = ux;
-  if (ny > 0 || ny === 0 && nx > 0)
-    nx = -nx, ny = -ny;
-  const along = Math.min(24, len2 / 3);
-  const t = Math.max(len2 / 2, Math.min(len2 - 20, along + 44));
-  return { x: s.p1.x + ux * t + nx * 13, y: s.p1.y + uy * t + ny * 13 };
-}
-var wireText = (it) => it.role === "trace" ? "" : (it.label ?? it.text ?? "").trim();
-function labelObstacles(b2) {
-  return Object.values(b2.items).filter((it) => isLabelObstacle(it)).map((it) => ({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h }));
-}
-function wireLabel(it, shape, boxes) {
-  const text3 = wireText(it);
-  if (!text3)
-    return void 0;
-  const ctl = labelControl(it.data);
-  const ds = shape.ds && it.role !== "annotation-link";
-  const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
-  const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
-  return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
-}
-var seqBox = (p) => ({ x: p.x - DS_SEQ / 2, y: p.y - DS_SEQ / 2, w: DS_SEQ, h: DS_SEQ });
-function planWires(b2, ids) {
-  const out = /* @__PURE__ */ new Map();
-  const wanted = ids ? new Set(ids) : void 0;
-  const wires = Object.values(b2.items).filter((it) => it.type === "arrow" && (!wanted || wanted.has(it.id))).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
-  const obstacles = labelObstacles(b2).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
-  const seqOf = (it) => typeof it.data?.seq === "number" ? it.data.seq : Infinity;
-  const bySeq = (x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1);
-  const lines2 = [];
-  for (const it of wires) {
-    const shape = wireShape(b2, it);
-    if (!shape)
-      continue;
-    out.set(it.id, { shape });
-    if (shape.ds)
-      lines2.push({ it, shape });
-  }
-  lines2.sort(bySeq);
-  const byId = new Map(obstacles.map((o) => [o.id, o]));
-  const ends = lines2.flatMap((l) => [b2.items[l.it.from], b2.items[l.it.to]]);
-  const reach = 400;
-  const [lx0, ly0] = [Math.min(...ends.map((e) => e.x)) - reach, Math.min(...ends.map((e) => e.y)) - reach];
-  const [lx1, ly1] = [Math.max(...ends.map((e) => e.x + e.w)) + reach, Math.max(...ends.map((e) => e.y + e.h)) + reach];
-  const nearLines = lines2.length ? obstacles.filter((o) => overlapsBox(o, lx0, ly0, lx1, ly1)) : [];
-  for (const line of lines2) {
-    if (line.shape.via.length)
-      continue;
-    const from = byId.get(line.it.from) ?? { ...b2.items[line.it.from], id: line.it.from };
-    const to = byId.get(line.it.to) ?? { ...b2.items[line.it.to], id: line.it.to };
-    const via = detourOf(from, to, nearLines, () => lines2.filter((l) => l !== line).map((l) => l.shape.points));
-    if (!via)
-      continue;
-    line.shape = folded(floatingEndTo(from, via[0]), via, floatingEndTo(to, via[via.length - 1]), true, true);
-    out.get(line.it.id).shape = line.shape;
-  }
-  for (const it of wires) {
-    const planned = out.get(it.id);
-    if (planned && (!planned.shape.ds || it.role === "annotation-link"))
-      planned.label = wireLabel(it, planned.shape, obstacles);
-  }
-  const ds = lines2.filter((l) => l.it.role !== "annotation-link");
-  const titles = Object.values(b2.items).filter((g2) => g2.type === "frame" && g2.data?.ds === "group" && g2.text).map((g2) => ({ x: g2.x, y: g2.y - 24, w: measure(g2.text, 13.5, 600) + 6, h: 20 }));
-  const circles = [];
-  for (const { it, shape } of ds) {
-    if (it.role !== "activity" || typeof it.data?.seq !== "number")
-      continue;
-    const q2 = shape.points[1] ?? shape.p2;
-    const len2 = Math.hypot(q2.x - shape.p1.x, q2.y - shape.p1.y);
-    const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
-    const along = (d) => ({ x: shape.p1.x + (q2.x - shape.p1.x) / (len2 || 1) * d, y: shape.p1.y + (q2.y - shape.p1.y) / (len2 || 1) * d });
-    let at3 = dsSeqAt(shape);
-    for (let d = Math.min(24, len2 / 3); d <= Math.max(24, len2 * 0.42); d += 8) {
-      const p = along(d);
-      if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
-        at3 = p;
-        break;
-      }
-    }
-    circles.push(seqBox(at3));
-    out.get(it.id).seq = at3;
-  }
-  const placed = [];
-  for (const { it, shape } of ds) {
-    const label2 = wireLabel(it, shape, [...obstacles, ...circles, ...titles, ...placed]);
-    if (!label2)
-      continue;
-    out.get(it.id).label = label2;
-    if (label2.mode !== "dot")
-      placed.push({ x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h });
-  }
-  return out;
-}
-
 // packages/canvas/dist/snapshot.js
 var SnapshotError = class extends Error {
   status;
@@ -63778,7 +64221,7 @@ function esc3(s) {
 var n3 = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
 var uiOf = (it) => it?.type === "ui" ? it.data?.ui : void 0;
 var isUiBox2 = (it) => Boolean(uiOf(it)?.container);
-function isContainer2(it) {
+function isContainer3(it) {
   if (it.type === "frame" || it.type === "lane")
     return true;
   if (it.type === "wireframe")
@@ -63873,7 +64316,7 @@ function select(b2, opts) {
     const r2 = boxOf2(root);
     ids.add(root.id);
     for (const it of all)
-      if (drawable(it) && it.id !== root.id && (isInside(b2, it, root.id) || within(it, r2) && !(isContainer2(it) && it.w * it.h >= root.w * root.h)))
+      if (drawable(it) && it.id !== root.id && (isInside(b2, it, root.id) || within(it, r2) && !(isContainer3(it) && it.w * it.h >= root.w * root.h)))
         ids.add(it.id);
   } else if (opts.ids?.length) {
     const missing = opts.ids.filter((i) => !b2.items[i]);
@@ -63888,7 +64331,7 @@ function select(b2, opts) {
         continue;
       }
       ids.add(id);
-      if (isContainer2(it)) {
+      if (isContainer3(it)) {
         for (const o of all)
           if (drawable(o) && (isInside(b2, o, id) || within(o, boxOf2(it))))
             ids.add(o.id);
@@ -64046,7 +64489,8 @@ function drawText(c, it) {
     const path16 = `M${n3(bx.x + bx.w)} ${n3(bx.y)}H${n3(bx.x)}V${n3(bx.y + bx.h)}H${n3(bx.x + bx.w)}`;
     const fit3 = fitText(it);
     const lines2 = c.text && it.text ? fit3.lines : [];
-    return `<path d="${path16}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines2, { x: bx.x + fit3.box.padLeft, y: bx.y + fit3.box.padTop, font: fit3.box.font, lh: fit3.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit3.fits) });
+    const tint = it.color && it.color !== "white" && it.color !== "grey" ? p.c[it.color] : void 0;
+    return (tint ? rect(bx, `fill="${tint}" fill-opacity="0.3"`) : "") + `<path d="${path16}" fill="none" stroke="${tint ?? p.ink2}" stroke-width="${tint ? 3 : 2}"/>` + textBlock(lines2, { x: bx.x + fit3.box.padLeft, y: bx.y + fit3.box.padTop, font: fit3.box.font, lh: fit3.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit3.fits) });
   }
   if (it.role === "release-cut")
     return `<line x1="${n3(bx.x)}" y1="${n3(bx.y + bx.h / 2)}" x2="${n3(bx.x + bx.w)}" y2="${n3(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n3(bx.x + 4)}" y="${n3(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc3(it.text)}</text>` : "");
@@ -64497,8 +64941,8 @@ function renderSnapshot(board, opts = {}) {
     notes.push(`${items.length} items: drawn as boxes without text (more than ${TEXT_ITEM_CAP}); ask for a frame or ids`);
   const c = { b: b2, p, text: text3, out: [] };
   const byPos2 = (x2, y2) => x2.y - y2.y || x2.x - y2.x || (x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
-  const containers = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && isContainer2(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || y2.w * y2.h - x2.w * x2.h || byPos2(x2, y2));
-  const plain = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && !isContainer2(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || byPos2(x2, y2));
+  const containers = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && isContainer3(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || y2.w * y2.h - x2.w * x2.h || byPos2(x2, y2));
+  const plain = items.filter((i) => i.type !== "arrow" && i.type !== "comment" && !isContainer3(i)).sort((x2, y2) => depthOf(b2, x2) - depthOf(b2, y2) || byPos2(x2, y2));
   const wires = items.filter((i) => i.type === "arrow" && (opts.traces !== "none" || i.role !== "trace")).sort((x2, y2) => x2.id < y2.id ? -1 : 1);
   const comments = items.filter((i) => i.type === "comment").sort(byPos2);
   const body = [...containers, ...plain, ...wires, ...comments].map((it) => drawItem(c, it)).join("\n");
@@ -64513,389 +64957,6 @@ ${body}
 </g>
 </svg>`;
   return { svg, width, height, region, scale, items: items.length, notes };
-}
-
-// packages/canvas/dist/layoutCheck.js
-var STICKY_W2 = 160;
-var STICKY_H2 = 110;
-var LayoutError = class extends Error {
-  status;
-  constructor(message, status = 404) {
-    super(message);
-    this.status = status;
-  }
-};
-var KINDS = ["clipped", "overlap", "group", "label", "wire-through", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
-var OVERLAP_TOL = 6;
-var CONTAINER_COVER = 25;
-var OUTSIDE_TOL = 6;
-var OVERSIZE_RATIO = 3;
-var OVERSIZE_STICKIES = 3;
-var MOVED_TOL = 8;
-var DECOR_ROLES = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
-var isDsGroup = (it) => it.type === "frame" && it.data?.ds === "group";
-var GROUP_TITLE = 26;
-var MARK_TOL = 2;
-var SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
-var isContainer3 = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
-var isLane = (it) => !!it && it.type === "lane";
-var short4 = (s, n4 = 40) => {
-  const t = (s ?? "").replace(/\s+/g, " ").trim();
-  return t.length > n4 ? t.slice(0, n4 - 1) + "\u2026" : t;
-};
-var nameOf2 = (it) => {
-  const t = short4(it.text);
-  return t ? `${it.role ?? it.type} "${t}"` : `${it.role ?? it.type}`;
-};
-var r = Math.round;
-function scopeOf(board, frame) {
-  if (!frame)
-    return {};
-  const fid = board.items[diagramFrameId(frame)] ? diagramFrameId(frame) : board.items[frame] && isContainer3(board.items[frame]) ? frame : void 0;
-  if (fid)
-    return { root: fid, key: frame };
-  if (board.kind !== "freeform" && frame === board.kind)
-    return { key: frame };
-  throw new LayoutError(`no diagram frame or container "${frame}" on this board`);
-}
-function inside2(board, it, root) {
-  const seen = /* @__PURE__ */ new Set();
-  let cur = it;
-  while (cur?.parent && !seen.has(cur.id)) {
-    seen.add(cur.id);
-    if (cur.parent === root)
-      return true;
-    cur = board.items[cur.parent];
-  }
-  return false;
-}
-function checkLayout(board, opts = {}) {
-  const { root, key } = scopeOf(board, opts.frame);
-  const shown = shownBoard(board);
-  const all = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment");
-  const items = root ? all.filter((it) => inside2(shown, it, root)) : all;
-  const inScope = new Set(items.map((i) => i.id));
-  const found = [];
-  const frameOf2 = (it) => diagramOf(board, board.items[it.id] ?? it)?.key;
-  const add2 = (it, f) => found.push({ id: it.id, ...f, ...frameOf2(it) ? { frame: frameOf2(it) } : {} });
-  const byParent = /* @__PURE__ */ new Map();
-  for (const it of items) {
-    if (DECOR_ROLES.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
-      continue;
-    const k2 = it.parent && shown.items[it.parent] ? it.parent : "";
-    byParent.set(k2, [...byParent.get(k2) ?? [], it]);
-  }
-  for (const sibs of byParent.values()) {
-    for (let i = 0; i < sibs.length; i++) {
-      for (let j2 = i + 1; j2 < sibs.length; j2++) {
-        const a = sibs[i];
-        const b2 = sibs[j2];
-        if (isContainer3(a) !== isContainer3(b2))
-          continue;
-        if (isDsGroup(a) && isDsGroup(b2))
-          continue;
-        const ox = Math.min(a.x + a.w, b2.x + b2.w) - Math.max(a.x, b2.x);
-        const oy = Math.min(a.y + a.h, b2.y + b2.h) - Math.max(a.y, b2.y);
-        if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
-          continue;
-        const [first, second] = byReading(a, b2) <= 0 ? [a, b2] : [b2, a];
-        const cover = Math.round(100 * ox * oy / Math.min(a.w * a.h, b2.w * b2.h));
-        if (isContainer3(a) && cover < CONTAINER_COVER)
-          continue;
-        const moveX = second.x >= first.x ? first.x + first.w + 20 - second.x : 0;
-        const moveY = first.y + first.h + 20 - second.y;
-        const how = moveX > 0 && moveX <= moveY ? `move it ${r(moveX)} px right` : `move it ${r(Math.max(moveY, 0))} px down`;
-        add2(second, {
-          kind: "overlap",
-          message: `${nameOf2(second)} overlaps ${nameOf2(first)} (${ox > 0 ? r(ox) : 0}\xD7${r(oy)} px, ${cover}% of the smaller one)`,
-          suggestion: `${how} (to x ${r(second.x + (moveX > 0 && moveX <= moveY ? moveX : 0))}, y ${r(second.y + (moveX > 0 && moveX <= moveY ? 0 : Math.max(moveY, 0)))}), or make one of them smaller`,
-          others: [first.id]
-        });
-      }
-    }
-  }
-  for (const it of items) {
-    if (!it.text?.trim() || DECOR_ROLES.has(it.role ?? "") || it.role === "legend")
-      continue;
-    if (it.type === "lane" && it.role === "column") {
-      const room = it.w - 24 - 40;
-      const need = measure(it.text.split("\n")[0], 13.5, 600);
-      if (need > room + 2)
-        add2(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need - room + 4)} px wider (w ${r(it.w + need - room + 4)}) or shorten the title` });
-      continue;
-    }
-    if (it.type !== "sticky" && it.type !== "card" && it.type !== "text" && !(it.type === "wireframe" && it.role !== "screen" && it.role !== "image" && it.role !== "nav"))
-      continue;
-    if (typeof it.data?.ds === "string" && it.data.ds !== "annotation")
-      continue;
-    const meta3 = it.role === "card" && (Array.isArray(it.data?.labels) && it.data.labels.length || it.data?.size || it.data?.assignee) ? 26 : 0;
-    const fit3 = fitText({ ...it, h: it.h - meta3 });
-    if (!fit3.clipped)
-      continue;
-    const grow = fit3.needH - (it.h - meta3);
-    add2(it, {
-      kind: "clipped",
-      message: `text of ${nameOf2(it)} likely cut off: needs ~${fit3.lines.length} line${fit3.lines.length === 1 ? "" : "s"} at ${fit3.box.font} px, the ${r(it.w)}\xD7${r(it.h)} box fits ${fit3.fits}`,
-      suggestion: `make it ${grow} px taller (h ${r(it.h + grow)}), or wider, or shorten the text`
-    });
-  }
-  for (const it of items) {
-    const p = it.parent ? shown.items[it.parent] : void 0;
-    if (!p || !isContainer3(p) || DECOR_ROLES.has(it.role ?? ""))
-      continue;
-    const out = {
-      left: p.x - it.x,
-      top: p.y - it.y,
-      right: it.x + it.w - (p.x + p.w),
-      bottom: it.y + it.h - (p.y + p.h)
-    };
-    const worst = Math.max(out.left, out.top, out.right, out.bottom);
-    if (worst <= OUTSIDE_TOL)
-      continue;
-    const cx = it.x + it.w / 2;
-    const cy = it.y + it.h / 2;
-    const centreIn = cx >= p.x && cx <= p.x + p.w && cy >= p.y && cy <= p.y + p.h;
-    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
-    const nx = Math.min(Math.max(it.x, p.x + 10), p.x + p.w - it.w - 10);
-    const ny = Math.min(Math.max(it.y, p.y + 10), p.y + p.h - it.h - 10);
-    const fitsIn = it.w <= p.w - 20 && it.h <= p.h - 20;
-    const into = fitsIn ? `move it to x ${r(nx)}, y ${r(ny)}` : `make ${nameOf2(p)} bigger (it is ${r(p.w)}\xD7${r(p.h)}, the item ${r(it.w)}\xD7${r(it.h)})`;
-    if (isLane(p) && !centreIn)
-      add2(it, { kind: "off-lane", message: `${nameOf2(it)} belongs to ${nameOf2(p)} but is drawn outside it (${sides.join(", ")})`, suggestion: `${into}, or set its parent to the lane it is in`, others: [p.id] });
-    else
-      add2(it, { kind: "outside-parent", message: `${nameOf2(it)} sticks out of ${nameOf2(p)}: ${sides.join(", ")}`, suggestion: `${into}${fitsIn ? "" : ""}`, others: [p.id] });
-  }
-  const groups = /* @__PURE__ */ new Map();
-  for (const it of items) {
-    if (isContainer3(it) || SPANNING_ROLES.has(it.role ?? "") || DECOR_ROLES.has(it.role ?? ""))
-      continue;
-    const k2 = `${it.parent ?? ""}|${it.type}|${it.role ?? ""}`;
-    groups.set(k2, [...groups.get(k2) ?? [], it]);
-  }
-  const template = STICKY_W2 * STICKY_H2;
-  for (const sibs of groups.values()) {
-    const areas = sibs.map((s) => s.w * s.h).sort((a, b2) => a - b2);
-    const median = areas[Math.floor(areas.length / 2)];
-    for (const it of sibs) {
-      const area = it.w * it.h;
-      const vsSibs = sibs.length >= 3 && area >= OVERSIZE_RATIO * median;
-      const textH = it.text ? fitText({ ...it, h: 1e4 }).needH : 0;
-      const vsTemplate = (it.type === "sticky" || it.type === "card") && area > OVERSIZE_STICKIES * template && textH <= it.h / 2;
-      if (!vsSibs && !vsTemplate)
-        continue;
-      const typical = sibs.length >= 3 ? sibs.find((s) => s.w * s.h === median) : void 0;
-      const target = typical && vsSibs ? { w: typical.w, h: typical.h, what: "like its siblings" } : { w: STICKY_W2, h: STICKY_H2, what: "(the template sticky)" };
-      const atTarget = it.text ? fitText({ ...it, w: target.w, h: 1e4 }).needH : 0;
-      const size2 = atTarget <= target.h ? `use ${r(target.w)}\xD7${r(target.h)} ${target.what}` : atTarget <= target.h * 2 ? `use ${r(target.w)}\xD7${r(atTarget)} (the usual width, tall enough for its text)` : `its text is long for one ${it.role ?? it.type}: split it into several, or move the detail into a comment or the file, and use ${r(target.w)}\xD7${r(target.h)}`;
-      add2(it, {
-        kind: "oversized",
-        message: vsSibs ? `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / median * 10) / 10}\xD7 the area of its ${sibs.length - 1} siblings (typically ${typical ? `${r(typical.w)}\xD7${r(typical.h)}` : "?"})` : `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / template * 10) / 10}\xD7 a template sticky (${STICKY_W2}\xD7${STICKY_H2})`,
-        suggestion: `${size2}; sizes come from the template \u2014 do not scale stickies up to fill space`
-      });
-    }
-  }
-  const dsGroups = items.filter(isDsGroup);
-  const titled = (g2) => ({ x: g2.x, y: g2.y - GROUP_TITLE, w: g2.w, h: g2.h + GROUP_TITLE });
-  const contains = (o, i) => o.x <= i.x + 1 && o.y <= i.y - GROUP_TITLE + 1 && o.x + o.w >= i.x + i.w - 1 && o.y + o.h >= i.y + i.h - 1;
-  for (let i = 0; i < dsGroups.length; i++)
-    for (let j2 = i + 1; j2 < dsGroups.length; j2++) {
-      const [ga, gb] = byReading(dsGroups[i], dsGroups[j2]) <= 0 ? [dsGroups[i], dsGroups[j2]] : [dsGroups[j2], dsGroups[i]];
-      if (contains(ga, gb) || contains(gb, ga))
-        continue;
-      const ta = titled(ga);
-      const tb = titled(gb);
-      const ox = Math.min(ta.x + ta.w, tb.x + tb.w) - Math.max(ta.x, tb.x);
-      const oy = Math.min(ta.y + ta.h, tb.y + tb.h) - Math.max(ta.y, tb.y);
-      if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
-        continue;
-      const ma = new Set(Array.isArray(ga.data?.members) ? ga.data.members : []);
-      const shared2 = (Array.isArray(gb.data?.members) ? gb.data.members : []).filter((m2) => ma.has(m2));
-      add2(gb, {
-        kind: "group",
-        message: `the outline of ${nameOf2(gb)} overlaps the outline of ${nameOf2(ga)} (${r(ox)}\xD7${r(oy)} px)${shared2.length ? `: they share ${shared2.slice(0, 4).join(", ")}` : ""}`,
-        suggestion: shared2.length ? "a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other \u2014 it is then drawn inside it)" : `move ${nameOf2(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf2(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
-        others: [ga.id]
-      });
-    }
-  const obstacles = labelObstacles(shown);
-  const plan = planWires(shown);
-  const marks = [];
-  let wires = 0;
-  const seqName = (w2) => typeof w2.data?.seq === "number" ? `number circle ${w2.data.seq}` : "number circle";
-  for (const w2 of Object.values(shown.items)) {
-    if (w2.type !== "arrow" || !w2.from || !w2.to || !inScope.has(w2.from) || !inScope.has(w2.to))
-      continue;
-    wires++;
-    const planned = plan.get(w2.id);
-    const a = shown.items[w2.from];
-    const z3 = shown.items[w2.to];
-    const text3 = wireText(w2);
-    if (planned?.seq) {
-      const box = seqBox(planned.seq);
-      marks.push({ wire: w2, what: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)}`, box, circle: true });
-      const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w2.from && o.id !== w2.to);
-      if (on.length) {
-        const names = on.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
-        add2(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
-      }
-    }
-    const folds = foldsOf(w2.data);
-    if (planned && (planned.shape.ds || folds.length)) {
-      const through = runsThrough(planned.shape.points, obstacles, w2.from, w2.to);
-      if (through.length) {
-        const names = through.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
-        const at3 = (o) => `(${r(o.x + o.w + 40)}, ${r(o.y - 40)})`;
-        add2(w2, {
-          kind: "wire-through",
-          message: `the ${planned.shape.ds ? "line" : "wire"} ${nameOf2(a)} \u2192 ${nameOf2(z3)} runs through ${names}${folds.length ? " (where it was folded, data.bend)" : ""}`,
-          suggestion: folds.length ? `move its folds (data.bend) so it goes round ${names}, or move ${names} off it` : `move ${names} off the line, or fold the line round it (data.bend: [{ "x": \u2026, "y": \u2026 }, \u2026] on the arrow \u2014 e.g. a fold at ${at3(through[0])})`,
-          others: through.map((o) => o.id)
-        });
-      }
-    }
-    const label2 = planned?.label;
-    if (!label2 || !text3)
-      continue;
-    const what = `label "${short4(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
-    if (label2.mode !== "dot")
-      marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
-    if (label2.mode !== "dot" && label2.mode !== "cut")
-      continue;
-    const gapX = Math.max(z3.x - (a.x + a.w), a.x - (z3.x + z3.w));
-    const gapY = Math.max(z3.y - (a.y + a.h), a.y - (z3.y + z3.h));
-    const whole = labelSize(labelLines(text3, EDGE_LABEL.maxW, label2.font).lines, label2.font);
-    const across = gapX >= gapY;
-    const gap = Math.max(0, across ? gapX : gapY);
-    const need = (across ? whole.w : whole.h) + EDGE_LABEL.gap * 2 + 4;
-    const move = across ? `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.x >= a.x ? "right" : "left"} (to x ${r(z3.x >= a.x ? z3.x + need - gap : z3.x - (need - gap))})` : `move ${nameOf2(z3)} ${r(need - gap)} px ${z3.y >= a.y ? "down" : "up"} (to y ${r(z3.y >= a.y ? z3.y + need - gap : z3.y - (need - gap))})`;
-    const fit3 = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label2.font * 0.55)));
-    const shorter = labelControl(w2.data).short ? "a shorter data.label.short" : "a short form in data.label.short";
-    const instead = `${fit3 >= 3 ? `${shorter} (about ${fit3} characters fit)` : shorter}, or shorten the label`;
-    add2(w2, {
-      kind: "label",
-      message: label2.mode === "dot" ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need)}): the page shows only a dot there, the text on hover` : `${what} is cut to "${label2.lines.join(" ")}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need)})`,
-      suggestion: need - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
-      others: [a.id, z3.id]
-    });
-  }
-  for (let i = 0; i < marks.length; i++)
-    for (let j2 = i + 1; j2 < marks.length; j2++) {
-      const [m1, m2] = [marks[i], marks[j2]];
-      const ox = Math.min(m1.box.x + m1.box.w, m2.box.x + m2.box.w) - Math.max(m1.box.x, m2.box.x);
-      const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y);
-      if (ox <= MARK_TOL || oy <= MARK_TOL)
-        continue;
-      const z3 = shown.items[m2.wire.to];
-      const fix = foldsOf(m1.wire.data).length || foldsOf(m2.wire.data).length ? "fold one of the two wires elsewhere (data.bend) so they part, or give one label a short form in data.label.short" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
-      add2(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
-    }
-  const paper = (it) => it.type === "frame" || it.type === "lane";
-  const coverable = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment" && !paper(it) && it.w > 8 && it.h > 8);
-  const cards = Object.values(shown.items).filter((it) => it.type === "comment" && it.w > 8 && it.h > 8 && shown.items[it.target ?? ""]?.type !== "comment");
-  const uiScreenOf2 = (it) => {
-    const seen = /* @__PURE__ */ new Set();
-    for (let cur = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : void 0) {
-      if (isUiScreen(cur))
-        return cur;
-      seen.add(cur.id);
-    }
-    return void 0;
-  };
-  for (const c of Object.values(shown.items)) {
-    if (c.type !== "comment" || c.w <= 8 || c.h <= 8)
-      continue;
-    const t = c.target ? shown.items[c.target] : void 0;
-    if (t?.type === "comment")
-      continue;
-    if (root && !inside2(shown, c, root) && !(t && inScope.has(t.id)))
-      continue;
-    const info = t ? diagramOf(board, board.items[t.id] ?? t) : diagramOf(board, board.items[c.id] ?? c);
-    const screen = t ? uiScreenOf2(t) : void 0;
-    const gutter = screen ? uiGutterOf(screen) : void 0;
-    const label2 = `comment "${short4(c.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
-    const into = gutter && screen && t ? `move it into the gutter right of ${nameOf2(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) \u2014 notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf2(t)} onto free paper, or add it without x/y so the canvas places it` : "move it onto free paper";
-    const push = (f2) => found.push({ id: c.id, ...f2, severity: "info", ...info?.key ? { frame: info.key } : {} });
-    const covered = coverable.map((it) => ({ it, ox: Math.min(c.x + c.w, it.x + it.w) - Math.max(c.x, it.x), oy: Math.min(c.y + c.h, it.y + it.h) - Math.max(c.y, it.y) })).filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL).sort((a, b2) => byReading(a.it, b2.it));
-    if (covered.length) {
-      const names = covered.slice(0, 3).map((o) => nameOf2(o.it)).join(", ");
-      const more = covered.length > 3 ? ` and ${covered.length - 3} more` : "";
-      const leaves = covered.filter((o) => !isContainer3(o.it));
-      const worst = (leaves.length ? leaves : covered).reduce((a, b2) => a.ox * a.oy >= b2.ox * b2.oy ? a : b2);
-      push({ kind: "comment-covers", message: `${label2} covers ${names}${more} (${r(worst.ox)}\xD7${r(worst.oy)} px on ${nameOf2(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) });
-    }
-    const stacked = cards.filter((o) => o.id !== c.id && (byReading(o, c) || (o.id < c.id ? -1 : 1)) < 0).map((o) => ({ o, ox: Math.min(c.x + c.w, o.x + o.w) - Math.max(c.x, o.x), oy: Math.min(c.y + c.h, o.y + o.h) - Math.max(c.y, o.y) })).filter((s) => s.ox > OVERLAP_TOL && s.oy > OVERLAP_TOL);
-    if (stacked.length) {
-      const names = stacked.slice(0, 3).map((s) => `comment "${short4(s.o.text, 24)}"`).join(", ");
-      const more = stacked.length > 3 ? ` and ${stacked.length - 3} more` : "";
-      push({
-        kind: "comment-covers",
-        message: `${label2} lies on ${names}${more} (${r(stacked[0].ox)}\xD7${r(stacked[0].oy)} px)`,
-        suggestion: `move one of them onto free paper, or add it without x/y so the canvas places it; a note the file no longer has goes with a redraw of its diagram`,
-        others: stacked.map((s) => s.o.id)
-      });
-    }
-    if (!t || !info?.frameId || isAnnotationDraft(c))
-      continue;
-    const f = shown.items[info.frameId];
-    if (!f || isHiddenFrame(f))
-      continue;
-    const out = { left: f.x - c.x, top: f.y - c.y, right: c.x + c.w - (f.x + f.w), bottom: c.y + c.h - (f.y + f.h) };
-    if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL)
-      continue;
-    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
-    const nx = Math.min(Math.max(c.x, f.x + 10), f.x + f.w - c.w - 10);
-    const ny = Math.min(Math.max(c.y, f.y + 10), f.y + f.h - c.h - 10);
-    push({
-      kind: "comment-outside",
-      message: `${label2} is outside its frame ${nameOf2(f)}: ${sides.join(", ")}`,
-      suggestion: gutter ? `${into}, or grow the frame to hold the gutter` : `move it inside the frame beside ${nameOf2(t)} (x ${r(nx)}, y ${r(ny)}), or grow the frame`,
-      others: [f.id, t.id]
-    });
-  }
-  for (const d of shownDifferences(board)) {
-    if (!inScope.has(d.id))
-      continue;
-    const it = board.items[d.id];
-    const moved = Math.abs(d.stored.x - d.shown.x) > MOVED_TOL || Math.abs(d.stored.y - d.shown.y) > MOVED_TOL;
-    if (!moved || it.type === "frame")
-      continue;
-    const card = it.type === "card";
-    add2(it, {
-      kind: "moved-by-layout",
-      message: `${nameOf2(it)} is stored at ${r(d.stored.x)},${r(d.stored.y)} but the page draws it at ${r(d.shown.x)},${r(d.shown.y)} (the kanban layout places ${card ? "cards" : "columns"})`,
-      suggestion: card ? "kanban cards stack in their column in the order of their stored y: set y to reorder (x is ignored); to change columns, set parent (or use the cards API)" : "kanban columns stand side by side in the order of their stored x: set x to reorder them; their y and height follow the row"
-    });
-  }
-  const counts = Object.fromEntries(KINDS.map((k2) => [k2, 0]));
-  for (const f of found)
-    counts[f.kind]++;
-  const pos = (id) => shown.items[id] ?? board.items[id];
-  found.sort((a, b2) => KINDS.indexOf(a.kind) - KINDS.indexOf(b2.kind) || byReading(pos(a.id), pos(b2.id)));
-  const limit = opts.limit ?? 200;
-  const h = hiddenOf(board);
-  const within = (id) => !!id && (!root || id === root || inside2(board, board.items[id], root));
-  const hidden = h ? [...h.ids].filter((id) => within(id) || within(h.frameOf.get(id))).length : 0;
-  return { findings: found.slice(0, limit), checked: items.length, wires, ...key ? { frame: key } : {}, counts, ...hidden ? { hidden } : {} };
-}
-function byReading(a, b2) {
-  const ra = Math.round(a.y / 60);
-  const rb = Math.round(b2.y / 60);
-  return ra !== rb ? ra - rb : a.x - b2.x;
-}
-function layoutLines(report, _board, max = 60) {
-  const total = KINDS.reduce((n4, k2) => n4 + report.counts[k2], 0);
-  const where = report.frame ? ` in ${report.frame}` : "";
-  const checked = `${report.checked} items${report.wires ? ` and ${report.wires} wires` : ""} checked${report.hidden ? `; ${report.hidden} in hidden frames not checked` : ""}`;
-  if (!total)
-    return [`Layout${where}: nothing overlaps, collides, sticks out or is cut off (${checked}).`];
-  const parts2 = KINDS.filter((k2) => report.counts[k2]).map((k2) => `${report.counts[k2]} ${k2}`);
-  const shown = report.findings.slice(0, max);
-  const out = [`Layout${where}: ${total} finding(s) \u2014 ${parts2.join(", ")} (${checked}; positions as the page draws them)`];
-  for (const f of shown)
-    out.push(`- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`);
-  if (total > shown.length)
-    out.push(`\u2026 ${total - shown.length} more (pass frame to look at one diagram, or fix these and check again)`);
-  return out;
 }
 
 // packages/canvas/dist/raster.js

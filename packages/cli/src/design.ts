@@ -9,7 +9,7 @@ import YAML from 'yaml'
 import { annotationFindings, designFromObject, fromEgon, frameOf, growFrame, lintDesignContent, tellBack, proposalOps, withDesignFindings, proposeFromDomainStory, proposeStories, toEgon, yamlCommentHint, type DesignFile, type DesignFinding } from '@awd/canvas/diagrams'
 import { lint as lintWorkflow, toGraph } from '@awd/core'
 import { loadWorkflow } from '@awd/runtime'
-import { explainRedraw, planLines, type RedrawPlan } from '@awd/canvas/diagrams'
+import { explainRedraw, planLines, planSummary, type RedrawPlan } from '@awd/canvas/diagrams'
 import { redrawInputsOf, repoRoot, withDetails } from './graphCanvas.js'
 import { boardByTitle, canvasApi as projectApi, canvasBase, holderInfo, redrawRefusal, registerProject } from './projects.js'
 import { afterApplied, type AppliedResult } from './applied.js'
@@ -75,10 +75,12 @@ type Api = ReturnType<typeof canvasApi>
  * `title:<title>` or a board id. A title is looked up in the design file's project first (its repo,
  * registered on the canvas) and created there as a freeform board when missing (docs/canvas.md "Projects").
  */
-async function resolveBoard(api: Api, ref: string, projectRoot?: string): Promise<Board> {
+async function resolveBoard(api: Api, ref: string, projectRoot?: string, inProject?: string): Promise<Board> {
   if (ref.startsWith('title:')) {
     const title = ref.slice(6).trim()
-    const project = projectRoot ? await registerProject(api, projectRoot) : undefined
+    // `--project personal` (or a project id): the board goes there and the file's repo is not registered — no
+    // `.unprose/` appears in a repo that only holds the design file (docs/canvas.md "Projects")
+    const project = inProject ?? (projectRoot ? await registerProject(api, projectRoot) : undefined)
     const id = (await boardByTitle(api, title, 'freeform', project)).id
     return (await api<{ board: Board }>('GET', `/api/boards/${id}`)).board
   }
@@ -124,6 +126,34 @@ export interface DrawOptions {
   applied?: string
   /** lines per section in a dry run's preview (default 8) */
   limit?: number
+  /** where a board looked up by `title:` is found or created: `personal`, or a project id — the file's repo is then not registered */
+  project?: string
+  /** lay the whole frame out again from the file: items the person moved are moved too (locked ones stay) */
+  relayout?: boolean
+}
+
+/** The file's `layout:` as one comparable line (undefined: none). */
+function layoutOf(content: unknown): string | undefined {
+  const l = (content as { layout?: unknown } | undefined)?.layout
+  return l && typeof l === 'object' ? JSON.stringify(Object.fromEntries(Object.entries(l as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)))) : undefined
+}
+
+/**
+ * What a redraw did to the frame's layout, in words — so a changed `layout:` that moved nothing, or moved only part of
+ * the frame, is not silent: the counts, what kept its place and why, and how to lay everything out again.
+ */
+export function redrawReport(plan: RedrawPlan, o: { first: boolean; layoutBefore?: string; layoutNow?: string; fileKnown: boolean; relayout?: boolean }): string[] {
+  if (o.first) return []
+  const out = [`  redraw: ${planSummary(plan)}`]
+  const moved = plan.updated.filter((l) => /\b(x|y|w|h)\b/.test(l.why ?? '')).length
+  const kept = plan.keptMoved.length
+  const locked = plan.keptLocked.length
+  if (o.fileKnown && o.layoutBefore !== o.layoutNow) {
+    out.push(`  layout: changed in the file (${o.layoutBefore ?? 'none'} → ${o.layoutNow ?? 'none'}): ${moved} item(s) moved to the new layout${kept || locked ? `, ${kept + locked} kept their place` : ''}${moved === 0 && !kept && !locked ? ' — the new setting places everything where it already was' : ''}`)
+  }
+  if (o.relayout) out.push(`  --relayout: the frame was laid out again from the file${locked ? ` (${locked} locked item(s) stayed)` : ''}`)
+  else if (kept) out.push(`  ${kept} item(s) keep the place the person gave them (a redraw never moves those) — \`--relayout\` lays the whole frame out again from the file; \`--dry-run\` lists them`)
+  return out
 }
 
 /** Draw or refresh one diagram frame from its file (docs/diagrams.md §2). */
@@ -153,7 +183,7 @@ export async function previewDesign(file: string, opts: DrawOptions): Promise<Dr
   return { base, boardId: board.id, key: d.key, plan, lines: [...planLines(plan, { title: `Redraw preview — ${d.key} from ${source} on "${board.title}" (${base}/b/${board.id})`, limit: opts.limit }), ...(refused ? [`  ✖ a real draw is refused: ${refused}`] : [])] }
 }
 
-export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult }> {
+export async function drawDesign(file: string, opts: DrawOptions): Promise<{ base: string; boardId: string; seq: number; key: string; unresolvedTraces: UnresolvedTrace[]; applied?: AppliedResult; report: string[] }> {
   const base = canvasBase(opts.canvas)
   const api = canvasApi(base)
   const abs = path.resolve(file)
@@ -161,7 +191,7 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const d = parseDesignFile(abs, text)
   const root = repoRoot(path.dirname(abs))
   const source = path.relative(root, abs)
-  const board = await resolveBoard(api, opts.board, root)
+  const board = await resolveBoard(api, opts.board, root, opts.project)
   // another agent holds this diagram's files: refuse before anything is drawn (docs/canvas.md "Handing over the files")
   const refused = await redrawRefusal(api, board.id, d.key)
   if (refused) throw new Error(refused)
@@ -177,9 +207,18 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const drawn = withDesignFindings(d, served)
   const current = (await api<{ board: Board }>('GET', `/api/boards/${board.id}`)).board
   // from the whole log: what the person moved, and who added each item (docs/diagrams.md "What a redraw keeps")
-  const inputs = await redrawInputsOf(api, board.id)
+  const logged = await redrawInputsOf(api, board.id)
+  const inputs = opts.relayout ? { ...logged, placed: new Set<string>() } : logged
   const frame = drawn.find((it) => it.type === 'frame' && (it.data?.diagram as { key?: string } | undefined)?.key === d.key) ?? frameOf(current, d.key)
-  const { ops } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && current.items[frame.id] ? { frame: frame.id } : {}) })
+  // the file as it was last drawn (the board keeps it): did its `layout:` change?
+  const before = ((current.meta?.diagrams as Record<string, { files?: Record<string, string> }> | undefined)?.[d.key]?.files ?? {})[source]
+  let layoutBefore: string | undefined
+  try {
+    layoutBefore = before === undefined ? undefined : layoutOf(YAML.parse(before))
+  } catch {
+    layoutBefore = undefined
+  }
+  const { ops, plan } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...(frame && current.items[frame.id] ? { frame: frame.id } : {}) })
   const { seq } = await api<{ seq: number }>('POST', `/api/boards/${board.id}/ops`, { author: 'agent', ops, note: `awd design draw: ${source}` })
   // PATCH merges: only this diagram's entry changes — another machine's diagrams and keys stay as they are.
   // the holder: this agent has the files and where (machine, root — the project root per diagram); the canvas stamps the
@@ -189,7 +228,8 @@ export async function drawDesign(file: string, opts: DrawOptions): Promise<{ bas
   const projectRoot = (current.meta?.project as { root?: unknown } | undefined)?.root
   await api('PATCH', `/api/boards/${board.id}`, { meta: { diagrams: { [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text }, holder } }, ...(typeof projectRoot === 'string' && projectRoot ? {} : { project: { root } }) } })
   const applied = opts.applied ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: source }) : undefined
-  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, ...(applied ? { applied } : {}) }
+  const report = redrawReport(plan, { first: !frameOf(current, d.key), layoutBefore, layoutNow: layoutOf(d.content), fileKnown: before !== undefined, relayout: opts.relayout })
+  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, report, ...(applied ? { applied } : {}) }
 }
 
 /** "N trace(s) not drawn" lines for a draw, so a link to a missing target is not lost silently (river0825/unprose#6). */
@@ -229,7 +269,7 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     return cmdDesignLint(file)
   }
   if (sub === 'draw') {
-    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]')
+    if (!file || !boardRef) throw new Error('usage: awd design draw <file> --board <id | title:…> [--canvas URL] [--project personal|<project id>] [--relayout] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]')
     const parsed = parseDesignFile(file, fs.readFileSync(file, 'utf8'))
     const findings = lintDesign(parsed, file)
     const errors = findings.filter((f) => f.severity === 'error')
@@ -240,13 +280,18 @@ export async function cmdDesign(args: string[], flags: Flags): Promise<boolean> 
     for (const w of findings.filter((f) => f.severity === 'warning' && f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.message}`)
     const at = str(flags.at)?.split(',').map(Number)
     const applied = str(flags.applied)
+    const project = str(flags.project)
+    const relayout = flags.relayout === true
     if (flags['dry-run']) {
       const p = await previewDesign(file, { board: boardRef, canvas, limit: Number(str(flags.limit)) || undefined, ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
       for (const line of p.lines) console.log(line)
       return true
     }
-    const r = await drawDesign(file, { board: boardRef, canvas, ...(applied ? { applied } : {}), ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
+    const r = await drawDesign(file, { board: boardRef, canvas, ...(project ? { project } : {}), ...(relayout ? { relayout } : {}), ...(applied ? { applied } : {}), ...(at && at.length === 2 && at.every(Number.isFinite) ? { at: { x: at[0], y: at[1] } } : {}) })
     console.log(`✔ ${path.basename(file)} → frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== 'error').length} note(s) — awd design lint ${file})`)
+    // what the drawing itself shows (overlapping group outlines, a line through a pictogram …): said here, not only by the lint
+    for (const w of findings.filter((f) => f.severity === 'warning' && !f.message.startsWith('unknown field'))) console.warn(`⚠ ${w.element ? `${w.element}: ` : ''}${w.message}`)
+    for (const line of r.report) console.log(line)
     if (r.applied) console.log(`✔ answered "Applied to ${r.applied.file ?? file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join('; ')})` : ''}`)
     for (const line of unresolvedReport(r.unresolvedTraces)) console.warn(line)
     if (parsed.kind === 'domain-story') for (const line of tellBack(parsed.content as never)) console.log(line)

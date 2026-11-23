@@ -416,7 +416,9 @@ function drawText(c: Ctx, it: Item): string {
     // the page's text box for an annotation (textMetrics.ts): what is cut there is cut here
     const fit = fitText(it)
     const lines = c.text && it.text ? fit.lines : []
-    return `<path d="${path}" fill="none" stroke="${p.ink2}" stroke-width="2"/>` + textBlock(lines, { x: bx.x + fit.box.padLeft, y: bx.y + fit.box.padTop, font: fit.box.font, lh: fit.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit.fits) })
+    // a note with a kind (pain / assumption / decision): a pale wash of its colour, the bracket in that colour
+    const tint = it.color && it.color !== 'white' && it.color !== 'grey' ? p.c[it.color] : undefined
+    return (tint ? rect(bx, `fill="${tint}" fill-opacity="0.3"`) : '') + `<path d="${path}" fill="none" stroke="${tint ?? p.ink2}" stroke-width="${tint ? 3 : 2}"/>` + textBlock(lines, { x: bx.x + fit.box.padLeft, y: bx.y + fit.box.padTop, font: fit.box.font, lh: fit.box.lineHeight, fill: p.ink, maxLines: Math.max(1, fit.fits) })
   }
   if (it.role === 'release-cut') return `<line x1="${n(bx.x)}" y1="${n(bx.y + bx.h / 2)}" x2="${n(bx.x + bx.w)}" y2="${n(bx.y + bx.h / 2)}" stroke="${p.ink3}" stroke-width="1.5" stroke-dasharray="8 5"/>` + (c.text && it.text ? `<text x="${n(bx.x + 4)}" y="${n(bx.y + bx.h / 2 - 4)}" font-size="11" fill="${p.ink3}">${esc(it.text)}</text>` : '')
   return itemText(c, it, p.ink)

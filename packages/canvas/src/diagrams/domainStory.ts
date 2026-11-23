@@ -30,6 +30,16 @@ export const DS_ACTOR_KINDS = ['person', 'group', 'system'] as const
 export const DS_OBJECT_KINDS = ['document', 'thing', 'digital', 'folder', 'call', 'email', 'conversation', 'info', 'message'] as const
 /** A group's fill (the board's colour tokens): a pale wash of it behind the members; grey and white draw none. Ours, not Egon.io's. */
 export const DS_GROUP_COLORS = ['orange', 'blue', 'yellow', 'pale-yellow', 'lilac', 'green', 'pink', 'red', 'purple', 'grey', 'white'] as const
+/**
+ * What a note is (ours, not Egon.io's): a plain `note` (the default), a `pain` point, an `assumption` still to be checked,
+ * or a `decision` still to be made — each drawn in its own colour (the book marks pain points with another colour of note).
+ */
+export const DS_NOTE_KINDS = ['note', 'pain', 'assumption', 'decision'] as const
+export type DsNoteKind = (typeof DS_NOTE_KINDS)[number]
+/** The board colour token of each kind of note (a plain note has none). */
+export const DS_NOTE_COLORS: Record<Exclude<DsNoteKind, 'note'>, 'red' | 'yellow' | 'blue'> = { pain: 'red', assumption: 'yellow', decision: 'blue' }
+/** What the legend calls each kind. */
+export const DS_NOTE_LABELS: Record<Exclude<DsNoteKind, 'note'>, string> = { pain: 'pain point', assumption: 'assumption', decision: 'open decision' }
 export const DS_GRANULARITY = ['coarse-grained', 'medium-grained', 'fine-grained', 'cloud-level', 'kite-level', 'sea-level', 'fish-level', 'clam-level'] as const
 
 const named = () =>
@@ -90,7 +100,8 @@ export const domainStorySchema = z.object({
     .min(1),
   /** `color`: a pale wash behind the group, to tell groups apart (DS_GROUP_COLORS) */
   groups: z.array(z.object({ id: z.string().optional(), text: z.string().min(1), members: z.array(z.string()).default([]), color: z.enum(DS_GROUP_COLORS).optional() })).default([]),
-  annotations: z.array(z.object({ id: z.string().optional(), on: z.string(), text: z.string().min(1) })).default([]),
+  /** `kind`: note (default) | pain | assumption | decision — a coloured note (DS_NOTE_KINDS) */
+  annotations: z.array(z.object({ id: z.string().optional(), on: z.string(), text: z.string().min(1), kind: z.enum(DS_NOTE_KINDS).optional() })).default([]),
   /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
   icons: z.record(z.string(), z.string().max(DS_ICON_MAX_CHARS)).optional(),
   /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
@@ -140,7 +151,7 @@ export interface DsModel {
   workObjects: DsWorkObject[]
   sentences: DsSentence[]
   groups: Array<{ id: string; text: string; members: string[]; color?: (typeof DS_GROUP_COLORS)[number] }>
-  annotations: Array<{ id: string; on: string; text: string }>
+  annotations: Array<{ id: string; on: string; text: string; kind?: Exclude<DsNoteKind, 'note'> }>
   /** The story's own icons by kind name (absent: only the built-in ones). */
   icons?: Record<string, string>
   /** Drawing spacing from the file's `layout` (absent: the default, `normal`). */
@@ -228,7 +239,7 @@ export function normalizeDomainStory(raw: DomainStoryContent): DsModel {
   const annotations = c.annotations.flatMap((a) => {
     const id = alloc(a.id, `note-${elementOf(a.on) ?? a.on}`, 'note')
     const on = elementRef(a.on, id, 'on')
-    return on ? [{ id, on, text: a.text }] : []
+    return on ? [{ id, on, text: a.text, ...(a.kind && a.kind !== 'note' ? { kind: a.kind } : {}) }] : []
   })
   return { scope: c.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...(c.icons ? { icons: c.icons } : {}), ...(c.layout ? { layout: c.layout } : {}), unresolved, ...(taken.length ? { taken } : {}), dsModel: true }
 }
@@ -245,9 +256,15 @@ export function circled(n: number): string {
   return n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `(${n})`
 }
 
+/** How a note's text starts when it names its kind in words (English and Chinese). */
+const NOTE_KIND_WORDS: Array<[RegExp, Exclude<DsNoteKind, 'note'>]> = [
+  [/^\s*(pain(\s*point)?|痛點|痛点)\s*[:：｜|]/i, 'pain'],
+  [/^\s*(assumption|assumed|假設|假设)\s*[:：｜|]/i, 'assumption'],
+  [/^\s*(decision|open decision|to decide|待決定|待决定|決定|决定)(\s*[A-Za-z0-9]+)?\s*[:：｜|]/i, 'decision'],
+]
 const QUICK_START = 'domainstorytelling.org/quick-start-guide'
 
-export type DsRule = 'unresolved-reference' | 'id-taken' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long' | 'draw-again-not-in-sentence' | 'draw-again-first-appearance'
+export type DsRule = 'unresolved-reference' | 'id-taken' | 'sentence-without-object' | 'sequence-gap' | 'sequence-shared' | 'work-object-unused' | 'actor-unused' | 'actor-kind-custom' | 'self-receiver' | 'groups-overlap' | 'note-long' | 'draw-again-not-in-sentence' | 'draw-again-first-appearance' | 'note-kind-in-text' | 'group-outlines-overlap' | 'repeat-no-effect' | 'line-through'
 
 /** A note longer than this (in display width: a CJK character counts as two) crowds the story (§6b "No collisions"). */
 export const NOTE_RECOMMENDED = 120
@@ -328,6 +345,12 @@ export function checkDomainStory(content: DomainStoryContent | DsModel): DsFindi
   for (const n of m.annotations) {
     const w = displayWidth(n.text)
     if (w > NOTE_RECOMMENDED) out.push({ rule: 'note-long', severity: 'warning', element: n.id, message: `note on "${name(n.on)}" is long (${w} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story — keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START })
+  }
+  // a note that says its kind in words ("痛點：…", "Assumption: …") and has no `kind`: the colour would say it
+  for (const n of m.annotations) {
+    if (n.kind) continue
+    const hit = NOTE_KIND_WORDS.find(([re]) => re.test(n.text))
+    if (hit) out.push({ rule: 'note-kind-in-text', severity: 'info', element: n.id, message: `note on "${name(n.on)}" names its kind in words (${DS_NOTE_LABELS[hit[1]]}) — give it \`kind: ${hit[1]}\` and the board draws it in that kind's colour (kinds: ${DS_NOTE_KINDS.join(', ')})`, page: 'docs/diagrams.md §6b' })
   }
   for (const o of m.workObjects) {
     if (!m.sentences.some((s) => s.object === o.id)) out.push({ rule: 'work-object-unused', severity: 'warning', element: o.id, message: `"${o.text}" is in no sentence`, page: QUICK_START })

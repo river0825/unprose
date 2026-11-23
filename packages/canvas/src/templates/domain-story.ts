@@ -27,7 +27,7 @@
 // sentence without a work object is one arrow actor → receiver; its element id rides on that arrow, and
 // traces into it resolve to its actor.
 import { withHints, type Item } from '../model.js'
-import { normalizeDomainStory, readSentence, type DomainStoryContent, type DsModel, type DsSentence } from '../diagrams/domainStory.js'
+import { DS_NOTE_COLORS, DS_NOTE_LABELS, normalizeDomainStory, readSentence, type DomainStoryContent, type DsModel, type DsSentence } from '../diagrams/domainStory.js'
 import { measure, sizeToText } from '../textMetrics.js'
 import { EDGE_LABEL } from '../edgeLabel.js'
 import { PAD, arrow, make, offsetAll, type RenderOpts } from './util.js'
@@ -555,10 +555,13 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
     const clear = (p: Pt) => !placed.some((o) => overlaps(o, { ...p, w: nw, h: nh }))
     const cuts = (p: Pt) => segs.filter(([a, b]) => segmentHitsBox(a, b, { ...p, w: nw, h: nh }, 4)).length
     const tc = centre(base)
-    const score = (p: Pt) => cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y)
+    // the dashed line from the note to what it is on must not run through another pictogram or note: that weighs more
+    // than cutting an arrow (the page folds the line round what it can; a spot with a free line needs no fold)
+    const through = (p: Pt) => placed.filter((o) => o !== target && segmentHitsBox({ x: p.x + nw / 2, y: p.y + nh / 2 }, tc, o, 6)).length
+    const score = (p: Pt) => (target ? through(p) * 1200 : 0) + cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y)
     let at = candidates.filter(clear).sort((p, q) => score(p) - score(q))[0] ?? candidates[0]
     for (let k = 0; !clear(at) && k < 60; k++) at = { x: at.x, y: at.y + 40 }
-    const note = make({ id: itemId('note', n.id), type: 'text', x: at.x, y: at.y, w: nw, h: nh, text: n.text, role: 'annotation', data: { element: n.id, on: n.on, ds: 'annotation' } }, now)
+    const note = make({ id: itemId('note', n.id), type: 'text', x: at.x, y: at.y, w: nw, h: nh, text: n.text, role: 'annotation', ...(n.kind ? { color: DS_NOTE_COLORS[n.kind] } : {}), data: { element: n.id, on: n.on, ds: 'annotation', ...(n.kind ? { noteKind: n.kind } : {}) } }, now)
     placed.push(note)
     items.push(note)
     if (target) {
@@ -612,6 +615,12 @@ export function renderDomainStory(raw: DomainStoryContent, opts: RenderOpts = {}
   })
   const facets = [m.scope.granularity, m.scope.time, m.scope.purity].filter(Boolean)
   if (facets.length) legend.push(make({ id: itemId('scope', 'scope'), type: 'text', x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(' · ')}`, role: 'scope', data: { scope: m.scope } }, now))
+
+  // the kinds of note this story uses, each in its colour (only those: a story without coloured notes keeps the plain legend)
+  const kinds = [...new Set(m.annotations.flatMap((n) => (n.kind ? [n.kind] : [])))].sort()
+  kinds.forEach((k, i) => {
+    legend.push(make({ id: itemId('legend', `note-${k}`), type: 'text', x: PAD + i * 170, y: legendY + 140, w: 150, h: 30, text: DS_NOTE_LABELS[k], role: 'annotation', color: DS_NOTE_COLORS[k], data: { ds: 'annotation', noteKind: k, legend: true } }, now))
+  })
 
   return offsetAll([...shifted, ...legend], opts.at).map((i) => (nearOf.has(i.id) ? withHints(i, { near: nearOf.get(i.id) }) : i))
 }

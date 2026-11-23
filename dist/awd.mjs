@@ -440,9 +440,9 @@ var require_anchors = __commonJS({
     "use strict";
     var identity = require_identity();
     var visit2 = require_visit();
-    function anchorIsValid(anchor2) {
-      if (/[\x00-\x19\s,[\]{}]/.test(anchor2)) {
-        const sa = JSON.stringify(anchor2);
+    function anchorIsValid(anchor3) {
+      if (/[\x00-\x19\s,[\]{}]/.test(anchor3)) {
+        const sa = JSON.stringify(anchor3);
         const msg = `Anchor must not contain whitespace or control characters: ${sa}`;
         throw new Error(msg);
       }
@@ -473,9 +473,9 @@ var require_anchors = __commonJS({
         onAnchor: (source) => {
           aliasObjects.push(source);
           prevAnchors ?? (prevAnchors = anchorNames(doc));
-          const anchor2 = findNewAnchor(prefix, prevAnchors);
-          prevAnchors.add(anchor2);
-          return anchor2;
+          const anchor3 = findNewAnchor(prefix, prevAnchors);
+          prevAnchors.add(anchor3);
+          return anchor3;
         },
         /**
          * With circular references, the source node is only resolved after all
@@ -511,7 +511,7 @@ var require_applyReviver = __commonJS({
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
         if (Array.isArray(val)) {
-          for (let i = 0, len = val.length; i < len; ++i) {
+          for (let i = 0, len2 = val.length; i < len2; ++i) {
             const v0 = val[i];
             const v1 = applyReviver(reviver, val, String(i), v0);
             if (v1 === void 0)
@@ -722,8 +722,8 @@ var require_Alias = __commonJS({
     function getAliasCount(doc, node3, anchors2) {
       if (identity.isAlias(node3)) {
         const source = node3.resolve(doc);
-        const anchor2 = anchors2 && source && anchors2.get(source);
-        return anchor2 ? anchor2.count * anchor2.aliasCount : 0;
+        const anchor3 = anchors2 && source && anchors2.get(source);
+        return anchor3 ? anchor3.count * anchor3.aliasCount : 0;
       } else if (identity.isCollection(node3)) {
         let count = 0;
         for (const item of node3.items) {
@@ -952,8 +952,8 @@ var require_Collection = __commonJS({
         return this.items.every((node3) => {
           if (!identity.isPair(node3))
             return false;
-          const n = node3.value;
-          return n == null || allowScalar && identity.isScalar(n) && n.value == null && !n.commentBefore && !n.comment && !n.tag;
+          const n2 = node3.value;
+          return n2 == null || allowScalar && identity.isScalar(n2) && n2.value == null && !n2.commentBefore && !n2.comment && !n2.tag;
         });
       }
       /**
@@ -1508,10 +1508,10 @@ var require_stringify = __commonJS({
       if (!doc.directives)
         return "";
       const props = [];
-      const anchor2 = (identity.isScalar(node3) || identity.isCollection(node3)) && node3.anchor;
-      if (anchor2 && anchors.anchorIsValid(anchor2)) {
-        anchors$1.add(anchor2);
-        props.push(`&${anchor2}`);
+      const anchor3 = (identity.isScalar(node3) || identity.isCollection(node3)) && node3.anchor;
+      if (anchor3 && anchors.anchorIsValid(anchor3)) {
+        anchors$1.add(anchor3);
+        props.push(`&${anchor3}`);
       }
       const tag = node3.tag ?? (tagObj.default ? null : tagObj.tag);
       if (tag)
@@ -1994,8 +1994,8 @@ ${indent}${line}` : "\n";
         return start + end;
       } else {
         if (!reqNewline) {
-          const len = lines.reduce((sum, line) => sum + line.length + 2, 2);
-          reqNewline = ctx.options.lineWidth > 0 && len > ctx.options.lineWidth;
+          const len2 = lines.reduce((sum, line) => sum + line.length + 2, 2);
+          reqNewline = ctx.options.lineWidth > 0 && len2 > ctx.options.lineWidth;
         }
         if (reqNewline) {
           let str6 = start;
@@ -2396,18 +2396,18 @@ var require_stringifyNumber = __commonJS({
       const num3 = typeof value === "number" ? value : Number(value);
       if (!isFinite(num3))
         return isNaN(num3) ? ".nan" : num3 < 0 ? "-.inf" : ".inf";
-      let n = Object.is(value, -0) ? "-0" : JSON.stringify(value);
-      if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n) && !n.includes("e")) {
-        let i = n.indexOf(".");
+      let n2 = Object.is(value, -0) ? "-0" : JSON.stringify(value);
+      if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n2) && !n2.includes("e")) {
+        let i = n2.indexOf(".");
         if (i < 0) {
-          i = n.length;
-          n += ".";
+          i = n2.length;
+          n2 += ".";
         }
-        let d = minFractionDigits - (n.length - i - 1);
+        let d = minFractionDigits - (n2.length - i - 1);
         while (d-- > 0)
-          n += "0";
+          n2 += "0";
       }
-      return n;
+      return n2;
     }
     exports.stringifyNumber = stringifyNumber;
   }
@@ -2651,9 +2651,9 @@ var require_binary = __commonJS({
         type ?? (type = Scalar.Scalar.BLOCK_LITERAL);
         if (type !== Scalar.Scalar.QUOTE_DOUBLE) {
           const lineWidth = Math.max(ctx.options.lineWidth - ctx.indent.length, ctx.options.minContentWidth);
-          const n = Math.ceil(str6.length / lineWidth);
-          const lines = new Array(n);
-          for (let i = 0, o = 0; i < n; ++i, o += lineWidth) {
+          const n2 = Math.ceil(str6.length / lineWidth);
+          const lines = new Array(n2);
+          for (let i = 0, o = 0; i < n2; ++i, o += lineWidth) {
             lines[i] = str6.substr(o, lineWidth);
           }
           str6 = lines.join(type === Scalar.Scalar.BLOCK_LITERAL ? "\n" : " ");
@@ -2925,11 +2925,11 @@ var require_int2 = __commonJS({
             str6 = `0x${str6}`;
             break;
         }
-        const n2 = BigInt(str6);
-        return sign === "-" ? BigInt(-1) * n2 : n2;
+        const n3 = BigInt(str6);
+        return sign === "-" ? BigInt(-1) * n3 : n3;
       }
-      const n = parseInt(str6, radix);
-      return sign === "-" ? -1 * n : n;
+      const n2 = parseInt(str6, radix);
+      return sign === "-" ? -1 * n2 : n2;
     }
     function intStringify(node3, radix, prefix) {
       const { value } = node3;
@@ -3078,15 +3078,15 @@ var require_timestamp = __commonJS({
     function parseSexagesimal(str6, asBigInt) {
       const sign = str6[0];
       const parts2 = sign === "-" || sign === "+" ? str6.substring(1) : str6;
-      const num3 = (n) => asBigInt ? BigInt(n) : Number(n);
+      const num3 = (n2) => asBigInt ? BigInt(n2) : Number(n2);
       const res = parts2.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num3(60) + num3(p), num3(0));
       return sign === "-" ? num3(-1) * res : res;
     }
     function stringifySexagesimal(node3) {
       let { value } = node3;
-      let num3 = (n) => n;
+      let num3 = (n2) => n2;
       if (typeof value === "bigint")
-        num3 = (n) => BigInt(n);
+        num3 = (n2) => BigInt(n2);
       else if (isNaN(value) || !isFinite(value))
         return stringifyNumber.stringifyNumber(node3);
       let sign = "";
@@ -3106,7 +3106,7 @@ var require_timestamp = __commonJS({
           parts2.unshift(value);
         }
       }
-      return sign + parts2.map((n) => String(n).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
+      return sign + parts2.map((n2) => String(n2).padStart(2, "0")).join(":").replace(/000000\d*$/, "");
     }
     var intTime = {
       identify: (value) => typeof value === "bigint" || Number.isInteger(value),
@@ -3795,7 +3795,7 @@ var require_resolve_props = __commonJS({
       let hasNewline = false;
       let reqSpace = false;
       let tab = null;
-      let anchor2 = null;
+      let anchor3 = null;
       let tag = null;
       let newlineAfterProp = null;
       let comma = null;
@@ -3842,16 +3842,16 @@ var require_resolve_props = __commonJS({
               commentSep += token.source;
             atNewline = true;
             hasNewline = true;
-            if (anchor2 || tag)
+            if (anchor3 || tag)
               newlineAfterProp = token;
             hasSpace = true;
             break;
           case "anchor":
-            if (anchor2)
+            if (anchor3)
               onError(token, "MULTIPLE_ANCHORS", "A node can have at most one anchor");
             if (token.source.endsWith(":"))
               onError(token.offset + token.source.length - 1, "BAD_ALIAS", "Anchor ending in : is ambiguous", true);
-            anchor2 = token;
+            anchor3 = token;
             start ?? (start = token.offset);
             atNewline = false;
             hasSpace = false;
@@ -3868,7 +3868,7 @@ var require_resolve_props = __commonJS({
             break;
           }
           case indicator:
-            if (anchor2 || tag)
+            if (anchor3 || tag)
               onError(token, "BAD_PROP_ORDER", `Anchors and tags must be after the ${token.source} indicator`);
             if (found)
               onError(token, "UNEXPECTED_TOKEN", `Unexpected ${token.source} in ${flow ?? "collection"}`);
@@ -3905,7 +3905,7 @@ var require_resolve_props = __commonJS({
         spaceBefore,
         comment,
         hasNewline,
-        anchor: anchor2,
+        anchor: anchor3,
         tag,
         newlineAfterProp,
         end,
@@ -4414,8 +4414,8 @@ var require_compose_collection = __commonJS({
       const tagToken = props.tag;
       const tagName = !tagToken ? null : ctx.directives.tagName(tagToken.source, (msg) => onError(tagToken, "TAG_RESOLVE_FAILED", msg));
       if (token.type === "block-seq") {
-        const { anchor: anchor2, newlineAfterProp: nl } = props;
-        const lastProp = anchor2 && tagToken ? anchor2.offset > tagToken.offset ? anchor2 : tagToken : anchor2 ?? tagToken;
+        const { anchor: anchor3, newlineAfterProp: nl } = props;
+        const lastProp = anchor3 && tagToken ? anchor3.offset > tagToken.offset ? anchor3 : tagToken : anchor3 ?? tagToken;
         if (lastProp && (!nl || nl.offset < lastProp.offset)) {
           const message = "Missing newline after block sequence props";
           onError(lastProp, "MISSING_CHAR", message);
@@ -4577,9 +4577,9 @@ var require_resolve_block_scalar = __commonJS({
         if (!chomp && (ch === "-" || ch === "+"))
           chomp = ch;
         else {
-          const n = Number(ch);
-          if (!indent && n)
-            indent = n;
+          const n2 = Number(ch);
+          if (!indent && n2)
+            indent = n2;
           else if (error62 === -1)
             error62 = offset + i;
         }
@@ -4981,13 +4981,13 @@ var require_compose_node = __commonJS({
     var CN = { composeNode, composeEmptyNode };
     function composeNode(ctx, token, props, onError) {
       const atKey = ctx.atKey;
-      const { spaceBefore, comment, anchor: anchor2, tag } = props;
+      const { spaceBefore, comment, anchor: anchor3, tag } = props;
       let node3;
       let isSrcToken = true;
       switch (token.type) {
         case "alias":
           node3 = composeAlias(ctx, token, onError);
-          if (anchor2 || tag)
+          if (anchor3 || tag)
             onError(token, "ALIAS_PROPS", "An alias node must not specify any properties");
           break;
         case "scalar":
@@ -4995,16 +4995,16 @@ var require_compose_node = __commonJS({
         case "double-quoted-scalar":
         case "block-scalar":
           node3 = composeScalar.composeScalar(ctx, token, tag, onError);
-          if (anchor2)
-            node3.anchor = anchor2.source.substring(1);
+          if (anchor3)
+            node3.anchor = anchor3.source.substring(1);
           break;
         case "block-map":
         case "block-seq":
         case "flow-collection":
           try {
             node3 = composeCollection.composeCollection(CN, ctx, token, props, onError);
-            if (anchor2)
-              node3.anchor = anchor2.source.substring(1);
+            if (anchor3)
+              node3.anchor = anchor3.source.substring(1);
           } catch (error62) {
             const message = error62 instanceof Error ? error62.message : String(error62);
             onError(token, "RESOURCE_EXHAUSTION", message);
@@ -5017,8 +5017,8 @@ var require_compose_node = __commonJS({
         }
       }
       node3 ?? (node3 = composeEmptyNode(ctx, token.offset, void 0, null, props, onError));
-      if (anchor2 && node3.anchor === "")
-        onError(anchor2, "BAD_ALIAS", "Anchor cannot be an empty string");
+      if (anchor3 && node3.anchor === "")
+        onError(anchor3, "BAD_ALIAS", "Anchor cannot be an empty string");
       if (atKey && ctx.options.stringKeys && (!identity.isScalar(node3) || typeof node3.value !== "string" || node3.tag && node3.tag !== "tag:yaml.org,2002:str")) {
         const msg = "With stringKeys, all keys must be strings";
         onError(tag ?? token, "NON_STRING_KEY", msg);
@@ -5035,7 +5035,7 @@ var require_compose_node = __commonJS({
         node3.srcToken = token;
       return node3;
     }
-    function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anchor: anchor2, tag, end }, onError) {
+    function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anchor: anchor3, tag, end }, onError) {
       const token = {
         type: "scalar",
         offset: utilEmptyScalarPosition.emptyScalarPosition(offset, before, pos),
@@ -5043,10 +5043,10 @@ var require_compose_node = __commonJS({
         source: ""
       };
       const node3 = composeScalar.composeScalar(ctx, token, tag, onError);
-      if (anchor2) {
-        node3.anchor = anchor2.source.substring(1);
+      if (anchor3) {
+        node3.anchor = anchor3.source.substring(1);
         if (node3.anchor === "")
-          onError(anchor2, "BAD_ALIAS", "Anchor cannot be an empty string");
+          onError(anchor3, "BAD_ALIAS", "Anchor cannot be an empty string");
       }
       if (spaceBefore)
         node3.spaceBefore = true;
@@ -5800,8 +5800,8 @@ var require_lexer = __commonJS({
           return this.buffer[i + 1] === "\n";
         return false;
       }
-      charAt(n) {
-        return this.buffer[this.pos + n];
+      charAt(n2) {
+        return this.buffer[this.pos + n2];
       }
       continueScalar(offset) {
         let ch = this.buffer[offset];
@@ -5835,8 +5835,8 @@ var require_lexer = __commonJS({
           end -= 1;
         return this.buffer.substring(this.pos, end);
       }
-      hasChars(n) {
-        return this.pos + n <= this.buffer.length;
+      hasChars(n2) {
+        return this.pos + n2 <= this.buffer.length;
       }
       setNext(state) {
         this.buffer = this.buffer.substring(this.pos);
@@ -5845,8 +5845,8 @@ var require_lexer = __commonJS({
         this.next = state;
         return null;
       }
-      peek(n) {
-        return this.buffer.substr(this.pos, n);
+      peek(n2) {
+        return this.buffer.substr(this.pos, n2);
       }
       *parseNext(next) {
         switch (next) {
@@ -5895,8 +5895,8 @@ var require_lexer = __commonJS({
             else
               break;
           }
-          const n = (yield* this.pushCount(dirEnd)) + (yield* this.pushSpaces(true));
-          yield* this.pushCount(line.length - n);
+          const n2 = (yield* this.pushCount(dirEnd)) + (yield* this.pushSpaces(true));
+          yield* this.pushCount(line.length - n2);
           this.pushNewline();
           return "stream";
         }
@@ -5934,9 +5934,9 @@ var require_lexer = __commonJS({
         if (!ch1 && !this.atEnd)
           return this.setNext("block-start");
         if ((ch0 === "-" || ch0 === "?" || ch0 === ":") && isEmpty(ch1)) {
-          const n = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
+          const n2 = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
           this.indentNext = this.indentValue + 1;
-          this.indentValue += n;
+          this.indentValue += n2;
           return "block-start";
         }
         return "doc";
@@ -5946,10 +5946,10 @@ var require_lexer = __commonJS({
         const line = this.getLine();
         if (line === null)
           return this.setNext("doc");
-        let n = yield* this.pushIndicators();
-        switch (line[n]) {
+        let n2 = yield* this.pushIndicators();
+        switch (line[n2]) {
           case "#":
-            yield* this.pushCount(line.length - n);
+            yield* this.pushCount(line.length - n2);
           // fallthrough
           case void 0:
             yield* this.pushNewline();
@@ -5972,9 +5972,9 @@ var require_lexer = __commonJS({
             return yield* this.parseQuotedScalar();
           case "|":
           case ">":
-            n += yield* this.parseBlockScalarHeader();
-            n += yield* this.pushSpaces(true);
-            yield* this.pushCount(line.length - n);
+            n2 += yield* this.parseBlockScalarHeader();
+            n2 += yield* this.pushSpaces(true);
+            yield* this.pushCount(line.length - n2);
             yield* this.pushNewline();
             return yield* this.parseBlockScalar();
           default:
@@ -6005,18 +6005,18 @@ var require_lexer = __commonJS({
             return yield* this.parseLineStart();
           }
         }
-        let n = 0;
-        while (line[n] === ",") {
-          n += yield* this.pushCount(1);
-          n += yield* this.pushSpaces(true);
+        let n2 = 0;
+        while (line[n2] === ",") {
+          n2 += yield* this.pushCount(1);
+          n2 += yield* this.pushSpaces(true);
           this.flowKey = false;
         }
-        n += yield* this.pushIndicators();
-        switch (line[n]) {
+        n2 += yield* this.pushIndicators();
+        switch (line[n2]) {
           case void 0:
             return "flow";
           case "#":
-            yield* this.pushCount(line.length - n);
+            yield* this.pushCount(line.length - n2);
             return "flow";
           case "{":
           case "[":
@@ -6060,10 +6060,10 @@ var require_lexer = __commonJS({
             end = this.buffer.indexOf("'", end + 2);
         } else {
           while (end !== -1) {
-            let n = 0;
-            while (this.buffer[end - 1 - n] === "\\")
-              n += 1;
-            if (n % 2 === 0)
+            let n2 = 0;
+            while (this.buffer[end - 1 - n2] === "\\")
+              n2 += 1;
+            if (n2 % 2 === 0)
               break;
             end = this.buffer.indexOf('"', end + 1);
           }
@@ -6217,11 +6217,11 @@ var require_lexer = __commonJS({
         yield* this.pushToIndex(end + 1, true);
         return inFlow ? "flow" : "doc";
       }
-      *pushCount(n) {
-        if (n > 0) {
-          yield this.buffer.substr(this.pos, n);
-          this.pos += n;
-          return n;
+      *pushCount(n2) {
+        if (n2 > 0) {
+          yield this.buffer.substr(this.pos, n2);
+          this.pos += n2;
+          return n2;
         }
         return 0;
       }
@@ -6236,16 +6236,16 @@ var require_lexer = __commonJS({
         return 0;
       }
       *pushIndicators() {
-        let n = 0;
+        let n2 = 0;
         loop: while (true) {
           switch (this.charAt(0)) {
             case "!":
-              n += yield* this.pushTag();
-              n += yield* this.pushSpaces(true);
+              n2 += yield* this.pushTag();
+              n2 += yield* this.pushSpaces(true);
               continue loop;
             case "&":
-              n += yield* this.pushUntil(isNotAnchorChar);
-              n += yield* this.pushSpaces(true);
+              n2 += yield* this.pushUntil(isNotAnchorChar);
+              n2 += yield* this.pushSpaces(true);
               continue loop;
             case "-":
             // this is an error
@@ -6259,15 +6259,15 @@ var require_lexer = __commonJS({
                   this.indentNext = this.indentValue + 1;
                 else if (this.flowKey)
                   this.flowKey = false;
-                n += yield* this.pushCount(1);
-                n += yield* this.pushSpaces(true);
+                n2 += yield* this.pushCount(1);
+                n2 += yield* this.pushSpaces(true);
                 continue loop;
               }
             }
           }
           break loop;
         }
-        return n;
+        return n2;
       }
       *pushTag() {
         if (this.charAt(1) === "<") {
@@ -6305,12 +6305,12 @@ var require_lexer = __commonJS({
         do {
           ch = this.buffer[++i];
         } while (ch === " " || allowTabs && ch === "	");
-        const n = i - this.pos;
-        if (n > 0) {
-          yield this.buffer.substr(this.pos, n);
+        const n2 = i - this.pos;
+        if (n2 > 0) {
+          yield this.buffer.substr(this.pos, n2);
           this.pos = i;
         }
-        return n;
+        return n2;
       }
       *pushUntil(test) {
         let i = this.pos;
@@ -6585,8 +6585,8 @@ var require_parser = __commonJS({
         }
         yield* this.pop();
       }
-      peek(n) {
-        return this.stack[this.stack.length - n];
+      peek(n2) {
+        return this.stack[this.stack.length - n2];
       }
       *pop(error62) {
         const token = error62 ?? this.stack.pop();
@@ -7394,7 +7394,7 @@ function reflectNotesOf(output2) {
       out.push({ note: i.note.trim(), kind, tags: Array.isArray(i.tags) ? i.tags.map(String) : void 0 });
     }
   }
-  return out.filter((n) => n.note);
+  return out.filter((n2) => n2.note);
 }
 function wildcardOutcome(listener) {
   const m2 = /^\*\.([a-z][a-z0-9-]*)$/.exec(listener);
@@ -7445,11 +7445,11 @@ function parseMemoryConfig(raw, where) {
     return { longTerm: false, recall: 0, shortTerm: false };
   if (typeof raw !== "object")
     throw new Error(`${where}: memory must be true | false | { longTerm, recall, shortTerm }`);
-  const r = raw;
+  const r2 = raw;
   return {
-    longTerm: r.longTerm === void 0 ? DEFAULT_MEMORY.longTerm : Boolean(r.longTerm),
-    recall: r.recall === void 0 ? DEFAULT_MEMORY.recall : Number(r.recall),
-    shortTerm: r.shortTerm === void 0 ? DEFAULT_MEMORY.shortTerm : Boolean(r.shortTerm)
+    longTerm: r2.longTerm === void 0 ? DEFAULT_MEMORY.longTerm : Boolean(r2.longTerm),
+    recall: r2.recall === void 0 ? DEFAULT_MEMORY.recall : Number(r2.recall),
+    shortTerm: r2.shortTerm === void 0 ? DEFAULT_MEMORY.shortTerm : Boolean(r2.shortTerm)
   };
 }
 function withMemoryProperties(schema) {
@@ -7476,13 +7476,13 @@ function learnNotesOf(output2) {
       out.push({ note: item.note.trim(), tags: Array.isArray(tags) ? tags.map(String) : void 0 });
     }
   }
-  return out.filter((n) => n.note);
+  return out.filter((n2) => n2.note);
 }
 function rememberOf(output2) {
   if (!output2 || typeof output2 !== "object")
     return void 0;
-  const r = output2.remember;
-  return r && typeof r === "object" && !Array.isArray(r) ? r : void 0;
+  const r2 = output2.remember;
+  return r2 && typeof r2 === "object" && !Array.isArray(r2) ? r2 : void 0;
 }
 function stripMemoryFields(data) {
   if (!data || typeof data !== "object" || Array.isArray(data))
@@ -7521,9 +7521,9 @@ function parseDuration(v2, where = "duration") {
   return Number(m2[1]) * UNIT_MS[(m2[2] ?? "ms").toLowerCase()];
 }
 function formatDuration(ms) {
-  for (const [u3, n] of [["w", UNIT_MS.w], ["d", UNIT_MS.d], ["h", UNIT_MS.h], ["m", UNIT_MS.m], ["s", UNIT_MS.s]]) {
-    if (ms >= n && ms % n === 0)
-      return `${ms / n}${u3}`;
+  for (const [u3, n2] of [["w", UNIT_MS.w], ["d", UNIT_MS.d], ["h", UNIT_MS.h], ["m", UNIT_MS.m], ["s", UNIT_MS.s]]) {
+    if (ms >= n2 && ms % n2 === 0)
+      return `${ms / n2}${u3}`;
   }
   return `${ms}ms`;
 }
@@ -7541,60 +7541,60 @@ function parseListeners(raw, where) {
   return list3.map((item, i) => {
     if (typeof item === "string")
       return { event: item };
-    const r = asRecord(item, `${where}.on[${i}]`);
-    if (typeof r.event !== "string")
+    const r2 = asRecord(item, `${where}.on[${i}]`);
+    if (typeof r2.event !== "string")
       throw new Error(`${where}.on[${i}]: needs an "event"`);
-    return { event: r.event, if: typeof r.if === "string" ? r.if : void 0 };
+    return { event: r2.event, if: typeof r2.if === "string" ? r2.if : void 0 };
   });
 }
 function parseConditionalOutcomes(raw, where) {
   if (raw === void 0 || raw === null)
     return [];
   if (Array.isArray(raw)) {
-    return raw.map((r2, i) => {
-      const o = asRecord(r2, `${where}[${i}]`);
+    return raw.map((r3, i) => {
+      const o = asRecord(r3, `${where}[${i}]`);
       return { outcome: String(o.outcome), if: String(o.if ?? "true") };
     });
   }
-  const r = asRecord(raw, where);
-  return Object.entries(r).map(([outcome, cond]) => ({ outcome, if: cond === true || cond === null ? "true" : String(cond) }));
+  const r2 = asRecord(raw, where);
+  return Object.entries(r2).map(([outcome, cond]) => ({ outcome, if: cond === true || cond === null ? "true" : String(cond) }));
 }
 function parseRetry(raw, where) {
   if (raw === void 0 || raw === null)
     return void 0;
   if (typeof raw === "number")
     return { max: raw, backoff: 0 };
-  const r = asRecord(raw, where);
-  return { max: Number(r.max ?? 1), backoff: r.backoff === void 0 ? 0 : parseDuration(r.backoff, `${where}.backoff`) };
+  const r2 = asRecord(raw, where);
+  return { max: Number(r2.max ?? 1), backoff: r2.backoff === void 0 ? 0 : parseDuration(r2.backoff, `${where}.backoff`) };
 }
 function parseStep(id, raw) {
-  const r = asRecord(raw, `steps.${id}`);
+  const r2 = asRecord(raw, `steps.${id}`);
   const where = `steps.${id}`;
-  const on = parseListeners(r.on, where);
-  if (typeof r.if === "string")
+  const on = parseListeners(r2.on, where);
+  if (typeof r2.if === "string")
     for (const l of on)
-      l.if = l.if ? `(${l.if}) && (${r.if})` : r.if;
+      l.if = l.if ? `(${l.if}) && (${r2.if})` : r2.if;
   const base = {
     id,
     on,
-    timeout: r.timeout === void 0 ? void 0 : parseDuration(r.timeout, `${where}.timeout`),
-    retry: parseRetry(r.retry, `${where}.retry`),
-    terminal: r.terminal === true ? ["*"] : Array.isArray(r.terminal) ? r.terminal.map(String) : typeof r.terminal === "string" ? [r.terminal] : void 0,
-    description: typeof r.description === "string" ? r.description : void 0
+    timeout: r2.timeout === void 0 ? void 0 : parseDuration(r2.timeout, `${where}.timeout`),
+    retry: parseRetry(r2.retry, `${where}.retry`),
+    terminal: r2.terminal === true ? ["*"] : Array.isArray(r2.terminal) ? r2.terminal.map(String) : typeof r2.terminal === "string" ? [r2.terminal] : void 0,
+    description: typeof r2.description === "string" ? r2.description : void 0
   };
-  const declared = Array.isArray(r.outcomes) ? r.outcomes.map(String) : typeof r.outcomes === "string" ? [r.outcomes] : void 0;
-  if (typeof r.run === "string") {
+  const declared = Array.isArray(r2.outcomes) ? r2.outcomes.map(String) : typeof r2.outcomes === "string" ? [r2.outcomes] : void 0;
+  if (typeof r2.run === "string") {
     return {
       ...base,
       kind: "script",
-      run: r.run,
-      cwd: typeof r.cwd === "string" ? r.cwd : void 0,
-      env: r.env ? Object.fromEntries(Object.entries(asRecord(r.env, `${where}.env`)).map(([k2, v2]) => [k2, String(v2)])) : void 0,
+      run: r2.run,
+      cwd: typeof r2.cwd === "string" ? r2.cwd : void 0,
+      env: r2.env ? Object.fromEntries(Object.entries(asRecord(r2.env, `${where}.env`)).map(([k2, v2]) => [k2, String(v2)])) : void 0,
       outcomes: declared ?? ["done"]
     };
   }
-  if (r.ai !== void 0) {
-    const ai = asRecord(r.ai, `${where}.ai`);
+  if (r2.ai !== void 0) {
+    const ai = asRecord(r2.ai, `${where}.ai`);
     const output2 = asRecord(ai.output, `${where}.ai.output`);
     const enumOutcomes = outcomeEnum(output2);
     return {
@@ -7611,8 +7611,8 @@ function parseStep(id, raw) {
       }
     };
   }
-  if (r.gate !== void 0) {
-    const g2 = asRecord(r.gate, `${where}.gate`);
+  if (r2.gate !== void 0) {
+    const g2 = asRecord(r2.gate, `${where}.gate`);
     const outcomes = parseConditionalOutcomes(g2.outcomes ?? g2, `${where}.gate.outcomes`).filter((o) => o.outcome !== "default");
     const def2 = typeof g2.default === "string" ? g2.default : void 0;
     const names = outcomes.map((o) => o.outcome);
@@ -7620,8 +7620,8 @@ function parseStep(id, raw) {
       names.push(def2);
     return { ...base, kind: "gate", outcomes: declared ?? names, gate: { outcomes, default: def2 } };
   }
-  if (r.human !== void 0) {
-    const h = asRecord(r.human, `${where}.human`);
+  if (r2.human !== void 0) {
+    const h = asRecord(r2.human, `${where}.human`);
     const resume = h.resume_on === void 0 ? [] : Array.isArray(h.resume_on) ? h.resume_on.map(String) : [String(h.resume_on)];
     const outcomes = parseConditionalOutcomes(h.outcomes, `${where}.human.outcomes`);
     return { ...base, kind: "human", outcomes: declared ?? outcomes.map((o) => o.outcome), human: { resume_on: resume, outcomes } };
@@ -7636,46 +7636,46 @@ function outcomeEnum(schema) {
   return void 0;
 }
 function parseTrigger(id, raw) {
-  const r = asRecord(raw, `triggers.${id}`);
-  const on = String(r.on ?? "manual");
+  const r2 = asRecord(raw, `triggers.${id}`);
+  const on = String(r2.on ?? "manual");
   return {
     id,
     on,
-    emit: typeof r.emit === "string" ? r.emit : id,
-    path: typeof r.path === "string" ? r.path : on === "webhook" ? `/hooks/${id}` : void 0,
-    every: r.every === void 0 ? void 0 : parseDuration(r.every, `triggers.${id}.every`),
-    at: typeof r.at === "string" ? r.at : void 0,
-    data: r.data,
-    if: typeof r.if === "string" ? r.if : void 0,
-    board: typeof r.board === "string" ? r.board : void 0,
-    frame: typeof r.frame === "string" ? r.frame : void 0,
-    canvas: typeof r.canvas === "string" ? r.canvas : void 0,
-    author: r.author === "agent" || r.author === "all" ? r.author : r.author === void 0 ? void 0 : "user"
+    emit: typeof r2.emit === "string" ? r2.emit : id,
+    path: typeof r2.path === "string" ? r2.path : on === "webhook" ? `/hooks/${id}` : void 0,
+    every: r2.every === void 0 ? void 0 : parseDuration(r2.every, `triggers.${id}.every`),
+    at: typeof r2.at === "string" ? r2.at : void 0,
+    data: r2.data,
+    if: typeof r2.if === "string" ? r2.if : void 0,
+    board: typeof r2.board === "string" ? r2.board : void 0,
+    frame: typeof r2.frame === "string" ? r2.frame : void 0,
+    canvas: typeof r2.canvas === "string" ? r2.canvas : void 0,
+    author: r2.author === "agent" || r2.author === "all" ? r2.author : r2.author === void 0 ? void 0 : "user"
   };
 }
 function parseAgent(id, raw) {
-  const r = asRecord(raw, `agents.${id}`);
+  const r2 = asRecord(raw, `agents.${id}`);
   const a = { id };
-  if (typeof r.description === "string")
-    a.description = r.description;
-  if (typeof r.system === "string")
-    a.system = r.system;
-  if (typeof r.file === "string")
-    a.file = r.file;
-  if (typeof r.model === "string")
-    a.model = r.model;
-  if (r.tools !== void 0)
-    a.tools = Array.isArray(r.tools) ? r.tools.map((t) => typeof t === "string" ? t : JSON.stringify(t)) : strList(r.tools);
-  if (typeof r.effort === "string")
-    a.effort = r.effort;
-  if (r.maxTurns !== void 0)
-    a.maxTurns = Number(r.maxTurns);
-  if (r.delegates !== void 0)
-    a.delegates = strList(r.delegates);
-  if (typeof r.runner === "string")
-    a.runner = r.runner;
-  if (r.cli !== void 0) {
-    const c2 = asRecord(r.cli, `agents.${id}.cli`);
+  if (typeof r2.description === "string")
+    a.description = r2.description;
+  if (typeof r2.system === "string")
+    a.system = r2.system;
+  if (typeof r2.file === "string")
+    a.file = r2.file;
+  if (typeof r2.model === "string")
+    a.model = r2.model;
+  if (r2.tools !== void 0)
+    a.tools = Array.isArray(r2.tools) ? r2.tools.map((t) => typeof t === "string" ? t : JSON.stringify(t)) : strList(r2.tools);
+  if (typeof r2.effort === "string")
+    a.effort = r2.effort;
+  if (r2.maxTurns !== void 0)
+    a.maxTurns = Number(r2.maxTurns);
+  if (r2.delegates !== void 0)
+    a.delegates = strList(r2.delegates);
+  if (typeof r2.runner === "string")
+    a.runner = r2.runner;
+  if (r2.cli !== void 0) {
+    const c2 = asRecord(r2.cli, `agents.${id}.cli`);
     a.cli = {
       command: typeof c2.command === "string" ? c2.command : void 0,
       preset: typeof c2.preset === "string" ? c2.preset : void 0,
@@ -7684,8 +7684,8 @@ function parseAgent(id, raw) {
       stdin: typeof c2.stdin === "boolean" ? c2.stdin : void 0
     };
   }
-  if (r.herdr !== void 0) {
-    const h = asRecord(r.herdr, `agents.${id}.herdr`);
+  if (r2.herdr !== void 0) {
+    const h = asRecord(r2.herdr, `agents.${id}.herdr`);
     a.herdr = {
       kind: String(h.kind ?? ""),
       name: typeof h.name === "string" ? h.name : void 0,
@@ -7693,10 +7693,10 @@ function parseAgent(id, raw) {
       timeoutMs: h.timeoutMs === void 0 ? void 0 : parseDuration(h.timeoutMs, `agents.${id}.herdr.timeoutMs`)
     };
   }
-  if (r.memory !== void 0)
-    a.memory = parseMemoryConfig(r.memory, `agents.${id}.memory`);
-  if (r.claudeCode !== void 0) {
-    const c2 = asRecord(r.claudeCode, `agents.${id}.claudeCode`);
+  if (r2.memory !== void 0)
+    a.memory = parseMemoryConfig(r2.memory, `agents.${id}.memory`);
+  if (r2.claudeCode !== void 0) {
+    const c2 = asRecord(r2.claudeCode, `agents.${id}.claudeCode`);
     a.claudeCode = {
       permissionMode: typeof c2.permissionMode === "string" ? c2.permissionMode : void 0,
       cwd: typeof c2.cwd === "string" ? c2.cwd : void 0,
@@ -7707,13 +7707,13 @@ function parseAgent(id, raw) {
 }
 function parseWorkflow(source) {
   const doc = typeof source === "string" ? import_yaml.default.parse(source) : source;
-  const r = asRecord(doc, "workflow");
-  if (typeof r.name !== "string" || !r.name)
+  const r2 = asRecord(doc, "workflow");
+  if (typeof r2.name !== "string" || !r2.name)
     throw new Error('workflow: "name" is required');
-  const triggers = Object.entries(asRecord(r.triggers, "triggers")).map(([id, t]) => parseTrigger(id, t));
-  const steps = Object.entries(asRecord(r.steps, "steps")).map(([id, s]) => parseStep(id, s));
-  const agents = Object.fromEntries(Object.entries(asRecord(r.agents, "agents")).map(([id, a]) => [id, parseAgent(id, a)]));
-  const { name, key, concurrency, triggers: _t, steps: _s, agents: _a4, ...extra } = r;
+  const triggers = Object.entries(asRecord(r2.triggers, "triggers")).map(([id, t]) => parseTrigger(id, t));
+  const steps = Object.entries(asRecord(r2.steps, "steps")).map(([id, s]) => parseStep(id, s));
+  const agents = Object.fromEntries(Object.entries(asRecord(r2.agents, "agents")).map(([id, a]) => [id, parseAgent(id, a)]));
+  const { name, key, concurrency, triggers: _t, steps: _s, agents: _a4, ...extra } = r2;
   return {
     name,
     key: typeof key === "string" ? key : void 0,
@@ -7868,24 +7868,24 @@ function parse(src) {
   function unaryOperand() {
     return primary();
   }
-  function postfix(n2) {
+  function postfix(n3) {
     for (; ; ) {
       if (isOp(".")) {
         next();
         const id = next();
         if (id.t !== "id")
           throw new Error(`expected name after "." in: ${src}`);
-        n2 = { k: "member", obj: n2, prop: { k: "lit", v: id.v } };
+        n3 = { k: "member", obj: n3, prop: { k: "lit", v: id.v } };
         continue;
       }
       if (isOp("[")) {
         next();
         const idx = expr(0);
         expect("]");
-        n2 = { k: "member", obj: n2, prop: idx };
+        n3 = { k: "member", obj: n3, prop: idx };
         continue;
       }
-      return n2;
+      return n3;
     }
   }
   function expr(minPrec) {
@@ -7908,10 +7908,10 @@ function parse(src) {
       left = { k: "binary", op, l: left, r: right };
     }
   }
-  const n = expr(0);
+  const n2 = expr(0);
   if (peek().t !== "eof")
     throw new Error(`unexpected trailing input in: ${src}`);
-  return n;
+  return n2;
 }
 function member(obj, prop) {
   if (obj === null || obj === void 0)
@@ -7967,35 +7967,35 @@ function evaluate(node3, scope) {
         const l2 = evaluate(node3.l, scope);
         return truthy(l2) ? l2 : evaluate(node3.r, scope);
       }
-      const l = evaluate(node3.l, scope), r = evaluate(node3.r, scope);
+      const l = evaluate(node3.l, scope), r2 = evaluate(node3.r, scope);
       switch (node3.op) {
         case "==":
-          return loose(l, r);
+          return loose(l, r2);
         case "!=":
-          return !loose(l, r);
+          return !loose(l, r2);
         case "<":
-          return l < r;
+          return l < r2;
         case "<=":
-          return l <= r;
+          return l <= r2;
         case ">":
-          return l > r;
+          return l > r2;
         case ">=":
-          return l >= r;
+          return l >= r2;
         case "+":
-          return typeof l === "string" || typeof r === "string" ? String(l ?? "") + String(r ?? "") : Number(l) + Number(r);
+          return typeof l === "string" || typeof r2 === "string" ? String(l ?? "") + String(r2 ?? "") : Number(l) + Number(r2);
         case "-":
-          return Number(l) - Number(r);
+          return Number(l) - Number(r2);
         case "*":
-          return Number(l) * Number(r);
+          return Number(l) * Number(r2);
         case "/":
-          return Number(l) / Number(r);
+          return Number(l) / Number(r2);
         case "in":
-          if (Array.isArray(r))
-            return r.some((x2) => loose(x2, l));
-          if (typeof r === "string")
-            return r.includes(String(l));
-          if (r && typeof r === "object")
-            return Object.prototype.hasOwnProperty.call(r, String(l));
+          if (Array.isArray(r2))
+            return r2.some((x2) => loose(x2, l));
+          if (typeof r2 === "string")
+            return r2.includes(String(l));
+          if (r2 && typeof r2 === "object")
+            return Object.prototype.hasOwnProperty.call(r2, String(l));
           return false;
       }
       throw new Error(`unknown operator ${node3.op}`);
@@ -8008,12 +8008,12 @@ function truthy(v2) {
   return !!v2;
 }
 function compile(src) {
-  let n = cache.get(src);
-  if (!n) {
-    n = parse(src);
-    cache.set(src, n);
+  let n2 = cache.get(src);
+  if (!n2) {
+    n2 = parse(src);
+    cache.set(src, n2);
   }
-  return n;
+  return n2;
 }
 function evalExpr(src, scope) {
   return evaluate(compile(src), scope);
@@ -8047,32 +8047,32 @@ function templateDeep(value, scope) {
 }
 function rootIdentifiers(src) {
   const out = /* @__PURE__ */ new Set();
-  const walk3 = (n) => {
-    switch (n.k) {
+  const walk3 = (n2) => {
+    switch (n2.k) {
       case "id":
-        out.add(n.name);
+        out.add(n2.name);
         break;
       case "member":
-        walk3(n.obj);
-        walk3(n.prop);
+        walk3(n2.obj);
+        walk3(n2.prop);
         break;
       case "call":
-        n.args.forEach(walk3);
+        n2.args.forEach(walk3);
         break;
       case "unary":
-        walk3(n.x);
+        walk3(n2.x);
         break;
       case "binary":
-        walk3(n.l);
-        walk3(n.r);
+        walk3(n2.l);
+        walk3(n2.r);
         break;
       case "cond":
-        walk3(n.c);
-        walk3(n.a);
-        walk3(n.b);
+        walk3(n2.c);
+        walk3(n2.a);
+        walk3(n2.b);
         break;
       case "array":
-        n.items.forEach(walk3);
+        n2.items.forEach(walk3);
         break;
     }
   };
@@ -8389,10 +8389,10 @@ function findCycles(def2) {
   const cycles = [];
   const color = /* @__PURE__ */ new Map();
   const stack = [];
-  const visit2 = (n) => {
-    color.set(n, 1);
-    stack.push(n);
-    for (const m2 of succ.get(n) ?? []) {
+  const visit2 = (n2) => {
+    color.set(n2, 1);
+    stack.push(n2);
+    for (const m2 of succ.get(n2) ?? []) {
       const c2 = color.get(m2) ?? 0;
       if (c2 === 0)
         visit2(m2);
@@ -8400,7 +8400,7 @@ function findCycles(def2) {
         cycles.push(stack.slice(stack.indexOf(m2)));
     }
     stack.pop();
-    color.set(n, 2);
+    color.set(n2, 2);
   };
   for (const s of def2.steps)
     if ((color.get(s.id) ?? 0) === 0)
@@ -8671,9 +8671,9 @@ function replay(def2, key, events, opts = {}) {
   let state = initialState(key);
   const steps = [];
   for (const ev of events) {
-    const r = reduce(def2, state, ev, opts);
-    state = r.state;
-    steps.push({ event: ev, commands: r.commands });
+    const r2 = reduce(def2, state, ev, opts);
+    state = r2.state;
+    steps.push({ event: ev, commands: r2.commands });
   }
   return { state, steps };
 }
@@ -8734,7 +8734,7 @@ ${who}` : s.id, config: config2 });
   for (const s of def2.steps) {
     for (const l of s.on) {
       if (/^\*\./.test(l.event)) {
-        if (!nodes.some((n) => n.id === l.event))
+        if (!nodes.some((n2) => n2.id === l.event))
           nodes.push({ id: l.event, kind: "outcome", label: `any step
 ${l.event.slice(2)}`, config: { wildcard: true } });
         edges.push({ from: l.event, to: s.id, label: l.event.slice(2), condition: l.if, event: l.event });
@@ -8794,9 +8794,9 @@ function toMermaid(def2) {
   const g2 = toGraph(def2);
   const lines = ["flowchart LR"];
   const esc2 = (s) => s.replace(/"/g, "#quot;").replace(/\n/g, "<br/>");
-  for (const n of g2.nodes) {
-    const [l, r] = SHAPES[n.kind];
-    lines.push(`  ${n.id}${l}"${esc2(n.label)}"${r}`);
+  for (const n2 of g2.nodes) {
+    const [l, r2] = SHAPES[n2.kind];
+    lines.push(`  ${n2.id}${l}"${esc2(n2.label)}"${r2}`);
   }
   for (const e of g2.edges) {
     const label2 = e.condition ? `${e.label}<br/><i>${esc2(e.condition)}</i>` : e.label;
@@ -8807,7 +8807,7 @@ function toMermaid(def2) {
   lines.push("  classDef human fill:#fff7e6,stroke:#f59e0b");
   lines.push("  classDef gate fill:#ecfdf5,stroke:#10b981");
   for (const kind of ["trigger", "ai", "human", "gate"]) {
-    const ids = g2.nodes.filter((n) => n.kind === kind).map((n) => n.id);
+    const ids = g2.nodes.filter((n2) => n2.kind === kind).map((n2) => n2.id);
     if (ids.length)
       lines.push(`  class ${ids.join(",")} ${kind}`);
   }
@@ -9320,17 +9320,17 @@ var require_codegen = __commonJS({
         this.nodes = nodes;
       }
       render(opts) {
-        return this.nodes.reduce((code, n) => code + n.render(opts), "");
+        return this.nodes.reduce((code, n2) => code + n2.render(opts), "");
       }
       optimizeNodes() {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
-          const n = nodes[i].optimizeNodes();
-          if (Array.isArray(n))
-            nodes.splice(i, 1, ...n);
-          else if (n)
-            nodes[i] = n;
+          const n2 = nodes[i].optimizeNodes();
+          if (Array.isArray(n2))
+            nodes.splice(i, 1, ...n2);
+          else if (n2)
+            nodes[i] = n2;
           else
             nodes.splice(i, 1);
         }
@@ -9340,16 +9340,16 @@ var require_codegen = __commonJS({
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
-          const n = nodes[i];
-          if (n.optimizeNames(names, constants3))
+          const n2 = nodes[i];
+          if (n2.optimizeNames(names, constants3))
             continue;
-          subtractNames(names, n.names);
+          subtractNames(names, n2.names);
           nodes.splice(i, 1);
         }
         return nodes.length > 0 ? this : void 0;
       }
       get names() {
-        return this.nodes.reduce((names, n) => addNames(names, n.names), {});
+        return this.nodes.reduce((names, n2) => addNames(names, n2.names), {});
       }
     };
     var BlockNode = class extends ParentNode {
@@ -9739,14 +9739,14 @@ var require_codegen = __commonJS({
       }
       // end the current self-balancing block
       endBlock(nodeCount) {
-        const len = this._blockStarts.pop();
-        if (len === void 0)
+        const len2 = this._blockStarts.pop();
+        if (len2 === void 0)
           throw new Error("CodeGen: not in self-balancing block");
-        const toClose = this._nodes.length - len;
+        const toClose = this._nodes.length - len2;
         if (toClose < 0 || nodeCount !== void 0 && toClose !== nodeCount) {
           throw new Error(`CodeGen: wrong number of nodes: ${toClose} vs ${nodeCount} expected`);
         }
-        this._nodes.length = len;
+        this._nodes.length = len2;
         return this;
       }
       // `function` heading (or definition if funcBody is passed)
@@ -9760,8 +9760,8 @@ var require_codegen = __commonJS({
       endFunc() {
         return this._endBlockNode(Func);
       }
-      optimize(n = 1) {
-        while (n-- > 0) {
+      optimize(n2 = 1) {
+        while (n2-- > 0) {
           this._root.optimizeNodes();
           this._root.optimizeNames(this._root.names, this._constants);
         }
@@ -9775,19 +9775,19 @@ var require_codegen = __commonJS({
         this._nodes.push(node3);
       }
       _endBlockNode(N1, N2) {
-        const n = this._currNode;
-        if (n instanceof N1 || N2 && n instanceof N2) {
+        const n2 = this._currNode;
+        if (n2 instanceof N1 || N2 && n2 instanceof N2) {
           this._nodes.pop();
           return this;
         }
         throw new Error(`CodeGen: not in block "${N2 ? `${N1.kind}/${N2.kind}` : N1.kind}"`);
       }
       _elseNode(node3) {
-        const n = this._currNode;
-        if (!(n instanceof If)) {
+        const n2 = this._currNode;
+        if (!(n2 instanceof If)) {
           throw new Error('CodeGen: "else" without "if"');
         }
-        this._currNode = n.else = node3;
+        this._currNode = n2.else = node3;
         return this;
       }
       get _root() {
@@ -9804,8 +9804,8 @@ var require_codegen = __commonJS({
     };
     exports.CodeGen = CodeGen;
     function addNames(names, from) {
-      for (const n in from)
-        names[n] = (names[n] || 0) + (from[n] || 0);
+      for (const n2 in from)
+        names[n2] = (names[n2] || 0) + (from[n2] || 0);
       return names;
     }
     function addExprNames(names, from) {
@@ -9825,11 +9825,11 @@ var require_codegen = __commonJS({
           items.push(c2);
         return items;
       }, []));
-      function replaceName(n) {
-        const c2 = constants3[n.str];
-        if (c2 === void 0 || names[n.str] !== 1)
-          return n;
-        delete names[n.str];
+      function replaceName(n2) {
+        const c2 = constants3[n2.str];
+        if (c2 === void 0 || names[n2.str] !== 1)
+          return n2;
+        delete names[n2.str];
         return c2;
       }
       function canOptimize(e) {
@@ -9837,8 +9837,8 @@ var require_codegen = __commonJS({
       }
     }
     function subtractNames(names, from) {
-      for (const n in from)
-        names[n] = (names[n] || 0) - (from[n] || 0);
+      for (const n2 in from)
+        names[n2] = (names[n2] || 0) - (from[n2] || 0);
     }
     function not(x2) {
       return typeof x2 == "boolean" || typeof x2 == "number" || x2 === null ? !x2 : (0, code_1._)`!${par(x2)}`;
@@ -10612,8 +10612,8 @@ var require_code2 = __commonJS({
       validateItems(() => gen.break());
       return valid;
       function validateItems(notValid) {
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-        gen.forRange("i", 0, len, (i) => {
+        const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
+        gen.forRange("i", 0, len2, (i) => {
           cxt.subschema({
             keyword,
             dataProp: i,
@@ -11109,11 +11109,11 @@ var require_resolve = __commonJS({
           }
           return ref2;
         }
-        function addAnchor(anchor2) {
-          if (typeof anchor2 == "string") {
-            if (!ANCHOR.test(anchor2))
-              throw new Error(`invalid anchor "${anchor2}"`);
-            addRef.call(this, `#${anchor2}`);
+        function addAnchor(anchor3) {
+          if (typeof anchor3 == "string") {
+            if (!ANCHOR.test(anchor3))
+              throw new Error(`invalid anchor "${anchor3}"`);
+            addRef.call(this, `#${anchor3}`);
           }
         }
       });
@@ -12077,9 +12077,9 @@ var require_utils = __commonJS({
       let input2 = path24;
       const output2 = [];
       let nextSlash = -1;
-      let len = 0;
-      while (len = input2.length) {
-        if (len === 1) {
+      let len2 = 0;
+      while (len2 = input2.length) {
+        if (len2 === 1) {
           if (input2 === ".") {
             break;
           } else if (input2 === "/") {
@@ -12089,7 +12089,7 @@ var require_utils = __commonJS({
             output2.push(input2);
             break;
           }
-        } else if (len === 2) {
+        } else if (len2 === 2) {
           if (input2[0] === ".") {
             if (input2[1] === ".") {
               break;
@@ -12103,7 +12103,7 @@ var require_utils = __commonJS({
               break;
             }
           }
-        } else if (len === 3) {
+        } else if (len2 === 3) {
           if (input2 === "/..") {
             if (output2.length !== 0) {
               output2.pop();
@@ -13879,14 +13879,14 @@ var require_ucs2length = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str6) {
-      const len = str6.length;
+      const len2 = str6.length;
       let length = 0;
       let pos = 0;
       let value;
-      while (pos < len) {
+      while (pos < len2) {
         length++;
         value = str6.charCodeAt(pos++);
-        if (value >= 55296 && value <= 56319 && pos < len) {
+        if (value >= 55296 && value <= 56319 && pos < len2) {
           value = str6.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
@@ -13923,8 +13923,8 @@ var require_limitLength = __commonJS({
       code(cxt) {
         const { keyword, data, schemaCode, it } = cxt;
         const op = keyword === "maxLength" ? codegen_1.operators.GT : codegen_1.operators.LT;
-        const len = it.opts.unicode === false ? (0, codegen_1._)`${data}.length` : (0, codegen_1._)`${(0, util_1.useFunc)(cxt.gen, ucs2length_1.default)}(${data})`;
-        cxt.fail$data((0, codegen_1._)`${len} ${op} ${schemaCode}`);
+        const len2 = it.opts.unicode === false ? (0, codegen_1._)`${data}.length` : (0, codegen_1._)`${(0, util_1.useFunc)(cxt.gen, ucs2length_1.default)}(${data})`;
+        cxt.fail$data((0, codegen_1._)`${len2} ${op} ${schemaCode}`);
       }
     };
     exports.default = def2;
@@ -14311,8 +14311,8 @@ var require_additionalItems = __commonJS({
     var codegen_1 = require_codegen();
     var util_1 = require_util();
     var error62 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+      message: ({ params: { len: len2 } }) => (0, codegen_1.str)`must NOT have more than ${len2} items`,
+      params: ({ params: { len: len2 } }) => (0, codegen_1._)`{limit: ${len2}}`
     };
     var def2 = {
       keyword: "additionalItems",
@@ -14333,17 +14333,17 @@ var require_additionalItems = __commonJS({
     function validateAdditionalItems(cxt, items) {
       const { gen, schema, data, keyword, it } = cxt;
       it.items = true;
-      const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+      const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
       if (schema === false) {
         cxt.setParams({ len: items.length });
-        cxt.pass((0, codegen_1._)`${len} <= ${items.length}`);
+        cxt.pass((0, codegen_1._)`${len2} <= ${items.length}`);
       } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-        const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items.length}`);
+        const valid = gen.var("valid", (0, codegen_1._)`${len2} <= ${items.length}`);
         gen.if((0, codegen_1.not)(valid), () => validateItems(valid));
         cxt.ok(valid);
       }
       function validateItems(valid) {
-        gen.forRange("i", items.length, len, (i) => {
+        gen.forRange("i", items.length, len2, (i) => {
           cxt.subschema({ keyword, dataProp: i, dataPropType: util_1.Type.Num }, valid);
           if (!it.allErrors)
             gen.if((0, codegen_1.not)(valid), () => gen.break());
@@ -14386,11 +14386,11 @@ var require_items = __commonJS({
         it.items = util_1.mergeEvaluated.items(gen, schArr.length, it.items);
       }
       const valid = gen.name("valid");
-      const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+      const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
       schArr.forEach((sch, i) => {
         if ((0, util_1.alwaysValidSchema)(it, sch))
           return;
-        gen.if((0, codegen_1._)`${len} > ${i}`, () => cxt.subschema({
+        gen.if((0, codegen_1._)`${len2} > ${i}`, () => cxt.subschema({
           keyword,
           schemaProp: i,
           dataProp: i
@@ -14439,8 +14439,8 @@ var require_items2020 = __commonJS({
     var code_1 = require_code2();
     var additionalItems_1 = require_additionalItems();
     var error62 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+      message: ({ params: { len: len2 } }) => (0, codegen_1.str)`must NOT have more than ${len2} items`,
+      params: ({ params: { len: len2 } }) => (0, codegen_1._)`{limit: ${len2}}`
     };
     var def2 = {
       keyword: "items",
@@ -14493,7 +14493,7 @@ var require_contains = __commonJS({
         } else {
           min = 1;
         }
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+        const len2 = gen.const("len", (0, codegen_1._)`${data}.length`);
         cxt.setParams({ min, max });
         if (max === void 0 && min === 0) {
           (0, util_1.checkStrictMode)(it, `"minContains" == 0 without "maxContains": "contains" keyword ignored`);
@@ -14505,9 +14505,9 @@ var require_contains = __commonJS({
           return;
         }
         if ((0, util_1.alwaysValidSchema)(it, schema)) {
-          let cond = (0, codegen_1._)`${len} >= ${min}`;
+          let cond = (0, codegen_1._)`${len2} >= ${min}`;
           if (max !== void 0)
-            cond = (0, codegen_1._)`${cond} && ${len} <= ${max}`;
+            cond = (0, codegen_1._)`${cond} && ${len2} <= ${max}`;
           cxt.pass(cond);
           return;
         }
@@ -14530,7 +14530,7 @@ var require_contains = __commonJS({
           validateItems(schValid, () => gen.if(schValid, () => checkLimits(count)));
         }
         function validateItems(_valid, block) {
-          gen.forRange("i", 0, len, (i) => {
+          gen.forRange("i", 0, len2, (i) => {
             cxt.subschema({
               keyword: "contains",
               dataProp: i,
@@ -15703,15 +15703,15 @@ function memoryEntryFromEvent(ev) {
   return { id: ev.id, agent: d.agent, key: d.key ?? ev.key, step: d.step, note: d.note, tags: Array.isArray(d.tags) ? d.tags.map(String) : [], at: ev.ts };
 }
 async function syncMemory(events, store) {
-  let n = 0;
+  let n2 = 0;
   for (const ev of events) {
     const e = memoryEntryFromEvent(ev);
     if (e) {
       await store.record(e);
-      n++;
+      n2++;
     }
   }
-  return n;
+  return n2;
 }
 function renderMemory(m2) {
   if (!m2)
@@ -15722,13 +15722,13 @@ function renderMemory(m2) {
     for (const e of m2.longTerm)
       parts2.push(`- ${e.at.slice(0, 10)}${e.key ? ` [${e.key}]` : ""}: ${clip(e.note)}${e.tags.length ? ` (${e.tags.join(", ")})` : ""}`);
   }
-  const short4 = m2.short;
-  if (short4 && (short4.trail.length || Object.keys(short4.remembered).length)) {
+  const short5 = m2.short;
+  if (short5 && (short5.trail.length || Object.keys(short5.remembered).length)) {
     parts2.push(parts2.length ? "" : "", "## Earlier in this run (short-term memory)");
-    for (const t of short4.trail.slice(-TRAIL_MAX))
+    for (const t of short5.trail.slice(-TRAIL_MAX))
       parts2.push(`- ${t.step}${t.agent ? ` (@${t.agent})` : ""} \u2192 ${t.outcome}${t.summary ? `: ${clip(t.summary)}` : ""}`);
-    if (Object.keys(short4.remembered).length)
-      parts2.push(`- you asked to remember: ${clip(JSON.stringify(short4.remembered), 600)}`);
+    if (Object.keys(short5.remembered).length)
+      parts2.push(`- you asked to remember: ${clip(JSON.stringify(short5.remembered), 600)}`);
   }
   if (parts2.length)
     parts2.push("", "You may add `remember: {...}` (kept for this run) and `learn: [{ note, tags }]` (kept for future runs) to your JSON answer.");
@@ -15875,12 +15875,12 @@ function guardFor(p) {
 function patternsOf(events, opts = {}) {
   const groups = /* @__PURE__ */ new Map();
   for (const s of signalsOf(events, opts)) {
-    const groupKey = s.kind === "failure" ? `failure|${s.step}|${s.reason}` : `reflection|${s.rkind}|${s.tags.length ? [...s.tags].sort().join(",") : normalize(s.text)}`;
-    let p = groups.get(groupKey);
+    const groupKey2 = s.kind === "failure" ? `failure|${s.step}|${s.reason}` : `reflection|${s.rkind}|${s.tags.length ? [...s.tags].sort().join(",") : normalize(s.text)}`;
+    let p = groups.get(groupKey2);
     if (!p) {
       const base = { kind: s.kind, step: s.step, reason: s.reason, rkind: s.rkind, tags: s.tags };
       p = {
-        id: `rf-${createHash("sha1").update(groupKey).digest("hex").slice(0, 8)}`,
+        id: `rf-${createHash("sha1").update(groupKey2).digest("hex").slice(0, 8)}`,
         ...base,
         title: s.kind === "failure" ? `${s.step} fails: ${s.reason}` : `[${KIND_LABEL[s.rkind]}] ${s.tags.length ? s.tags.join(", ") + " \u2014 " : ""}${clip2(s.text, 70)}`,
         count: 0,
@@ -15890,7 +15890,7 @@ function patternsOf(events, opts = {}) {
         examples: [],
         guard: guardFor(base)
       };
-      groups.set(groupKey, p);
+      groups.set(groupKey2, p);
     }
     p.count++;
     if (s.at < p.firstAt)
@@ -15928,8 +15928,8 @@ function renderPatterns(patterns, opts = {}) {
   const th = opts.threshold ?? 2;
   const rows = patterns.map((p) => [String(p.count) + (p.count >= th || p.rkind === "rule" ? " \u25CF" : "  "), p.kind === "failure" ? "failure" : p.rkind, p.title, `${p.firstAt.slice(5, 10)}\u2192${p.lastAt.slice(5, 10)}`, p.keys.slice(0, 3).join(",") + (p.keys.length > 3 ? "\u2026" : "")]);
   const head = ["n", "kind", "pattern", "when", "keys"];
-  const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
-  const line = (r) => r.map((c2, i) => i === 2 ? c2.padEnd(widths[i]) : c2.padEnd(widths[i])).join("  ");
+  const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r2) => r2[i].length)));
+  const line = (r2) => r2.map((c2, i) => i === 2 ? c2.padEnd(widths[i]) : c2.padEnd(widths[i])).join("  ");
   return [line(head), ...rows.map(line), "", `\u25CF = past the threshold (${th}) or a rule \u2192 becomes a card with --to-board`].join("\n");
 }
 function normalize(s) {
@@ -16134,7 +16134,7 @@ var init_engine = __esm({
       async idle() {
         while (this.inflight.size || this.queue.length || this.draining) {
           await Promise.all([...this.inflight.values()]);
-          await new Promise((r) => setTimeout(r, 5));
+          await new Promise((r2) => setTimeout(r2, 5));
         }
       }
       log(line) {
@@ -16202,26 +16202,26 @@ var init_engine = __esm({
           }
           case "run_script": {
             this.log(`[${c2.key}] ${c2.step}: $ ${c2.cmd}`);
-            const r = await this.opts.scriptRunner(c2, { cwd: this.opts.cwd, env: this.opts.env });
-            this.log(`[${c2.key}] ${c2.step} \u2192 ${r.outcome} (${r.durationMs}ms)`);
-            this.store.append({ type: `${c2.step}.${r.outcome}`, key: c2.key, data: r.data, causationId: c2.id, meta: { step: c2.step, attempt: c2.attempt, code: r.code, durationMs: r.durationMs, stderr: r.stderr.slice(-500) || void 0 } });
-            for (const n of reflectNotesOf({ reflect: r.reflect }))
-              this.store.append({ type: REFLECTION_NOTED, key: c2.key, data: { source: "script", key: c2.key, step: c2.step, note: n.note, kind: n.kind, tags: n.tags ?? [] }, causationId: c2.id, meta: { step: c2.step } });
+            const r2 = await this.opts.scriptRunner(c2, { cwd: this.opts.cwd, env: this.opts.env });
+            this.log(`[${c2.key}] ${c2.step} \u2192 ${r2.outcome} (${r2.durationMs}ms)`);
+            this.store.append({ type: `${c2.step}.${r2.outcome}`, key: c2.key, data: r2.data, causationId: c2.id, meta: { step: c2.step, attempt: c2.attempt, code: r2.code, durationMs: r2.durationMs, stderr: r2.stderr.slice(-500) || void 0 } });
+            for (const n2 of reflectNotesOf({ reflect: r2.reflect }))
+              this.store.append({ type: REFLECTION_NOTED, key: c2.key, data: { source: "script", key: c2.key, step: c2.step, note: n2.note, kind: n2.kind, tags: n2.tags ?? [] }, causationId: c2.id, meta: { step: c2.step } });
             return;
           }
           case "call_ai": {
             const via = this.opts.worker.for?.(c2.runner)?.name ?? this.opts.worker.name;
             this.log(`[${c2.key}] ${c2.step}: @${c2.agent ?? c2.role ?? "model"} model=${c2.model ?? "-"} via ${via}`);
-            const r = await callAi(c2, this.opts.worker, { memory: this.opts.memory });
-            this.log(`[${c2.key}] ${c2.step} \u2192 ${r.outcome}${r.error ? " (" + r.error.slice(0, 120) + ")" : ""}${r.learned ? ` \xB7 learned ${r.learned.length}` : ""}`);
-            this.store.append({ type: `${c2.step}.${r.outcome}`, key: c2.key, data: r.data, causationId: c2.id, meta: { step: c2.step, attempt: c2.attempt, usage: r.usage, worker: this.opts.worker.name, error: r.error, ...r.recalled ? { recalled: r.recalled.map((e) => e.note) } : {} } });
-            for (const note of r.learned ?? []) {
+            const r2 = await callAi(c2, this.opts.worker, { memory: this.opts.memory });
+            this.log(`[${c2.key}] ${c2.step} \u2192 ${r2.outcome}${r2.error ? " (" + r2.error.slice(0, 120) + ")" : ""}${r2.learned ? ` \xB7 learned ${r2.learned.length}` : ""}`);
+            this.store.append({ type: `${c2.step}.${r2.outcome}`, key: c2.key, data: r2.data, causationId: c2.id, meta: { step: c2.step, attempt: c2.attempt, usage: r2.usage, worker: this.opts.worker.name, error: r2.error, ...r2.recalled ? { recalled: r2.recalled.map((e) => e.note) } : {} } });
+            for (const note of r2.learned ?? []) {
               const ev = this.store.append({ type: MEMORY_LEARNED, key: c2.key, data: { agent: c2.agent ?? c2.role ?? c2.step, key: c2.key, step: c2.step, note: note.note, tags: note.tags ?? [] }, causationId: c2.id, meta: { step: c2.step } });
               if (this.opts.memory)
                 await this.opts.memory.record({ id: ev.id, agent: c2.agent ?? c2.role ?? c2.step, key: c2.key, step: c2.step, note: note.note, tags: note.tags ?? [], at: ev.ts });
             }
-            for (const n of r.reflected ?? [])
-              this.store.append({ type: REFLECTION_NOTED, key: c2.key, data: { source: "ai", agent: c2.agent ?? c2.role ?? c2.step, key: c2.key, step: c2.step, note: n.note, kind: n.kind, tags: n.tags ?? [] }, causationId: c2.id, meta: { step: c2.step } });
+            for (const n2 of r2.reflected ?? [])
+              this.store.append({ type: REFLECTION_NOTED, key: c2.key, data: { source: "ai", agent: c2.agent ?? c2.role ?? c2.step, key: c2.key, step: c2.step, note: n2.note, kind: n2.kind, tags: n2.tags ?? [] }, causationId: c2.id, meta: { step: c2.step } });
             return;
           }
         }
@@ -16434,9 +16434,9 @@ var init_file2 = __esm({
         return path2.join(this.dir, `${agent.replace(/[^A-Za-z0-9_-]/g, "_")}.ndjson`);
       }
       load(agent) {
-        const hit = this.cache.get(agent);
-        if (hit)
-          return hit;
+        const hit2 = this.cache.get(agent);
+        if (hit2)
+          return hit2;
         const f = this.file(agent);
         const rows = fs2.existsSync(f) ? fs2.readFileSync(f, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
         this.cache.set(agent, rows);
@@ -16607,8 +16607,8 @@ var init_fake = __esm({
         return { output: output2, usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 } };
       }
       lookup(req) {
-        const names = [req.agent, req.role, req.step].filter((n) => Boolean(n));
-        const candidates = names.flatMap((n) => [`${n}/${req.key}.json`, `${n}.json`]);
+        const names = [req.agent, req.role, req.step].filter((n2) => Boolean(n2));
+        const candidates = names.flatMap((n2) => [`${n2}/${req.key}.json`, `${n2}.json`]);
         for (const c2 of candidates) {
           const inlineHit = this.inline[c2.replace(/\.json$/, "")];
           if (inlineHit !== void 0)
@@ -17050,14 +17050,14 @@ var init_values = __esm({
     };
     isArray = (val) => (isArray = Array.isArray, isArray(val));
     isReadonlyArray = isArray;
-    validatePositiveInteger = (name, n) => {
-      if (typeof n !== "number" || !Number.isInteger(n)) {
+    validatePositiveInteger = (name, n2) => {
+      if (typeof n2 !== "number" || !Number.isInteger(n2)) {
         throw new AnthropicError(`${name} must be an integer`);
       }
-      if (n < 0) {
+      if (n2 < 0) {
         throw new AnthropicError(`${name} must be a positive integer`);
       }
-      return n;
+      return n2;
     };
     safeJSON = (text3) => {
       try {
@@ -17907,7 +17907,7 @@ async function readLimitedText(resp) {
   if (chunks.length === 1) {
     merged = chunks[0];
   } else {
-    merged = new Uint8Array(chunks.reduce((n, c2) => n + c2.length, 0));
+    merged = new Uint8Array(chunks.reduce((n2, c2) => n2 + c2.length, 0));
     let offset = 0;
     for (const c2 of chunks) {
       merged.set(c2, offset);
@@ -20964,9 +20964,9 @@ var require_sha256 = __commonJS({
         3204031479,
         3329325298
       ]);
-      function hashBlocks(w2, v2, p, pos, len) {
+      function hashBlocks(w2, v2, p, pos, len2) {
         var a, b2, c2, d, e, f, g2, h, u3, i, j2, t1, t2;
-        while (len >= 64) {
+        while (len2 >= 64) {
           a = v2[0];
           b2 = v2[1];
           c2 = v2[2];
@@ -21007,7 +21007,7 @@ var require_sha256 = __commonJS({
           v2[6] += g2;
           v2[7] += h;
           pos += 64;
-          len -= 64;
+          len2 -= 64;
         }
         return pos;
       }
@@ -21255,12 +21255,12 @@ var require_sha256 = __commonJS({
       exports2.hkdf = hkdf;
       function pbkdf2(password, salt, iterations, dkLen) {
         var prf = new HMAC(password);
-        var len = prf.digestLength;
+        var len2 = prf.digestLength;
         var ctr = new Uint8Array(4);
-        var t = new Uint8Array(len);
-        var u3 = new Uint8Array(len);
+        var t = new Uint8Array(len2);
+        var u3 = new Uint8Array(len2);
         var dk = new Uint8Array(dkLen);
-        for (var i = 0; i * len < dkLen; i++) {
+        for (var i = 0; i * len2 < dkLen; i++) {
           var c2 = i + 1;
           ctr[0] = c2 >>> 24 & 255;
           ctr[1] = c2 >>> 16 & 255;
@@ -21270,21 +21270,21 @@ var require_sha256 = __commonJS({
           prf.update(salt);
           prf.update(ctr);
           prf.finish(u3);
-          for (var j2 = 0; j2 < len; j2++) {
+          for (var j2 = 0; j2 < len2; j2++) {
             t[j2] = u3[j2];
           }
           for (var j2 = 2; j2 <= iterations; j2++) {
             prf.reset();
             prf.update(u3).finish(u3);
-            for (var k2 = 0; k2 < len; k2++) {
+            for (var k2 = 0; k2 < len2; k2++) {
               t[k2] ^= u3[k2];
             }
           }
-          for (var j2 = 0; j2 < len && i * len + j2 < dkLen; j2++) {
-            dk[i * len + j2] = t[j2];
+          for (var j2 = 0; j2 < len2 && i * len2 + j2 < dkLen; j2++) {
+            dk[i * len2 + j2] = t[j2];
           }
         }
-        for (var i = 0; i < len; i++) {
+        for (var i = 0; i < len2; i++) {
           t[i] = u3[i] = 0;
         }
         for (var i = 0; i < 4; i++) {
@@ -21965,9 +21965,9 @@ var init_async_queue = __esm({
             return Promise.resolve({ done: true, value: void 0 });
           }
           return new Promise((resolve2) => {
-            const waiter = (r) => {
+            const waiter = (r2) => {
               signal?.removeEventListener("abort", onAbort);
-              resolve2(r);
+              resolve2(r2);
             };
             const onAbort = () => {
               const idx = __classPrivateFieldGet(this, _AsyncQueue_waiters, "f").indexOf(waiter);
@@ -22561,7 +22561,7 @@ var init_SessionToolRunner = __esm({
       async function _SessionToolRunner_drain2() {
         if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") === 0)
           return;
-        await Promise.race([new Promise((r) => __classPrivateFieldSet(this, _SessionToolRunner_onIdle, r, "f")), sleep(DRAIN_TIMEOUT_MS)]);
+        await Promise.race([new Promise((r2) => __classPrivateFieldSet(this, _SessionToolRunner_onIdle, r2, "f")), sleep(DRAIN_TIMEOUT_MS)]);
         __classPrivateFieldSet(this, _SessionToolRunner_onIdle, null, "f");
         if (__classPrivateFieldGet(this, _SessionToolRunner_inFlightCount, "f") > 0) {
           __classPrivateFieldGet(this, _SessionToolRunner_logger, "f").warn("drain timeout exceeded");
@@ -22924,11 +22924,11 @@ async function extractArgs(cmd2, archive, stage, special, excludeFile) {
   await fs6.writeFile(excludeFile, patterns.join("\n") + "\n", { flag: "wx", mode: 384 });
   return ["-xf", archive, "-C", stage, "-X", excludeFile];
 }
-async function readHead(file2, n) {
+async function readHead(file2, n2) {
   const handle = await fs6.open(file2, "r");
   try {
-    const buf = Buffer.alloc(n);
-    const { bytesRead } = await handle.read(buf, 0, n, 0);
+    const buf = Buffer.alloc(n2);
+    const { bytesRead } = await handle.read(buf, 0, n2, 0);
     return buf.subarray(0, bytesRead);
   } finally {
     await handle.close();
@@ -24829,7 +24829,7 @@ ${out}`;
 
 // node_modules/@anthropic-ai/sdk/lib/environments/worker.mjs
 function hasMemoryStore(session) {
-  return session.resources.some((r) => r.type === "memory_store");
+  return session.resources.some((r2) => r2.type === "memory_store");
 }
 function sessionsTokenFromSecret(secret) {
   if (!secret)
@@ -33968,7 +33968,7 @@ function strictify(schema) {
       o.additionalProperties = false;
     for (const k2 of ["properties", "items", "anyOf", "oneOf", "allOf"])
       if (k2 in o)
-        o[k2] = k2 === "properties" ? Object.fromEntries(Object.entries(o[k2]).map(([n, v2]) => [n, walk3(v2)])) : walk3(o[k2]);
+        o[k2] = k2 === "properties" ? Object.fromEntries(Object.entries(o[k2]).map(([n2, v2]) => [n2, walk3(v2)])) : walk3(o[k2]);
     return o;
   };
   return walk3(schema);
@@ -34133,9 +34133,9 @@ function buildPrompt(req, inFile, outFile) {
     `Then write your final answer as a single JSON object matching that schema to ${outFile} (nothing else in that file) and reply with the single word DONE.`
   ].join(" ");
 }
-function readyOf(r) {
+function readyOf(r2) {
   try {
-    const j2 = JSON.parse(r.stdout);
+    const j2 = JSON.parse(r2.stdout);
     const a = j2.result?.agent ?? j2.result ?? j2;
     const status = a.agent_status ?? a.status;
     return a.interactive_ready === true && (status === "idle" || status === "done" || status === void 0);
@@ -34143,9 +34143,9 @@ function readyOf(r) {
     return false;
   }
 }
-function stateOf(r) {
+function stateOf(r2) {
   try {
-    const j2 = JSON.parse(r.stdout);
+    const j2 = JSON.parse(r2.stdout);
     const res = j2.result ?? j2;
     return res.agent?.agent_status ?? res.state ?? res.status ?? res.agent_status ?? j2.error?.code;
   } catch {
@@ -34207,12 +34207,12 @@ var init_herdr = __esm({
         if (fs8.existsSync(outFile))
           fs8.unlinkSync(outFile);
         const prompt = buildPrompt(req, inFile, outFile);
-        const r = await this.exec(["agent", "prompt", agentName, prompt]);
-        const submitState = stateOf(r);
+        const r2 = await this.exec(["agent", "prompt", agentName, prompt]);
+        const submitState = stateOf(r2);
         if (submitState === "blocked" || submitState === "agent_blocked")
           throw new Error(`agent_blocked: ${agentName} is waiting for a human in its herdr pane \u2014 answer it there; a retry re-prompts`);
-        if (r.code !== 0)
-          throw new Error(`herdr agent prompt failed (${submitState ?? r.code}): ${(r.stderr || r.stdout).slice(-600)}`);
+        if (r2.code !== 0)
+          throw new Error(`herdr agent prompt failed (${submitState ?? r2.code}): ${(r2.stderr || r2.stdout).slice(-600)}`);
         const poll = this.opts.pollMs ?? 500;
         const stateEvery = this.opts.stateEveryMs ?? 2e3;
         const idleGraceMs = this.opts.idleGraceMs ?? 2e4;
@@ -34276,9 +34276,9 @@ ${tail}`);
           const got = await this.exec(["agent", "get", name]);
           if (readyOf(got))
             break;
-          await new Promise((r) => setTimeout(r, this.opts.pollMs ?? 500));
+          await new Promise((r2) => setTimeout(r2, this.opts.pollMs ?? 500));
         }
-        await new Promise((r) => setTimeout(r, this.opts.settleMs ?? 1500));
+        await new Promise((r2) => setTimeout(r2, this.opts.settleMs ?? 1500));
       }
     };
   }
@@ -34314,10 +34314,10 @@ function channelExec(channel) {
       return json3({ result: { agent: { name: rest[0], pane_id: pane } } });
     }
     if (group === "agent" && cmd2 === "prompt") {
-      const r = await channel.prompt(rest[0], rest[1]);
-      if (!r.ok)
-        return { stdout: JSON.stringify({ error: { code: r.state ?? "error" } }), stderr: r.detail ?? "", code: 1 };
-      return json3({ result: { type: "agent_prompted", agent: { agent_status: r.state } } });
+      const r2 = await channel.prompt(rest[0], rest[1]);
+      if (!r2.ok)
+        return { stdout: JSON.stringify({ error: { code: r2.state ?? "error" } }), stderr: r2.detail ?? "", code: 1 };
+      return json3({ result: { type: "agent_prompted", agent: { agent_status: r2.state } } });
     }
     if (group === "agent" && cmd2 === "get")
       return json3({ result: { agent: await channel.get(rest[0]) } });
@@ -34354,31 +34354,31 @@ var init_herdr3 = __esm({
         this.exec = exec ?? ((args2) => herdrExec2(bin, args2));
       }
       async list() {
-        const r = await this.exec(["agent", "list"]);
-        return parse2(r.stdout)?.result?.agents ?? [];
+        const r2 = await this.exec(["agent", "list"]);
+        return parse2(r2.stdout)?.result?.agents ?? [];
       }
       async start(name, kind, paneId, args2 = []) {
-        const r = await this.exec(["agent", "start", name, "--kind", kind, "--pane", paneId, ...args2.length ? ["--", ...args2] : []]);
-        if (r.code !== 0)
-          throw new Error(`herdr agent start ${name} (${kind}) failed: ${(r.stderr || r.stdout).slice(-600)}`);
+        const r2 = await this.exec(["agent", "start", name, "--kind", kind, "--pane", paneId, ...args2.length ? ["--", ...args2] : []]);
+        if (r2.code !== 0)
+          throw new Error(`herdr agent start ${name} (${kind}) failed: ${(r2.stderr || r2.stdout).slice(-600)}`);
       }
       async prompt(name, text3) {
-        const r = await this.exec(["agent", "prompt", name, text3]);
-        const j2 = parse2(r.stdout);
+        const r2 = await this.exec(["agent", "prompt", name, text3]);
+        const j2 = parse2(r2.stdout);
         const state = j2?.result?.agent?.agent_status ?? j2?.result?.state ?? j2?.error?.code;
-        return { ok: r.code === 0, state, detail: r.code === 0 ? void 0 : (r.stderr || r.stdout).slice(-600) };
+        return { ok: r2.code === 0, state, detail: r2.code === 0 ? void 0 : (r2.stderr || r2.stdout).slice(-600) };
       }
       async get(name) {
-        const r = await this.exec(["agent", "get", name]);
-        return parse2(r.stdout)?.result?.agent;
+        const r2 = await this.exec(["agent", "get", name]);
+        return parse2(r2.stdout)?.result?.agent;
       }
       async read(name, lines = 40) {
-        const r = await this.exec(["agent", "read", name, "--lines", String(lines), "--format", "text"]);
-        return r.stdout;
+        const r2 = await this.exec(["agent", "read", name, "--lines", String(lines), "--format", "text"]);
+        return r2.stdout;
       }
       async wait(name, until, timeoutMs) {
-        const r = await this.exec(["agent", "wait", name, ...until.flatMap((u3) => ["--until", u3]), "--timeout", String(timeoutMs)]);
-        const j2 = parse2(r.stdout);
+        const r2 = await this.exec(["agent", "wait", name, ...until.flatMap((u3) => ["--until", u3]), "--timeout", String(timeoutMs)]);
+        const j2 = parse2(r2.stdout);
         return j2?.result?.agent?.agent_status ?? j2?.result?.state;
       }
       async openPane(cwd) {
@@ -34396,15 +34396,15 @@ var init_herdr3 = __esm({
         return typeof root === "string" ? root : void 0;
       }
       async splitPane(paneId, cwd) {
-        const r = await this.exec(["pane", "split", paneId, "--direction", "right", "--cwd", cwd, "--no-focus"]);
-        const pane = parse2(r.stdout)?.result?.pane?.pane_id;
+        const r2 = await this.exec(["pane", "split", paneId, "--direction", "right", "--cwd", cwd, "--no-focus"]);
+        const pane = parse2(r2.stdout)?.result?.pane?.pane_id;
         return typeof pane === "string" ? pane : void 0;
       }
       async closePane(paneId) {
-        const r = await this.exec(["pane", "close", paneId]);
-        const code = (parse2(r.stdout) ?? parse2(r.stderr))?.error?.code;
-        if (r.code !== 0 && code !== "pane_not_found")
-          throw new Error(`herdr pane close ${paneId} failed: ${(r.stderr || r.stdout).slice(-400)}`);
+        const r2 = await this.exec(["pane", "close", paneId]);
+        const code = (parse2(r2.stdout) ?? parse2(r2.stderr))?.error?.code;
+        if (r2.code !== 0 && code !== "pane_not_found")
+          throw new Error(`herdr pane close ${paneId} failed: ${(r2.stderr || r2.stdout).slice(-400)}`);
       }
     };
   }
@@ -34486,15 +34486,15 @@ data: ${JSON.stringify(data)}
     if (!streams.size)
       return;
     const state = opts.engine?.states.get(ev.key);
-    for (const r of streams) {
-      sse(r, "event", ev);
+    for (const r2 of streams) {
+      sse(r2, "event", ev);
       if (state)
-        sse(r, "state", { key: ev.key, state });
+        sse(r2, "state", { key: ev.key, state });
     }
   });
   const keepalive = setInterval(() => {
-    for (const r of streams)
-      sse(r, "ping", { at: Date.now() });
+    for (const r2 of streams)
+      sse(r2, "ping", { at: Date.now() });
   }, 15e3);
   keepalive.unref?.();
   const server = http.createServer(async (req, res) => {
@@ -34514,9 +34514,9 @@ data: ${JSON.stringify(data)}
         const body = await readBody(req);
         const query = Object.fromEntries(url2.searchParams.entries());
         const headers = Object.fromEntries(Object.entries(req.headers).map(([k2, v2]) => [k2, Array.isArray(v2) ? v2.join(",") : String(v2 ?? "")]));
-        const r = fireWebhook(t, def2, store, { body, query, headers }, opts.env);
-        opts.log?.(r.accepted ? `webhook ${t.id} \u2192 ${r.event.type} [${r.event.key}]` : `webhook ${t.id} dropped: ${r.reason}`);
-        return send(r.accepted ? 202 : 200, r);
+        const r2 = fireWebhook(t, def2, store, { body, query, headers }, opts.env);
+        opts.log?.(r2.accepted ? `webhook ${t.id} \u2192 ${r2.event.type} [${r2.event.key}]` : `webhook ${t.id} dropped: ${r2.reason}`);
+        return send(r2.accepted ? 202 : 200, r2);
       }
       if (url2.pathname === "/api/status") {
         const runs = opts.engine ? [...opts.engine.states.values()] : [];
@@ -34556,8 +34556,8 @@ data: ${JSON.stringify(data)}
   server.on("close", () => {
     unsub();
     clearInterval(keepalive);
-    for (const r of streams)
-      r.end();
+    for (const r2 of streams)
+      r2.end();
     streams.clear();
   });
   return server;
@@ -34739,10 +34739,10 @@ function canvasSource(opts) {
   const aborts = /* @__PURE__ */ new Set();
   const baseFor = (t) => (t.canvas ?? env.AWD_CANVAS_URL ?? "http://localhost:4400").replace(/\/$/, "");
   const getJson = async (url2, signal) => {
-    const r = await f(url2, { signal, headers: { "user-agent": canvasUserAgent("runtime") } });
-    if (!r.ok)
-      throw Object.assign(new Error(`${url2} \u2192 ${r.status}`), { status: r.status });
-    return r.json();
+    const r2 = await f(url2, { signal, headers: { "user-agent": canvasUserAgent("runtime") } });
+    if (!r2.ok)
+      throw Object.assign(new Error(`${url2} \u2192 ${r2.status}`), { status: r2.status });
+    return r2.json();
   };
   async function resolveBoard2(t) {
     const base = baseFor(t);
@@ -34750,10 +34750,10 @@ function canvasSource(opts) {
     if (ref2.startsWith("title:")) {
       const title = ref2.slice(6).trim();
       const { boards } = await getJson(`${base}/api/boards`);
-      const hit = boards.find((b2) => b2.title === title);
-      if (!hit)
+      const hit2 = boards.find((b2) => b2.title === title);
+      if (!hit2)
         throw new Error(`no board titled "${title}" on ${base}`);
-      return (await getJson(`${base}/api/boards/${hit.id}`)).board;
+      return (await getJson(`${base}/api/boards/${hit2.id}`)).board;
     }
     return (await getJson(`${base}/api/boards/${encodeURIComponent(ref2)}`)).board;
   }
@@ -34785,8 +34785,8 @@ function canvasSource(opts) {
         let moves = [];
         if (useCards !== false) {
           try {
-            const r = await getJson(`${base}/api/boards/${board.id}/cards?since=${since}`);
-            const list3 = r.moves ?? r.cards ?? [];
+            const r2 = await getJson(`${base}/api/boards/${board.id}/cards?since=${since}`);
+            const list3 = r2.moves ?? r2.cards ?? [];
             const fresh = (await getJson(`${base}/api/boards/${board.id}`)).board;
             board = fresh;
             inScope = kanbanScope(board, t.frame);
@@ -34826,7 +34826,7 @@ function canvasSource(opts) {
           break;
         opts.log?.(`board ${t.id}: ${e.message} \u2014 retrying in ${opts.pollMs ?? 2e3} ms`);
         board = void 0;
-        await new Promise((r) => setTimeout(r, opts.pollMs ?? 2e3));
+        await new Promise((r2) => setTimeout(r2, opts.pollMs ?? 2e3));
       }
     }
   }
@@ -35014,20 +35014,20 @@ function stepDetail(s, wf, rel, exists, readFile2, root) {
     };
   }
   const ends = (o) => !!s.terminal && (s.terminal.includes("*") || s.terminal.includes(o));
-  const rules = (s.kind === "gate" ? s.gate.outcomes : s.human.outcomes).map((r) => ({ outcome: r.outcome, when: r.if, terminal: ends(r.outcome) }));
+  const rules = (s.kind === "gate" ? s.gate.outcomes : s.human.outcomes).map((r2) => ({ outcome: r2.outcome, when: r2.if, terminal: ends(r2.outcome) }));
   if (s.kind === "gate" && s.gate.default)
     rules.push({ outcome: s.gate.default, when: "otherwise", terminal: ends(s.gate.default) });
   const verb = (o) => ends(o) ? `Ends the run as "${o}"` : `Goes on as "${o}"`;
   const plain = [
     ...s.kind === "human" ? [`Waits for ${s.human.resume_on.join(" or ")}`] : [],
-    ...rules.map((r) => `${verb(r.outcome)} ${r.when === "otherwise" ? "otherwise" : `when ${r.when}`}`),
+    ...rules.map((r2) => `${verb(r2.outcome)} ${r2.when === "otherwise" ? "otherwise" : `when ${r2.when}`}`),
     ...s.timeout ? [`${ends("timeout") ? "Stops the run" : "Goes on"} as "timeout" after ${formatDuration(s.timeout)}`] : []
   ];
   return { kind: s.kind, rules, resumeOn: s.kind === "human" ? s.human.resume_on : void 0, timeout: s.timeout ? formatDuration(s.timeout) : void 0, plain };
 }
 function roleFile(wf, role, rel, exists) {
-  const hit = ["md", "txt"].map((ext) => path8.join(wf.dir, "roles", `${role}.${ext}`)).find(exists);
-  return hit ? rel(hit) : void 0;
+  const hit2 = ["md", "txt"].map((ext) => path8.join(wf.dir, "roles", `${role}.${ext}`)).find(exists);
+  return hit2 ? rel(hit2) : void 0;
 }
 function triggerConfig(t) {
   const out = {};
@@ -35109,7 +35109,7 @@ function openSessions(sessions) {
   return Object.entries(sessions).filter(([, s]) => s.pane).sort(([, a], [, b2]) => (a.openedAt ?? 0) - (b2.openedAt ?? 0));
 }
 function paneNumber(sessions, name) {
-  const i = openSessions(sessions).findIndex(([n]) => n === name);
+  const i = openSessions(sessions).findIndex(([n2]) => n2 === name);
   return i < 0 ? void 0 : i + 1;
 }
 function evictable(sessions) {
@@ -35118,7 +35118,7 @@ function evictable(sessions) {
   return idle[0]?.[0];
 }
 function idleExpired(sessions, now, idleMs) {
-  return openSessions(sessions).filter(([, s]) => closable(s) && now - s.lastUsed > idleMs).map(([n]) => n);
+  return openSessions(sessions).filter(([, s]) => closable(s) && now - s.lastUsed > idleMs).map(([n2]) => n2);
 }
 var closable;
 var init_pool = __esm({
@@ -35148,7 +35148,7 @@ function blockOf(item) {
 }
 function forStudio(comment) {
   const to = comment?.data?.to;
-  return !Array.isArray(to) || to.some((n) => typeof n === "string" && (n.toLowerCase() === "agent" || n.toLowerCase() === "studio"));
+  return !Array.isArray(to) || to.some((n2) => typeof n2 === "string" && (n2.toLowerCase() === "agent" || n2.toLowerCase() === "studio"));
 }
 function newUserComments(board, changes, sinceSeq) {
   const out = [];
@@ -35246,16 +35246,16 @@ function chatRequest(board, comment, seq, defaultModel = "opus", scope = "studio
       ...text3 !== void 0 ? { followUp: true } : {}
     };
   }
-  const anchor2 = board.items[comment.target];
-  if (!chattable(anchor2))
+  const anchor3 = board.items[comment.target];
+  if (!chattable(anchor3))
     return void 0;
   const ids = Array.isArray(discuss.about) ? discuss.about.filter((id) => typeof id === "string" && chattable(board.items[id])) : [];
-  const about = [...new Set(ids.length ? ids : [anchor2.id])].map((id) => aboutItem(board.items[id]));
+  const about = [...new Set(ids.length ? ids : [anchor3.id])].map((id) => aboutItem(board.items[id]));
   const model = pick2(discuss.model);
   return {
     seq,
     commentId: comment.id,
-    blockItemId: anchor2.id,
+    blockItemId: anchor3.id,
     block: selectionName(about),
     kind: about.length === 1 ? about[0].kind : "selection",
     text: (text3 ?? comment.text ?? "").trim(),
@@ -35352,8 +35352,8 @@ function inProject(meta3, root) {
   const project = meta3?.project?.root;
   const file2 = meta3?.workflow?.file;
   const base = root.replace(/\/+$/, "");
-  const inside = (p) => typeof p === "string" && (p === base || p.startsWith(`${base}/`));
-  return inside(project) || inside(file2);
+  const inside2 = (p) => typeof p === "string" && (p === base || p.startsWith(`${base}/`));
+  return inside2(project) || inside2(file2);
 }
 function boardScope(board) {
   return `${slug2(board.title).slice(0, 12).replace(/-+$/, "") || "board"}-${hash6(board.id).slice(-4)}`;
@@ -35501,8 +35501,8 @@ function renderItemsBrief({ req, board, workflow, canvasUrl, awd = "awd" }) {
   const comments = Object.values(board.items).filter((i) => i.type === "comment" && i.id !== req.commentId);
   const chat = comments.filter((i) => i.target === req.commentId).map(said);
   const earlier = comments.filter((i) => i.target && inSet.has(i.target) && !anchorOf(i)).map((i) => `${said(i)} (on ${name(i.target)})`);
-  const ranges = details.map((d) => d?.yaml).filter((r) => !!r);
-  const behind = (a) => a.file === workflow ? ranges.some((r) => a.line <= r.end && (a.endLine ?? a.line) >= r.start) : files.includes(a.file);
+  const ranges = details.map((d) => d?.yaml).filter((r2) => !!r2);
+  const behind = (a) => a.file === workflow ? ranges.some((r2) => a.line <= r2.end && (a.endLine ?? a.line) >= r2.start) : files.includes(a.file);
   const answered = new Set(comments.filter((i) => i.createdBy === "agent" && i.target).map((i) => i.target));
   const notes = comments.filter((i) => {
     const a = anchorOf(i);
@@ -35690,7 +35690,7 @@ var init_studio = __esm({
     nameOf = (a) => a.block ?? (slug2(a.text).slice(0, 20) || a.itemId);
     tabLabel = (projectName) => `studio: ${projectName}`;
     boardSessionName = (scope, gen = 0) => `awd-${scope}${gen ? `-g${gen}` : ""}`;
-    forkSessionName = (scope, n) => `awd-${scope}-f${n}`;
+    forkSessionName = (scope, n2) => `awd-${scope}-f${n2}`;
     GRAMMAR = {
       "event-storming": "EventStorming (Brandolini): a system between a command and an event; a policy between an event and a command; events come from a person, a system, time or a policy; read models are updated by events and inform people (book p.200-208).",
       "user-story-map": "Story map: backbone activities left \u2192 right, steps under them, stories under steps; release lines cut scope top \u2192 bottom.",
@@ -36094,7 +36094,7 @@ var init_studioLoop = __esm({
       }
       /** Like the herdr worker: `agent start` can return before the input box takes text. */
       async ready(name) {
-        const sleep2 = this.o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+        const sleep2 = this.o.sleep ?? ((ms) => new Promise((r2) => setTimeout(r2, ms)));
         await this.o.channel.wait(name, ["idle", "done"], 6e4).catch(() => void 0);
         for (let i = 0; i < 60; i++) {
           const row = await this.o.channel.get(name);
@@ -36105,9 +36105,9 @@ var init_studioLoop = __esm({
         await sleep2(1500);
       }
       async prompt(name, text3) {
-        const r = await this.o.channel.prompt(name, text3);
-        if (!r.ok)
-          throw new Error(`herdr prompt to ${name} failed (${r.state ?? "?"})${r.detail ? `: ${r.detail}` : ""}`);
+        const r2 = await this.o.channel.prompt(name, text3);
+        if (!r2.ok)
+          throw new Error(`herdr prompt to ${name} failed (${r2.state ?? "?"})${r2.detail ? `: ${r2.detail}` : ""}`);
       }
       /** Ask herdr how each open session is doing; write it on its chat root when it changed. */
       async mirror() {
@@ -36205,10 +36205,10 @@ function canvasCards(opts = {}) {
     if (ref2.startsWith("title:")) {
       const title = ref2.slice(6).trim();
       const { boards } = await req("GET", "/api/boards");
-      const hit = boards.find((b2) => b2.title === title) ?? boards.find((b2) => b2.title.toLowerCase() === title.toLowerCase());
-      if (!hit)
+      const hit2 = boards.find((b2) => b2.title === title) ?? boards.find((b2) => b2.title.toLowerCase() === title.toLowerCase());
+      if (!hit2)
         throw new Error(`no board titled "${title}"`);
-      return (await req("GET", `/api/boards/${hit.id}`)).board;
+      return (await req("GET", `/api/boards/${hit2.id}`)).board;
     }
     return (await req("GET", `/api/boards/${encodeURIComponent(ref2)}`)).board;
   }
@@ -36271,8 +36271,8 @@ function canvasBoardHttp(opts = {}) {
   return {
     base,
     async boards() {
-      const r = await req("GET", "/api/boards");
-      return Array.isArray(r) ? r : r.boards;
+      const r2 = await req("GET", "/api/boards");
+      return Array.isArray(r2) ? r2 : r2.boards;
     },
     async board(id) {
       return (await req("GET", b2(id))).board;
@@ -36561,7 +36561,7 @@ function userAgent(component) {
 var VERSION2;
 var init_version2 = __esm({
   "packages/canvas/dist/version.js"() {
-    VERSION2 = "0.30.1";
+    VERSION2 = "0.31.0";
   }
 });
 
@@ -36645,10 +36645,10 @@ function pickBoardByTitle(boards, title, project, match = () => true) {
   }
   return { ambiguous: [] };
 }
-function ambiguityNote(title, r) {
-  if (!r.board || r.ambiguous.length < 2)
+function ambiguityNote(title, r2) {
+  if (!r2.board || r2.ambiguous.length < 2)
     return void 0;
-  return `${r.ambiguous.length} boards are titled "${norm(title)}" (${r.ambiguous.map((b2) => `${b2.id} [${b2.project ?? "personal"}]`).join(", ")}) \u2014 used ${r.board.id}, the most recently changed; pass a board id to use another`;
+  return `${r2.ambiguous.length} boards are titled "${norm(title)}" (${r2.ambiguous.map((b2) => `${b2.id} [${b2.project ?? "personal"}]`).join(", ")}) \u2014 used ${r2.board.id}, the most recently changed; pass a board id to use another`;
 }
 var norm;
 var init_boardLookup = __esm({
@@ -36661,8 +36661,8 @@ var init_boardLookup = __esm({
 function calloutOf(it) {
   if (!it || it.type !== "comment" || it.role !== "note")
     return void 0;
-  const n = it.data?.callout;
-  return typeof n === "number" && Number.isInteger(n) && n > 0 ? n : void 0;
+  const n2 = it.data?.callout;
+  return typeof n2 === "number" && Number.isInteger(n2) && n2 > 0 ? n2 : void 0;
 }
 function annotationOf(it) {
   if (!it || it.type !== "comment")
@@ -36699,10 +36699,11 @@ function todoOf(it) {
     ...str(o.doneAt) ? { doneAt: o.doneAt } : {}
   };
 }
-var str, todoAnswerText;
+var str, isAnnotationDraft, todoAnswerText;
 var init_annotations = __esm({
   "packages/canvas/dist/annotations.js"() {
     str = (v2) => typeof v2 === "string" && v2.trim() ? v2 : void 0;
+    isAnnotationDraft = (it) => annotationOf(it)?.draft === true;
     todoAnswerText = (answer) => `Confirmed: ${answer.trim()}`;
   }
 });
@@ -36715,6 +36716,22 @@ function withoutHints(it) {
   for (const k2 of HINTS)
     delete out[k2];
   return out;
+}
+function diagramSpecOf(item) {
+  const d = item?.type === "frame" ? item.data?.diagram : void 0;
+  return d && typeof d.kind === "string" && typeof d.key === "string" ? d : void 0;
+}
+function diagramOf3(board, item) {
+  let cur = item?.type === "arrow" && item.from ? board.items[item.from] : item;
+  const seen = /* @__PURE__ */ new Set();
+  while (cur && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    const spec = diagramSpecOf(cur);
+    if (spec)
+      return { ...spec, frameId: cur.id };
+    cur = cur.parent ? board.items[cur.parent] : void 0;
+  }
+  return board.kind !== "freeform" ? { kind: board.kind, key: board.kind } : void 0;
 }
 function layoutLock(items, id) {
   const it = items[id];
@@ -36732,13 +36749,14 @@ function layoutLock(items, id) {
   }
   return void 0;
 }
-var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, HINTS, withHints, LAYOUT_LOCK, ownLock;
+var WAIT_MAX_SEC, WAIT_DEFAULT_SEC, HINTS, withHints, diagramFrameId, LAYOUT_LOCK, ownLock;
 var init_model = __esm({
   "packages/canvas/dist/model.js"() {
     WAIT_MAX_SEC = 1800;
     WAIT_DEFAULT_SEC = 300;
     HINTS = ["near"];
     withHints = (it, hints) => ({ ...it, ...hints });
+    diagramFrameId = (key) => `diagram.${key}`;
     LAYOUT_LOCK = "layout";
     ownLock = (it) => it?.data?.lock === LAYOUT_LOCK;
   }
@@ -36766,7 +36784,7 @@ function resolveAgent(raw, known) {
   const want = raw.trim().replace(/^@+/, "");
   if (sameAgent(want, LOCAL_AGENT))
     return LOCAL_AGENT;
-  return known.find((n) => n === want) ?? known.find((n) => n.toLowerCase() === want.toLowerCase()) ?? known.find((n) => sameAgent(n, want));
+  return known.find((n2) => n2 === want) ?? known.find((n2) => n2.toLowerCase() === want.toLowerCase()) ?? known.find((n2) => sameAgent(n2, want));
 }
 function agentLabel(name) {
   const h = handleOf(name);
@@ -38900,9 +38918,9 @@ function standardProps(inst) {
     validate: (value) => {
       const ctx = { async: false };
       try {
-        const r = inst._zod.run({ value, issues: [] }, ctx);
-        if (!(r instanceof Promise))
-          return toStandardResult(r, ctx);
+        const r2 = inst._zod.run({ value, issues: [] }, ctx);
+        if (!(r2 instanceof Promise))
+          return toStandardResult(r2, ctx);
       } catch (_2) {
       }
       return validateAsync2(inst, value);
@@ -39011,8 +39029,8 @@ function isValidCreditCard(input2) {
 }
 function isIso7064Mod97(iban3) {
   let remainder = 0;
-  const len = iban3.length;
-  for (let i = 4; i < len; i++) {
+  const len2 = iban3.length;
+  for (let i = 4; i < len2; i++) {
     const code = iban3.charCodeAt(i);
     remainder = (code >= 65 ? remainder * 100 + (code - 55) : remainder * 10 + (code - 48)) % 97;
   }
@@ -39130,11 +39148,11 @@ function handleCatchall(proms, input2, payload, ctx, def2, inst, abortEarly) {
       unrecognized.push(key);
       continue;
     }
-    const r = _catchall.run({ value: input2[key], issues: [] }, ctx);
-    if (r instanceof Promise) {
-      proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input2, optin, optout)));
+    const r2 = _catchall.run({ value: input2[key], issues: [] }, ctx);
+    if (r2 instanceof Promise) {
+      proms.push(r2.then((r3) => handlePropertyResult(r3, payload, key, input2, optin, optout)));
     } else {
-      handlePropertyResult(r, payload, key, input2, optin, optout);
+      handlePropertyResult(r2, payload, key, input2, optin, optout);
     }
   }
   if (unrecognized.length) {
@@ -39160,7 +39178,7 @@ function handleUnionResults(results, final, inst, ctx) {
       return final;
     }
   }
-  const nonaborted = results.filter((r) => !aborted(r));
+  const nonaborted = results.filter((r2) => !aborted(r2));
   if (nonaborted.length === 1) {
     final.value = nonaborted[0].value;
     return nonaborted[0];
@@ -39347,20 +39365,20 @@ function handleTupleResult(result, final, index) {
 }
 function handleTupleResults(itemResults, final, items, input2, optoutStart) {
   for (let i = 0; i < items.length; i++) {
-    const r = itemResults[i];
+    const r2 = itemResults[i];
     const isPresent = i < input2.length;
     if (!isPresent && i >= optoutStart && items[i]._zod.optin === "optional") {
       final.value.length = i;
       break;
     }
-    if (r.issues.length) {
+    if (r2.issues.length) {
       if (!isPresent && i >= optoutStart) {
         final.value.length = i;
         break;
       }
-      final.issues.push(...prefixIssues(i, r.issues));
+      final.issues.push(...prefixIssues(i, r2.issues));
     }
-    final.value[i] = r.value;
+    final.value[i] = r2.value;
   }
   for (let i = final.value.length - 1; i >= input2.length; i--) {
     if (items[i]._zod.optout === "optional" && final.value[i] === void 0) {
@@ -39667,7 +39685,7 @@ var init_schemas = __esm({
         own(this, "~standard", value);
       }
     });
-    toStandardResult = (r, ctx) => r.issues.length ? { issues: r.issues.map((iss) => finalizeIssue(iss, ctx, config())) } : { value: r.value };
+    toStandardResult = (r2, ctx) => r2.issues.length ? { issues: r2.issues.map((iss) => finalizeIssue(iss, ctx, config())) } : { value: r2.value };
     $ZodString = /* @__PURE__ */ $constructor("$ZodString", (inst, def2) => {
       $ZodType.init(inst, def2);
       inst._zod.pattern = def2.pattern ?? anyString;
@@ -40258,11 +40276,11 @@ var init_schemas = __esm({
           const el = shape[key];
           const optin = el._zod.optin;
           const optout = el._zod.optout;
-          const r = el._zod.run({ value: input2[key], issues: [] }, ctx);
-          if (r instanceof Promise) {
-            proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input2, optin, optout)));
+          const r2 = el._zod.run({ value: input2[key], issues: [] }, ctx);
+          if (r2 instanceof Promise) {
+            proms.push(r2.then((r3) => handlePropertyResult(r3, payload, key, input2, optin, optout)));
           } else {
-            handlePropertyResult(r, payload, key, input2, optin, optout);
+            handlePropertyResult(r2, payload, key, input2, optin, optout);
           }
         }
         if (!catchall) {
@@ -40599,15 +40617,15 @@ var init_schemas = __esm({
         const abortEarly = def2.rest ? ctx?.abortEarly : void 0;
         let itemAborted = false;
         for (let i = 0; i < items.length; i++) {
-          const r = items[i]._zod.run({ value: input2[i], issues: [] }, ctx);
-          if (r instanceof Promise) {
-            proms.push(r.then((rr) => {
+          const r2 = items[i]._zod.run({ value: input2[i], issues: [] }, ctx);
+          if (r2 instanceof Promise) {
+            proms.push(r2.then((rr) => {
               itemResults[i] = rr;
             }));
           } else {
-            itemResults[i] = r;
-            if (abortEarly && !itemAborted && r.issues.length)
-              itemAborted = aborted(r);
+            itemResults[i] = r2;
+            if (abortEarly && !itemAborted && r2.issues.length)
+              itemAborted = aborted(r2);
           }
         }
         if (def2.rest && !itemAborted) {
@@ -40623,7 +40641,7 @@ var init_schemas = __esm({
             i++;
             const result = def2.rest._zod.run({ value: el, issues: [] }, ctx);
             if (result instanceof Promise) {
-              proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+              proms.push(result.then((r2) => handleTupleResult(r2, payload, i)));
             } else {
               handleTupleResult(result, payload, i);
             }
@@ -41306,11 +41324,11 @@ var init_schemas = __esm({
       };
       inst._zod.check = (payload) => {
         const input2 = payload.value;
-        const r = def2.fn(input2);
-        if (r instanceof Promise) {
-          return r.then((r2) => handleRefineResult(r2, payload, input2, inst));
+        const r2 = def2.fn(input2);
+        if (r2 instanceof Promise) {
+          return r2.then((r3) => handleRefineResult(r3, payload, input2, inst));
         }
-        handleRefineResult(r, payload, input2, inst);
+        handleRefineResult(r2, payload, input2, inst);
         return;
       };
     });
@@ -41561,16 +41579,16 @@ var init_memoizer = __esm({
               lastCtx = ctx;
               lastBucket = bucket;
             }
-            const hit = bucket.get(input2);
-            if (hit) {
-              payload.value = hit.value;
-              if (hit.issues) {
-                if (hit.issues.length)
-                  payload.issues.push(...cloneIssues(hit.issues));
+            const hit2 = bucket.get(input2);
+            if (hit2) {
+              payload.value = hit2.value;
+              if (hit2.issues) {
+                if (hit2.issues.length)
+                  payload.issues.push(...cloneIssues(hit2.issues));
               } else {
                 payload.memo = true;
                 state.backEdges ?? (state.backEdges = /* @__PURE__ */ new WeakSet());
-                state.backEdges.add(hit.value);
+                state.backEdges.add(hit2.value);
               }
               return payload;
             }
@@ -41580,10 +41598,10 @@ var init_memoizer = __esm({
             handoff = void 0;
             const entry = open.length > depth ? open.pop() : void 0;
             if (result instanceof Promise) {
-              return result.then((r) => {
+              return result.then((r2) => {
                 if (entry)
-                  entry.issues = r.issues.length ? cloneIssues(r.issues) : NO_ISSUES;
-                return r;
+                  entry.issues = r2.issues.length ? cloneIssues(r2.issues) : NO_ISSUES;
+                return r2;
               });
             }
             if (entry)
@@ -49798,8 +49816,8 @@ function runtimeRun(schema, value) {
   const result = schema._zod.run({ value, issues: [] }, {});
   if (result && typeof result.then === "function")
     return INVALID;
-  const r = result;
-  return r.issues.length === 0 ? r.value : INVALID;
+  const r2 = result;
+  return r2.issues.length === 0 ? r2.value : INVALID;
 }
 function compileChild(doc, ctx, schema, accessor, needsValue = true) {
   const contentLen = doc.content.length;
@@ -49856,20 +49874,20 @@ function generateChecks(doc, ctx, schema, accessor) {
         break;
       case "min_length": {
         const min = numericOperand(def2.minimum, "min_length");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${min} && ${currentAccessor}.length < ${def2.minimum * 2}`);
-        doc.write(`if (${len} < ${min}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${min} && ${currentAccessor}.length < ${def2.minimum * 2}`);
+        doc.write(`if (${len2} < ${min}) return INVALID;`);
         break;
       }
       case "max_length": {
         const max = numericOperand(def2.maximum, "max_length");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length > ${max}`);
-        doc.write(`if (${len} > ${max}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length > ${max}`);
+        doc.write(`if (${len2} > ${max}) return INVALID;`);
         break;
       }
       case "length_equals": {
         const exact = numericOperand(def2.length, "length_equals");
-        const len = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${exact} && ${currentAccessor}.length <= ${def2.length * 2}`);
-        doc.write(`if (${len} !== ${exact}) return INVALID;`);
+        const len2 = codePointLengthVar(doc, ctx, currentAccessor, `${currentAccessor}.length >= ${exact} && ${currentAccessor}.length <= ${def2.length * 2}`);
+        doc.write(`if (${len2} !== ${exact}) return INVALID;`);
         break;
       }
       case "min_size":
@@ -51165,9 +51183,9 @@ function runtimeCatch(innerSchema, catchValue, value) {
   const result = innerSchema._zod.run({ value, issues: [] }, {});
   if (result && typeof result.then === "function")
     return INVALID;
-  const r = result;
-  if (r.issues.length === 0)
-    return r.value;
+  const r2 = result;
+  if (r2.issues.length === 0)
+    return r2.value;
   return catchValue();
 }
 function generateCatchCheck(doc, ctx, schema, accessor) {
@@ -52601,11 +52619,11 @@ function foldObjects(members2) {
     for (const key of object3.required ?? [])
       required2.add(key);
   }
-  const folded = { type: "object", properties };
+  const folded2 = { type: "object", properties };
   if (required2.size)
-    folded.required = [...required2];
+    folded2.required = [...required2];
   if (objects.every((object3) => object3.additionalProperties === false)) {
-    folded.additionalProperties = false;
+    folded2.additionalProperties = false;
   } else {
     const constraints = [];
     for (const object3 of objects) {
@@ -52614,11 +52632,11 @@ function foldObjects(members2) {
         constraints.push(constraint);
     }
     if (constraints.length === 1)
-      folded.additionalProperties = constraints[0];
+      folded2.additionalProperties = constraints[0];
     else if (constraints.length > 1)
-      folded.additionalProperties = { allOf: constraints };
+      folded2.additionalProperties = { allOf: constraints };
   }
-  return folded;
+  return folded2;
 }
 function foldIntersection(json3) {
   const allOf = json3.allOf;
@@ -52628,9 +52646,9 @@ function foldIntersection(json3) {
     if (key in json3)
       return;
   const unions = allOf.filter((m2) => UNION_KEYS.some((k2) => Array.isArray(m2[k2])));
-  let folded = null;
+  let folded2 = null;
   if (!unions.length) {
-    folded = foldObjects(allOf);
+    folded2 = foldObjects(allOf);
   } else {
     const union3 = unions[0];
     const keyword = UNION_KEYS.find((k2) => Array.isArray(union3[k2]));
@@ -52640,12 +52658,12 @@ function foldIntersection(json3) {
     const branches = union3[keyword].map((branch) => foldObjects([...rest, branch]));
     if (branches.some((b2) => !b2))
       return;
-    folded = { [keyword]: branches };
+    folded2 = { [keyword]: branches };
   }
-  if (!folded)
+  if (!folded2)
     return;
   delete json3.allOf;
-  assignProps(json3, folded);
+  assignProps(json3, folded2);
 }
 function finalize(ctx, schema) {
   const root = ctx.seen.get(schema);
@@ -55490,17 +55508,17 @@ var init_schemas2 = __esm({
       inst._zod.processJSONSchema = (ctx, json3, params) => arrayProcessor(inst, ctx, json3, params);
       inst.element = def2.element;
     }, {
-      min(n, params) {
-        return this.check(_minLength(n, params));
+      min(n2, params) {
+        return this.check(_minLength(n2, params));
       },
       nonempty(params) {
         return this.check(_minLength(1, params));
       },
-      max(n, params) {
-        return this.check(_maxLength(n, params));
+      max(n2, params) {
+        return this.check(_maxLength(n2, params));
       },
-      length(n, params) {
-        return this.check(_length(n, params));
+      length(n2, params) {
+        return this.check(_length(n2, params));
       },
       unwrap() {
         return this.element;
@@ -56044,8 +56062,8 @@ function containsRef(value) {
     return Object.values(sub).some(containsRef);
   });
 }
-function plural(n) {
-  return n === 1 ? "element" : "elements";
+function plural(n2) {
+  return n2 === 1 ? "element" : "elements";
 }
 function checkArrayGuards(arraySchema, guards) {
   const guard = z.transform((value) => value).check((payload) => {
@@ -57196,8 +57214,8 @@ function idAllocator() {
   return (explicit, text3, fallback = "item") => {
     const base = explicit && explicit.trim() || slugify2(text3) || fallback;
     let id = base;
-    for (let n = 2; used.has(id); n++)
-      id = `${base}-${n}`;
+    for (let n2 = 2; used.has(id); n2++)
+      id = `${base}-${n2}`;
     used.add(id);
     return id;
   };
@@ -57230,18 +57248,18 @@ function normalizeEventStorming(raw) {
       m2.set(text3, id);
     return id;
   };
-  const resolve2 = (r, kinds, element, field) => {
-    if (kindOf.has(r) && kinds.includes(kindOf.get(r)))
-      return r;
+  const resolve2 = (r2, kinds, element, field) => {
+    if (kindOf.has(r2) && kinds.includes(kindOf.get(r2)))
+      return r2;
     for (const k2 of kinds) {
-      const hit = byText.get(k2)?.get(r);
-      if (hit)
-        return hit;
+      const hit2 = byText.get(k2)?.get(r2);
+      if (hit2)
+        return hit2;
     }
-    unresolved.push({ element, field, ref: r });
+    unresolved.push({ element, field, ref: r2 });
     return void 0;
   };
-  const resolveAll = (v2, kinds, element, field) => list2(v2).flatMap((r) => resolve2(r, kinds, element, field) ?? []);
+  const resolveAll = (v2, kinds, element, field) => list2(v2).flatMap((r2) => resolve2(r2, kinds, element, field) ?? []);
   const laneNames = c2.lanes ?? [];
   const laneOf = (name) => name && laneNames.includes(name) ? laneNames.indexOf(name) : 0;
   const people = c2.people.map((p) => typeof p === "string" ? { text: p } : p).map((p) => ({ id: declare("person", p.id, p.text), text: p.text }));
@@ -57270,7 +57288,7 @@ function normalizeEventStorming(raw) {
   const eventIds = c2.events.map((e) => declare("event", e.id, e.text));
   const commandIds = c2.commands.map((k2) => declare("command", k2.id, k2.text));
   const policyIds = c2.policies.map((p) => declare("policy", p.id, p.text));
-  const readModelIds = c2.readModels.map((r) => declare("read-model", r.id, r.text));
+  const readModelIds = c2.readModels.map((r2) => declare("read-model", r2.id, r2.text));
   const events = c2.events.map((e, i) => {
     const id = eventIds[i];
     return {
@@ -57305,12 +57323,12 @@ function normalizeEventStorming(raw) {
     then: resolveAll(p.then, ["command"], policyIds[i], "then"),
     person: personRef(p.person, policyIds[i], "person")
   }));
-  const readModels = c2.readModels.map((r, i) => ({
+  const readModels = c2.readModels.map((r2, i) => ({
     id: readModelIds[i],
-    text: r.text,
-    updatedBy: resolveAll(r.updatedBy, ["event"], readModelIds[i], "updatedBy"),
-    informs: resolveAll(r.informs ?? r.for, ["person", "command"], readModelIds[i], "informs"),
-    traces: r.traces ?? []
+    text: r2.text,
+    updatedBy: resolveAll(r2.updatedBy, ["event"], readModelIds[i], "updatedBy"),
+    informs: resolveAll(r2.informs ?? r2.for, ["person", "command"], readModelIds[i], "informs"),
+    traces: r2.traces ?? []
   }));
   systemsRaw.forEach((s, i) => {
     if ("raises" in s)
@@ -57323,10 +57341,10 @@ function normalizeEventStorming(raw) {
       sys.raises.push(ev);
   }
   const anyElement = ["event", "command", "policy", "read-model", "person", "system", "aggregate", "hotspot", "opportunity"];
-  const note = (kind, n) => {
-    const id = declare(kind, n.id, n.text);
-    const target = n.on ?? n.near;
-    return { id, text: n.text, on: target ? resolve2(target, anyElement, id, "on") : void 0 };
+  const note = (kind, n2) => {
+    const id = declare(kind, n2.id, n2.text);
+    const target = n2.on ?? n2.near;
+    return { id, text: n2.text, on: target ? resolve2(target, anyElement, id, "on") : void 0 };
   };
   const hotspots = c2.hotspots.map((h) => ({ ...note("hotspot", h), kind: h.kind }));
   const opportunities = c2.opportunities.map((o) => note("opportunity", o));
@@ -57511,9 +57529,9 @@ var init_eventStorming = __esm({
 // packages/canvas/dist/templates/esTimeline.js
 function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
   const isEvent = new Set(timeline);
-  const ids = nodes.map((n) => n.id);
+  const ids = nodes.map((n2) => n2.id);
   const known = new Set(ids);
-  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
+  const bandOf = new Map(nodes.map((n2) => [n2.id, n2.band]));
   const succ = new Map(ids.map((id) => [id, []]));
   const pred = new Map(ids.map((id) => [id, []]));
   const add = (a, b2) => {
@@ -57558,9 +57576,9 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
     for (const b2 of [...succ.get(a)]) {
       if (!back.has(`${a}>${b2}`))
         continue;
-      const n = count.get(b2) ?? 0;
-      count.set(b2, n + 1);
-      const id = againId(b2, n);
+      const n2 = count.get(b2) ?? 0;
+      count.set(b2, n2 + 1);
+      const id = againId(b2, n2);
       const band = bandOf.get(a);
       again.push({ id, of: b2, after: a, band });
       retarget.set(`${a}>${b2}`, id);
@@ -57616,9 +57634,9 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
     reach.set(id, Math.max(rank.get(id), ...succ.get(id).filter((s) => forward(id, s)).map((s) => reach.get(s) ?? rank.get(s))));
   const ancestors = /* @__PURE__ */ new Map();
   const ancestorsOf = (id) => {
-    const hit = ancestors.get(id);
-    if (hit)
-      return hit;
+    const hit2 = ancestors.get(id);
+    if (hit2)
+      return hit2;
     const out = /* @__PURE__ */ new Set();
     ancestors.set(id, out);
     for (const p of pred.get(id)) {
@@ -57641,16 +57659,16 @@ function placeFlow(nodes, edges, timeline, siblings, opts = {}) {
   const place2 = (id, want) => {
     if (row.has(id))
       return;
-    let r = want;
-    while (taken.has(`${bandOf.get(id)}|${rank.get(id)}|${r}`))
-      r++;
-    row.set(id, r);
-    taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r}`);
+    let r2 = want;
+    while (taken.has(`${bandOf.get(id)}|${rank.get(id)}|${r2}`))
+      r2++;
+    row.set(id, r2);
+    taken.add(`${bandOf.get(id)}|${rank.get(id)}|${r2}`);
     const next = succ.get(id).filter((s) => forward(id, s) && !branchOfFork(id, s));
     const pos = new Map(next.map((s, i) => [s, i]));
     next.sort((x2, y2) => reach.get(y2) - reach.get(x2) || pos.get(x2) - pos.get(y2));
     for (const s of next)
-      place2(s, r);
+      place2(s, r2);
   };
   for (const id of order)
     if (pred.get(id).every((p) => !forward(p, id)))
@@ -57686,7 +57704,7 @@ function branchSiblings(m2) {
 var againIdOf;
 var init_esTimeline = __esm({
   "packages/canvas/dist/templates/esTimeline.js"() {
-    againIdOf = (of, n) => n ? `${of}.again-${n + 1}` : `${of}.again`;
+    againIdOf = (of, n2) => n2 ? `${of}.again-${n2 + 1}` : `${of}.again`;
   }
 });
 
@@ -57801,10 +57819,10 @@ function renderEventStorming(raw, opts = {}) {
       if (a)
         aggOf.set(p.id, a);
     }
-    for (const r of m2.readModels) {
-      const a = r.informs.map((x2) => aggOf.get(x2)).find(Boolean);
+    for (const r2 of m2.readModels) {
+      const a = r2.informs.map((x2) => aggOf.get(x2)).find(Boolean);
       if (a)
-        aggOf.set(r.id, a);
+        aggOf.set(r2.id, a);
     }
   }
   const laneKeys = m2.lanes.map((name, i) => `lane:${i}:${name}`);
@@ -57856,16 +57874,16 @@ function renderEventStorming(raw, opts = {}) {
       for (const k2 of p.then)
         edges.push([po, itemId("command", k2)]);
     }
-    for (const r of m2.readModels) {
-      const cmds = r.informs.filter((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
+    for (const r2 of m2.readModels) {
+      const cmds = r2.informs.filter((x2) => m2.kindOf.get(x2) === "command" && nodeOf.has(x2));
       if (!cmds.length)
         continue;
-      const rm = itemId("read-model", r.id);
-      const updates = r.updatedBy.filter((e) => eventById.has(e));
-      const band = aggOf.has(r.id) ? `agg:${aggOf.get(r.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : nodes.find((n) => n.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0);
+      const rm = itemId("read-model", r2.id);
+      const updates = r2.updatedBy.filter((e) => eventById.has(e));
+      const band = aggOf.has(r2.id) ? `agg:${aggOf.get(r2.id)}` : updates.length ? bandOfEvent(updates[updates.length - 1]) : nodes.find((n2) => n2.id === nodeOf.get(cmds[0]))?.band ?? timelineBand(0);
       nodes.push({ id: rm, band });
-      nodeOf.set(r.id, rm);
-      inlineRm.add(r.id);
+      nodeOf.set(r2.id, rm);
+      inlineRm.add(r2.id);
       for (const e of updates)
         edges.push([ev(e), rm]);
       for (const k2 of cmds)
@@ -57896,12 +57914,12 @@ function renderEventStorming(raw, opts = {}) {
     ({ rank, row, again, retarget } = placeFlow(nodes, edges, timeline, (a, b2) => siblings(a.slice(scope.length + 7), b2.slice(scope.length + 7)), { time: flowTimes(m2, itemId, systemOcc, inlineRm) }));
     nodes.push(...again.map((a) => ({ id: a.id, band: a.band })));
     const minRank = /* @__PURE__ */ new Map();
-    for (const n of nodes)
-      if (n.band.startsWith("agg:"))
-        minRank.set(n.band, Math.min(minRank.get(n.band) ?? Infinity, rank.get(n.id)));
-    for (const n of nodes)
-      if (minRank.has(n.band))
-        rank.set(n.id, rank.get(n.id) - minRank.get(n.band));
+    for (const n2 of nodes)
+      if (n2.band.startsWith("agg:"))
+        minRank.set(n2.band, Math.min(minRank.get(n2.band) ?? Infinity, rank.get(n2.id)));
+    for (const n2 of nodes)
+      if (minRank.has(n2.band))
+        rank.set(n2.id, rank.get(n2.id) - minRank.get(n2.band));
   } else {
     rank = /* @__PURE__ */ new Map();
     row = /* @__PURE__ */ new Map();
@@ -57913,23 +57931,23 @@ function renderEventStorming(raw, opts = {}) {
       row.set(ev(e.id), 0);
     }
   }
-  const bandOf = new Map(nodes.map((n) => [n.id, n.band]));
+  const bandOf = new Map(nodes.map((n2) => [n2.id, n2.band]));
   const at3 = (id) => ({ band: bandOf.get(id) ?? timelineBand(0), rank: rank.get(id) ?? 0, row: row.get(id) ?? 0 });
   const atElement = (element) => {
-    const n = element ? nodeOf.get(element) : void 0;
-    return n && rank.has(n) ? at3(n) : void 0;
+    const n2 = element ? nodeOf.get(element) : void 0;
+    return n2 && rank.has(n2) ? at3(n2) : void 0;
   };
   const slots = [];
   const slot = (s) => slots.push({ ...s, data: s.data ?? {} });
   const rmWhere = /* @__PURE__ */ new Map();
   const personAt = /* @__PURE__ */ new Map();
-  const personSlot = (person, where, anchor2) => {
+  const personSlot = (person, where, anchor3) => {
     const key = `${where.band}|${where.rank}|${where.row}|${person}`;
     if (personAt.has(key))
       return personAt.get(key);
-    const id = itemId("person", `${person}.${anchor2}`);
+    const id = itemId("person", `${person}.${anchor3}`);
     personAt.set(key, id);
-    slot({ ...where, strip: "person", id, role: "person", text: personText(person), color: ES_COLORS.person, w: SMALL_W, h: SMALL_H, data: { element: person, occurrence: true, for: anchor2 } });
+    slot({ ...where, strip: "person", id, role: "person", text: personText(person), color: ES_COLORS.person, w: SMALL_W, h: SMALL_H, data: { element: person, occurrence: true, for: anchor3 } });
     return id;
   };
   for (const e of m2.events) {
@@ -57963,14 +57981,14 @@ function renderEventStorming(raw, opts = {}) {
       const po = itemId("policy", p.id);
       slot({ ...at3(po), strip: "main", id: po, role: "policy", text: p.text, color: ES_COLORS.policy, w: STICKY_W, h: STICKY_H, data: { element: p.id, when: p.when, then: p.then, ...p.person ? { person: personText(p.person) } : {} } });
     }
-    for (const r of m2.readModels) {
-      const rm = itemId("read-model", r.id);
-      const lastUpdate = r.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
-      const inline = inlineRm.has(r.id) && rank.has(rm);
+    for (const r2 of m2.readModels) {
+      const rm = itemId("read-model", r2.id);
+      const lastUpdate = r2.updatedBy.map((e) => atElement(e)).filter(Boolean).sort((a, b2) => b2.rank - a.rank)[0];
+      const inline = inlineRm.has(r2.id) && rank.has(rm);
       const where = inline ? at3(rm) : lastUpdate ? { ...lastUpdate, rank: lastUpdate.rank + 1 } : { band: timelineBand(0), rank: 0, row: 0 };
-      nodeOf.set(r.id, rm);
-      rmWhere.set(r.id, where);
-      slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r.id, updatedBy: r.updatedBy, informs: r.informs, ...r.traces.length ? { traces: r.traces } : {} } });
+      nodeOf.set(r2.id, rm);
+      rmWhere.set(r2.id, where);
+      slot({ ...where, strip: inline ? "main" : "read-model", id: rm, role: "read-model", text: r2.text, color: ES_COLORS["read-model"], w: STICKY_W, h: STICKY_H, data: { element: r2.id, updatedBy: r2.updatedBy, informs: r2.informs, ...r2.traces.length ? { traces: r2.traces } : {} } });
     }
   }
   for (const x2 of raisers) {
@@ -57989,11 +58007,11 @@ function renderEventStorming(raw, opts = {}) {
       personSlot(k2.by, at3(a.id), a.id.slice(`${scope}.command.`.length));
   }
   if (detailed) {
-    for (const r of m2.readModels) {
-      const where = rmWhere.get(r.id);
+    for (const r2 of m2.readModels) {
+      const where = rmWhere.get(r2.id);
       if (!where)
         continue;
-      for (const x2 of r.informs) {
+      for (const x2 of r2.informs) {
         if (m2.kindOf.get(x2) !== "person")
           continue;
         const later = [...personAt.keys()].some((key) => {
@@ -58002,7 +58020,7 @@ function renderEventStorming(raw, opts = {}) {
           return person === x2 && rk >= where.rank && (band === where.band || !band.startsWith("agg:") && !where.band.startsWith("agg:"));
         });
         if (!later)
-          personSlot(x2, where, r.id);
+          personSlot(x2, where, r2.id);
       }
     }
   }
@@ -58037,13 +58055,13 @@ function renderEventStorming(raw, opts = {}) {
     const rows = Math.max(0, ...inBand.map((s) => s.row + 1));
     const top = /* @__PURE__ */ new Map();
     let y3 = 0;
-    for (let r = 0; r < rows; r++) {
+    for (let r2 = 0; r2 < rows; r2++) {
       for (const st of STRIPS) {
-        const key = `${r}|${st}`;
+        const key = `${r2}|${st}`;
         top.set(key, y3);
-        const n = depth.get(key) ?? 0;
-        if (n)
-          y3 += n * unit.get(key) + (n - 1) * STACK + GAP;
+        const n2 = depth.get(key) ?? 0;
+        if (n2)
+          y3 += n2 * unit.get(key) + (n2 - 1) * STACK + GAP;
       }
       y3 += GAP;
     }
@@ -58062,18 +58080,18 @@ function renderEventStorming(raw, opts = {}) {
   const timelineRanks = m2.events.filter((e) => !aggOf.has(e.id)).map((e) => rank.get(ev(e.id)));
   const lastRank = Math.max(0, ...timelineRanks);
   const phaseBars = m2.phases.map((ph) => {
-    const members2 = m2.events.filter((e) => e.phase === ph.id).map((e) => eventRank(e.id)).filter((r) => r !== void 0);
+    const members2 = m2.events.filter((e) => e.phase === ph.id).map((e) => eventRank(e.id)).filter((r2) => r2 !== void 0);
     const from = eventRank(ph.from) ?? (members2.length ? Math.min(...members2) : 0);
     const to2 = eventRank(ph.to) ?? (members2.length ? Math.max(...members2) : lastRank);
     return { ph, from: Math.min(from, to2), to: Math.max(from, to2) };
   });
   const phaseRows = [];
   const phaseRowOf = phaseBars.map((b2) => {
-    let r = phaseRows.findIndex((pr) => pr.every((o) => b2.to < o.from || b2.from > o.to));
-    if (r < 0)
-      r = phaseRows.push([]) - 1;
-    phaseRows[r].push(b2);
-    return r;
+    let r2 = phaseRows.findIndex((pr) => pr.every((o) => b2.to < o.from || b2.from > o.to));
+    if (r2 < 0)
+      r2 = phaseRows.push([]) - 1;
+    phaseRows[r2].push(b2);
+    return r2;
   });
   const PHASE_H = 32;
   const phasesH = phaseRows.length ? phaseRows.length * (PHASE_H + STACK) + GAP : 0;
@@ -58085,8 +58103,8 @@ function renderEventStorming(raw, opts = {}) {
   const laneSlug = /* @__PURE__ */ new Set();
   m2.lanes.forEach((name, i) => {
     let sl = slugify2(name) || "lane";
-    for (let n = 2; laneSlug.has(sl); n++)
-      sl = `${slugify2(name) || "lane"}-${n}`;
+    for (let n2 = 2; laneSlug.has(sl); n2++)
+      sl = `${slugify2(name) || "lane"}-${n2}`;
     laneSlug.add(sl);
     laneIds.set(laneKeys[i], itemId("lane", sl));
   });
@@ -58108,8 +58126,8 @@ function renderEventStorming(raw, opts = {}) {
   }
   for (const e of m2.events.filter((e2) => e2.pivotal && !aggOf.has(e2.id))) {
     const band = bandOfEvent(e.id);
-    const r = rank.get(ev(e.id)) ?? 0;
-    items.push(make({ id: itemId("pivotal", e.id), type: "text", x: PAD + r * COL - (COL - STICKY_W) / 2 - 2, y: bandTop.get(band) - (m2.lanes.length ? LANE_HEADER / 2 : 0), w: 4, h: bandH.get(band), text: "", role: "pivotal", color: "grey", parent: laneIds.get(band), data: { for: ev(e.id), element: e.id } }, now));
+    const r2 = rank.get(ev(e.id)) ?? 0;
+    items.push(make({ id: itemId("pivotal", e.id), type: "text", x: PAD + r2 * COL - (COL - STICKY_W) / 2 - 2, y: bandTop.get(band) - (m2.lanes.length ? LANE_HEADER / 2 : 0), w: 4, h: bandH.get(band), text: "", role: "pivotal", color: "grey", parent: laneIds.get(band), data: { for: ev(e.id), element: e.id } }, now));
   }
   const width = PAD * 2 + lastRank * COL + PIVOTAL_W;
   const laneItems = m2.lanes.map((name, i) => {
@@ -58129,15 +58147,15 @@ function renderEventStorming(raw, opts = {}) {
       const a = m2.aggregates.find((g2) => `agg:${g2.id}` === band);
       const frameId = itemId("aggregate-frame", a.id);
       const agSticky = make({ id: itemId("aggregate", a.id), type: "sticky", x: x2, y: top, w: STICKY_W, h: SMALL_H, text: a.text, color: ES_COLORS.aggregate, role: "aggregate", parent: frameId, data: { element: a.id } }, now);
-      const inside = [agSticky];
+      const inside2 = [agSticky];
       for (const { s, dx, dy } of layoutBand(band).positioned) {
         const it = make({ id: s.id, type: "sticky", x: x2 + dx, y: top + SMALL_H + GAP + dy, w: s.w, h: s.h, text: s.text, color: s.color, role: s.role, parent: frameId, order: s.order, data: s.data }, now);
-        inside.push(it);
+        inside2.push(it);
         itemOf.set(s.id, it);
       }
-      const frame = fit(make({ id: frameId, type: "frame", x: x2, y: top, w: 0, h: 0, text: `\xABaggregate\xBB ${a.text}`, role: "aggregate", color: "pale-yellow", data: { element: a.id } }, now), inside, GAP / 2, LANE_HEADER / 2);
+      const frame = fit(make({ id: frameId, type: "frame", x: x2, y: top, w: 0, h: 0, text: `\xABaggregate\xBB ${a.text}`, role: "aggregate", color: "pale-yellow", data: { element: a.id } }, now), inside2, GAP / 2, LANE_HEADER / 2);
       aggFrames.push(frame);
-      items.push(...inside);
+      items.push(...inside2);
       x2 = frame.x + frame.w + GAP;
     }
     bottom = Math.max(bottom, ...aggFrames.map((f) => f.y + f.h));
@@ -58173,13 +58191,13 @@ function renderEventStorming(raw, opts = {}) {
       for (const k2 of p.then)
         arrows.push(arrow(scope, po, to(po, itemId("command", k2)), now, "then", "triggers"));
     }
-    for (const r of m2.readModels) {
-      const rm = itemId("read-model", r.id);
+    for (const r2 of m2.readModels) {
+      const rm = itemId("read-model", r2.id);
       const rmX = itemOf.get(rm)?.x ?? 0;
-      for (const e of r.updatedBy)
+      for (const e of r2.updatedBy)
         if (has2(ev(e)))
           arrows.push(arrow(scope, ev(e), to(ev(e), rm), now, void 0, "updates"));
-      for (const x2 of r.informs) {
+      for (const x2 of r2.informs) {
         const occurrences = [...personAt.entries()].filter(([key]) => key.endsWith(`|${x2}`)).map(([, id]) => itemOf.get(id)).filter((it) => Boolean(it));
         const person = occurrences.filter((it) => it.x >= rmX).sort((a, b2) => a.x - b2.x)[0] ?? occurrences.sort((a, b2) => b2.x - a.x)[0];
         const target = m2.kindOf.get(x2) === "command" ? to(rm, itemId("command", x2)) : person?.id;
@@ -58189,9 +58207,9 @@ function renderEventStorming(raw, opts = {}) {
     }
   }
   for (const [key, id] of systemOcc) {
-    const [sys, anchor2] = key.split("|");
-    if (m2.kindOf.get(anchor2) === "event" && has2(ev(anchor2)) && has2(id))
-      arrows.push(arrow(scope, id, to(id, ev(anchor2)), now, void 0, "raises", { data: { system: sys } }));
+    const [sys, anchor3] = key.split("|");
+    if (m2.kindOf.get(anchor3) === "event" && has2(ev(anchor3)) && has2(id))
+      arrows.push(arrow(scope, id, to(id, ev(anchor3)), now, void 0, "raises", { data: { system: sys } }));
   }
   return offsetAll([...lanes, ...aggFrames, ...items, ...arrows], opts.at);
 }
@@ -58219,20 +58237,20 @@ function flowTimes(m2, itemId, systemOcc, inlineRm) {
     t.set(itemId("command", k2.id), at3);
   }
   for (const [key, id] of systemOcc) {
-    const anchor2 = key.slice(key.indexOf("|") + 1);
-    if (commandT.has(anchor2))
-      t.set(id, commandT.get(anchor2) + 0.2);
-    else if (idx.has(anchor2))
-      t.set(id, idx.get(anchor2) - 0.3);
+    const anchor3 = key.slice(key.indexOf("|") + 1);
+    if (commandT.has(anchor3))
+      t.set(id, commandT.get(anchor3) + 0.2);
+    else if (idx.has(anchor3))
+      t.set(id, idx.get(anchor3) - 0.3);
   }
-  for (const r of m2.readModels) {
-    if (!inlineRm.has(r.id))
+  for (const r2 of m2.readModels) {
+    if (!inlineRm.has(r2.id))
       continue;
-    const updates = r.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
-    const cmds = r.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
+    const updates = r2.updatedBy.map((e) => idx.get(e)).filter((x2) => x2 !== void 0);
+    const cmds = r2.informs.map((x2) => commandT.get(x2)).filter((x2) => x2 !== void 0);
     const at3 = updates.length ? Math.max(...updates) + 0.25 : cmds.length ? Math.min(...cmds) - 0.7 : void 0;
     if (at3 !== void 0)
-      t.set(itemId("read-model", r.id), at3);
+      t.set(itemId("read-model", r2.id), at3);
   }
   return t;
 }
@@ -58283,7 +58301,7 @@ function normalizeUserStoryMap(raw) {
   const unassigned = c2.activities.some((a) => a.steps.some((s) => s.stories.some((st) => !st.release || !releases.includes(st.release))));
   if (unassigned && !releases.includes("Later"))
     releases.push("Later");
-  const releaseOf = (r) => r && releases.includes(r) ? r : releases[releases.length - 1];
+  const releaseOf = (r2) => r2 && releases.includes(r2) ? r2 : releases[releases.length - 1];
   const activityIds = c2.activities.map((a) => alloc(a.id, a.text, "activity"));
   const stepIds = c2.activities.map((a) => a.steps.map((s) => alloc(s.id, s.text, "step")));
   return {
@@ -58359,8 +58377,8 @@ function renderUserStoryMap(raw, opts = {}) {
   const laneSlugs = /* @__PURE__ */ new Set();
   m2.releases.forEach((rel, ri) => {
     let slug3 = slugify2(rel) || "release";
-    for (let n = 2; laneSlugs.has(slug3); n++)
-      slug3 = `${slugify2(rel) || "release"}-${n}`;
+    for (let n2 = 2; laneSlugs.has(slug3); n2++)
+      slug3 = `${slugify2(rel) || "release"}-${n2}`;
     laneSlugs.add(slug3);
     const laneId = itemId("release", slug3);
     const laneStories = [];
@@ -58686,12 +58704,12 @@ function rowsOf(rows) {
   if (!rows)
     return {};
   const notes = {};
-  const cells = rows.map((r, i) => {
-    if (Array.isArray(r))
-      return r;
-    if (r.note)
-      notes[String(i)] = r.note;
-    return r.cells;
+  const cells = rows.map((r2, i) => {
+    if (Array.isArray(r2))
+      return r2;
+    if (r2.note)
+      notes[String(i)] = r2.note;
+    return r2.cells;
   });
   return { rows: cells, ...Object.keys(notes).length ? { rowNotes: notes } : {} };
 }
@@ -58700,8 +58718,8 @@ function normalizeUiMock(raw) {
   const usedScreens = /* @__PURE__ */ new Set();
   const screens = c2.screens.map((s, si) => {
     let sid = s.id && s.id.trim() || slugify2(s.name) || `screen-${si + 1}`;
-    for (let n = 2; usedScreens.has(sid); n++)
-      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n}`;
+    for (let n2 = 2; usedScreens.has(sid); n2++)
+      sid = `${s.id && s.id.trim() || slugify2(s.name) || "screen"}-${n2}`;
     usedScreens.add(sid);
     const device = s.device ?? c2.device ?? "desktop";
     const theme = { theme: s.theme ?? c2.theme ?? "light", accent: c2.tokens?.accent ?? DEFAULT_ACCENT, radius: c2.tokens?.radius ?? 8, font: c2.tokens?.font ?? "sans" };
@@ -58709,15 +58727,15 @@ function normalizeUiMock(raw) {
     const alloc = (explicit, text3, type) => {
       const base = explicit && explicit.trim() || slugify2(text3 ?? "") || type;
       let id = base;
-      for (let n = 2; used.has(id); n++)
-        id = `${base}-${n}`;
+      for (let n2 = 2; used.has(id); n2++)
+        id = `${base}-${n2}`;
       used.add(id);
       return id;
     };
-    const el = (n, path24) => {
-      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n;
+    const el = (n2, path24) => {
+      const { type, id: _id, text: text3, label: label2, children, note, goto, traces: traces2, items, rows, sample, ...props } = n2;
       const words = text3 ?? label2;
-      const id = alloc(n.id, words, type);
+      const id = alloc(n2.id, words, type);
       return {
         id,
         ref: `${sid}/${id}`,
@@ -58726,7 +58744,7 @@ function normalizeUiMock(raw) {
         textKey: text3 === void 0 && label2 !== void 0 ? "label" : "text",
         path: path24,
         children: (children ?? []).map((ch, i) => el(ch, [...path24, "children", i])),
-        props: { ...props, ...items ? { items: itemsOf(items, n.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
+        props: { ...props, ...items ? { items: itemsOf(items, n2.active) } : {}, ...rowsOf(rows), ...sample ? { sample: true } : {} },
         ...note ? { note } : {},
         ...goto ? { goto } : {},
         traces: traces2 ?? []
@@ -58745,7 +58763,7 @@ function normalizeUiMock(raw) {
       ...s.sample ? { sample: true } : {},
       traces: s.traces ?? [],
       path: ["screens", si],
-      body: s.body.map((n, i) => el(n, ["screens", si, "body", i]))
+      body: s.body.map((n2, i) => el(n2, ["screens", si, "body", i]))
     };
   });
   return { screens, flows: c2.flows };
@@ -58762,7 +58780,7 @@ function textWidth(s, px = 14, bold = false) {
 function lineCount(s, px, maxW, bold = false) {
   if (!s)
     return 1;
-  return s.split("\n").reduce((n, seg) => n + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
+  return s.split("\n").reduce((n2, seg) => n2 + Math.max(1, Math.ceil(textWidth(seg, px, bold) / Math.max(40, maxW))), 0);
 }
 function padOf(el) {
   if (el.props.pad !== void 0)
@@ -58803,7 +58821,7 @@ function measure2(el, avail) {
     case "grid": {
       const w2 = fixedW ?? avail;
       const { rows } = gridCells(el, w2);
-      return { w: w2, h: Math.max(p.h ?? 0, rows.reduce((a, r) => a + r.h, 0) + gapOf(el) * Math.max(0, rows.length - 1) + padOf(el) * 2) };
+      return { w: w2, h: Math.max(p.h ?? 0, rows.reduce((a, r2) => a + r2.h, 0) + gapOf(el) * Math.max(0, rows.length - 1) + padOf(el) * 2) };
     }
     case "navbar":
       return { w: fixedW ?? avail, h: p.h ?? 56 };
@@ -58883,7 +58901,7 @@ function measure2(el, avail) {
 }
 function rowWidths(el, inner) {
   const gap = gapOf(el);
-  const n = el.children.length;
+  const n2 = el.children.length;
   const colW = (inner - gap * 11) / 12;
   const widths = el.children.map((c2) => {
     if (c2.props.w !== void 0)
@@ -58895,7 +58913,7 @@ function rowWidths(el, inner) {
     return void 0;
   });
   const growers = widths.filter((w2) => w2 === void 0).length;
-  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n - 1);
+  const used = widths.reduce((a, w2) => a + (w2 ?? 0), 0) + gap * Math.max(0, n2 - 1);
   const share = growers ? Math.max(24, (inner - used) / growers) : 0;
   return widths.map((w2) => Math.round(w2 ?? share));
 }
@@ -58956,9 +58974,9 @@ function place(el, x2, y2, w2, h, parent, out) {
     case "grid": {
       const { cellW, rows } = gridCells(el, w2);
       let cy = y2 + pad;
-      for (const r of rows) {
-        r.items.forEach((c2, i) => place(c2, x2 + pad + i * (cellW + gap), cy, cellW, align === "start" ? measure2(c2, cellW).h : r.h, holder, out));
-        cy += r.h + gap;
+      for (const r2 of rows) {
+        r2.items.forEach((c2, i) => place(c2, x2 + pad + i * (cellW + gap), cy, cellW, align === "start" ? measure2(c2, cellW).h : r2.h, holder, out));
+        cy += r2.h + gap;
       }
       return;
     }
@@ -59013,7 +59031,7 @@ function productTexts(e) {
   });
   p.columns?.forEach((c2, i) => out.push({ at: `columns[${i}]`, text: c2 }));
   if (e.type === "table")
-    p.rows?.forEach((r, i) => r.forEach((c2, j2) => typeof c2 === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c2 })));
+    p.rows?.forEach((r2, i) => r2.forEach((c2, j2) => typeof c2 === "string" && out.push({ at: `rows[${i}][${j2}]`, text: c2 })));
   return out;
 }
 function checkUiMock(raw) {
@@ -59032,7 +59050,7 @@ function checkUiMock(raw) {
         out.push({ severity: "warning", element: e.ref, message: `goto: no screen "${e.goto}" (screens: ${[...screens].join(", ")})` });
       const cols = e.props.columns?.length;
       if (e.type === "table" && cols)
-        e.props.rows?.forEach((r, i) => r.length !== cols && out.push({ severity: "warning", element: e.ref, message: `table row ${i + 1} has ${r.length} cells for ${cols} columns` }));
+        e.props.rows?.forEach((r2, i) => r2.length !== cols && out.push({ severity: "warning", element: e.ref, message: `table row ${i + 1} has ${r2.length} cells for ${cols} columns` }));
       for (const ic of [e.props.icon, ...(e.props.items ?? []).map((i) => i.icon)])
         if (ic && !icons.has(ic))
           out.push({ severity: "info", element: e.ref, message: `icon "${ic}" is not one the canvas draws (${UI_ICONS.join(", ")})` });
@@ -59048,9 +59066,9 @@ function checkUiMock(raw) {
           out.push({ severity: "warning", element: e.ref, message: `${NOTE_RULE}: ${t.at} "${shortText(t.text)}" (${word}) ${NOTE_RULE_MESSAGE}` });
       }
     }
-    for (const [id, n] of explicit)
-      if (n > 1)
-        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n} times in screen ${s.id}; the others become ${id}-2 \u2026` });
+    for (const [id, n2] of explicit)
+      if (n2 > 1)
+        out.push({ severity: "warning", element: `${s.id}/${id}`, message: `id "${id}" is used ${n2} times in screen ${s.id}; the others become ${id}-2 \u2026` });
   }
   for (const f of m2.flows) {
     if (!screens.has(f.to))
@@ -59128,9 +59146,9 @@ function lintUiMock(raw) {
   }
   const owner = (path24) => {
     for (let p = path24; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
-      const hit = where.get(p);
-      if (hit)
-        return hit;
+      const hit2 = where.get(p);
+      if (hit2)
+        return hit2;
       if (!/(\.[^.[\]]+|\[\d+\])$/.test(p))
         break;
     }
@@ -59371,9 +59389,9 @@ var init_uiMock = __esm({
     CLICK_NOTE_RULE = "ui-note-says-where-a-click-goes";
     CLICK_WORD = /^\s*(?:click(?:ing|ed)?|tap(?:ping|ped)?|press(?:ing|ed)?|點擊|點選|點按|點|按下|按)(?:\s+(?:on\s+)?(?:it|this|here))?\s*/iu;
     LEADS = /^(?:[→⇒➜➔>:：=\-]+|(?:goes|go|leads|navigates|takes\s+you|opens?|to|into)(?![A-Za-z])|前往|跳轉到?|跳到|進入|開啟|打開|到|至)\s*/iu;
-    shortText = (s, n = 48) => {
+    shortText = (s, n2 = 48) => {
       const t = s.replace(/\s+/g, " ").trim();
-      return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
+      return t.length > n2 ? t.slice(0, n2 - 1) + "\u2026" : t;
     };
     uiPathText = (p) => p.map((k2) => typeof k2 === "number" ? `[${k2}]` : `.${k2}`).join("").replace(/^\./, "");
   }
@@ -59413,38 +59431,38 @@ function unresolvedAnnotations(kind, content, items, scope) {
 function readingOrder(notes) {
   const byTop = [...notes].sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq);
   const lines = [];
-  for (const n of byTop) {
+  for (const n2 of byTop) {
     const line = lines[lines.length - 1];
-    if (line && n.anchorY - line[0].anchorY <= LINE)
-      line.push(n);
+    if (line && n2.anchorY - line[0].anchorY <= LINE)
+      line.push(n2);
     else
-      lines.push([n]);
+      lines.push([n2]);
   }
   return lines.flatMap((l) => l.sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq));
 }
 function timelineOrder(notes) {
   const byLeft = [...notes].sort((a, b2) => a.anchorX - b2.anchorX || a.seq - b2.seq);
   const cols = [];
-  for (const n of byLeft) {
+  for (const n2 of byLeft) {
     const col = cols[cols.length - 1];
-    if (col && n.anchorX - col[0].anchorX <= LINE)
-      col.push(n);
+    if (col && n2.anchorX - col[0].anchorX <= LINE)
+      col.push(n2);
     else
-      cols.push([n]);
+      cols.push([n2]);
   }
   return cols.flatMap((c2) => c2.sort((a, b2) => a.anchorY - b2.anchorY || a.seq - b2.seq));
 }
-function annotationCard(n, at3, now, file2) {
-  const size2 = uiCalloutSize(n.text);
-  return make({ id: n.id, type: "comment", x: at3.x, y: at3.y, w: size2.w, h: size2.h, text: n.text, role: "note", color: "yellow", target: n.target, data: { ...n.data, callout: n.callout, annotation: { on: n.on, ...file2 ? { file: file2 } : {} } } }, now);
+function annotationCard(n2, at3, now, file2) {
+  const size2 = uiCalloutSize(n2.text);
+  return make({ id: n2.id, type: "comment", x: at3.x, y: at3.y, w: size2.w, h: size2.h, text: n2.text, role: "note", color: "yellow", target: n2.target, data: { ...n2.data, callout: n2.callout, annotation: { on: n2.on, ...file2 ? { file: file2 } : {} } } }, now);
 }
 function cardsInColumn(notes, gutter, now, o = {}) {
   const out = [];
   let bottom = o.below ?? -Infinity;
   let gap = o.gap ?? UI_GUTTER.calloutGap;
-  for (const n of notes) {
-    const y2 = Math.max(n.anchorY, gutter.y, bottom + gap);
-    const card = annotationCard(n, { x: gutter.x, y: y2 }, now, o.file);
+  for (const n2 of notes) {
+    const y2 = Math.max(n2.anchorY, gutter.y, bottom + gap);
+    const card = annotationCard(n2, { x: gutter.x, y: y2 }, now, o.file);
     out.push(card);
     bottom = y2 + card.h;
     gap = UI_GUTTER.calloutGap;
@@ -59457,16 +59475,16 @@ function cardsInBand(notes, band, now, file2) {
   let top = band.top;
   let rowRight = -Infinity;
   let rowH = 0;
-  for (const n of notes) {
-    const size2 = uiCalloutSize(n.text);
-    const under = (from) => Math.max(from, Math.min(n.anchorX, band.right - size2.w), band.left);
+  for (const n2 of notes) {
+    const size2 = uiCalloutSize(n2.text);
+    const under = (from) => Math.max(from, Math.min(n2.anchorX, band.right - size2.w), band.left);
     let x2 = under(rowRight + gap);
     if (rowRight > -Infinity && x2 + size2.w > Math.max(band.right, band.left + size2.w)) {
       top += rowH + gap;
       rowH = 0;
       x2 = under(-Infinity);
     }
-    const card = annotationCard(n, { x: x2, y: top }, now, file2);
+    const card = annotationCard(n2, { x: x2, y: top }, now, file2);
     out.push(card);
     rowRight = x2 + card.w;
     rowH = Math.max(rowH, card.h);
@@ -59486,7 +59504,7 @@ function withAnnotationBand(items, content, o) {
   if (!notes.length || !boxes.length)
     return items;
   const band = { left: Math.min(...boxes.map((b2) => b2.x)), top: Math.max(...boxes.map((b2) => b2.y + b2.h)) + UI_GUTTER.gap, right: Math.max(...boxes.map((b2) => b2.x + b2.w)) };
-  const numbered = timelineOrder(notes).map((n, i) => ({ ...n, callout: i + 1 }));
+  const numbered = timelineOrder(notes).map((n2, i) => ({ ...n2, callout: i + 1 }));
   return [...items, ...cardsInBand(numbered, band, o.now, o.file)];
 }
 var MARKS, annotatable, ON_NAMES, LINE;
@@ -59555,14 +59573,14 @@ function renderWireframe(raw, opts = {}) {
   });
   const items = [];
   let shift = 0;
-  let n = 0;
+  let n2 = 0;
   for (const l of screens) {
     const moved = (it) => shift ? { ...it, x: it.x + shift } : it;
     const screen = moved(l.screen);
     items.push(screen, ...l.items.map(moved));
     if (!l.notes.length)
       continue;
-    const numbered = readingOrder(l.notes.map((x2) => ({ ...x2, anchorX: x2.anchorX + shift }))).map((x2) => ({ ...x2, callout: ++n }));
+    const numbered = readingOrder(l.notes.map((x2) => ({ ...x2, anchorX: x2.anchorX + shift }))).map((x2) => ({ ...x2, callout: ++n2 }));
     items.push(...cardsInColumn(numbered, { x: screen.x + screen.w + UI_GUTTER.gap, y: screen.y }, now, { file: opts.source, gap: 0 }));
     shift += UI_GUTTER.gap + UI_GUTTER.w;
   }
@@ -59610,18 +59628,18 @@ var init_wireframe = __esm({
 function layered(nodes, edges, opts = {}) {
   const gap = opts.gap ?? 40;
   const laneH = opts.laneH ?? 20;
-  const known = new Map(nodes.map((n) => [n.id, n]));
+  const known = new Map(nodes.map((n2) => [n2.id, n2]));
   const valid = edges.map((e) => known.has(e.from) && known.has(e.to));
-  const out = new Map(nodes.map((n) => [n.id, []]));
+  const out = new Map(nodes.map((n2) => [n2.id, []]));
   edges.forEach((e, i) => valid[i] && out.get(e.from).push(i));
   const back = edges.map((e, i) => valid[i] && e.from === e.to);
   const state = /* @__PURE__ */ new Map();
-  const roots = [...nodes.filter((n) => n.source), ...nodes.filter((n) => !n.source)];
-  for (const r of roots) {
-    if (state.get(r.id))
+  const roots = [...nodes.filter((n2) => n2.source), ...nodes.filter((n2) => !n2.source)];
+  for (const r2 of roots) {
+    if (state.get(r2.id))
       continue;
-    const stack = [{ id: r.id, next: 0 }];
-    state.set(r.id, 1);
+    const stack = [{ id: r2.id, next: 0 }];
+    state.set(r2.id, 1);
     while (stack.length) {
       const top2 = stack[stack.length - 1];
       const outs = out.get(top2.id);
@@ -59642,13 +59660,13 @@ function layered(nodes, edges, opts = {}) {
     }
   }
   const forward = edges.map((e, i) => valid[i] && !back[i] && e.from !== e.to ? e : void 0);
-  const preds = new Map(nodes.map((n) => [n.id, []]));
-  const succs = new Map(nodes.map((n) => [n.id, []]));
+  const preds = new Map(nodes.map((n2) => [n2.id, []]));
+  const succs = new Map(nodes.map((n2) => [n2.id, []]));
   for (const e of forward)
     if (e)
       preds.get(e.to).push(e.from), succs.get(e.from).push(e.to);
-  const indeg = new Map(nodes.map((n) => [n.id, preds.get(n.id).length]));
-  const queue = nodes.filter((n) => indeg.get(n.id) === 0).map((n) => n.id);
+  const indeg = new Map(nodes.map((n2) => [n2.id, preds.get(n2.id).length]));
+  const queue = nodes.filter((n2) => indeg.get(n2.id) === 0).map((n2) => n2.id);
   const layer = /* @__PURE__ */ new Map();
   for (let qi = 0; qi < queue.length; qi++) {
     const id = queue[qi];
@@ -59660,9 +59678,9 @@ function layered(nodes, edges, opts = {}) {
         queue.push(s);
     }
   }
-  for (const n of nodes)
-    if (!layer.has(n.id))
-      layer.set(n.id, 1);
+  for (const n2 of nodes)
+    if (!layer.has(n2.id))
+      layer.set(n2.id, 1);
   const depth = Math.max(0, ...layer.values());
   const layers = Array.from({ length: depth + 1 }, () => []);
   const slotUp = /* @__PURE__ */ new Map();
@@ -59675,8 +59693,8 @@ function layered(nodes, edges, opts = {}) {
     slotDown.get(a).push(b2);
     slotUp.get(b2).push(a);
   };
-  for (const n of nodes)
-    layers[layer.get(n.id)].push({ id: n.id, h: n.h, dummy: false });
+  for (const n2 of nodes)
+    layers[layer.get(n2.id)].push({ id: n2.id, h: n2.h, dummy: false });
   forward.forEach((e, i) => {
     if (!e)
       return;
@@ -59709,7 +59727,7 @@ function layered(nodes, edges, opts = {}) {
   const sortBy = (ls, nb) => {
     const bary = new Map(ls.map((s) => {
       const ns = nb.get(s.id) ?? [];
-      return [s.id, ns.length ? ns.reduce((a, n) => a + pos.get(n), 0) / ns.length : pos.get(s.id)];
+      return [s.id, ns.length ? ns.reduce((a, n2) => a + pos.get(n2), 0) / ns.length : pos.get(s.id)];
     }));
     ls.sort((a, b2) => bary.get(a.id) - bary.get(b2.id) || pos.get(a.id) - pos.get(b2.id));
     ls.forEach((s, i) => pos.set(s.id, i));
@@ -59744,7 +59762,7 @@ function layered(nodes, edges, opts = {}) {
   const place2 = (ls, nb) => {
     const want = ls.map((s) => {
       const ns = nb.get(s.id) ?? [];
-      return ns.length ? median(ns.map((n) => centre2(n, hOf.get(n)))) - s.h / 2 : y2.get(s.id);
+      return ns.length ? median(ns.map((n2) => centre2(n2, hOf.get(n2)))) - s.h / 2 : y2.get(s.id);
     });
     const ys = [...want];
     for (let i = 1; i < ls.length; i++)
@@ -59761,10 +59779,10 @@ function layered(nodes, edges, opts = {}) {
   }
   for (let l = 1; l < layers.length; l++)
     place2(layers[l], slotUp);
-  const top = Math.min(...nodes.map((n) => y2.get(n.id)));
+  const top = Math.min(...nodes.map((n2) => y2.get(n2.id)));
   const out2 = /* @__PURE__ */ new Map();
-  for (const n of nodes)
-    out2.set(n.id, Math.round((y2.get(n.id) - top) / 10) * 10);
+  for (const n2 of nodes)
+    out2.set(n2.id, Math.round((y2.get(n2.id) - top) / 10) * 10);
   return { layer, y: out2, back };
 }
 var init_layered = __esm({
@@ -59779,30 +59797,30 @@ function renderWorkflow(raw, opts = {}) {
   const COL4 = STICKY_W + labelGap(c2.edges.map(edgeLabel));
   const now = opts.now ?? (/* @__PURE__ */ new Date()).toISOString();
   const scope = opts.scope ?? "wf";
-  const nodeId = (n) => `${scope}.node.${n}`;
+  const nodeId = (n2) => `${scope}.node.${n2}`;
   const items = [];
-  const known = new Set(c2.nodes.map((n) => n.id));
-  const lay = layered(c2.nodes.map((n) => ({ id: n.id, source: n.kind === "trigger", h: STICKY_H })), c2.edges.map((e) => ({ from: e.from, to: e.to })), { gap: GAP + 10 });
+  const known = new Set(c2.nodes.map((n2) => n2.id));
+  const lay = layered(c2.nodes.map((n2) => ({ id: n2.id, source: n2.kind === "trigger", h: STICKY_H })), c2.edges.map((e) => ({ from: e.from, to: e.to })), { gap: GAP + 10 });
   const layer = lay.layer;
   const agentId = (a) => `${scope}.agent.${a}`;
   const frameH = c2.agents.length ? LANE_HEADER + AGENT_H + PAD : 0;
   const graphTop = PAD + (frameH ? frameH + GAP * 2 : 0);
-  const labelOf = (n) => n.label ?? n.id;
-  for (const n of c2.nodes) {
-    const l = layer.get(n.id);
-    const row = [...layer].filter(([id, k2]) => k2 === l && lay.y.get(id) < lay.y.get(n.id)).length;
+  const labelOf = (n2) => n2.label ?? n2.id;
+  for (const n2 of c2.nodes) {
+    const l = layer.get(n2.id);
+    const row = [...layer].filter(([id, k2]) => k2 === l && lay.y.get(id) < lay.y.get(n2.id)).length;
     items.push(make({
-      id: nodeId(n.id),
+      id: nodeId(n2.id),
       type: "card",
       x: PAD + l * COL4,
-      y: graphTop + lay.y.get(n.id),
+      y: graphTop + lay.y.get(n2.id),
       w: STICKY_W,
       h: STICKY_H,
-      text: labelOf(n),
-      color: KIND_COLOR[n.kind] ?? "grey",
-      role: n.kind,
+      text: labelOf(n2),
+      color: KIND_COLOR[n2.kind] ?? "grey",
+      role: n2.kind,
       order: row,
-      data: { nodeId: n.id, element: n.id, kind: n.kind, config: n.config ?? {}, ...n.config?.agent ? { agent: n.config.agent } : {}, ...n.detail ? { detail: n.detail } : {} }
+      data: { nodeId: n2.id, element: n2.id, kind: n2.kind, config: n2.config ?? {}, ...n2.config?.agent ? { agent: n2.config.agent } : {}, ...n2.detail ? { detail: n2.detail } : {} }
     }, now));
   }
   for (const e of c2.edges) {
@@ -60016,8 +60034,8 @@ function dsGlyphTransform(g2) {
   if (x2 === 0 && y2 === 0 && w2 === 24 && h === 24)
     return void 0;
   const s = 24 / Math.max(w2, h);
-  const r = (v2) => Math.round(v2 * 1e3) / 1e3;
-  return `translate(${r((24 - w2 * s) / 2)} ${r((24 - h * s) / 2)}) scale(${r(s)}) translate(${r(-x2)} ${r(-y2)})`;
+  const r2 = (v2) => Math.round(v2 * 1e3) / 1e3;
+  return `translate(${r2((24 - w2 * s) / 2)} ${r2((24 - h * s) / 2)}) scale(${r2(s)}) translate(${r2(-x2)} ${r2(-y2)})`;
 }
 function dsGlyphMarkup(g2) {
   const body = g2.shapes.map((s) => `<${s.tag}${Object.entries(s.attrs).map(([k2, v2]) => ` ${k2}="${v2}"`).join("")}/>`).join("");
@@ -60091,7 +60109,7 @@ function reviewDomainStory(m2) {
   }
   for (const [first2, names2] of variants)
     if (names2.size >= 3)
-      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n) => `"${n}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
+      out.push({ rule: "work-objects-variants", severity: "info", message: `${names2.size} work objects start with "${first2}": ${[...names2].map((n2) => `"${n2}"`).join(", ")} \u2014 if they are one thing, give it one name and keep its state in a note or an annotation (the method draws the same work object again under the same name; its state may change)`, page: QUICK_START });
   const names = new Set(told.map((s) => s.object ?? s.objectText.trim().toLowerCase()));
   if (told.length >= 4 && names.size === told.length)
     out.push({ rule: "work-objects-never-repeat", severity: "info", message: `no work object is in more than one of the ${told.length} sentences \u2014 the thing a story is about usually comes back (created, checked, handed on), drawn again each time under the same name; check whether some of these are one work object called differently`, page: QUICK_START });
@@ -60137,7 +60155,7 @@ var init_domainStoryReview = __esm({
     CONDITIONAL_CJK = /如果|否則|或者|還是/;
     NEGATIVE = /不送|不發|不再|不會|不執行|不觸發|沒有送|\bnot\b|\bno\b|\bnever\b|\bskip(s|ped)?\b|doesn't|does not|isn't|is not|won't|will not/i;
     DATE = /\b\d{1,2}\/\d{1,2}\b|\b\d{4}-\d{2}(-\d{2})?\b|\d{1,2}月\d{1,2}日|\b\d{1,2}月/;
-    num = (n) => `#${n}`;
+    num = (n2) => `#${n2}`;
   }
 });
 
@@ -60163,9 +60181,9 @@ function normalizeDomainStory(raw) {
   const unresolved = [];
   const find = (list3, ref2) => list3.find((x2) => x2.id === ref2) ?? list3.find((x2) => x2.text === ref2) ?? list3.find((x2) => x2.id === slugify2(ref2));
   const actorRef = (ref2, element, field) => {
-    const hit = find(actors, ref2);
-    if (hit)
-      return hit.id;
+    const hit2 = find(actors, ref2);
+    if (hit2)
+      return hit2.id;
     unresolved.push({ element, field, ref: ref2 });
     const added = { id: alloc(void 0, ref2, "actor"), text: ref2, kind: "person", ...repeatAll ? { repeat: true } : {} };
     actors.push(added);
@@ -60179,7 +60197,7 @@ function normalizeDomainStory(raw) {
     const declared = s.object ? find(workObjects, s.object) : void 0;
     const to = s.to === void 0 ? [] : Array.isArray(s.to) ? s.to : [s.to];
     const actor = actorRef(s.actor, id, "actor");
-    const receivers = to.map((r) => actorRef(r, id, "to"));
+    const receivers = to.map((r2) => actorRef(r2, id, "to"));
     const again = s.drawAgain === void 0 ? [] : Array.isArray(s.drawAgain) ? s.drawAgain : [s.drawAgain];
     return {
       id,
@@ -60191,17 +60209,17 @@ function normalizeDomainStory(raw) {
       objectKind: declared?.kind ?? "document",
       to: receivers,
       ...s.toLabel ? { toLabel: s.toLabel } : {},
-      ...again.length ? { drawAgain: [...new Set(again.map((r) => find(actors, r)?.id ?? r))] } : {},
+      ...again.length ? { drawAgain: [...new Set(again.map((r2) => find(actors, r2)?.id ?? r2))] } : {},
       ...s.note ? { note: s.note } : {},
       traces: s.traces ?? []
     };
   });
   const elementOf = (ref2) => find(actors, ref2)?.id ?? find(workObjects, ref2)?.id ?? sentences.find((s) => s.id === ref2)?.id;
   const elementRef = (ref2, element, field) => {
-    const hit = elementOf(ref2);
-    if (!hit)
+    const hit2 = elementOf(ref2);
+    if (!hit2)
       unresolved.push({ element, field, ref: ref2 });
-    return hit;
+    return hit2;
   };
   const groups = c2.groups.map((g2) => {
     const id = alloc(g2.id, g2.text, "group");
@@ -60210,7 +60228,7 @@ function normalizeDomainStory(raw) {
   const annotations = c2.annotations.flatMap((a) => {
     const id = alloc(a.id, `note-${elementOf(a.on) ?? a.on}`, "note");
     const on = elementRef(a.on, id, "on");
-    return on ? [{ id, on, text: a.text }] : [];
+    return on ? [{ id, on, text: a.text, ...a.kind && a.kind !== "note" ? { kind: a.kind } : {} }] : [];
   });
   return { scope: c2.scope ?? {}, actors, workObjects, sentences, groups, annotations, ...c2.icons ? { icons: c2.icons } : {}, ...c2.layout ? { layout: c2.layout } : {}, unresolved, ...taken.length ? { taken } : {}, dsModel: true };
 }
@@ -60219,14 +60237,14 @@ function readSentence(m2, s) {
   const to = s.to.length ? ` ${s.toLabel ?? "to"} ${s.to.map(name).join(", ")}` : "";
   return `${circled(s.seq)} ${name(s.actor)} ${s.verb}${s.objectText ? ` ${s.objectText}` : ""}${to}`;
 }
-function circled(n) {
-  return n >= 1 && n <= 20 ? String.fromCodePoint(9312 + n - 1) : `(${n})`;
+function circled(n2) {
+  return n2 >= 1 && n2 <= 20 ? String.fromCodePoint(9312 + n2 - 1) : `(${n2})`;
 }
 function displayWidth(text3) {
-  let n = 0;
+  let n2 = 0;
   for (const ch of text3)
-    n += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
-  return n;
+    n2 += /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(ch) ? 2 : 1;
+  return n2;
 }
 function checkDomainStory(content) {
   const m2 = "dsModel" in content ? content : normalizeDomainStory(content);
@@ -60238,7 +60256,7 @@ function checkDomainStory(content) {
   const actorName = (id) => m2.actors.find((a) => a.id === id)?.text ?? id;
   for (const s of m2.sentences) {
     if (s.to.includes(s.actor)) {
-      const others = s.to.filter((r) => r !== s.actor);
+      const others = s.to.filter((r2) => r2 !== s.actor);
       out.push({
         rule: "self-receiver",
         severity: "warning",
@@ -60252,7 +60270,7 @@ function checkDomainStory(content) {
   }
   const met = /* @__PURE__ */ new Set();
   for (const s of [...m2.sentences].sort((a, b2) => a.seq - b2.seq)) {
-    const members2 = [s.actor, ...s.to.filter((r) => r !== s.actor)];
+    const members2 = [s.actor, ...s.to.filter((r2) => r2 !== s.actor)];
     for (const ref2 of s.drawAgain ?? []) {
       if (!members2.includes(ref2))
         out.push({ rule: "draw-again-not-in-sentence", severity: "warning", element: s.id, message: `${circled(s.seq)} "${actorName(s.actor)} ${s.verb}": drawAgain names "${actorName(ref2)}", who is not in this sentence, so nothing is drawn again for it \u2014 name its actor or a receiver (${members2.map(actorName).join(", ")})`, page: "docs/diagrams.md \xA76b" });
@@ -60263,15 +60281,15 @@ function checkDomainStory(content) {
       met.add(id);
   }
   const seqs = [...new Set(m2.sentences.map((s) => s.seq))].sort((a, b2) => a - b2);
-  seqs.forEach((n, i) => {
+  seqs.forEach((n2, i) => {
     const expected = i === 0 ? 1 : seqs[i - 1] + 1;
-    if (n !== expected)
-      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n}`, page: QUICK_START2 });
+    if (n2 !== expected)
+      out.push({ rule: "sequence-gap", severity: "info", message: `sequence jumps from ${i === 0 ? "the start" : seqs[i - 1]} to ${n2}`, page: QUICK_START2 });
   });
-  for (const n of seqs) {
-    const same2 = m2.sentences.filter((s) => s.seq === n);
+  for (const n2 of seqs) {
+    const same2 = m2.sentences.filter((s) => s.seq === n2);
     if (same2.length > 1)
-      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
+      out.push({ rule: "sequence-shared", severity: "info", element: same2[1].id, message: `${circled(n2)} is used by ${same2.length} sentences \u2014 read as parallel activities (Egon.io allows a shared number; the site does not describe it)`, page: "egon.io" });
   }
   const name = (id) => m2.actors.find((a) => a.id === id)?.text ?? m2.workObjects.find((o) => o.id === id)?.text ?? m2.sentences.find((x2) => x2.id === id)?.objectText ?? id;
   for (let i = 0; i < m2.groups.length; i++)
@@ -60290,10 +60308,17 @@ function checkDomainStory(content) {
         page: QUICK_START2
       });
     }
-  for (const n of m2.annotations) {
-    const w2 = displayWidth(n.text);
+  for (const n2 of m2.annotations) {
+    const w2 = displayWidth(n2.text);
     if (w2 > NOTE_RECOMMENDED)
-      out.push({ rule: "note-long", severity: "warning", element: n.id, message: `note on "${name(n.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
+      out.push({ rule: "note-long", severity: "warning", element: n2.id, message: `note on "${name(n2.on)}" is long (${w2} > ${NOTE_RECOMMENDED}; a CJK character counts as 2): its box grows to fit, but a long note crowds the story \u2014 keep the gist on the board and move the detail into a sentence's \`note\` or the file`, page: QUICK_START2 });
+  }
+  for (const n2 of m2.annotations) {
+    if (n2.kind)
+      continue;
+    const hit2 = NOTE_KIND_WORDS.find(([re2]) => re2.test(n2.text));
+    if (hit2)
+      out.push({ rule: "note-kind-in-text", severity: "info", element: n2.id, message: `note on "${name(n2.on)}" names its kind in words (${DS_NOTE_LABELS[hit2[1]]}) \u2014 give it \`kind: ${hit2[1]}\` and the board draws it in that kind's colour (kinds: ${DS_NOTE_KINDS.join(", ")})`, page: "docs/diagrams.md \xA76b" });
   }
   for (const o of m2.workObjects) {
     if (!m2.sentences.some((s) => s.object === o.id))
@@ -60308,7 +60333,7 @@ function checkDomainStory(content) {
   out.push(...reviewDomainStory(m2));
   return out;
 }
-var DS_ACTOR_KINDS, DS_GROUP_COLORS, DS_GRANULARITY, named2, actorSchema, domainStorySchema, QUICK_START2, NOTE_RECOMMENDED;
+var DS_ACTOR_KINDS, DS_GROUP_COLORS, DS_NOTE_KINDS, DS_NOTE_COLORS, DS_NOTE_LABELS, DS_GRANULARITY, named2, actorSchema, domainStorySchema, NOTE_KIND_WORDS, QUICK_START2, NOTE_RECOMMENDED;
 var init_domainStory = __esm({
   "packages/canvas/dist/diagrams/domainStory.js"() {
     init_zod();
@@ -60317,6 +60342,9 @@ var init_domainStory = __esm({
     init_domainStoryReview();
     DS_ACTOR_KINDS = ["person", "group", "system"];
     DS_GROUP_COLORS = ["orange", "blue", "yellow", "pale-yellow", "lilac", "green", "pink", "red", "purple", "grey", "white"];
+    DS_NOTE_KINDS = ["note", "pain", "assumption", "decision"];
+    DS_NOTE_COLORS = { pain: "red", assumption: "yellow", decision: "blue" };
+    DS_NOTE_LABELS = { pain: "pain point", assumption: "assumption", decision: "open decision" };
     DS_GRANULARITY = ["coarse-grained", "medium-grained", "fine-grained", "cloud-level", "kite-level", "sea-level", "fish-level", "clam-level"];
     named2 = () => external_exports.union([
       external_exports.string(),
@@ -60367,7 +60395,8 @@ var init_domainStory = __esm({
       })).min(1),
       /** `color`: a pale wash behind the group, to tell groups apart (DS_GROUP_COLORS) */
       groups: external_exports.array(external_exports.object({ id: external_exports.string().optional(), text: external_exports.string().min(1), members: external_exports.array(external_exports.string()).default([]), color: external_exports.enum(DS_GROUP_COLORS).optional() })).default([]),
-      annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1) })).default([]),
+      /** `kind`: note (default) | pain | assumption | decision — a coloured note (DS_NOTE_KINDS) */
+      annotations: external_exports.array(external_exports.object({ id: external_exports.string().optional(), on: external_exports.string(), text: external_exports.string().min(1), kind: external_exports.enum(DS_NOTE_KINDS).optional() })).default([]),
       /** Icons of the story's own: a name (used as an actor's or work object's `kind`) → a 24 × 24 line-drawing SVG (dsIcons.ts). */
       icons: external_exports.record(external_exports.string(), external_exports.string().max(DS_ICON_MAX_CHARS)).optional(),
       /** How far apart the board draws actors, work objects and arrows (§6b "Spacing"); not part of Egon.io's format. */
@@ -60382,13 +60411,164 @@ var init_domainStory = __esm({
         actors: external_exports.enum(["once", "repeat"]).optional()
       }).optional()
     });
+    NOTE_KIND_WORDS = [
+      [/^\s*(pain(\s*point)?|痛點|痛点)\s*[:：｜|]/i, "pain"],
+      [/^\s*(assumption|assumed|假設|假设)\s*[:：｜|]/i, "assumption"],
+      [/^\s*(decision|open decision|to decide|待決定|待决定|決定|决定)(\s*[A-Za-z0-9]+)?\s*[:：｜|]/i, "decision"]
+    ];
     QUICK_START2 = "domainstorytelling.org/quick-start-guide";
     NOTE_RECOMMENDED = 120;
   }
 });
 
 // packages/canvas/dist/edgeLabel.js
-var EDGE_LABEL;
+function labelControl(data) {
+  const l = data?.label;
+  if (!l || typeof l !== "object" || Array.isArray(l))
+    return {};
+  const o = l;
+  const out = {};
+  if (typeof o.at === "number" && Number.isFinite(o.at))
+    out.at = Math.min(1, Math.max(0, o.at));
+  if (typeof o.short === "string" && o.short.trim())
+    out.short = o.short.trim();
+  return out;
+}
+function isLabelObstacle(it) {
+  if (it.type === "arrow" || it.type === "comment" || it.type === "frame" || it.type === "lane")
+    return false;
+  if (it.type === "wireframe" && it.role === "screen")
+    return false;
+  if (it.type === "ui" && it.data?.ui?.container)
+    return false;
+  if (DECOR.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
+    return false;
+  return true;
+}
+function cutLine(s, maxW, font) {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (measure(t, font) <= maxW)
+    return t;
+  let out = "";
+  for (const ch of t) {
+    if (measure(out + ch + "\u2026", font) > maxW)
+      break;
+    out += ch;
+  }
+  return out.trimEnd() + "\u2026";
+}
+function labelLines(text3, width, font = EDGE_LABEL.font, maxLines = EDGE_LABEL.maxLines) {
+  const t = text3.replace(/\s+/g, " ").trim();
+  if (!t)
+    return { lines: [], cut: false };
+  if (measure(t, font) <= width)
+    return { lines: [t], cut: false };
+  const all = wrap(t, width, font);
+  if (all.length <= maxLines)
+    return { lines: all, cut: false };
+  const kept = all.slice(0, maxLines - 1);
+  const restStart = kept.reduce((n2, l) => t.indexOf(l, n2) + l.length, 0);
+  return { lines: [...kept, cutLine(t.slice(restStart), width, font)], cut: true };
+}
+function labelSize(lines, font = EDGE_LABEL.font) {
+  const w2 = Math.max(0, ...lines.map((l) => measure(l, font))) + EDGE_LABEL.padX * 2;
+  const lh = font === EDGE_LABEL.font ? EDGE_LABEL.lineHeight : Math.round(font * 1.25);
+  return { w: Math.ceil(w2), h: lines.length * lh + EDGE_LABEL.padY * 2 };
+}
+function labelHits(x2, y2, w2, h, boxes, gap = EDGE_LABEL.gap) {
+  const r2 = { x: x2 - w2 / 2, y: y2 - h / 2, w: w2, h };
+  return boxes.filter((b2) => hit(r2, b2, gap));
+}
+function pointAlong(path24, t) {
+  const lens = path24.slice(1).map((p, i) => Math.hypot(p.x - path24[i].x, p.y - path24[i].y));
+  const total = lens.reduce((a, b2) => a + b2, 0);
+  let d = total * t;
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i] || i === lens.length - 1) {
+      const k2 = lens[i] ? Math.min(1, d / lens[i]) : 0;
+      return { x: path24[i].x + (path24[i + 1].x - path24[i].x) * k2, y: path24[i].y + (path24[i + 1].y - path24[i].y) * k2 };
+    }
+    d -= lens[i];
+  }
+  return path24[0];
+}
+function spots(path24, at3) {
+  const out = [];
+  const segs = path24.slice(1).map((b2, i) => ({ a: path24[i], b: b2, i })).filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 1);
+  const dirOf = (s) => {
+    const l = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) || 1;
+    return { x: (s.b.x - s.a.x) / l, y: (s.b.y - s.a.y) / l };
+  };
+  if (at3 !== void 0 && segs.length) {
+    const p = pointAlong(path24, at3);
+    const seg = segs.find((s) => Math.abs((s.b.x - s.a.x) * (p.y - s.a.y) - (s.b.y - s.a.y) * (p.x - s.a.x)) < 1 && p.x >= Math.min(s.a.x, s.b.x) - 1 && p.x <= Math.max(s.a.x, s.b.x) + 1 && p.y >= Math.min(s.a.y, s.b.y) - 1 && p.y <= Math.max(s.a.y, s.b.y) + 1) ?? segs[0];
+    out.push({ p, dir: dirOf(seg) });
+  }
+  const horizontal = (s) => Math.abs(s.b.y - s.a.y) < 1;
+  const ordered = [...segs.filter(horizontal), ...segs.filter((s) => !horizontal(s))];
+  for (const s of ordered)
+    for (const t of FRACTIONS)
+      out.push({ p: { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }, dir: dirOf(s) });
+  return out;
+}
+function placeEdgeLabel(text3, path24, boxes, o = {}) {
+  const full = text3.replace(/\s+/g, " ").trim();
+  if (!full || path24.length < 2)
+    return void 0;
+  const font = o.font ?? EDGE_LABEL.font;
+  const xs = path24.map((p) => p.x);
+  const ys = path24.map((p) => p.y);
+  const m2 = EDGE_LABEL.maxW;
+  const near = boxes.filter((b2) => b2.x < Math.max(...xs) + m2 && b2.x + b2.w > Math.min(...xs) - m2 && b2.y < Math.max(...ys) + m2 && b2.y + b2.h > Math.min(...ys) - m2);
+  const variants = [];
+  const seen = /* @__PURE__ */ new Set();
+  const push = (mode, lines) => {
+    const k2 = lines.join("\n");
+    if (!lines.length || seen.has(k2))
+      return;
+    seen.add(k2);
+    variants.push({ mode, lines });
+  };
+  const whole = labelLines(full, EDGE_LABEL.maxW, font);
+  push(whole.cut ? "cut" : "full", whole.lines);
+  if (o.short) {
+    const s = labelLines(o.short, EDGE_LABEL.maxW, font);
+    push(s.cut ? "cut" : "short", s.lines);
+  }
+  for (const w2 of [120, 88, 60]) {
+    const src = o.short ?? full;
+    const l = labelLines(src, w2, font);
+    push(l.cut ? "cut" : o.short ? "short" : "full", l.lines);
+    push("cut", [cutLine(src, w2, font)]);
+  }
+  const tries = spots(path24, o.at);
+  for (const v2 of variants) {
+    const { w: w2, h } = labelSize(v2.lines, font);
+    for (const p of o.prefer ?? [])
+      if (!labelHits(p.x, p.y, w2, h, near).length)
+        return { mode: v2.mode, x: p.x, y: p.y, w: w2, h, lines: v2.lines, text: full, font };
+    for (const s of tries)
+      if (!labelHits(s.p.x, s.p.y, w2, h, near).length)
+        return { mode: v2.mode, x: s.p.x, y: s.p.y, w: w2, h, lines: v2.lines, text: full, font };
+    for (const s of tries) {
+      let nx = -s.dir.y;
+      let ny = s.dir.x;
+      if (ny > 0 || ny === 0 && nx > 0)
+        nx = -nx, ny = -ny;
+      const d = Math.abs(nx) * (w2 / 2) + Math.abs(ny) * (h / 2) + 2;
+      for (const k2 of [1, -1]) {
+        const x2 = s.p.x + nx * d * k2;
+        const y2 = s.p.y + ny * d * k2;
+        if (!labelHits(x2, y2, w2, h, near).length)
+          return { mode: v2.mode, x: x2, y: y2, w: w2, h, lines: v2.lines, text: full, font };
+      }
+    }
+  }
+  const D2 = EDGE_LABEL.dot;
+  const dotAt = tries.find((s) => !labelHits(s.p.x, s.p.y, D2, D2, near, 1).length)?.p ?? pointAlong(path24, 0.5);
+  return { mode: "dot", x: dotAt.x, y: dotAt.y, w: D2, h: D2, lines: [], text: full, font };
+}
+var EDGE_LABEL, DECOR, hit, FRACTIONS;
 var init_edgeLabel = __esm({
   "packages/canvas/dist/edgeLabel.js"() {
     init_textMetrics();
@@ -60409,6 +60589,9 @@ var init_edgeLabel = __esm({
       /** the dot shown when the label fits nowhere */
       dot: 10
     };
+    DECOR = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
+    hit = (r2, b2, gap) => r2.x < b2.x + b2.w + gap && r2.x + r2.w + gap > b2.x && r2.y < b2.y + b2.h + gap && r2.y + r2.h + gap > b2.y;
+    FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
   }
 });
 
@@ -60442,11 +60625,11 @@ function segmentHitsBox(p, q2, b2, pad = 0) {
         return false;
       continue;
     }
-    const r = qq / pp;
+    const r2 = qq / pp;
     if (pp < 0)
-      t0 = Math.max(t0, r);
+      t0 = Math.max(t0, r2);
     else
-      t1 = Math.min(t1, r);
+      t1 = Math.min(t1, r2);
     if (t0 > t1)
       return false;
   }
@@ -60467,26 +60650,26 @@ function nearestFree(at3, w2, h, boxes, step, start = { x: 0, y: 1 }) {
 }
 function countCrossings(segs) {
   const same2 = (p, q2) => Math.abs(p.x - q2.x) < 0.5 && Math.abs(p.y - q2.y) < 0.5;
-  const orient = (a, b2, c2) => Math.sign((b2.x - a.x) * (c2.y - a.y) - (b2.y - a.y) * (c2.x - a.x));
-  let n = 0;
+  const orient2 = (a, b2, c2) => Math.sign((b2.x - a.x) * (c2.y - a.y) - (b2.y - a.y) * (c2.x - a.x));
+  let n2 = 0;
   for (let i = 0; i < segs.length; i++)
     for (let j2 = i + 1; j2 < segs.length; j2++) {
       const [a, b2] = segs[i];
       const [c2, d] = segs[j2];
       if (same2(a, c2) || same2(a, d) || same2(b2, c2) || same2(b2, d))
         continue;
-      if (orient(a, b2, c2) * orient(a, b2, d) < 0 && orient(c2, d, a) * orient(c2, d, b2) < 0)
-        n++;
+      if (orient2(a, b2, c2) * orient2(a, b2, d) < 0 && orient2(c2, d, a) * orient2(c2, d, b2) < 0)
+        n2++;
     }
-  return n;
+  return n2;
 }
 function layoutWith(m2, sentences, order, pref, g2) {
   const cell2 = /* @__PURE__ */ new Map();
   const taken = /* @__PURE__ */ new Set();
   const nextTo = /* @__PURE__ */ new Map();
-  const put = (id, c2, r) => {
-    cell2.set(id, [c2, r]);
-    taken.add(`${c2},${r}`);
+  const put = (id, c2, r2) => {
+    cell2.set(id, [c2, r2]);
+    taken.add(`${c2},${r2}`);
   };
   const near = (id, partner) => {
     nextTo.set(id, partner);
@@ -60520,8 +60703,8 @@ function layoutWith(m2, sentences, order, pref, g2) {
         near(id, [...cell2.keys()][cell2.size - 1]);
   }
   const actor = /* @__PURE__ */ new Map();
-  for (const [id, [c2, r]] of cell2)
-    actor.set(id, { x: c2 * g2.cellW, y: r * g2.cellH, w: ICON_W, h: ICON_H });
+  for (const [id, [c2, r2]] of cell2)
+    actor.set(id, { x: c2 * g2.cellW, y: r2 * g2.cellH, w: ICON_W, h: ICON_H });
   const boxes = [...actor.values()];
   const free = (b2) => !boxes.some((o) => overlaps(o, b2));
   const wayCount = /* @__PURE__ */ new Map();
@@ -60539,14 +60722,14 @@ function layoutWith(m2, sentences, order, pref, g2) {
     let perp;
     const recv = cast.get(s.id).to;
     if (recv.length) {
-      const rs = recv.map((r) => centre(actor.get(r)));
+      const rs = recv.map((r2) => centre(actor.get(r2)));
       const t = { x: rs.reduce((v2, p) => v2 + p.x, 0) / rs.length, y: rs.reduce((v2, p) => v2 + p.y, 0) / rs.length };
-      const len = Math.hypot(t.x - a.x, t.y - a.y);
-      perp = len ? { x: -(t.y - a.y) / len, y: (t.x - a.x) / len } : { x: 0, y: 1 };
-      const n = wayCount.get(wayKey(s)) ?? 1;
+      const len2 = Math.hypot(t.x - a.x, t.y - a.y);
+      perp = len2 ? { x: -(t.y - a.y) / len2, y: (t.x - a.x) / len2 } : { x: 0, y: 1 };
+      const n2 = wayCount.get(wayKey(s)) ?? 1;
       const k2 = wayIndex.get(wayKey(s)) ?? 0;
       wayIndex.set(wayKey(s), k2 + 1);
-      const shift = (k2 - (n - 1) / 2) * g2.spread;
+      const shift = (k2 - (n2 - 1) / 2) * g2.spread;
       at3 = { x: (a.x + t.x) / 2 + perp.x * shift, y: (a.y + t.y) / 2 + perp.y * shift };
     } else {
       perp = { x: 0, y: 1 };
@@ -60572,11 +60755,11 @@ function layoutWith(m2, sentences, order, pref, g2) {
     const o = object3.get(s.id);
     if (o) {
       segs.push([a, centre(o)]);
-      for (const r of c2.to)
-        segs.push([centre(o), centre(actor.get(r))]);
+      for (const r2 of c2.to)
+        segs.push([centre(o), centre(actor.get(r2))]);
     } else
-      for (const r of c2.to)
-        segs.push([a, centre(actor.get(r))]);
+      for (const r2 of c2.to)
+        segs.push([a, centre(actor.get(r2))]);
   }
   const all = [...actor.values(), ...object3.values()];
   let through = 0;
@@ -60616,8 +60799,8 @@ function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast, again
     return Math.max(Math.abs(ac - bc), Math.abs(ar - br));
   };
   const at3 = (key) => {
-    const [c2, r] = cell2.get(key);
-    return { x: c2 * g2.cellW + ICON_W / 2, y: r * g2.cellH + ICON_H / 2 };
+    const [c2, r2] = cell2.get(key);
+    return { x: c2 * g2.cellW + ICON_W / 2, y: r2 * g2.cellH + ICON_H / 2 };
   };
   const lines = [];
   const clean = (a, b2) => {
@@ -60648,31 +60831,31 @@ function placeWithCopies(m2, sentences, order, g2, cell2, put, near, cast, again
     const members2 = [s.actor, ...receiversOf(s)];
     const forced = new Set((s.drawAgain ?? []).filter((id) => members2.includes(id)));
     const chosen = /* @__PURE__ */ new Map();
-    let anchor2;
+    let anchor3;
     for (const id of members2) {
-      const hit = forced.has(id) ? void 0 : nearest(id, previous);
-      if (hit && (!anchor2 || hit.d < anchor2.d))
-        anchor2 = { id, ...hit };
+      const hit2 = forced.has(id) ? void 0 : nearest(id, previous);
+      if (hit2 && (!anchor3 || hit2.d < anchor3.d))
+        anchor3 = { id, ...hit2 };
     }
-    if (!anchor2)
-      anchor2 = { id: s.actor, key: draw(s.actor, void 0), d: 0 };
-    else if (anchor2.d > REUSE_CELLS && repeats.has(anchor2.id) && previous.length)
-      anchor2 = { id: anchor2.id, key: draw(anchor2.id, previous[previous.length - 1]), d: 0 };
-    chosen.set(anchor2.id, anchor2.key);
-    if (forced.has(anchor2.id))
-      again.set(anchor2.key, s.id);
+    if (!anchor3)
+      anchor3 = { id: s.actor, key: draw(s.actor, void 0), d: 0 };
+    else if (anchor3.d > REUSE_CELLS && repeats.has(anchor3.id) && previous.length)
+      anchor3 = { id: anchor3.id, key: draw(anchor3.id, previous[previous.length - 1]), d: 0 };
+    chosen.set(anchor3.id, anchor3.key);
+    if (forced.has(anchor3.id))
+      again.set(anchor3.key, s.id);
     for (const id of members2) {
       if (chosen.has(id))
         continue;
-      const hit = forced.has(id) ? void 0 : nearest(id, [anchor2.key]);
-      const reuse = hit && (!repeats.has(id) || hit.d <= REUSE_CELLS && clean(anchor2.key, hit.key));
-      chosen.set(id, reuse ? hit.key : draw(id, anchor2.key));
+      const hit2 = forced.has(id) ? void 0 : nearest(id, [anchor3.key]);
+      const reuse = hit2 && (!repeats.has(id) || hit2.d <= REUSE_CELLS && clean(anchor3.key, hit2.key));
+      chosen.set(id, reuse ? hit2.key : draw(id, anchor3.key));
       if (forced.has(id))
         again.set(chosen.get(id), s.id);
     }
-    const c2 = { actor: chosen.get(s.actor), to: receiversOf(s).map((r) => chosen.get(r)) };
-    for (const r of c2.to)
-      lines.push([at3(c2.actor), at3(r)]);
+    const c2 = { actor: chosen.get(s.actor), to: receiversOf(s).map((r2) => chosen.get(r2)) };
+    for (const r2 of c2.to)
+      lines.push([at3(c2.actor), at3(r2)]);
     cast.set(s.id, c2);
     previous = [c2.actor, ...c2.to];
   }
@@ -60761,14 +60944,14 @@ function renderDomainStory(raw, opts = {}) {
       nearOf.set(o.id, from.id);
       items.push(o);
       items.push(arrow(scope, from.id, o.id, now, s.verb, "activity", { key: s.id, data: { ...base, ...facing(from, o) } }));
-      receiversOf(s).forEach((r, k2) => {
+      receiversOf(s).forEach((r2, k2) => {
         const to = actorItem.get(c2.to[k2]);
-        items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
+        items.push(arrow(scope, o.id, to.id, now, s.toLabel, "activity-to", { key: `${s.id}:to:${r2}`, data: { sentence: read, ds: true, ...facing(o, to) } }));
       });
     } else {
-      for (const [k2, r] of receiversOf(s).entries()) {
+      for (const [k2, r2] of receiversOf(s).entries()) {
         const to = actorItem.get(c2.to[k2]);
-        items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
+        items.push(arrow(scope, from.id, to.id, now, s.verb, "activity", { key: `${s.id}${k2 ? `:${r2}` : ""}`, data: { ...base, element: s.id, ...facing(from, to) } }));
       }
     }
   }
@@ -60778,21 +60961,22 @@ function renderDomainStory(raw, opts = {}) {
     const t = [...actorItem.values(), ...objectItem.values()].find((x2) => x2.id === a.to);
     return f && t ? [[centre(f), centre(t)]] : [];
   });
-  for (const n of m2.annotations) {
-    const target = actorItem.get(n.on) ?? objectItem.get(n.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n.on);
+  for (const n2 of m2.annotations) {
+    const target = actorItem.get(n2.on) ?? objectItem.get(n2.on) ?? [...objectItem.values()].find((o) => o.data?.workObject === n2.on);
     const base = target ?? { x: 0, y: 0, w: 0, h: 0 };
-    const { w: nw, h: nh } = sizeToText({ type: "text", role: "annotation" }, n.text, { minW: NOTE_MIN_W, maxW: NOTE_MAX_W, minH: NOTE_MIN_H });
+    const { w: nw, h: nh } = sizeToText({ type: "text", role: "annotation" }, n2.text, { minW: NOTE_MIN_W, maxW: NOTE_MAX_W, minH: NOTE_MIN_H });
     const candidates = [];
     for (const d of [60, 150, 260, 380])
       candidates.push({ x: base.x + base.w + d, y: base.y - 10 }, { x: base.x + base.w + d, y: base.y + base.h - nh + 10 }, { x: base.x - nw - d, y: base.y - 10 }, { x: base.x - nw - d, y: base.y + base.h - nh + 10 }, { x: base.x + base.w / 2 - nw / 2, y: base.y + base.h + d - 20 }, { x: base.x + base.w / 2 - nw / 2, y: base.y - nh - d + 20 }, { x: base.x + base.w + d * 0.7, y: base.y - nh - d * 0.5 }, { x: base.x + base.w + d * 0.7, y: base.y + base.h + d * 0.5 }, { x: base.x - nw - d * 0.7, y: base.y - nh - d * 0.5 }, { x: base.x - nw - d * 0.7, y: base.y + base.h + d * 0.5 });
     const clear = (p) => !placed.some((o) => overlaps(o, { ...p, w: nw, h: nh }));
     const cuts = (p) => segs.filter(([a, b2]) => segmentHitsBox(a, b2, { ...p, w: nw, h: nh }, 4)).length;
     const tc = centre(base);
-    const score = (p) => cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
+    const through = (p) => placed.filter((o) => o !== target && segmentHitsBox({ x: p.x + nw / 2, y: p.y + nh / 2 }, tc, o, 6)).length;
+    const score = (p) => (target ? through(p) * 1200 : 0) + cuts(p) * 400 + Math.hypot(p.x + nw / 2 - tc.x, p.y + nh / 2 - tc.y);
     let at3 = candidates.filter(clear).sort((p, q2) => score(p) - score(q2))[0] ?? candidates[0];
     for (let k2 = 0; !clear(at3) && k2 < 60; k2++)
       at3 = { x: at3.x, y: at3.y + 40 };
-    const note = make({ id: itemId("note", n.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n.text, role: "annotation", data: { element: n.id, on: n.on, ds: "annotation" } }, now);
+    const note = make({ id: itemId("note", n2.id), type: "text", x: at3.x, y: at3.y, w: nw, h: nh, text: n2.text, role: "annotation", ...n2.kind ? { color: DS_NOTE_COLORS[n2.kind] } : {}, data: { element: n2.id, on: n2.on, ds: "annotation", ...n2.kind ? { noteKind: n2.kind } : {} } }, now);
     placed.push(note);
     items.push(note);
     if (target) {
@@ -60844,6 +61028,10 @@ function renderDomainStory(raw, opts = {}) {
   const facets = [m2.scope.granularity, m2.scope.time, m2.scope.purity].filter(Boolean);
   if (facets.length)
     legend2.push(make({ id: itemId("scope", "scope"), type: "text", x: PAD + 4 * 130 + 290, y: legendY + 50, w: 520, h: 64, text: `Scope: ${facets.join(" \xB7 ")}`, role: "scope", data: { scope: m2.scope } }, now));
+  const kinds = [...new Set(m2.annotations.flatMap((n2) => n2.kind ? [n2.kind] : []))].sort();
+  kinds.forEach((k2, i) => {
+    legend2.push(make({ id: itemId("legend", `note-${k2}`), type: "text", x: PAD + i * 170, y: legendY + 140, w: 150, h: 30, text: DS_NOTE_LABELS[k2], role: "annotation", color: DS_NOTE_COLORS[k2], data: { ds: "annotation", noteKind: k2, legend: true } }, now));
+  });
   return offsetAll([...shifted, ...legend2], opts.at).map((i) => nearOf.has(i.id) ? withHints(i, { near: nearOf.get(i.id) }) : i);
 }
 function groupOutlines(groups) {
@@ -60940,7 +61128,7 @@ var init_domain_story = __esm({
     GROUP_TITLE_H = 26;
     centre = (b2) => ({ x: b2.x + b2.w / 2, y: b2.y + b2.h / 2 });
     overlaps = (a, b2, gap = 16) => a.x < b2.x + b2.w + gap && b2.x < a.x + a.w + gap && a.y < b2.y + b2.h + gap && b2.y < a.y + a.h + gap;
-    receiversOf = (s) => s.to.filter((r) => r !== s.actor);
+    receiversOf = (s) => s.to.filter((r2) => r2 !== s.actor);
     PREFERENCES = [
       [[1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1], [-1, 0], [2, 0], [0, 2], [2, 1], [2, -1]],
       [[1, 0], [0, -1], [0, 1], [1, -1], [1, 1], [-1, -1], [-1, 1], [-1, 0], [2, 0], [0, -2], [2, -1], [2, 1]],
@@ -61052,7 +61240,7 @@ function renderUiMock(raw, opts = {}) {
       parent: b2.parent ? elId(b2.parent) : sid,
       data: { element: e.ref, ui: uiData(e, look), ...e.traces.length ? { traces: e.traces } : {} }
     }, now);
-    const note = (n) => notes.push({ ...n, ref: e.ref, target: id, anchorX: left, seq: notes.length });
+    const note = (n2) => notes.push({ ...n2, ref: e.ref, target: id, anchorX: left, seq: notes.length });
     if (e.note)
       note({ id: noteId(e.ref), text: e.note, anchorY: top, on: { item, kind: "element" } });
     e.props.items?.forEach((it, i) => {
@@ -61066,21 +61254,21 @@ function renderUiMock(raw, opts = {}) {
     return [item];
   }
   function numberCallouts(notes) {
-    return readingOrder(notes).map((n, i) => {
+    return readingOrder(notes).map((n2, i) => {
       const callout = i + 1;
-      const on = n.on;
+      const on = n2.on;
       const ui = { ...on.item.data.ui };
       if (on.kind === "element" || on.kind === "screen") {
         if (typeof ui.callout === "number")
           ui.callouts = [...Array.isArray(ui.callouts) ? ui.callouts : [ui.callout], callout];
         else
-          Object.assign(ui, { callout, note: n.text });
+          Object.assign(ui, { callout, note: n2.text });
       } else if (on.kind === "item")
         ui.items = ui.items.map((it, j2) => j2 === on.index ? { ...it, callout } : it);
       else if (on.kind === "row")
         ui.rowCallouts = { ...ui.rowCallouts, [String(on.index)]: callout };
       on.item.data = { ...on.item.data, ui };
-      return { ...n, callout };
+      return { ...n2, callout };
     });
   }
   function gutterItems(gutter, screenNote, callouts) {
@@ -61091,10 +61279,10 @@ function renderUiMock(raw, opts = {}) {
       out.push(make({ ...screenNote, type: "comment", x: gutter.x, y: gutter.y, w: UI_GUTTER.noteW, h: UI_GUTTER.noteH, role: "note", color: "yellow" }, now));
       bottom = gutter.y + UI_GUTTER.noteH;
     }
-    for (const n of callouts) {
-      const size2 = uiCalloutSize(n.text);
-      const y2 = Math.max(n.anchorY, gutter.y, bottom + gap);
-      out.push(make({ id: n.id, type: "comment", x: gutter.x, y: y2, w: size2.w, h: size2.h, text: n.text, role: "note", color: "yellow", target: n.target, data: { ...n.data, callout: n.callout, annotation: { on: n.ref, ...opts.source ? { file: opts.source } : {} } } }, now));
+    for (const n2 of callouts) {
+      const size2 = uiCalloutSize(n2.text);
+      const y2 = Math.max(n2.anchorY, gutter.y, bottom + gap);
+      out.push(make({ id: n2.id, type: "comment", x: gutter.x, y: y2, w: size2.w, h: size2.h, text: n2.text, role: "note", color: "yellow", target: n2.target, data: { ...n2.data, callout: n2.callout, annotation: { on: n2.ref, ...opts.source ? { file: opts.source } : {} } } }, now));
       bottom = y2 + size2.h;
       gap = UI_GUTTER.calloutGap;
     }
@@ -61296,6 +61484,1000 @@ var init_check = __esm({
   }
 });
 
+// packages/canvas/dist/hidden.js
+function hiddenOf(board) {
+  const items = Object.values(board.items);
+  if (!items.some(isHiddenFrame))
+    return void 0;
+  const ids = /* @__PURE__ */ new Set();
+  const frames = /* @__PURE__ */ new Map();
+  const frameOf2 = /* @__PURE__ */ new Map();
+  const outermost = (it) => {
+    let top;
+    const seen = /* @__PURE__ */ new Set([it.id]);
+    for (let p = it.parent ? board.items[it.parent] : void 0; p && !seen.has(p.id); p = p.parent ? board.items[p.parent] : void 0) {
+      seen.add(p.id);
+      if (isHiddenFrame(p))
+        top = p.id;
+    }
+    return top;
+  };
+  for (const it of items) {
+    if (it.type === "comment" || it.type === "arrow")
+      continue;
+    const f = outermost(it);
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items) {
+    if (it.type !== "arrow")
+      continue;
+    const f = frameOf2.get(it.from ?? "") ?? frameOf2.get(it.to ?? "");
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items) {
+    if (it.type !== "comment")
+      continue;
+    const f = frameOf2.get(threadTarget(board, it) ?? "");
+    if (!f)
+      continue;
+    ids.add(it.id);
+    frameOf2.set(it.id, f);
+  }
+  for (const it of items)
+    if (isHiddenFrame(it) && !ids.has(it.id))
+      frames.set(it.id, 0);
+  for (const f of frameOf2.values())
+    frames.set(f, (frames.get(f) ?? 0) + 1);
+  return { ids, frames, frameOf: frameOf2 };
+}
+function threadTarget(board, c2) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = c2;
+  while (cur?.type === "comment" && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    const next = cur.target ? board.items[cur.target] : void 0;
+    if (next?.type !== "comment")
+      return cur.target;
+    cur = next;
+  }
+  return void 0;
+}
+function withoutHidden(board, h = hiddenOf(board)) {
+  if (!h)
+    return board;
+  const items = {};
+  for (const [id, it] of Object.entries(board.items))
+    if (!h.ids.has(id))
+      items[id] = it;
+  return { ...board, items };
+}
+function drawnBoard(board, h = hiddenOf(board)) {
+  if (!h)
+    return board;
+  const out = withoutHidden(board, h);
+  for (const [id, n2] of h.frames) {
+    const f = out.items[id];
+    out.items[id] = { ...f, w: Math.min(f.w, HIDDEN_FRAME_W), h: Math.min(f.h, HIDDEN_FRAME_H), data: { ...f.data, [COUNT]: n2 } };
+  }
+  return out;
+}
+function hiddenFramesLine(list3, listed = false) {
+  if (!list3.length)
+    return [];
+  const names = list3.map((f) => `${[f.key, f.title !== f.key ? `"${f.title}"` : ""].filter(Boolean).join(" ")} (${itemCount(f.items)})`);
+  return [`Hidden frames: ${names.join(", ")} \u2014 the person hid their contents on the board (not drawn for anyone); ${listed ? "listed here because of includeHidden: true" : "canvas_read_board with includeHidden: true lists them"}`];
+}
+var HIDDEN_FRAME_H, HIDDEN_FRAME_W, COUNT, isHiddenFrame, itemCount;
+var init_hidden = __esm({
+  "packages/canvas/dist/hidden.js"() {
+    init_model();
+    HIDDEN_FRAME_H = 44;
+    HIDDEN_FRAME_W = 640;
+    COUNT = "hiddenItems";
+    isHiddenFrame = (it) => it?.type === "frame" && it.data?.hidden === true;
+    itemCount = (n2) => `${n2} item${n2 === 1 ? "" : "s"}`;
+  }
+});
+
+// packages/canvas/dist/shown.js
+function kanbanOrigins(board) {
+  const out = /* @__PURE__ */ new Map();
+  for (const col of Object.values(board.items)) {
+    if (!isColumn(col) || ownLock(col))
+      continue;
+    const k2 = groupKey(col);
+    const o = out.get(k2);
+    out.set(k2, o ? { x: Math.min(o.x, col.x), y: Math.min(o.y, col.y) } : { x: col.x, y: col.y });
+  }
+  return out;
+}
+function nextFree(start, size2, fixed) {
+  let p = start;
+  for (let moved = true; moved; ) {
+    moved = false;
+    for (const [a, b2] of fixed)
+      if (p < b2 && p + size2 + KANBAN_GAP > a) {
+        p = b2;
+        moved = true;
+      }
+  }
+  return p;
+}
+function stackCards(board, col, x2, top, out) {
+  const cards = cardsOf(board, col);
+  const fixed = cards.filter(ownLock).map((c2) => [c2.y, c2.y + c2.h + KANBAN_GAP]);
+  let y2 = top;
+  let bottom = top;
+  for (const card of cards) {
+    if (ownLock(card)) {
+      bottom = Math.max(bottom, card.y + card.h + KANBAN_GAP);
+      continue;
+    }
+    y2 = nextFree(y2, card.h, fixed);
+    out.set(card.id, { x: x2 + KANBAN_PAD, y: y2 });
+    y2 += card.h + KANBAN_GAP;
+    bottom = Math.max(bottom, y2);
+  }
+  return bottom;
+}
+function alignKanban(board, origins = kanbanOrigins(board)) {
+  const columns = Object.values(board.items).filter((c2) => isColumn(c2) && !lockedKanban(board, groupKey(c2)));
+  if (!columns.length)
+    return board;
+  const patched = {};
+  const set2 = (it, p) => {
+    const cur = patched[it.id] ?? it;
+    if (Object.entries(p).every(([k2, v2]) => cur[k2] === v2))
+      return;
+    patched[it.id] = { ...cur, ...p };
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const c2 of columns)
+    groups.set(groupKey(c2), [...groups.get(groupKey(c2)) ?? [], c2]);
+  for (const [key, cols] of groups) {
+    const origin = origins.get(key) ?? { x: Math.min(...cols.map((c2) => c2.x)), y: Math.min(...cols.map((c2) => c2.y)) };
+    cols.sort((a, b2) => a.x - b2.x || (a.order ?? 0) - (b2.order ?? 0));
+    const fixed = cols.filter(ownLock).map((c2) => [c2.x, c2.x + c2.w + KANBAN_GAP]);
+    let x2 = origin.x;
+    let right = origin.x;
+    let tallest = 0;
+    const placed = [];
+    for (const col of cols) {
+      const locked = ownLock(col);
+      const cx = locked ? col.x : nextFree(x2, col.w, fixed);
+      const top = (locked ? col.y : origin.y) + KANBAN_HEADER + KANBAN_GAP;
+      const cards = /* @__PURE__ */ new Map();
+      const bottom = stackCards(board, col, cx, top, cards);
+      for (const [id, at3] of cards)
+        set2(board.items[id], at3);
+      if (!locked) {
+        tallest = Math.max(tallest, col.h, bottom - KANBAN_GAP + KANBAN_PAD - origin.y);
+        placed.push({ col, x: cx });
+        x2 = cx + col.w + KANBAN_GAP;
+      }
+      right = Math.max(right, cx + col.w + KANBAN_GAP);
+    }
+    for (const { col, x: cx } of placed)
+      set2(col, { x: cx, y: origin.y, h: tallest });
+    const frame = key ? board.items[key] : void 0;
+    if (frame && frame.type === "frame") {
+      const edge = right - KANBAN_GAP + FRAME_PAD;
+      const bottom = Math.max(origin.y + tallest, ...cols.filter(ownLock).map((c2) => c2.y + c2.h)) + FRAME_PAD;
+      set2(frame, { w: Math.max(frame.w, edge - frame.x), h: Math.max(frame.h, bottom - frame.y) });
+    }
+  }
+  if (!Object.keys(patched).length)
+    return board;
+  return { ...board, items: { ...board.items, ...patched } };
+}
+function shownBoard(board) {
+  return drawnBoard(alignKanban(board));
+}
+function shownDifferences(board) {
+  const shown = shownBoard(board);
+  if (shown === board)
+    return [];
+  const out = [];
+  for (const it of Object.values(board.items)) {
+    if (layoutLock(board.items, it.id) || isHiddenFrame(it))
+      continue;
+    const s = shown.items[it.id];
+    if (!s || s.x === it.x && s.y === it.y && s.w === it.w && s.h === it.h)
+      continue;
+    const why = it.type === "card" && it.parent && isColumn(board.items[it.parent] ?? it) ? `kanban cards stack in their column in the order of their stored y: drawn at ${s.x},${s.y}, stored at ${it.x},${it.y}` : isColumn(it) ? "kanban columns stand side by side and are as tall as the tallest column" : it.type === "frame" ? "the frame grows to hold its kanban" : "drawn elsewhere by the kanban layout";
+    out.push({ id: it.id, stored: { x: it.x, y: it.y, w: it.w, h: it.h }, shown: { x: s.x, y: s.y, w: s.w, h: s.h }, why });
+  }
+  return out;
+}
+var KANBAN_HEADER, KANBAN_GAP, KANBAN_PAD, FRAME_PAD, isColumn, groupKey, cardsOf, lockedKanban;
+var init_shown = __esm({
+  "packages/canvas/dist/shown.js"() {
+    init_hidden();
+    init_model();
+    KANBAN_HEADER = 44;
+    KANBAN_GAP = 12;
+    KANBAN_PAD = 20;
+    FRAME_PAD = 24;
+    isColumn = (it) => it.type === "lane" && it.role === "column";
+    groupKey = (col) => col.parent ?? "";
+    cardsOf = (board, col) => Object.values(board.items).filter((it) => it.type === "card" && it.parent === col.id).sort((a, b2) => a.y - b2.y || (a.order ?? 0) - (b2.order ?? 0));
+    lockedKanban = (board, key) => {
+      const f = key ? board.items[key] : void 0;
+      return !!f && f.type === "frame" && ownLock(f);
+    };
+  }
+});
+
+// packages/canvas/dist/wireGeometry.js
+function anchor2(bx, side) {
+  if (side === "left")
+    return { x: bx.x, y: bx.y + bx.h / 2 };
+  if (side === "right")
+    return { x: bx.x + bx.w, y: bx.y + bx.h / 2 };
+  if (side === "top")
+    return { x: bx.x + bx.w / 2, y: bx.y };
+  return { x: bx.x + bx.w / 2, y: bx.y + bx.h };
+}
+function floatingEnd(a, b2) {
+  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+  const dx = b2.x + b2.w / 2 - ca.x;
+  const dy = b2.y + b2.h / 2 - ca.y;
+  if (!dx && !dy)
+    return ca;
+  const t = Math.min(dx ? (a.w / 2 + 6) / Math.abs(dx) : Infinity, dy ? (a.h / 2 + 6) / Math.abs(dy) : Infinity);
+  return { x: ca.x + dx * t, y: ca.y + dy * t };
+}
+function floatingEndTo(a, p) {
+  return floatingEnd(a, { x: p.x, y: p.y, w: 0, h: 0 });
+}
+function foldedPath(pts, r2 = 8) {
+  const f = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+  if (!pts.length)
+    return "";
+  let d = `M${f(pts[0].x)} ${f(pts[0].y)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [a, b2, c2] = [pts[i - 1], pts[i], pts[i + 1]];
+    const k2 = Math.min(r2, Math.hypot(b2.x - a.x, b2.y - a.y) / 2, Math.hypot(c2.x - b2.x, c2.y - b2.y) / 2);
+    const u3 = (p, q2) => {
+      const l = Math.hypot(q2.x - p.x, q2.y - p.y) || 1;
+      return { x: (q2.x - p.x) / l, y: (q2.y - p.y) / l };
+    };
+    const [ua, uc] = [u3(b2, a), u3(b2, c2)];
+    d += k2 > 0 ? `L${f(b2.x + ua.x * k2)} ${f(b2.y + ua.y * k2)}Q${f(b2.x)} ${f(b2.y)} ${f(b2.x + uc.x * k2)} ${f(b2.y + uc.y * k2)}` : `L${f(b2.x)} ${f(b2.y)}`;
+  }
+  const z3 = pts[pts.length - 1];
+  return pts.length > 1 ? `${d}L${f(z3.x)} ${f(z3.y)}` : d;
+}
+function autoSides(a, b2) {
+  const dx = b2.x + b2.w / 2 - (a.x + a.w / 2);
+  const dy = b2.y + b2.h / 2 - (a.y + a.h / 2);
+  const gapX = dx > 0 ? b2.x - (a.x + a.w) : a.x - (b2.x + b2.w);
+  const gapY = dy > 0 ? b2.y - (a.y + a.h) : a.y - (b2.y + b2.h);
+  if (gapX >= gapY)
+    return dx >= 0 ? ["right", "left"] : ["left", "right"];
+  return dy >= 0 ? ["bottom", "top"] : ["top", "bottom"];
+}
+function routePoints(p1, s1, p2, s2) {
+  const h1 = s1 === "left" || s1 === "right";
+  const h2 = s2 === "left" || s2 === "right";
+  if (h1 && h2) {
+    const mx = (p1.x + p2.x) / 2;
+    return Math.abs(p1.y - p2.y) < 0.5 ? [p1, p2] : [p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2];
+  }
+  if (!h1 && !h2) {
+    const my = (p1.y + p2.y) / 2;
+    return Math.abs(p1.x - p2.x) < 0.5 ? [p1, p2] : [p1, { x: p1.x, y: my }, { x: p2.x, y: my }, p2];
+  }
+  return h1 ? [p1, { x: p2.x, y: p1.y }, p2] : [p1, { x: p1.x, y: p2.y }, p2];
+}
+function foldsOf(data) {
+  const b2 = data?.bend;
+  const list3 = Array.isArray(b2) ? b2 : b2 && typeof b2 === "object" ? [b2] : [];
+  return list3.filter((p) => typeof p?.x === "number" && typeof p?.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y)).map((p) => ({ x: p.x, y: p.y }));
+}
+function folded(p1, via, p2, ds, auto) {
+  const points = [p1, ...via, p2];
+  return { d: foldedPath(points, ds ? 4 : 8), points, p1, p2, ds, via, ...auto ? { auto } : {} };
+}
+function wireShape(b2, it) {
+  const from = it.from ? b2.items[it.from] : void 0;
+  const to = it.to ? b2.items[it.to] : void 0;
+  if (!from || !to)
+    return void 0;
+  const ds = !!it.data?.ds;
+  const folds = foldsOf(it.data);
+  if (folds.length)
+    return folded(floatingEndTo(from, folds[0]), folds, floatingEndTo(to, folds[folds.length - 1]), ds);
+  const auto = autoSides(from, to);
+  const s1 = typeof it.data?.fromSide === "string" && SIDES.has(it.data.fromSide) ? it.data.fromSide : auto[0];
+  const s2 = typeof it.data?.toSide === "string" && SIDES.has(it.data.toSide) ? it.data.toSide : auto[1];
+  const p1 = ds ? floatingEnd(from, to) : anchor2(from, s1);
+  const p2 = ds ? floatingEnd(to, from) : anchor2(to, s2);
+  const points = ds ? [p1, p2] : routePoints(p1, s1, p2, s2);
+  return { d: points.map((p, i) => `${i ? "L" : "M"}${n(p.x)} ${n(p.y)}`).join(""), points, p1, p2, ds, via: [] };
+}
+function segmentHits(p, q2, b2, pad = 0) {
+  const [x0, y0, x1, y1] = [b2.x - pad, b2.y - pad, b2.x + b2.w + pad, b2.y + b2.h + pad];
+  if (x1 <= x0 || y1 <= y0)
+    return false;
+  let t0 = 0;
+  let t1 = 1;
+  const dx = q2.x - p.x;
+  const dy = q2.y - p.y;
+  for (const [pp, qq] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
+    if (pp === 0) {
+      if (qq < 0)
+        return false;
+      continue;
+    }
+    const r2 = qq / pp;
+    if (pp < 0)
+      t0 = Math.max(t0, r2);
+    else
+      t1 = Math.min(t1, r2);
+    if (t0 > t1)
+      return false;
+  }
+  return true;
+}
+function runsThrough(points, boxes, fromId, toId) {
+  const out = [];
+  for (const o of boxes) {
+    for (let i = 0; i < points.length - 1; i++) {
+      if (i === 0 && o.id === fromId || i === points.length - 2 && o.id === toId)
+        continue;
+      if (segmentHits(points[i], points[i + 1], o, THROUGH_PAD)) {
+        out.push(o);
+        break;
+      }
+    }
+  }
+  return out;
+}
+function crossingsWith(a, others) {
+  let k2 = 0;
+  for (const o of others)
+    for (let i = 0; i < a.length - 1; i++)
+      for (let j2 = 0; j2 < o.length - 1; j2++) {
+        const [p, q2, r2, s] = [a[i], a[i + 1], o[j2], o[j2 + 1]];
+        if (samePt2(p, r2) || samePt2(p, s) || samePt2(q2, r2) || samePt2(q2, s))
+          continue;
+        if (orient(p, q2, r2) * orient(p, q2, s) < 0 && orient(r2, s, p) * orient(r2, s, q2) < 0)
+          k2++;
+      }
+  return k2;
+}
+function detourOf(from, to, boxes, others) {
+  const s = floatingEnd(from, to);
+  const t = floatingEnd(to, from);
+  const [x0, y0, x1, y1] = [Math.min(s.x, t.x), Math.min(s.y, t.y), Math.max(s.x, t.x), Math.max(s.y, t.y)];
+  const hit2 = boxes.filter((o) => o.id !== from.id && o.id !== to.id && overlapsBox(o, x0 - 1, y0 - 1, x1 + 1, y1 + 1) && segmentHits(s, t, o, THROUGH_PAD));
+  if (!hit2.length)
+    return void 0;
+  const L2 = Math.hypot(t.x - s.x, t.y - s.y) || 1;
+  const [ux, uy] = [(t.x - s.x) / L2, (t.y - s.y) / L2];
+  const [nx, ny] = [-uy, ux];
+  const singles = [];
+  const beside = (h) => {
+    const c2 = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
+    const along = Math.max(0, Math.min(L2, (c2.x - s.x) * ux + (c2.y - s.y) * uy));
+    const off = (c2.x - s.x) * nx + (c2.y - s.y) * ny;
+    const ext = Math.abs(nx) * (h.w / 2) + Math.abs(ny) * (h.h / 2) + DETOUR_GAP;
+    return { along, lo: off - ext, hi: off + ext };
+  };
+  for (const h of hit2) {
+    singles.push(...cornersOf(h, DETOUR_GAP));
+    const { along, lo, hi } = beside(h);
+    for (const d of [hi, lo])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  if (hit2.length > 1) {
+    const bs = hit2.map(beside);
+    const along = bs.reduce((v2, b2) => v2 + b2.along, 0) / bs.length;
+    for (const d of [Math.max(...bs.map((b2) => b2.hi)), Math.min(...bs.map((b2) => b2.lo))])
+      singles.push({ x: s.x + ux * along + nx * d, y: s.y + uy * along + ny * d });
+  }
+  const pts = [s, t, ...singles];
+  const bx0 = Math.min(...pts.map((p) => p.x)) - DETOUR_GAP;
+  const by0 = Math.min(...pts.map((p) => p.y)) - DETOUR_GAP;
+  const bx1 = Math.max(...pts.map((p) => p.x)) + DETOUR_GAP;
+  const by1 = Math.max(...pts.map((p) => p.y)) + DETOUR_GAP;
+  const near = boxes.filter((o) => overlapsBox(o, bx0, by0, bx1, by1));
+  const clear = (route) => {
+    for (let i = 0; i < route.length - 1; i++)
+      for (const o of near) {
+        if (i === 0 && o.id === from.id || i === route.length - 2 && o.id === to.id)
+          continue;
+        if (segmentHits(route[i], route[i + 1], o, CLEAR_PAD))
+          return false;
+      }
+    return true;
+  };
+  const lines = typeof others === "function" ? others() : others;
+  let best;
+  const tryVia = (via) => {
+    const route = [floatingEndTo(from, via[0]), ...via, floatingEndTo(to, via[via.length - 1])];
+    if (!clear(route))
+      return;
+    const score = len(route) + CROSS_COST * crossingsWith(route, lines);
+    if (!best || score < best.score - 1e-6)
+      best = { via, score };
+  };
+  for (const v2 of singles)
+    tryVia([v2]);
+  if (!best) {
+    const corners = hit2.flatMap((h) => cornersOf(h, DETOUR_GAP));
+    for (const a of corners)
+      for (const b2 of corners)
+        if (a !== b2)
+          tryVia([a, b2]);
+  }
+  return best?.via.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+}
+function dsSeqAt(s, along = 24) {
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const d = Math.min(along, len2 / 3);
+  return { x: s.p1.x + (q2.x - s.p1.x) / len2 * d, y: s.p1.y + (q2.y - s.p1.y) / len2 * d };
+}
+function dsVerbAt(s) {
+  const q2 = s.points[1] ?? s.p2;
+  const len2 = Math.hypot(q2.x - s.p1.x, q2.y - s.p1.y) || 1;
+  const ux = (q2.x - s.p1.x) / len2;
+  const uy = (q2.y - s.p1.y) / len2;
+  let nx = -uy;
+  let ny = ux;
+  if (ny > 0 || ny === 0 && nx > 0)
+    nx = -nx, ny = -ny;
+  const along = Math.min(24, len2 / 3);
+  const t = Math.max(len2 / 2, Math.min(len2 - 20, along + 44));
+  return { x: s.p1.x + ux * t + nx * 13, y: s.p1.y + uy * t + ny * 13 };
+}
+function labelObstacles(b2) {
+  return Object.values(b2.items).filter((it) => isLabelObstacle(it)).map((it) => ({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h }));
+}
+function wireLabel(it, shape, boxes) {
+  const text3 = wireText(it);
+  if (!text3)
+    return void 0;
+  const ctl = labelControl(it.data);
+  const ds = shape.ds && it.role !== "annotation-link";
+  const font = ds ? EDGE_LABEL.dsFont : EDGE_LABEL.font;
+  const prefer = ds && it.role === "activity" ? [dsVerbAt(shape)] : void 0;
+  return placeEdgeLabel(text3, shape.points, boxes, { font, at: ctl.at, short: ctl.short, prefer });
+}
+function planWires(b2, ids) {
+  const out = /* @__PURE__ */ new Map();
+  const wanted = ids ? new Set(ids) : void 0;
+  const wires = Object.values(b2.items).filter((it) => it.type === "arrow" && (!wanted || wanted.has(it.id))).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
+  const obstacles = labelObstacles(b2).sort((x2, y2) => x2.id < y2.id ? -1 : x2.id > y2.id ? 1 : 0);
+  const seqOf = (it) => typeof it.data?.seq === "number" ? it.data.seq : Infinity;
+  const bySeq = (x2, y2) => seqOf(x2.it) - seqOf(y2.it) || (x2.it.id < y2.it.id ? -1 : 1);
+  const lines = [];
+  for (const it of wires) {
+    const shape = wireShape(b2, it);
+    if (!shape)
+      continue;
+    out.set(it.id, { shape });
+    if (shape.ds)
+      lines.push({ it, shape });
+  }
+  lines.sort(bySeq);
+  const byId = new Map(obstacles.map((o) => [o.id, o]));
+  const ends = lines.flatMap((l) => [b2.items[l.it.from], b2.items[l.it.to]]);
+  const reach = 400;
+  const [lx0, ly0] = [Math.min(...ends.map((e) => e.x)) - reach, Math.min(...ends.map((e) => e.y)) - reach];
+  const [lx1, ly1] = [Math.max(...ends.map((e) => e.x + e.w)) + reach, Math.max(...ends.map((e) => e.y + e.h)) + reach];
+  const nearLines = lines.length ? obstacles.filter((o) => overlapsBox(o, lx0, ly0, lx1, ly1)) : [];
+  for (const line of lines) {
+    if (line.shape.via.length)
+      continue;
+    const from = byId.get(line.it.from) ?? { ...b2.items[line.it.from], id: line.it.from };
+    const to = byId.get(line.it.to) ?? { ...b2.items[line.it.to], id: line.it.to };
+    const via = detourOf(from, to, nearLines, () => lines.filter((l) => l !== line).map((l) => l.shape.points));
+    if (!via)
+      continue;
+    line.shape = folded(floatingEndTo(from, via[0]), via, floatingEndTo(to, via[via.length - 1]), true, true);
+    out.get(line.it.id).shape = line.shape;
+  }
+  for (const it of wires) {
+    const planned = out.get(it.id);
+    if (planned && (!planned.shape.ds || it.role === "annotation-link"))
+      planned.label = wireLabel(it, planned.shape, obstacles);
+  }
+  const ds = lines.filter((l) => l.it.role !== "annotation-link");
+  const titles = Object.values(b2.items).filter((g2) => g2.type === "frame" && g2.data?.ds === "group" && g2.text).map((g2) => ({ x: g2.x, y: g2.y - 24, w: measure(g2.text, 13.5, 600) + 6, h: 20 }));
+  const circles = [];
+  for (const { it, shape } of ds) {
+    if (it.role !== "activity" || typeof it.data?.seq !== "number")
+      continue;
+    const q2 = shape.points[1] ?? shape.p2;
+    const len2 = Math.hypot(q2.x - shape.p1.x, q2.y - shape.p1.y);
+    const others = obstacles.filter((o) => o.id !== it.from && o.id !== it.to);
+    const along = (d) => ({ x: shape.p1.x + (q2.x - shape.p1.x) / (len2 || 1) * d, y: shape.p1.y + (q2.y - shape.p1.y) / (len2 || 1) * d });
+    let at3 = dsSeqAt(shape);
+    for (let d = Math.min(24, len2 / 3); d <= Math.max(24, len2 * 0.42); d += 8) {
+      const p = along(d);
+      if (!labelHits(p.x, p.y, DS_SEQ, DS_SEQ, [...circles, ...titles, ...others], 2).length) {
+        at3 = p;
+        break;
+      }
+    }
+    circles.push(seqBox(at3));
+    out.get(it.id).seq = at3;
+  }
+  const placed = [];
+  for (const { it, shape } of ds) {
+    const label2 = wireLabel(it, shape, [...obstacles, ...circles, ...titles, ...placed]);
+    if (!label2)
+      continue;
+    out.get(it.id).label = label2;
+    if (label2.mode !== "dot")
+      placed.push({ x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h });
+  }
+  return out;
+}
+var SIDES, n, THROUGH_PAD, CLEAR_PAD, DETOUR_GAP, CROSS_COST, len, samePt2, orient, overlapsBox, cornersOf, DS_SEQ, wireText, seqBox;
+var init_wireGeometry = __esm({
+  "packages/canvas/dist/wireGeometry.js"() {
+    init_textMetrics();
+    init_edgeLabel();
+    SIDES = /* @__PURE__ */ new Set(["top", "right", "bottom", "left"]);
+    n = (v2) => Number.isInteger(v2) ? String(v2) : (Math.round(v2 * 100) / 100).toString();
+    THROUGH_PAD = -6;
+    CLEAR_PAD = 2;
+    DETOUR_GAP = 30;
+    CROSS_COST = 60;
+    len = (pts) => pts.reduce((v2, p, i) => i ? v2 + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0, 0);
+    samePt2 = (a, b2) => Math.abs(a.x - b2.x) < 0.5 && Math.abs(a.y - b2.y) < 0.5;
+    orient = (a, b2, c2) => Math.sign((b2.x - a.x) * (c2.y - a.y) - (b2.y - a.y) * (c2.x - a.x));
+    overlapsBox = (o, x0, y0, x1, y1) => o.x < x1 && o.x + o.w > x0 && o.y < y1 && o.y + o.h > y0;
+    cornersOf = (b2, g2) => [
+      { x: b2.x - g2, y: b2.y - g2 },
+      { x: b2.x + b2.w + g2, y: b2.y - g2 },
+      { x: b2.x + b2.w + g2, y: b2.y + b2.h + g2 },
+      { x: b2.x - g2, y: b2.y + b2.h + g2 }
+    ];
+    DS_SEQ = 22;
+    wireText = (it) => it.role === "trace" ? "" : (it.label ?? it.text ?? "").trim();
+    seqBox = (p) => ({ x: p.x - DS_SEQ / 2, y: p.y - DS_SEQ / 2, w: DS_SEQ, h: DS_SEQ });
+  }
+});
+
+// packages/canvas/dist/layoutCheck.js
+function scopeOf(board, frame) {
+  if (!frame)
+    return {};
+  const fid = board.items[diagramFrameId(frame)] ? diagramFrameId(frame) : board.items[frame] && isContainer(board.items[frame]) ? frame : void 0;
+  if (fid)
+    return { root: fid, key: frame };
+  if (board.kind !== "freeform" && frame === board.kind)
+    return { key: frame };
+  throw new LayoutError(`no diagram frame or container "${frame}" on this board`);
+}
+function inside(board, it, root) {
+  const seen = /* @__PURE__ */ new Set();
+  let cur = it;
+  while (cur?.parent && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    if (cur.parent === root)
+      return true;
+    cur = board.items[cur.parent];
+  }
+  return false;
+}
+function checkLayout(board, opts = {}) {
+  const { root, key } = scopeOf(board, opts.frame);
+  const shown = shownBoard(board);
+  const all = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment");
+  const items = root ? all.filter((it) => inside(shown, it, root)) : all;
+  const inScope = new Set(items.map((i) => i.id));
+  const found = [];
+  const frameOf2 = (it) => diagramOf3(board, board.items[it.id] ?? it)?.key;
+  const add = (it, f) => found.push({ id: it.id, ...f, ...frameOf2(it) ? { frame: frameOf2(it) } : {} });
+  const byParent = /* @__PURE__ */ new Map();
+  for (const it of items) {
+    if (DECOR_ROLES.has(it.role ?? "") || it.w <= 8 || it.h <= 8)
+      continue;
+    const k2 = it.parent && shown.items[it.parent] ? it.parent : "";
+    byParent.set(k2, [...byParent.get(k2) ?? [], it]);
+  }
+  for (const sibs of byParent.values()) {
+    for (let i = 0; i < sibs.length; i++) {
+      for (let j2 = i + 1; j2 < sibs.length; j2++) {
+        const a = sibs[i];
+        const b2 = sibs[j2];
+        if (isContainer(a) !== isContainer(b2))
+          continue;
+        if (isDsGroup(a) && isDsGroup(b2))
+          continue;
+        const ox = Math.min(a.x + a.w, b2.x + b2.w) - Math.max(a.x, b2.x);
+        const oy = Math.min(a.y + a.h, b2.y + b2.h) - Math.max(a.y, b2.y);
+        if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
+          continue;
+        const [first, second] = byReading(a, b2) <= 0 ? [a, b2] : [b2, a];
+        const cover = Math.round(100 * ox * oy / Math.min(a.w * a.h, b2.w * b2.h));
+        if (isContainer(a) && cover < CONTAINER_COVER)
+          continue;
+        const moveX = second.x >= first.x ? first.x + first.w + 20 - second.x : 0;
+        const moveY = first.y + first.h + 20 - second.y;
+        const how = moveX > 0 && moveX <= moveY ? `move it ${r(moveX)} px right` : `move it ${r(Math.max(moveY, 0))} px down`;
+        add(second, {
+          kind: "overlap",
+          message: `${nameOf2(second)} overlaps ${nameOf2(first)} (${ox > 0 ? r(ox) : 0}\xD7${r(oy)} px, ${cover}% of the smaller one)`,
+          suggestion: `${how} (to x ${r(second.x + (moveX > 0 && moveX <= moveY ? moveX : 0))}, y ${r(second.y + (moveX > 0 && moveX <= moveY ? 0 : Math.max(moveY, 0)))}), or make one of them smaller`,
+          others: [first.id]
+        });
+      }
+    }
+  }
+  for (const it of items) {
+    if (!it.text?.trim() || DECOR_ROLES.has(it.role ?? "") || it.role === "legend")
+      continue;
+    if (it.type === "lane" && it.role === "column") {
+      const room = it.w - 24 - 40;
+      const need2 = measure(it.text.split("\n")[0], 13.5, 600);
+      if (need2 > room + 2)
+        add(it, { kind: "clipped", message: `column title of ${nameOf2(it)} is cut short (needs ~${r(need2)} px, the header has ${r(room)})`, suggestion: `make the column ${r(need2 - room + 4)} px wider (w ${r(it.w + need2 - room + 4)}) or shorten the title` });
+      continue;
+    }
+    if (it.type !== "sticky" && it.type !== "card" && it.type !== "text" && !(it.type === "wireframe" && it.role !== "screen" && it.role !== "image" && it.role !== "nav"))
+      continue;
+    if (typeof it.data?.ds === "string" && it.data.ds !== "annotation")
+      continue;
+    const meta3 = it.role === "card" && (Array.isArray(it.data?.labels) && it.data.labels.length || it.data?.size || it.data?.assignee) ? 26 : 0;
+    const fit2 = fitText({ ...it, h: it.h - meta3 });
+    if (!fit2.clipped)
+      continue;
+    const grow = fit2.needH - (it.h - meta3);
+    add(it, {
+      kind: "clipped",
+      message: `text of ${nameOf2(it)} likely cut off: needs ~${fit2.lines.length} line${fit2.lines.length === 1 ? "" : "s"} at ${fit2.box.font} px, the ${r(it.w)}\xD7${r(it.h)} box fits ${fit2.fits}`,
+      suggestion: `make it ${grow} px taller (h ${r(it.h + grow)}), or wider, or shorten the text`
+    });
+  }
+  for (const it of items) {
+    const p = it.parent ? shown.items[it.parent] : void 0;
+    if (!p || !isContainer(p) || DECOR_ROLES.has(it.role ?? ""))
+      continue;
+    const out = {
+      left: p.x - it.x,
+      top: p.y - it.y,
+      right: it.x + it.w - (p.x + p.w),
+      bottom: it.y + it.h - (p.y + p.h)
+    };
+    const worst = Math.max(out.left, out.top, out.right, out.bottom);
+    if (worst <= OUTSIDE_TOL)
+      continue;
+    const cx = it.x + it.w / 2;
+    const cy = it.y + it.h / 2;
+    const centreIn = cx >= p.x && cx <= p.x + p.w && cy >= p.y && cy <= p.y + p.h;
+    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
+    const nx = Math.min(Math.max(it.x, p.x + 10), p.x + p.w - it.w - 10);
+    const ny = Math.min(Math.max(it.y, p.y + 10), p.y + p.h - it.h - 10);
+    const fitsIn = it.w <= p.w - 20 && it.h <= p.h - 20;
+    const into = fitsIn ? `move it to x ${r(nx)}, y ${r(ny)}` : `make ${nameOf2(p)} bigger (it is ${r(p.w)}\xD7${r(p.h)}, the item ${r(it.w)}\xD7${r(it.h)})`;
+    if (isLane(p) && !centreIn)
+      add(it, { kind: "off-lane", message: `${nameOf2(it)} belongs to ${nameOf2(p)} but is drawn outside it (${sides.join(", ")})`, suggestion: `${into}, or set its parent to the lane it is in`, others: [p.id] });
+    else
+      add(it, { kind: "outside-parent", message: `${nameOf2(it)} sticks out of ${nameOf2(p)}: ${sides.join(", ")}`, suggestion: `${into}${fitsIn ? "" : ""}`, others: [p.id] });
+  }
+  const groups = /* @__PURE__ */ new Map();
+  for (const it of items) {
+    if (isContainer(it) || SPANNING_ROLES.has(it.role ?? "") || DECOR_ROLES.has(it.role ?? ""))
+      continue;
+    const k2 = `${it.parent ?? ""}|${it.type}|${it.role ?? ""}`;
+    groups.set(k2, [...groups.get(k2) ?? [], it]);
+  }
+  const template2 = STICKY_W2 * STICKY_H2;
+  for (const sibs of groups.values()) {
+    const areas = sibs.map((s) => s.w * s.h).sort((a, b2) => a - b2);
+    const median = areas[Math.floor(areas.length / 2)];
+    for (const it of sibs) {
+      const area = it.w * it.h;
+      const vsSibs = sibs.length >= 3 && area >= OVERSIZE_RATIO * median;
+      const textH = it.text ? fitText({ ...it, h: 1e4 }).needH : 0;
+      const vsTemplate = (it.type === "sticky" || it.type === "card") && area > OVERSIZE_STICKIES * template2 && textH <= it.h / 2;
+      if (!vsSibs && !vsTemplate)
+        continue;
+      const typical = sibs.length >= 3 ? sibs.find((s) => s.w * s.h === median) : void 0;
+      const target = typical && vsSibs ? { w: typical.w, h: typical.h, what: "like its siblings" } : { w: STICKY_W2, h: STICKY_H2, what: "(the template sticky)" };
+      const atTarget = it.text ? fitText({ ...it, w: target.w, h: 1e4 }).needH : 0;
+      const size2 = atTarget <= target.h ? `use ${r(target.w)}\xD7${r(target.h)} ${target.what}` : atTarget <= target.h * 2 ? `use ${r(target.w)}\xD7${r(atTarget)} (the usual width, tall enough for its text)` : `its text is long for one ${it.role ?? it.type}: split it into several, or move the detail into a comment or the file, and use ${r(target.w)}\xD7${r(target.h)}`;
+      add(it, {
+        kind: "oversized",
+        message: vsSibs ? `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / median * 10) / 10}\xD7 the area of its ${sibs.length - 1} siblings (typically ${typical ? `${r(typical.w)}\xD7${r(typical.h)}` : "?"})` : `${nameOf2(it)} is ${r(it.w)}\xD7${r(it.h)}, ${Math.round(area / template2 * 10) / 10}\xD7 a template sticky (${STICKY_W2}\xD7${STICKY_H2})`,
+        suggestion: `${size2}; sizes come from the template \u2014 do not scale stickies up to fill space`
+      });
+    }
+  }
+  const dsGroups = items.filter(isDsGroup);
+  const titled = (g2) => ({ x: g2.x, y: g2.y - GROUP_TITLE, w: g2.w, h: g2.h + GROUP_TITLE });
+  const contains = (o, i) => o.x <= i.x + 1 && o.y <= i.y - GROUP_TITLE + 1 && o.x + o.w >= i.x + i.w - 1 && o.y + o.h >= i.y + i.h - 1;
+  for (let i = 0; i < dsGroups.length; i++)
+    for (let j2 = i + 1; j2 < dsGroups.length; j2++) {
+      const [ga, gb] = byReading(dsGroups[i], dsGroups[j2]) <= 0 ? [dsGroups[i], dsGroups[j2]] : [dsGroups[j2], dsGroups[i]];
+      if (contains(ga, gb) || contains(gb, ga))
+        continue;
+      const ta = titled(ga);
+      const tb = titled(gb);
+      const ox = Math.min(ta.x + ta.w, tb.x + tb.w) - Math.max(ta.x, tb.x);
+      const oy = Math.min(ta.y + ta.h, tb.y + tb.h) - Math.max(ta.y, tb.y);
+      if (ox <= OVERLAP_TOL || oy <= OVERLAP_TOL)
+        continue;
+      const ma = new Set(Array.isArray(ga.data?.members) ? ga.data.members : []);
+      const shared = (Array.isArray(gb.data?.members) ? gb.data.members : []).filter((m2) => ma.has(m2));
+      add(gb, {
+        kind: "group",
+        message: `the outline of ${nameOf2(gb)} overlaps the outline of ${nameOf2(ga)} (${r(ox)}\xD7${r(oy)} px)${shared.length ? `: they share ${shared.slice(0, 4).join(", ")}` : ""}`,
+        suggestion: shared.length ? "a pictogram can sit in only one outline: keep the shared member(s) in one group, or make one group a sub-group (all of its members also in the other \u2014 it is then drawn inside it)" : `move ${nameOf2(gb)}'s members ${r(Math.min(ox, oy) + 20)} px away from ${nameOf2(ga)}, or redraw (the layout trims outlines apart when their members leave room)`,
+        others: [ga.id]
+      });
+    }
+  const obstacles = labelObstacles(shown);
+  const plan = planWires(shown);
+  const marks = [];
+  let wires = 0;
+  const seqName = (w2) => typeof w2.data?.seq === "number" ? `number circle ${w2.data.seq}` : "number circle";
+  for (const w2 of Object.values(shown.items)) {
+    if (w2.type !== "arrow" || !w2.from || !w2.to || !inScope.has(w2.from) || !inScope.has(w2.to))
+      continue;
+    wires++;
+    const planned = plan.get(w2.id);
+    const a = shown.items[w2.from];
+    const z3 = shown.items[w2.to];
+    const text3 = wireText(w2);
+    if (planned?.seq) {
+      const box = seqBox(planned.seq);
+      marks.push({ wire: w2, what: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)}`, box, circle: true });
+      const on = labelHits(planned.seq.x, planned.seq.y, DS_SEQ, DS_SEQ, obstacles, 0).filter((o) => o.id !== w2.from && o.id !== w2.to);
+      if (on.length) {
+        const names = on.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        add(w2, { kind: "label", message: `${seqName(w2)} of the arrow ${nameOf2(a)} \u2192 ${nameOf2(z3)} sits on ${names}`, suggestion: `move ${names} ${DS_SEQ + 20} px off the arrow's start (or move ${nameOf2(z3)} so the arrow leaves ${nameOf2(a)} at another angle)`, others: on.map((o) => o.id) });
+      }
+    }
+    const folds = foldsOf(w2.data);
+    if (planned && (planned.shape.ds || folds.length)) {
+      const through = runsThrough(planned.shape.points, obstacles, w2.from, w2.to);
+      if (through.length) {
+        const names = through.slice(0, 3).map((o) => nameOf2(shown.items[o.id])).join(", ");
+        const at3 = (o) => `(${r(o.x + o.w + 40)}, ${r(o.y - 40)})`;
+        add(w2, {
+          kind: "wire-through",
+          message: `the ${planned.shape.ds ? "line" : "wire"} ${nameOf2(a)} \u2192 ${nameOf2(z3)} runs through ${names}${folds.length ? " (where it was folded, data.bend)" : ""}`,
+          suggestion: folds.length ? `move its folds (data.bend) so it goes round ${names}, or move ${names} off it` : `move ${names} off the line, or fold the line round it (data.bend: [{ "x": \u2026, "y": \u2026 }, \u2026] on the arrow \u2014 e.g. a fold at ${at3(through[0])})`,
+          others: through.map((o) => o.id)
+        });
+      }
+    }
+    const label2 = planned?.label;
+    if (!label2 || !text3)
+      continue;
+    const what = `label "${short(text3, 32)}" of the wire ${nameOf2(a)} \u2192 ${nameOf2(z3)}`;
+    if (label2.mode !== "dot")
+      marks.push({ wire: w2, what, box: { x: label2.x - label2.w / 2, y: label2.y - label2.h / 2, w: label2.w, h: label2.h }, circle: false });
+    if (label2.mode !== "dot" && label2.mode !== "cut")
+      continue;
+    const gapX = Math.max(z3.x - (a.x + a.w), a.x - (z3.x + z3.w));
+    const gapY = Math.max(z3.y - (a.y + a.h), a.y - (z3.y + z3.h));
+    const whole = labelSize(labelLines(text3, EDGE_LABEL.maxW, label2.font).lines, label2.font);
+    const across = gapX >= gapY;
+    const gap = Math.max(0, across ? gapX : gapY);
+    const need2 = (across ? whole.w : whole.h) + EDGE_LABEL.gap * 2 + 4;
+    const move = across ? `move ${nameOf2(z3)} ${r(need2 - gap)} px ${z3.x >= a.x ? "right" : "left"} (to x ${r(z3.x >= a.x ? z3.x + need2 - gap : z3.x - (need2 - gap))})` : `move ${nameOf2(z3)} ${r(need2 - gap)} px ${z3.y >= a.y ? "down" : "up"} (to y ${r(z3.y >= a.y ? z3.y + need2 - gap : z3.y - (need2 - gap))})`;
+    const fit2 = Math.max(0, Math.floor((Math.min(gap, EDGE_LABEL.maxW) - EDGE_LABEL.gap * 2 - EDGE_LABEL.padX * 2) / (label2.font * 0.55)));
+    const shorter = labelControl(w2.data).short ? "a shorter data.label.short" : "a short form in data.label.short";
+    const instead = `${fit2 >= 3 ? `${shorter} (about ${fit2} characters fit)` : shorter}, or shorten the label`;
+    add(w2, {
+      kind: "label",
+      message: label2.mode === "dot" ? `${what} has no free spot beside the wire (the gap is ${r(gap)} px, the label needs ~${r(need2)}): the page shows only a dot there, the text on hover` : `${what} is cut to "${label2.lines.join(" ")}" to stay off the cards (the gap is ${r(gap)} px, the whole label needs ~${r(need2)})`,
+      suggestion: need2 - gap > 0 ? `${move} to make room, or give it ${instead}` : `give it ${instead}`,
+      others: [a.id, z3.id]
+    });
+  }
+  for (let i = 0; i < marks.length; i++)
+    for (let j2 = i + 1; j2 < marks.length; j2++) {
+      const [m1, m2] = [marks[i], marks[j2]];
+      const ox = Math.min(m1.box.x + m1.box.w, m2.box.x + m2.box.w) - Math.max(m1.box.x, m2.box.x);
+      const oy = Math.min(m1.box.y + m1.box.h, m2.box.y + m2.box.h) - Math.max(m1.box.y, m2.box.y);
+      if (ox <= MARK_TOL || oy <= MARK_TOL)
+        continue;
+      const z3 = shown.items[m2.wire.to];
+      const fix = foldsOf(m1.wire.data).length || foldsOf(m2.wire.data).length ? "fold one of the two wires elsewhere (data.bend) so they part, or give one label a short form in data.label.short" : m1.wire.from === m2.wire.from ? `the two arrows leave ${nameOf2(shown.items[m1.wire.from])} at nearly the same angle: move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 30)} px sideways so they spread, or redraw the story` : `move ${nameOf2(z3)} about ${r(Math.max(ox, oy) + 20)} px so the wires part, or give one label a short form in data.label.short`;
+      add(m2.wire, { kind: "label", message: `${m2.what} ${m1.circle || m2.circle ? "collides with" : "overlaps"} ${m1.wire.id === m2.wire.id ? "its own " : ""}${m1.what} (${r(ox)}\xD7${r(oy)} px)`, suggestion: fix, others: m1.wire.id === m2.wire.id ? [] : [m1.wire.id] });
+    }
+  const paper = (it) => it.type === "frame" || it.type === "lane";
+  const coverable = Object.values(shown.items).filter((it) => it.type !== "arrow" && it.type !== "comment" && !paper(it) && it.w > 8 && it.h > 8);
+  const cards = Object.values(shown.items).filter((it) => it.type === "comment" && it.w > 8 && it.h > 8 && shown.items[it.target ?? ""]?.type !== "comment");
+  const uiScreenOf = (it) => {
+    const seen = /* @__PURE__ */ new Set();
+    for (let cur = it; cur && !seen.has(cur.id); cur = cur.parent ? shown.items[cur.parent] : void 0) {
+      if (isUiScreen(cur))
+        return cur;
+      seen.add(cur.id);
+    }
+    return void 0;
+  };
+  for (const c2 of Object.values(shown.items)) {
+    if (c2.type !== "comment" || c2.w <= 8 || c2.h <= 8)
+      continue;
+    const t = c2.target ? shown.items[c2.target] : void 0;
+    if (t?.type === "comment")
+      continue;
+    if (root && !inside(shown, c2, root) && !(t && inScope.has(t.id)))
+      continue;
+    const info = t ? diagramOf3(board, board.items[t.id] ?? t) : diagramOf3(board, board.items[c2.id] ?? c2);
+    const screen = t ? uiScreenOf(t) : void 0;
+    const gutter = screen ? uiGutterOf(screen) : void 0;
+    const label2 = `comment "${short(c2.text, 32)}"${t ? ` on ${nameOf2(t)}` : ""}`;
+    const into = gutter && screen && t ? `move it into the gutter right of ${nameOf2(screen)} (x ${r(gutter.x)}, y ${r(Math.max(t.y, gutter.y))}) \u2014 notes and threads live beside a screen, never on it` : t ? `move it beside ${nameOf2(t)} onto free paper, or add it without x/y so the canvas places it` : "move it onto free paper";
+    const push = (f2) => found.push({ id: c2.id, ...f2, severity: "info", ...info?.key ? { frame: info.key } : {} });
+    const covered = coverable.map((it) => ({ it, ox: Math.min(c2.x + c2.w, it.x + it.w) - Math.max(c2.x, it.x), oy: Math.min(c2.y + c2.h, it.y + it.h) - Math.max(c2.y, it.y) })).filter((o) => o.ox > OVERLAP_TOL && o.oy > OVERLAP_TOL).sort((a, b2) => byReading(a.it, b2.it));
+    if (covered.length) {
+      const names = covered.slice(0, 3).map((o) => nameOf2(o.it)).join(", ");
+      const more = covered.length > 3 ? ` and ${covered.length - 3} more` : "";
+      const leaves = covered.filter((o) => !isContainer(o.it));
+      const worst = (leaves.length ? leaves : covered).reduce((a, b2) => a.ox * a.oy >= b2.ox * b2.oy ? a : b2);
+      push({ kind: "comment-covers", message: `${label2} covers ${names}${more} (${r(worst.ox)}\xD7${r(worst.oy)} px on ${nameOf2(worst.it)})`, suggestion: into, others: covered.map((o) => o.it.id) });
+    }
+    const stacked = cards.filter((o) => o.id !== c2.id && (byReading(o, c2) || (o.id < c2.id ? -1 : 1)) < 0).map((o) => ({ o, ox: Math.min(c2.x + c2.w, o.x + o.w) - Math.max(c2.x, o.x), oy: Math.min(c2.y + c2.h, o.y + o.h) - Math.max(c2.y, o.y) })).filter((s) => s.ox > OVERLAP_TOL && s.oy > OVERLAP_TOL);
+    if (stacked.length) {
+      const names = stacked.slice(0, 3).map((s) => `comment "${short(s.o.text, 24)}"`).join(", ");
+      const more = stacked.length > 3 ? ` and ${stacked.length - 3} more` : "";
+      push({
+        kind: "comment-covers",
+        message: `${label2} lies on ${names}${more} (${r(stacked[0].ox)}\xD7${r(stacked[0].oy)} px)`,
+        suggestion: `move one of them onto free paper, or add it without x/y so the canvas places it; a note the file no longer has goes with a redraw of its diagram`,
+        others: stacked.map((s) => s.o.id)
+      });
+    }
+    if (!t || !info?.frameId || isAnnotationDraft(c2))
+      continue;
+    const f = shown.items[info.frameId];
+    if (!f || isHiddenFrame(f))
+      continue;
+    const out = { left: f.x - c2.x, top: f.y - c2.y, right: c2.x + c2.w - (f.x + f.w), bottom: c2.y + c2.h - (f.y + f.h) };
+    if (Math.max(out.left, out.top, out.right, out.bottom) <= OUTSIDE_TOL)
+      continue;
+    const sides = Object.entries(out).filter(([, v2]) => v2 > OUTSIDE_TOL).map(([s, v2]) => `${r(v2)} px past the ${s}`);
+    const nx = Math.min(Math.max(c2.x, f.x + 10), f.x + f.w - c2.w - 10);
+    const ny = Math.min(Math.max(c2.y, f.y + 10), f.y + f.h - c2.h - 10);
+    push({
+      kind: "comment-outside",
+      message: `${label2} is outside its frame ${nameOf2(f)}: ${sides.join(", ")}`,
+      suggestion: gutter ? `${into}, or grow the frame to hold the gutter` : `move it inside the frame beside ${nameOf2(t)} (x ${r(nx)}, y ${r(ny)}), or grow the frame`,
+      others: [f.id, t.id]
+    });
+  }
+  for (const d of shownDifferences(board)) {
+    if (!inScope.has(d.id))
+      continue;
+    const it = board.items[d.id];
+    const moved = Math.abs(d.stored.x - d.shown.x) > MOVED_TOL || Math.abs(d.stored.y - d.shown.y) > MOVED_TOL;
+    if (!moved || it.type === "frame")
+      continue;
+    const card = it.type === "card";
+    add(it, {
+      kind: "moved-by-layout",
+      message: `${nameOf2(it)} is stored at ${r(d.stored.x)},${r(d.stored.y)} but the page draws it at ${r(d.shown.x)},${r(d.shown.y)} (the kanban layout places ${card ? "cards" : "columns"})`,
+      suggestion: card ? "kanban cards stack in their column in the order of their stored y: set y to reorder (x is ignored); to change columns, set parent (or use the cards API)" : "kanban columns stand side by side in the order of their stored x: set x to reorder them; their y and height follow the row"
+    });
+  }
+  const counts = Object.fromEntries(KINDS2.map((k2) => [k2, 0]));
+  for (const f of found)
+    counts[f.kind]++;
+  const pos = (id) => shown.items[id] ?? board.items[id];
+  found.sort((a, b2) => KINDS2.indexOf(a.kind) - KINDS2.indexOf(b2.kind) || byReading(pos(a.id), pos(b2.id)));
+  const limit2 = opts.limit ?? 200;
+  const h = hiddenOf(board);
+  const within = (id) => !!id && (!root || id === root || inside(board, board.items[id], root));
+  const hidden = h ? [...h.ids].filter((id) => within(id) || within(h.frameOf.get(id))).length : 0;
+  return { findings: found.slice(0, limit2), checked: items.length, wires, ...key ? { frame: key } : {}, counts, ...hidden ? { hidden } : {} };
+}
+function byReading(a, b2) {
+  const ra = Math.round(a.y / 60);
+  const rb = Math.round(b2.y / 60);
+  return ra !== rb ? ra - rb : a.x - b2.x;
+}
+var STICKY_W2, STICKY_H2, LayoutError, KINDS2, OVERLAP_TOL, CONTAINER_COVER, OUTSIDE_TOL, OVERSIZE_RATIO, OVERSIZE_STICKIES, MOVED_TOL, DECOR_ROLES, isDsGroup, GROUP_TITLE, MARK_TOL, SPANNING_ROLES, isContainer, isLane, short, nameOf2, r;
+var init_layoutCheck = __esm({
+  "packages/canvas/dist/layoutCheck.js"() {
+    init_annotations();
+    init_hidden();
+    init_model();
+    init_shown();
+    init_textMetrics();
+    init_edgeLabel();
+    init_wireGeometry();
+    init_uiMock();
+    STICKY_W2 = 160;
+    STICKY_H2 = 110;
+    LayoutError = class extends Error {
+      status;
+      constructor(message, status = 404) {
+        super(message);
+        this.status = status;
+      }
+    };
+    KINDS2 = ["clipped", "overlap", "group", "label", "wire-through", "off-lane", "outside-parent", "oversized", "moved-by-layout", "comment-covers", "comment-outside"];
+    OVERLAP_TOL = 6;
+    CONTAINER_COVER = 25;
+    OUTSIDE_TOL = 6;
+    OVERSIZE_RATIO = 3;
+    OVERSIZE_STICKIES = 3;
+    MOVED_TOL = 8;
+    DECOR_ROLES = /* @__PURE__ */ new Set(["pivotal", "release-cut", "phase", "legend-title", "scope"]);
+    isDsGroup = (it) => it.type === "frame" && it.data?.ds === "group";
+    GROUP_TITLE = 26;
+    MARK_TOL = 2;
+    SPANNING_ROLES = /* @__PURE__ */ new Set(["activity", "phase", "legend-title", "scope", "release-cut", "title", "heading", "annotation"]);
+    isContainer = (it) => it.type === "frame" || it.type === "lane" || it.type === "wireframe" && it.role === "screen" || it.type === "ui" && Boolean(it.data?.ui?.container);
+    isLane = (it) => !!it && it.type === "lane";
+    short = (s, n2 = 40) => {
+      const t = (s ?? "").replace(/\s+/g, " ").trim();
+      return t.length > n2 ? t.slice(0, n2 - 1) + "\u2026" : t;
+    };
+    nameOf2 = (it) => {
+      const t = short(it.text);
+      return t ? `${it.role ?? it.type} "${t}"` : `${it.role ?? it.type}`;
+    };
+    r = Math.round;
+  }
+});
+
+// packages/canvas/dist/diagrams/domainStoryLayout.js
+function domainStoryLayoutFindings(content, key = "ds") {
+  const m2 = normalizeDomainStory(content);
+  let items;
+  try {
+    items = renderDomainStory(content, { scope: key, now: "1970-01-01T00:00:00.000Z" });
+  } catch {
+    return [];
+  }
+  const out = [];
+  const element = (id) => id.startsWith(`${key}.`) ? id.slice(key.length + 1).replace(/^(group|note|object|actor)\./, "") : id;
+  const board = { id: "lint", title: "", kind: "freeform", seq: 0, createdAt: "", updatedAt: "", items: Object.fromEntries(items.map((i) => [i.id, i])) };
+  const shared = (a, b2) => {
+    const ga = m2.groups.find((g2) => g2.id === a);
+    const gb = m2.groups.find((g2) => g2.id === b2);
+    return !!ga && !!gb && ga.members.some((x2) => gb.members.includes(x2));
+  };
+  for (const f of checkLayout(board, { limit: 200 }).findings) {
+    if (f.kind === "group") {
+      const [a, b2] = [element(f.others?.[0] ?? ""), element(f.id)];
+      if (shared(a, b2))
+        continue;
+      out.push({ rule: "group-outlines-overlap", severity: "warning", element: b2, message: `${f.message}, although the two groups share no member: their members interleave on the board (often sentences grouped by number around one actor they all pass through) \u2014 group what sits together (an actor with its work objects), give the story more room (\`layout: { spacing: roomy }\`), split it into two stories, or drop the groups`, page: PAGE });
+    } else if (f.kind === "wire-through") {
+      out.push({ rule: "line-through", severity: "warning", element: element(f.id), message: `${f.message} \u2014 on the board: ${f.suggestion}`, page: PAGE });
+    }
+  }
+  const asked = m2.layout?.actors === "repeat" ? "`layout.actors: repeat`" : m2.actors.some((a) => a.repeat) ? "`repeat: true`" : void 0;
+  if (asked && !items.some((i) => i.data?.occurrence))
+    out.push({
+      rule: "repeat-no-effect",
+      severity: "info",
+      message: `${asked} draws no actor again in this story: every sentence is drawn within two grid cells of the drawings its actors already have (an actor is drawn again only where the story comes back to it from further away) \u2014 to draw one again anyway, put \`drawAgain: <actor>\` on the sentence that should get the copy`,
+      page: PAGE
+    });
+  return out;
+}
+var PAGE;
+var init_domainStoryLayout = __esm({
+  "packages/canvas/dist/diagrams/domainStoryLayout.js"() {
+    init_layoutCheck();
+    init_domain_story();
+    init_domainStory();
+    PAGE = "docs/diagrams.md \xA76b";
+  }
+});
+
 // packages/canvas/dist/diagrams/grammar.js
 function checkEventStorming(content) {
   const m2 = "kindOf" in content ? content : normalizeEventStorming(content);
@@ -61309,7 +62491,7 @@ function checkEventStorming(content) {
         out.push({ rule: "command-without-system", severity: "warning", element: k2.id, message: `"${k2.text}": no system between the command and its event`, page: "p.202" });
       if (!k2.produces.length)
         out.push({ rule: "command-without-event", severity: "warning", element: k2.id, message: `"${k2.text}" produces no event \u2014 the path is not complete`, page: "p.199" });
-      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r) => r.informs.includes(k2.id));
+      const triggered = !!k2.by || m2.policies.some((p) => p.then.includes(k2.id)) || m2.readModels.some((r2) => r2.informs.includes(k2.id));
       if (!triggered)
         out.push({ rule: "command-without-trigger", severity: "info", element: k2.id, message: `"${k2.text}": nobody issues it \u2014 add a person or a policy`, page: "p.216" });
     }
@@ -61326,9 +62508,9 @@ function checkEventStorming(content) {
         return;
       out.push({ rule: "event-without-source", severity: "info", element: e.id, message: `"${e.text}": where does it come from? a command, a system, time or a policy`, page: "p.208" });
     });
-    for (const r of m2.readModels) {
-      if (!r.informs.length)
-        out.push({ rule: "read-model-unused", severity: "warning", element: r.id, message: `"${r.text}" informs no person or command`, page: "p.231" });
+    for (const r2 of m2.readModels) {
+      if (!r2.informs.length)
+        out.push({ rule: "read-model-unused", severity: "warning", element: r2.id, message: `"${r2.text}" informs no person or command`, page: "p.231" });
     }
     if (m2.level === "process") {
       for (const e of m2.events.filter((e2) => e2.pivotal))
@@ -61357,23 +62539,23 @@ var init_grammar = __esm({
 function designFromObject(file2, raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     throw new Error(`${file2}: expected a YAML mapping`);
-  const r = raw;
+  const r2 = raw;
   const base = (file2.split(/[\\/]/).pop() ?? file2).replace(/\.ya?ml$/i, "");
   const dot = base.lastIndexOf(".");
   const name = dot > 0 ? base.slice(0, dot) : base;
   const alias = dot > 0 ? base.slice(dot + 1) : void 0;
-  if (alias === "workflow" || !r.kind && !alias && Array.isArray(r.steps) === false && r.steps && typeof r.steps === "object") {
+  if (alias === "workflow" || !r2.kind && !alias && Array.isArray(r2.steps) === false && r2.steps && typeof r2.steps === "object") {
     const key2 = `${name}-workflow`.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-    return { key: key2, kind: "workflow", title: typeof r.name === "string" ? r.name : void 0, content: r };
+    return { key: key2, kind: "workflow", title: typeof r2.name === "string" ? r2.name : void 0, content: r2 };
   }
-  const kind = typeof r.kind === "string" ? KIND_ALIASES[r.kind] ?? r.kind : alias ? KIND_ALIASES[alias] : void 0;
+  const kind = typeof r2.kind === "string" ? KIND_ALIASES[r2.kind] ?? r2.kind : alias ? KIND_ALIASES[alias] : void 0;
   if (!kind)
     throw new Error(`${file2}: which diagram is this? name it <name>.<kind>.yaml (${Object.keys(KIND_ALIASES).join(", ")}) or set kind:`);
   const derived2 = alias && !name.endsWith(`-${alias}`) ? `${name}-${alias}` : name;
-  const key = typeof r.key === "string" ? r.key : derived2.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  const key = typeof r2.key === "string" ? r2.key : derived2.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(key))
     throw new Error(`${file2}: diagram key "${key}" must be lower-case letters, digits and dashes`);
-  const { key: _k, kind: _kind, title, ...content } = r;
+  const { key: _k, kind: _kind, title, ...content } = r2;
   const level = typeof content.level === "string" ? content.level : void 0;
   return { key, kind, title: typeof title === "string" ? title : void 0, level, content };
 }
@@ -61402,7 +62584,7 @@ function lintDesignContent(d) {
   if (!parsed.success)
     return [...parsed.error.issues.map((i) => ({ severity: "error", message: `${i.path.map((p) => typeof p === "number" ? `[${p}]` : `.${String(p)}`).join("").replace(/^\./, "") || "(root)"}: ${i.message}` })), ...unknown2];
   if (d.kind === "domain-story")
-    return [...unknown2, ...checkDomainStory(d.content).map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
+    return [...unknown2, ...[...checkDomainStory(d.content), ...domainStoryLayoutFindings(d.content, d.key)].map((f) => ({ severity: f.severity, message: f.message, element: f.element, page: f.page }))];
   const notes = annotationFindings(d.kind, parsed.data, d.key);
   if (d.kind === "ui-mock")
     return [...[...lintUiMock(d.content), ...clickNoteFindings(d.content)].map((f) => ({ severity: f.severity, message: f.message, element: f.element })), ...notes];
@@ -61499,6 +62681,7 @@ var init_designFile = __esm({
     init_templates();
     init_check();
     init_domainStory();
+    init_domainStoryLayout();
     init_uiMock();
     init_grammar();
     KIND_ALIASES = {
@@ -61651,8 +62834,8 @@ function same(a, b2) {
   return ka.length === kb.length && ka.every((k2) => same(a[k2], b2[k2]));
 }
 function freeSpot(b2, boxes, from) {
-  const hit = (c2) => boxes.some((o) => c2.x < o.x + o.w + GAP3 && o.x < c2.x + c2.w + GAP3 && c2.y < o.y + o.h + GAP3 && o.y < c2.y + c2.h + GAP3);
-  if (!hit(b2))
+  const hit2 = (c2) => boxes.some((o) => c2.x < o.x + o.w + GAP3 && o.x < c2.x + c2.w + GAP3 && c2.y < o.y + o.h + GAP3 && o.y < c2.y + c2.h + GAP3);
+  if (!hit2(b2))
     return { box: b2, nudged: false };
   const a0 = Math.atan2(b2.y + b2.h / 2 - from.y, b2.x + b2.w / 2 - from.x);
   const step = Math.max(40, Math.round(Math.min(b2.w, b2.h) / 2));
@@ -61660,7 +62843,7 @@ function freeSpot(b2, boxes, from) {
     for (let k2 = 0; k2 < 12; k2++) {
       const a = a0 + Math.ceil(k2 / 2) * (k2 % 2 ? 1 : -1) * Math.PI / 6;
       const c2 = { ...b2, x: Math.round(b2.x + Math.cos(a) * ring * step), y: Math.round(b2.y + Math.sin(a) * ring * step) };
-      if (!hit(c2))
+      if (!hit2(c2))
         return { box: c2, nudged: true };
     }
   return { box: b2, nudged: false };
@@ -61775,14 +62958,14 @@ function explainRedraw(board, given, inputs, scope = { prefix: SCOPE }) {
           why.push(kept === "moved" ? "keeps where you put it" : kept === "locked" ? "keeps its place (locked)" : "keeps its place");
         }
       }
-      const anchor2 = hints.get(d.id);
-      const shift = !landed.has(d.id) && anchor2 && solid(d) ? shiftOf(anchor2) : void 0;
-      if (anchor2 && shift) {
-        const a = boxOf(at3(anchor2));
+      const anchor3 = hints.get(d.id);
+      const shift = !landed.has(d.id) && anchor3 && solid(d) ? shiftOf(anchor3) : void 0;
+      if (anchor3 && shift) {
+        const a = boxOf(at3(anchor3));
         const spot = freeSpot({ ...boxOf(d), x: num2(d.x) + shift.dx, y: num2(d.y) + shift.dy }, obstacles(d.id), { x: a.x + a.w / 2, y: a.y + a.h / 2 });
-        item = { ...item, x: spot.box.x, y: spot.box.y, data: { ...item.data ?? {}, placedNear: anchor2 } };
+        item = { ...item, x: spot.box.x, y: spot.box.y, data: { ...item.data ?? {}, placedNear: anchor3 } };
         landed.set(d.id, item);
-        why.push(`placed next to "${label(board[anchor2] ?? drawnById.get(anchor2))}", where ${placed.has(anchor2) ? "you put it" : "it is on the board"}${spot.nudged ? " (moved aside to a free spot)" : ""}`);
+        why.push(`placed next to "${label(board[anchor3] ?? drawnById.get(anchor3))}", where ${placed.has(anchor3) ? "you put it" : "it is on the board"}${spot.nudged ? " (moved aside to a free spot)" : ""}`);
       }
       updates.push({ kind: "add", item });
       plan.added.push({ id: d.id, label: label(d), ...why.length ? { why: why.join("; ") } : {} });
@@ -61860,8 +63043,8 @@ function explainRedraw(board, given, inputs, scope = { prefix: SCOPE }) {
     if (pendingOf(it) && owned(it))
       continue;
     const mine = foreign.has(it.id);
-    const inside = mine || !it.id.startsWith(scope.prefix) && (it.type === "arrow" ? endIn(it.from) && endIn(it.to) : inFrame(it));
-    if (!inside)
+    const inside2 = mine || !it.id.startsWith(scope.prefix) && (it.type === "arrow" ? endIn(it.from) && endIn(it.to) : inFrame(it));
+    if (!inside2)
       continue;
     plan.foreign.push({ id: it.id, label: label(it), why: `added by ${addedBy(it)}${mine ? " with this file's prefix" : ""}, not from this file: kept` });
   }
@@ -61881,7 +63064,7 @@ function explainRedraw(board, given, inputs, scope = { prefix: SCOPE }) {
   return { ops: result, plan, keptLayout };
 }
 function planSummary(plan) {
-  const parts2 = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n]) => n > 0).map(([n, name]) => `${n} ${name}`);
+  const parts2 = SECTIONS.map(([k2, , name]) => [plan[k2].length, name]).filter(([n2]) => n2 > 0).map(([n2, name]) => `${n2} ${name}`);
   if (plan.unchanged)
     parts2.splice(Math.min(2, parts2.length), 0, `${plan.unchanged} unchanged`);
   return parts2.length ? parts2.join(" \xB7 ") : "nothing to change";
@@ -62064,10 +63247,10 @@ var init_client2 = __esm({
       /** Boards, optionally only those of one project (a project id, or 'personal'). */
       listBoards(project) {
         const q2 = project ? `?project=${encodeURIComponent(project)}` : "";
-        return this.req("GET", `/api/boards${q2}`).then((r) => r.boards);
+        return this.req("GET", `/api/boards${q2}`).then((r2) => r2.boards);
       }
       createBoard(input2) {
-        return this.req("POST", "/api/boards", input2).then((r) => r.board);
+        return this.req("POST", "/api/boards", input2).then((r2) => r2.board);
       }
       /**
        * The board titled `title`, else a new one — decided by the canvas in one step, so two agents drawing at once get the
@@ -62077,18 +63260,18 @@ var init_client2 = __esm({
         return this.req("POST", "/api/boards", { ...input2, author: "agent", reuse: "title" });
       }
       projects() {
-        return this.req("GET", "/api/projects").then((r) => r.projects);
+        return this.req("GET", "/api/projects").then((r2) => r2.projects);
       }
       /** Register the project at `root` on this canvas (only accepted from the canvas's own machine). */
       registerProject(root) {
-        return this.req("POST", "/api/projects", { root }).then((r) => r.project);
+        return this.req("POST", "/api/projects", { root }).then((r2) => r2.project);
       }
       /** Move a board (snapshot + log) into a project: a project id or, from this machine, `{ projectRoot }`. */
       moveBoard(id, to) {
         return this.req("POST", `/api/boards/${encodeURIComponent(id)}/move`, to);
       }
       getBoard(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}`).then((r) => r.board);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}`).then((r2) => r2.board);
       }
       outline(id) {
         return this.req("GET", `/api/boards/${encodeURIComponent(id)}/outline`);
@@ -62101,14 +63284,14 @@ var init_client2 = __esm({
       }
       /** Board-level fields (title, meta — meta is replaced whole; prefer patchBoard, which merges). */
       updateBoard(id, patch) {
-        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
+        return this.req("PUT", `/api/boards/${encodeURIComponent(id)}`, patch).then((r2) => r2.board);
       }
       /**
        * Merge into the board's meta (PATCH /api/boards/:id): only the keys given change (null removes one);
        * `meta.diagrams` merges per diagram key — so two agents drawing different diagrams never overwrite each other.
        */
       patchBoard(id, patch) {
-        return this.req("PATCH", `/api/boards/${encodeURIComponent(id)}`, patch).then((r) => r.board);
+        return this.req("PATCH", `/api/boards/${encodeURIComponent(id)}`, patch).then((r2) => r2.board);
       }
       changes(id, since = 0, author) {
         const q2 = new URLSearchParams({ since: String(since) });
@@ -62157,10 +63340,10 @@ var init_client2 = __esm({
           q2.set("until", "mention");
         if (opts.contextOnce)
           q2.set("context", "changed");
-        const r = await this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`, void 0, opts.signal);
-        if (typeof r !== "object" || r === null || typeof r.seq !== "number")
-          throw new Error(r?.error ?? "the canvas gave no answer to the wait");
-        return r;
+        const r2 = await this.req("GET", `/api/boards/${encodeURIComponent(id)}/wait?${q2}`, void 0, opts.signal);
+        if (typeof r2 !== "object" || r2 === null || typeof r2.seq !== "number")
+          throw new Error(r2?.error ?? "the canvas gave no answer to the wait");
+        return r2;
       }
       /** Who answers the board, its context note, who holds the files, the agents it knows. */
       settings(id) {
@@ -62207,7 +63390,7 @@ var init_client2 = __esm({
       }
       /** What agents said about Unprose — a local agent (or a page allowed to manage agents) only. */
       feedback() {
-        return this.req("GET", "/api/feedback").then((r) => r.feedback);
+        return this.req("GET", "/api/feedback").then((r2) => r2.feedback);
       }
       /** Kanban: column moves since `since` (structured; see cardMoves). */
       cardMoves(id, since) {
@@ -62225,10 +63408,10 @@ var init_client2 = __esm({
       }
       /** The files behind a board (its snapshot) with their sha-1, or one file with its text (docs/canvas.md "Proposals and saving"). */
       files(id) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r) => r.files);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files`).then((r2) => r2.files);
       }
       file(id, path24) {
-        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path24)}`).then((r) => r.file);
+        return this.req("GET", `/api/boards/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path24)}`).then((r2) => r2.file);
       }
       /** Propose an edit to one of those files: checked against the snapshot, posted as a chat request on the board. */
       propose(id, input2) {
@@ -62402,8 +63585,8 @@ async function cmdProjects(args2, flags2) {
   }
   const force = flags2.force === true || flags2.force === "true" || flags2.force === "1" || !!forceWord;
   try {
-    const r = await api("DELETE", `/api/projects/${encodeURIComponent(p.id)}${force ? "?force=1" : ""}`);
-    console.log(`removed project ${r.removed.id}${p.root ? ` (${p.root} \u2014 its files stay)` : ""}${r.moved.length ? `; moved ${r.moved.length} board(s) to the personal space: ${r.moved.join(", ")}` : ""}`);
+    const r2 = await api("DELETE", `/api/projects/${encodeURIComponent(p.id)}${force ? "?force=1" : ""}`);
+    console.log(`removed project ${r2.removed.id}${p.root ? ` (${p.root} \u2014 its files stay)` : ""}${r2.moved.length ? `; moved ${r2.moved.length} board(s) to the personal space: ${r2.moved.join(", ")}` : ""}`);
     return true;
   } catch (e) {
     console.error(e.message);
@@ -62429,9 +63612,9 @@ async function cmdBoards(args2, flags2) {
     }
     id = hits[0].id;
   }
-  const r = await api("POST", `/api/boards/${encodeURIComponent(id)}/move`, { projectRoot: path13.resolve(to) });
-  console.log(`moved ${r.board} into project ${r.project} (${path13.join(path13.resolve(to), ".unprose", "boards")}); the URL ${base}/b/${r.board} is unchanged`);
-  console.log(`commit ${path13.join(".unprose", "boards", `${r.board}.json`)} with the project (the change log stays local)`);
+  const r2 = await api("POST", `/api/boards/${encodeURIComponent(id)}/move`, { projectRoot: path13.resolve(to) });
+  console.log(`moved ${r2.board} into project ${r2.project} (${path13.join(path13.resolve(to), ".unprose", "boards")}); the URL ${base}/b/${r2.board} is unchanged`);
+  console.log(`commit ${path13.join(".unprose", "boards", `${r2.board}.json`)} with the project (the change log stays local)`);
   return true;
 }
 var init_projects = __esm({
@@ -62574,11 +63757,11 @@ function proposeStories(content, opts) {
         continue;
       const seg = segOf(k2.produces[0]);
       const who = person(k2.by) ?? person(m2.policies.find((p) => p.then.includes(k2.id))?.person);
-      const shown = m2.readModels.filter((r) => r.informs.includes(k2.id) || k2.by !== void 0 && r.informs.includes(k2.by));
+      const shown = m2.readModels.filter((r2) => r2.informs.includes(k2.id) || k2.by !== void 0 && r2.informs.includes(k2.by));
       candidates.push({
         id: `from-${k2.id}`,
         text: who ? `As ${who}, I ${lowerFirst(k2.text)}` : k2.text,
-        acceptance: [...k2.produces.map((e) => `Event: ${eventText(e)}`), ...shown.map((r) => `Shows: ${r.text}`)],
+        acceptance: [...k2.produces.map((e) => `Event: ${eventText(e)}`), ...shown.map((r2) => `Shows: ${r2.text}`)],
         traces: [{ from: ref2(k2.id), rel: "derived-from" }],
         activity: { id: activityByText.get(seg.text) ?? seg.id, text: seg.text },
         step: { id: stepByText.get(k2.text) ?? k2.id, text: k2.text },
@@ -62708,8 +63891,8 @@ function fromEgon(file2) {
 }
 function toEgon(content, opts = {}) {
   const m2 = normalizeDomainStory(content);
-  let n = 0;
-  const id = (p) => `${p}_${1e3 + ++n}`;
+  let n2 = 0;
+  const id = (p) => `${p}_${1e3 + ++n2}`;
   const objs = [];
   const shapeOf = /* @__PURE__ */ new Map();
   const COL4 = 250;
@@ -62755,13 +63938,13 @@ function toEgon(content, opts = {}) {
       objs.push(wo);
       shapeOf.set(s.id, wo);
       objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: wo.id, waypoints: [center(actor), center(wo)], pickedColor: "black" });
-      for (const r of s.to) {
-        const to = shapeOf.get(drawingOf(s.id, r));
+      for (const r2 of s.to) {
+        const to = shapeOf.get(drawingOf(s.id, r2));
         objs.push({ id: id("connection"), type: "domainStory:activity", name: s.toLabel ?? "", number: null, source: wo.id, target: to.id, waypoints: [center(wo), center(to)], pickedColor: "black" });
       }
     } else {
-      for (const r of s.to.length ? s.to : []) {
-        const to = shapeOf.get(drawingOf(s.id, r));
+      for (const r2 of s.to.length ? s.to : []) {
+        const to = shapeOf.get(drawingOf(s.id, r2));
         objs.push({ id: id("connection"), type: "domainStory:activity", name: s.verb, number: s.seq, source: actor.id, target: to.id, waypoints: [center(actor), center(to)], pickedColor: "black" });
       }
     }
@@ -62836,7 +64019,7 @@ function proposeFromDomainStory(content, opts) {
     const ref2 = `${opts.dsKey}/${s.id}`;
     if (traced.has(ref2))
       continue;
-    const receivers = s.to.map((r) => actor(r).text);
+    const receivers = s.to.map((r2) => actor(r2).text);
     const group = m2.groups.find((g2) => g2.members.includes(s.id) || s.object && g2.members.includes(s.object) || g2.members.includes(s.actor)) ?? story;
     candidates.push({
       id: `from-${s.id}`,
@@ -62928,14 +64111,14 @@ async function previewGraph(def2, opts = {}) {
   const title = `${def2.name} \u2014 workflow.yaml`;
   const api = canvasApi(base);
   const { boards } = await api("GET", "/api/boards");
-  const hit = boards.find((b2) => b2.title === title && b2.kind === "workflow");
-  if (!hit)
+  const hit2 = boards.find((b2) => b2.title === title && b2.kind === "workflow");
+  if (!hit2)
     return { base, lines: [`Redraw preview \u2014 ${def2.name} (dry run: nothing written)`, `  no board "${title}" yet: a real draw creates it and adds every block`] };
-  const { items: drawn } = await api("POST", `/api/boards/${hit.id}/template`, { kind: "workflow", content: graph });
-  const { board: current } = await api("GET", `/api/boards/${hit.id}`);
-  const { plan } = explainRedraw(current.items, drawn, await redrawInputsOf(api, hit.id));
-  const refused = await redrawRefusal(api, hit.id, "workflow", { workflow: true });
-  return { base, boardId: hit.id, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 workflow ${def2.name} on "${title}" (${base}/b/${hit.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
+  const { items: drawn } = await api("POST", `/api/boards/${hit2.id}/template`, { kind: "workflow", content: graph });
+  const { board: current } = await api("GET", `/api/boards/${hit2.id}`);
+  const { plan } = explainRedraw(current.items, drawn, await redrawInputsOf(api, hit2.id));
+  const refused = await redrawRefusal(api, hit2.id, "workflow", { workflow: true });
+  return { base, boardId: hit2.id, plan, lines: [...planLines(plan, { title: `Redraw preview \u2014 workflow ${def2.name} on "${title}" (${base}/b/${hit2.id})`, limit: opts.limit }), ...refused ? [`  \u2716 a real draw is refused: ${refused}`] : []] };
 }
 async function redrawInputsOf(api, boardId) {
   const id = encodeURIComponent(boardId);
@@ -62956,7 +64139,7 @@ function withDetails(graph, file2) {
   return {
     graph: {
       ...graph,
-      nodes: graph.nodes.map((n) => d.nodes[n.id] ? { ...n, detail: d.nodes[n.id] } : n),
+      nodes: graph.nodes.map((n2) => d.nodes[n2.id] ? { ...n2, detail: d.nodes[n2.id] } : n2),
       agents: graph.agents.map((a) => d.agents[a.id] ? { ...a, detail: d.agents[a.id] } : a)
     },
     files: workflowFiles(wf, d, opts)
@@ -63020,6 +64203,7 @@ __export(design_exports, {
   previewDesign: () => previewDesign,
   proposalOps: () => proposalOps,
   proposeStoriesToBoard: () => proposeStoriesToBoard,
+  redrawReport: () => redrawReport,
   unresolvedReport: () => unresolvedReport,
   yamlCommentHint: () => yamlCommentHint
 });
@@ -63042,8 +64226,8 @@ function lintDesign(d, file2) {
     if (!file2)
       return [{ severity: "info", message: "workflow: lint it with awd lint <file>" }];
     const def2 = loadWorkflow(file2).def;
-    const r = lint(def2);
-    return [...r.errors.map((e) => ({ severity: "error", message: `${e.where}: ${e.message}` })), ...r.warnings.map((w2) => ({ severity: "warning", message: `${w2.where}: ${w2.message}` })), ...annotationFindings("workflow", toGraph(def2), d.key)];
+    const r2 = lint(def2);
+    return [...r2.errors.map((e) => ({ severity: "error", message: `${e.where}: ${e.message}` })), ...r2.warnings.map((w2) => ({ severity: "warning", message: `${w2.where}: ${w2.message}` })), ...annotationFindings("workflow", toGraph(def2), d.key)];
   }
   return lintDesignContent(d);
 }
@@ -63059,10 +64243,10 @@ function cmdDesignLint(file2) {
       console.log(line);
   return errors.length === 0;
 }
-async function resolveBoard(api, ref2, projectRoot) {
+async function resolveBoard(api, ref2, projectRoot, inProject2) {
   if (ref2.startsWith("title:")) {
     const title = ref2.slice(6).trim();
-    const project = projectRoot ? await registerProject(api, projectRoot) : void 0;
+    const project = inProject2 ?? (projectRoot ? await registerProject(api, projectRoot) : void 0);
     const id = (await boardByTitle(api, title, "freeform", project)).id;
     return (await api("GET", `/api/boards/${id}`)).board;
   }
@@ -63079,8 +64263,28 @@ async function findBoard(api, ref2, projectRoot, kind) {
     const { projects = [] } = await api("GET", "/api/projects").catch(() => ({ projects: [] }));
     project = projects.find((p) => p.root && path16.resolve(p.root) === path16.resolve(projectRoot))?.id;
   }
-  const hit = (project ? named3.find((b2) => b2.project === project) : void 0) ?? named3[0];
-  return hit ? (await api("GET", `/api/boards/${hit.id}`)).board : void 0;
+  const hit2 = (project ? named3.find((b2) => b2.project === project) : void 0) ?? named3[0];
+  return hit2 ? (await api("GET", `/api/boards/${hit2.id}`)).board : void 0;
+}
+function layoutOf(content) {
+  const l = content?.layout;
+  return l && typeof l === "object" ? JSON.stringify(Object.fromEntries(Object.entries(l).sort(([a], [b2]) => a < b2 ? -1 : 1))) : void 0;
+}
+function redrawReport(plan, o) {
+  if (o.first)
+    return [];
+  const out = [`  redraw: ${planSummary(plan)}`];
+  const moved = plan.updated.filter((l) => /\b(x|y|w|h)\b/.test(l.why ?? "")).length;
+  const kept = plan.keptMoved.length;
+  const locked = plan.keptLocked.length;
+  if (o.fileKnown && o.layoutBefore !== o.layoutNow) {
+    out.push(`  layout: changed in the file (${o.layoutBefore ?? "none"} \u2192 ${o.layoutNow ?? "none"}): ${moved} item(s) moved to the new layout${kept || locked ? `, ${kept + locked} kept their place` : ""}${moved === 0 && !kept && !locked ? " \u2014 the new setting places everything where it already was" : ""}`);
+  }
+  if (o.relayout)
+    out.push(`  --relayout: the frame was laid out again from the file${locked ? ` (${locked} locked item(s) stayed)` : ""}`);
+  else if (kept)
+    out.push(`  ${kept} item(s) keep the place the person gave them (a redraw never moves those) \u2014 \`--relayout\` lays the whole frame out again from the file; \`--dry-run\` lists them`);
+  return out;
 }
 async function previewDesign(file2, opts) {
   const base = canvasBase(opts.canvas);
@@ -63113,7 +64317,7 @@ async function drawDesign(file2, opts) {
   const d = parseDesignFile(abs, text3);
   const root = repoRoot(path16.dirname(abs));
   const source = path16.relative(root, abs);
-  const board = await resolveBoard(api, opts.board, root);
+  const board = await resolveBoard(api, opts.board, root, opts.project);
   const refused = await redrawRefusal(api, board.id, d.key);
   if (refused)
     throw new Error(refused);
@@ -63125,15 +64329,24 @@ async function drawDesign(file2, opts) {
   });
   const drawn = withDesignFindings(d, served);
   const current = (await api("GET", `/api/boards/${board.id}`)).board;
-  const inputs = await redrawInputsOf(api, board.id);
+  const logged = await redrawInputsOf(api, board.id);
+  const inputs = opts.relayout ? { ...logged, placed: /* @__PURE__ */ new Set() } : logged;
   const frame = drawn.find((it) => it.type === "frame" && it.data?.diagram?.key === d.key) ?? frameOf(current, d.key);
-  const { ops } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && current.items[frame.id] ? { frame: frame.id } : {} });
+  const before = (current.meta?.diagrams?.[d.key]?.files ?? {})[source];
+  let layoutBefore;
+  try {
+    layoutBefore = before === void 0 ? void 0 : layoutOf(import_yaml3.default.parse(before));
+  } catch {
+    layoutBefore = void 0;
+  }
+  const { ops, plan } = explainRedraw(current.items, drawn, inputs, { prefix: `${d.key}.`, keep: new Set(frame ? [frame.id] : []), ...frame && current.items[frame.id] ? { frame: frame.id } : {} });
   const { seq } = await api("POST", `/api/boards/${board.id}/ops`, { author: "agent", ops, note: `awd design draw: ${source}` });
   const holder = { ...holderInfo(root), ...opts.applied ? { applied: opts.applied } : {} };
   const projectRoot = current.meta?.project?.root;
   await api("PATCH", `/api/boards/${board.id}`, { meta: { diagrams: { [d.key]: { kind: d.kind, source, files: wf?.files?.files ?? { [source]: text3 }, holder } }, ...typeof projectRoot === "string" && projectRoot ? {} : { project: { root } } } });
   const applied = opts.applied ? await afterApplied(api, { base, boardId: board.id, thread: opts.applied, root, fallbackFile: source }) : void 0;
-  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, ...applied ? { applied } : {} };
+  const report = redrawReport(plan, { first: !frameOf(current, d.key), layoutBefore, layoutNow: layoutOf(d.content), fileKnown: before !== void 0, relayout: opts.relayout });
+  return { base, boardId: board.id, seq, key: d.key, unresolvedTraces, report, ...applied ? { applied } : {} };
 }
 function unresolvedReport(list3) {
   if (!list3.length)
@@ -63167,7 +64380,7 @@ async function cmdDesign(args2, flags2) {
   }
   if (sub === "draw") {
     if (!file2 || !boardRef)
-      throw new Error("usage: awd design draw <file> --board <id | title:\u2026> [--canvas URL] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]");
+      throw new Error("usage: awd design draw <file> --board <id | title:\u2026> [--canvas URL] [--project personal|<project id>] [--relayout] [--at x,y] [--applied <proposal thread id>] [--dry-run [--limit N]]");
     const parsed = parseDesignFile(file2, fs15.readFileSync(file2, "utf8"));
     const findings = lintDesign(parsed, file2);
     const errors = findings.filter((f) => f.severity === "error");
@@ -63180,17 +64393,23 @@ async function cmdDesign(args2, flags2) {
       console.warn(`\u26A0 ${w2.message}`);
     const at3 = str3(flags2.at)?.split(",").map(Number);
     const applied = str3(flags2.applied);
+    const project = str3(flags2.project);
+    const relayout = flags2.relayout === true;
     if (flags2["dry-run"]) {
       const p = await previewDesign(file2, { board: boardRef, canvas, limit: Number(str3(flags2.limit)) || void 0, ...at3 && at3.length === 2 && at3.every(Number.isFinite) ? { at: { x: at3[0], y: at3[1] } } : {} });
       for (const line of p.lines)
         console.log(line);
       return true;
     }
-    const r = await drawDesign(file2, { board: boardRef, canvas, ...applied ? { applied } : {}, ...at3 && at3.length === 2 && at3.every(Number.isFinite) ? { at: { x: at3[0], y: at3[1] } } : {} });
-    console.log(`\u2714 ${path16.basename(file2)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId} (seq ${r.seq}; ${findings.filter((f) => f.severity !== "error").length} note(s) \u2014 awd design lint ${file2})`);
-    if (r.applied)
-      console.log(`\u2714 answered "Applied to ${r.applied.file ?? file2}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`);
-    for (const line of unresolvedReport(r.unresolvedTraces))
+    const r2 = await drawDesign(file2, { board: boardRef, canvas, ...project ? { project } : {}, ...relayout ? { relayout } : {}, ...applied ? { applied } : {}, ...at3 && at3.length === 2 && at3.every(Number.isFinite) ? { at: { x: at3[0], y: at3[1] } } : {} });
+    console.log(`\u2714 ${path16.basename(file2)} \u2192 frame ${r2.key} on ${r2.base}/b/${r2.boardId} (seq ${r2.seq}; ${findings.filter((f) => f.severity !== "error").length} note(s) \u2014 awd design lint ${file2})`);
+    for (const w2 of findings.filter((f) => f.severity === "warning" && !f.message.startsWith("unknown field")))
+      console.warn(`\u26A0 ${w2.element ? `${w2.element}: ` : ""}${w2.message}`);
+    for (const line of r2.report)
+      console.log(line);
+    if (r2.applied)
+      console.log(`\u2714 answered "Applied to ${r2.applied.file ?? file2}" in thread ${applied}${r2.applied.notes.length ? ` (${r2.applied.notes.join("; ")})` : ""}`);
+    for (const line of unresolvedReport(r2.unresolvedTraces))
       console.warn(line);
     if (parsed.kind === "domain-story")
       for (const line of tellBack(parsed.content))
@@ -63201,18 +64420,18 @@ async function cmdDesign(args2, flags2) {
     const into = str3(flags2.into);
     if (!file2 || !into || !boardRef)
       throw new Error("usage: awd design propose-stories <es file> --into <story map file> --board <id | title:\u2026> [--canvas URL]");
-    const r = await proposeStoriesToBoard(file2, into, { board: boardRef, canvas });
-    console.log(`\u2714 ${r.proposed} story proposal(s) on ${r.base}/b/${r.boardId}${r.skipped ? ` (${r.skipped} already proposed)` : ""}${r.candidates === 0 ? " \u2014 nothing new: every command already has a story" : ""}. Accept them in a chat; the story-map file is not written until then.`);
+    const r2 = await proposeStoriesToBoard(file2, into, { board: boardRef, canvas });
+    console.log(`\u2714 ${r2.proposed} story proposal(s) on ${r2.base}/b/${r2.boardId}${r2.skipped ? ` (${r2.skipped} already proposed)` : ""}${r2.candidates === 0 ? " \u2014 nothing new: every command already has a story" : ""}. Accept them in a chat; the story-map file is not written until then.`);
     return true;
   }
   if (sub === "import-egon") {
     const out = str3(flags2.out);
     if (!file2 || !out)
       throw new Error("usage: awd design import-egon <story.egn> --out design/<name>.domain-story.yaml");
-    const r = importEgonFile(file2, out);
-    for (const w2 of r.warnings)
+    const r2 = importEgonFile(file2, out);
+    for (const w2 of r2.warnings)
       console.warn(`\u26A0 ${w2}`);
-    console.log(`\u2714 ${path16.basename(file2)} \u2192 ${out} (${r.sentences} sentence(s)); draw it with awd design draw ${out} --board \u2026`);
+    console.log(`\u2714 ${path16.basename(file2)} \u2192 ${out} (${r2.sentences} sentence(s)); draw it with awd design draw ${out} --board \u2026`);
     return cmdDesignLint(out);
   }
   if (sub === "export-egon") {
@@ -63234,13 +64453,13 @@ function importEgonFile(file2, out) {
       throw new Error(`${file2}: no embedded domain story (<DST>) in this SVG`);
     text3 = m2[1].replace(/<!--|-->/g, "");
   }
-  const r = fromEgon(JSON.parse(text3));
-  const header = [`# Imported from Egon.io (${path16.basename(file2)}) by awd design import-egon.`, ...r.description ? [`# ${r.description.replace(/\n/g, " ")}`] : []].join("\n");
-  const body = import_yaml3.default.stringify({ ...r.title ? { title: r.title } : {}, ...r.content }, { lineWidth: 0 });
+  const r2 = fromEgon(JSON.parse(text3));
+  const header = [`# Imported from Egon.io (${path16.basename(file2)}) by awd design import-egon.`, ...r2.description ? [`# ${r2.description.replace(/\n/g, " ")}`] : []].join("\n");
+  const body = import_yaml3.default.stringify({ ...r2.title ? { title: r2.title } : {}, ...r2.content }, { lineWidth: 0 });
   fs15.mkdirSync(path16.dirname(path16.resolve(out)), { recursive: true });
   fs15.writeFileSync(out, `${header}
 ${body}`);
-  return { sentences: (r.content.sentences ?? []).length, warnings: r.warnings };
+  return { sentences: (r2.content.sentences ?? []).length, warnings: r2.warnings };
 }
 function exportEgonFile(file2, out) {
   const d = parseDesignFile(file2, fs15.readFileSync(file2, "utf8"));
@@ -63337,7 +64556,7 @@ async function cmdStudio(file2, flags2) {
     } catch (e) {
       console.error(`studio: ${e.message} \u2014 retrying in ${intervalMs} ms`);
     }
-    await new Promise((r) => setTimeout(r, studio.busy ? intervalMs : Math.max(intervalMs, 5e3)));
+    await new Promise((r2) => setTimeout(r2, studio.busy ? intervalMs : Math.max(intervalMs, 5e3)));
   }
 }
 function awdCommand(root) {
@@ -63436,37 +64655,22 @@ var init_patch = __esm({
   }
 });
 
-// packages/canvas/dist/hidden.js
-function hiddenFramesLine(list3, listed = false) {
-  if (!list3.length)
-    return [];
-  const names = list3.map((f) => `${[f.key, f.title !== f.key ? `"${f.title}"` : ""].filter(Boolean).join(" ")} (${itemCount(f.items)})`);
-  return [`Hidden frames: ${names.join(", ")} \u2014 the person hid their contents on the board (not drawn for anyone); ${listed ? "listed here because of includeHidden: true" : "canvas_read_board with includeHidden: true lists them"}`];
-}
-var itemCount;
-var init_hidden = __esm({
-  "packages/canvas/dist/hidden.js"() {
-    init_model();
-    itemCount = (n) => `${n} item${n === 1 ? "" : "s"}`;
-  }
-});
-
 // packages/canvas/dist/todos.js
 function todosOf(board) {
   return Object.values(board.items).filter((it) => todoOf(it) && threadRoot(board, it).id === it.id).sort((a, b2) => when(a).localeCompare(when(b2))).map((item) => {
     const thread = threadOf(board, item).slice(1);
-    const answers = thread.filter((r) => r.data?.todoAnswer === true);
+    const answers = thread.filter((r2) => r2.data?.todoAnswer === true);
     const on = item.target ? board.items[item.target] : void 0;
-    return { item, todo: todoOf(item), ...on ? { on } : {}, by: item.createdBy === "user" ? "person" : typeof item.data?.by === "string" ? item.data.by : LOCAL_AGENT, ...answers.length ? { answerReply: answers[answers.length - 1] } : {}, replies: thread.filter((r) => r.data?.todoAnswer !== true) };
+    return { item, todo: todoOf(item), ...on ? { on } : {}, by: item.createdBy === "user" ? "person" : typeof item.data?.by === "string" ? item.data.by : LOCAL_AGENT, ...answers.length ? { answerReply: answers[answers.length - 1] } : {}, replies: thread.filter((r2) => r2.data?.todoAnswer !== true) };
   });
 }
 function todoLine(t) {
   if (t.todo.state === "open") {
     const bits = [t.todo.ask ? `ask ${t.todo.ask}` : "", t.on ? `on ${aboutText(t.on)}` : "", `opened by ${whoText(t.by)}`, t.replies.length ? `${t.replies.length} repl${t.replies.length === 1 ? "y" : "ies"}` : ""].filter(Boolean);
-    return `\u2610 ${short(t.item.text, 200)} [${bits.join(" \xB7 ")}]  #${t.item.id}`;
+    return `\u2610 ${short2(t.item.text, 200)} [${bits.join(" \xB7 ")}]  #${t.item.id}`;
   }
   const by = t.todo.doneBy ? ` by ${whoText(t.todo.doneBy)}` : "";
-  return `\u2611 ${short(t.item.text, 120)} \u2014 ${t.todo.answer ? `answer: ${short(t.todo.answer, 160)}` : "checked off without an answer"}${by}  #${t.item.id}`;
+  return `\u2611 ${short2(t.item.text, 120)} \u2014 ${t.todo.answer ? `answer: ${short2(t.todo.answer, 160)}` : "checked off without an answer"}${by}  #${t.item.id}`;
 }
 function todoLines(board, o = {}) {
   const all = todosOf(board).filter((t) => !o.only || o.only.has(t.item.id));
@@ -63479,8 +64683,8 @@ function todoLines(board, o = {}) {
   for (const t of open2) {
     out.push(`${pad}${todoLine(t)}`);
     const rs = t.replies.slice(-(o.replies ?? 2));
-    for (const r of rs)
-      out.push(`${pad}  \u21B3 (${r.createdBy === "user" ? "person" : typeof r.data?.by === "string" ? r.data.by : LOCAL_AGENT}) ${short(r.text, 160)}  #${r.id}`);
+    for (const r2 of rs)
+      out.push(`${pad}  \u21B3 (${r2.createdBy === "user" ? "person" : typeof r2.data?.by === "string" ? r2.data.by : LOCAL_AGENT}) ${short2(r2.text, 160)}  #${r2.id}`);
   }
   const shown = done.slice(0, o.done ?? 5);
   for (const t of shown)
@@ -63513,19 +64717,19 @@ function todoReopenOp(board, id) {
   const was = todoOf(it);
   return { kind: "update", id, patch: { data: { ...it.data ?? {}, todo: { state: "open", ...was.ask ? { ask: was.ask } : {} } } } };
 }
-var short, when, isTodo, whoText, aboutText, TodoError;
+var short2, when, isTodo, whoText, aboutText, TodoError;
 var init_todos = __esm({
   "packages/canvas/dist/todos.js"() {
     init_annotations();
     init_routing();
-    short = (s, n = 120) => {
+    short2 = (s, n2 = 120) => {
       const t = (s ?? "").replace(/\s+/g, " ").trim();
-      return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
+      return t.length > n2 ? t.slice(0, n2 - 1) + "\u2026" : t;
     };
     when = (i) => String(i.data?.postedAt ?? i.updatedAt ?? "");
     isTodo = (it) => !!todoOf(it);
     whoText = (name) => name === "person" ? "the person" : displayName(name);
-    aboutText = (it) => !it ? "" : `${it.type === "ui" ? String(it.data?.ui?.type ?? "ui") : it.role ?? it.type} "${short(it.text, 40) || it.id}"`;
+    aboutText = (it) => !it ? "" : `${it.type === "ui" ? String(it.data?.ui?.type ?? "ui") : it.role ?? it.type} "${short2(it.text, 40) || it.id}"`;
     TodoError = class extends Error {
     };
   }
@@ -64235,24 +65439,24 @@ var require_validation2 = __commonJS({
       return code >= 1e3 && code <= 1014 && code !== 1004 && code !== 1005 && code !== 1006 || code >= 3e3 && code <= 4999;
     }
     function _isValidUTF8(buf) {
-      const len = buf.length;
+      const len2 = buf.length;
       let i = 0;
-      while (i < len) {
+      while (i < len2) {
         if ((buf[i] & 128) === 0) {
           i++;
         } else if ((buf[i] & 224) === 192) {
-          if (i + 1 === len || (buf[i + 1] & 192) !== 128 || (buf[i] & 254) === 192) {
+          if (i + 1 === len2 || (buf[i + 1] & 192) !== 128 || (buf[i] & 254) === 192) {
             return false;
           }
           i += 2;
         } else if ((buf[i] & 240) === 224) {
-          if (i + 2 >= len || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || buf[i] === 224 && (buf[i + 1] & 224) === 128 || // Overlong
+          if (i + 2 >= len2 || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || buf[i] === 224 && (buf[i + 1] & 224) === 128 || // Overlong
           buf[i] === 237 && (buf[i + 1] & 224) === 160) {
             return false;
           }
           i += 3;
         } else if ((buf[i] & 248) === 240) {
-          if (i + 3 >= len || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || (buf[i + 3] & 192) !== 128 || buf[i] === 240 && (buf[i + 1] & 240) === 128 || // Overlong
+          if (i + 3 >= len2 || (buf[i + 1] & 192) !== 128 || (buf[i + 2] & 192) !== 128 || (buf[i + 3] & 192) !== 128 || buf[i] === 240 && (buf[i + 1] & 240) === 128 || // Overlong
           buf[i] === 244 && buf[i + 1] > 143 || buf[i] > 244) {
             return false;
           }
@@ -64392,34 +65596,34 @@ var require_receiver = __commonJS({
        * @return {Buffer} The consumed bytes
        * @private
        */
-      consume(n) {
-        this._bufferedBytes -= n;
-        if (n === this._buffers[0].length) return this._buffers.shift();
-        if (n < this._buffers[0].length) {
+      consume(n2) {
+        this._bufferedBytes -= n2;
+        if (n2 === this._buffers[0].length) return this._buffers.shift();
+        if (n2 < this._buffers[0].length) {
           const buf = this._buffers[0];
           this._buffers[0] = new FastBuffer(
             buf.buffer,
-            buf.byteOffset + n,
-            buf.length - n
+            buf.byteOffset + n2,
+            buf.length - n2
           );
-          return new FastBuffer(buf.buffer, buf.byteOffset, n);
+          return new FastBuffer(buf.buffer, buf.byteOffset, n2);
         }
-        const dst = Buffer.allocUnsafe(n);
+        const dst = Buffer.allocUnsafe(n2);
         do {
           const buf = this._buffers[0];
-          const offset = dst.length - n;
-          if (n >= buf.length) {
+          const offset = dst.length - n2;
+          if (n2 >= buf.length) {
             dst.set(this._buffers.shift(), offset);
           } else {
-            dst.set(new Uint8Array(buf.buffer, buf.byteOffset, n), offset);
+            dst.set(new Uint8Array(buf.buffer, buf.byteOffset, n2), offset);
             this._buffers[0] = new FastBuffer(
               buf.buffer,
-              buf.byteOffset + n,
-              buf.length - n
+              buf.byteOffset + n2,
+              buf.length - n2
             );
           }
-          n -= buf.length;
-        } while (n > 0);
+          n2 -= buf.length;
+        } while (n2 > 0);
         return dst;
       }
       /**
@@ -67275,11 +68479,11 @@ function G(u3) {
   O = u3;
 }
 function k(u3, e = "") {
-  let t = typeof u3 == "string" ? u3 : u3.source, n = { replace: (r, i) => {
+  let t = typeof u3 == "string" ? u3 : u3.source, n2 = { replace: (r2, i) => {
     let s = typeof i == "string" ? i : i.source;
-    return s = s.replace(m.caret, "$1"), t = t.replace(r, s), n;
+    return s = s.replace(m.caret, "$1"), t = t.replace(r2, s), n2;
   }, getRegex: () => new RegExp(t, e) };
-  return n;
+  return n2;
 }
 function T(u3, e) {
   if (e) {
@@ -67300,56 +68504,56 @@ function V(u3, e) {
     let o = false, l = s;
     for (; --l >= 0 && a[l] === "\\"; ) o = !o;
     return o ? "|" : " |";
-  }), n = t.split(m.splitPipe), r = 0;
-  if (n[0].trim() || n.shift(), n.length > 0 && !n.at(-1)?.trim() && n.pop(), e) if (n.length > e) n.splice(e);
-  else for (; n.length < e; ) n.push("");
-  for (; r < n.length; r++) n[r] = n[r].trim().replace(m.slashPipe, "|");
-  return n;
+  }), n2 = t.split(m.splitPipe), r2 = 0;
+  if (n2[0].trim() || n2.shift(), n2.length > 0 && !n2.at(-1)?.trim() && n2.pop(), e) if (n2.length > e) n2.splice(e);
+  else for (; n2.length < e; ) n2.push("");
+  for (; r2 < n2.length; r2++) n2[r2] = n2[r2].trim().replace(m.slashPipe, "|");
+  return n2;
 }
 function I(u3, e, t) {
-  let n = u3.length;
-  if (n === 0) return "";
-  let r = 0;
-  for (; r < n; ) {
-    let i = u3.charAt(n - r - 1);
-    if (i === e && !t) r++;
-    else if (i !== e && t) r++;
+  let n2 = u3.length;
+  if (n2 === 0) return "";
+  let r2 = 0;
+  for (; r2 < n2; ) {
+    let i = u3.charAt(n2 - r2 - 1);
+    if (i === e && !t) r2++;
+    else if (i !== e && t) r2++;
     else break;
   }
-  return u3.slice(0, n - r);
+  return u3.slice(0, n2 - r2);
 }
 function de(u3, e) {
   if (u3.indexOf(e[1]) === -1) return -1;
   let t = 0;
-  for (let n = 0; n < u3.length; n++) if (u3[n] === "\\") n++;
-  else if (u3[n] === e[0]) t++;
-  else if (u3[n] === e[1] && (t--, t < 0)) return n;
+  for (let n2 = 0; n2 < u3.length; n2++) if (u3[n2] === "\\") n2++;
+  else if (u3[n2] === e[0]) t++;
+  else if (u3[n2] === e[1] && (t--, t < 0)) return n2;
   return t > 0 ? -2 : -1;
 }
 function ge(u3, e = 0) {
-  let t = e, n = "";
-  for (let r of u3) if (r === "	") {
+  let t = e, n2 = "";
+  for (let r2 of u3) if (r2 === "	") {
     let i = 4 - t % 4;
-    n += " ".repeat(i), t += i;
-  } else n += r, t++;
-  return n;
+    n2 += " ".repeat(i), t += i;
+  } else n2 += r2, t++;
+  return n2;
 }
-function fe(u3, e, t, n, r) {
-  let i = e.href, s = e.title || null, a = u3[1].replace(r.other.outputLinkReplace, "$1");
-  n.state.inLink = true;
-  let o = { type: u3[0].charAt(0) === "!" ? "image" : "link", raw: t, href: i, title: s, text: a, tokens: n.inlineTokens(a) };
-  return n.state.inLink = false, o;
+function fe(u3, e, t, n2, r2) {
+  let i = e.href, s = e.title || null, a = u3[1].replace(r2.other.outputLinkReplace, "$1");
+  n2.state.inLink = true;
+  let o = { type: u3[0].charAt(0) === "!" ? "image" : "link", raw: t, href: i, title: s, text: a, tokens: n2.inlineTokens(a) };
+  return n2.state.inLink = false, o;
 }
 function nt(u3, e, t) {
-  let n = u3.match(t.other.indentCodeCompensation);
-  if (n === null) return e;
-  let r = n[1];
+  let n2 = u3.match(t.other.indentCodeCompensation);
+  if (n2 === null) return e;
+  let r2 = n2[1];
   return e.split(`
 `).map((i) => {
     let s = i.match(t.other.beginningSpace);
     if (s === null) return i;
     let [a] = s;
-    return a.length >= r.length ? i.slice(r.length) : i;
+    return a.length >= r2.length ? i.slice(r2.length) : i;
   }).join(`
 `);
 }
@@ -67447,27 +68651,27 @@ var init_marked_esm = __esm({
       code(e) {
         let t = this.rules.block.code.exec(e);
         if (t) {
-          let n = t[0].replace(this.rules.other.codeRemoveIndent, "");
-          return { type: "code", raw: t[0], codeBlockStyle: "indented", text: this.options.pedantic ? n : I(n, `
+          let n2 = t[0].replace(this.rules.other.codeRemoveIndent, "");
+          return { type: "code", raw: t[0], codeBlockStyle: "indented", text: this.options.pedantic ? n2 : I(n2, `
 `) };
         }
       }
       fences(e) {
         let t = this.rules.block.fences.exec(e);
         if (t) {
-          let n = t[0], r = nt(n, t[3] || "", this.rules);
-          return { type: "code", raw: n, lang: t[2] ? t[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : t[2], text: r };
+          let n2 = t[0], r2 = nt(n2, t[3] || "", this.rules);
+          return { type: "code", raw: n2, lang: t[2] ? t[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : t[2], text: r2 };
         }
       }
       heading(e) {
         let t = this.rules.block.heading.exec(e);
         if (t) {
-          let n = t[2].trim();
-          if (this.rules.other.endingHash.test(n)) {
-            let r = I(n, "#");
-            (this.options.pedantic || !r || this.rules.other.endingSpaceChar.test(r)) && (n = r.trim());
+          let n2 = t[2].trim();
+          if (this.rules.other.endingHash.test(n2)) {
+            let r2 = I(n2, "#");
+            (this.options.pedantic || !r2 || this.rules.other.endingSpaceChar.test(r2)) && (n2 = r2.trim());
           }
-          return { type: "heading", raw: t[0], depth: t[1].length, text: n, tokens: this.lexer.inline(n) };
+          return { type: "heading", raw: t[0], depth: t[1].length, text: n2, tokens: this.lexer.inline(n2) };
         }
       }
       hr(e) {
@@ -67478,49 +68682,49 @@ var init_marked_esm = __esm({
       blockquote(e) {
         let t = this.rules.block.blockquote.exec(e);
         if (t) {
-          let n = I(t[0], `
+          let n2 = I(t[0], `
 `).split(`
-`), r = "", i = "", s = [];
-          for (; n.length > 0; ) {
+`), r2 = "", i = "", s = [];
+          for (; n2.length > 0; ) {
             let a = false, o = [], l;
-            for (l = 0; l < n.length; l++) if (this.rules.other.blockquoteStart.test(n[l])) o.push(n[l]), a = true;
-            else if (!a) o.push(n[l]);
+            for (l = 0; l < n2.length; l++) if (this.rules.other.blockquoteStart.test(n2[l])) o.push(n2[l]), a = true;
+            else if (!a) o.push(n2[l]);
             else break;
-            n = n.slice(l);
+            n2 = n2.slice(l);
             let p = o.join(`
 `), c2 = p.replace(this.rules.other.blockquoteSetextReplace, `
     $1`).replace(this.rules.other.blockquoteSetextReplace2, "");
-            r = r ? `${r}
+            r2 = r2 ? `${r2}
 ${p}` : p, i = i ? `${i}
 ${c2}` : c2;
             let d = this.lexer.state.top;
-            if (this.lexer.state.top = true, this.lexer.blockTokens(c2, s, true), this.lexer.state.top = d, n.length === 0) break;
+            if (this.lexer.state.top = true, this.lexer.blockTokens(c2, s, true), this.lexer.state.top = d, n2.length === 0) break;
             let h = s.at(-1);
             if (h?.type === "code") break;
             if (h?.type === "blockquote") {
               let R = h, f = R.raw + `
-` + n.join(`
+` + n2.join(`
 `), S = this.blockquote(f);
-              s[s.length - 1] = S, r = r.substring(0, r.length - R.raw.length) + S.raw, i = i.substring(0, i.length - R.text.length) + S.text;
+              s[s.length - 1] = S, r2 = r2.substring(0, r2.length - R.raw.length) + S.raw, i = i.substring(0, i.length - R.text.length) + S.text;
               break;
             } else if (h?.type === "list") {
               let R = h, f = R.raw + `
-` + n.join(`
+` + n2.join(`
 `), S = this.list(f);
-              s[s.length - 1] = S, r = r.substring(0, r.length - h.raw.length) + S.raw, i = i.substring(0, i.length - R.raw.length) + S.raw, n = f.substring(s.at(-1).raw.length).split(`
+              s[s.length - 1] = S, r2 = r2.substring(0, r2.length - h.raw.length) + S.raw, i = i.substring(0, i.length - R.raw.length) + S.raw, n2 = f.substring(s.at(-1).raw.length).split(`
 `);
               continue;
             }
           }
-          return { type: "blockquote", raw: r, tokens: s, text: i };
+          return { type: "blockquote", raw: r2, tokens: s, text: i };
         }
       }
       list(e) {
         let t = this.rules.block.list.exec(e);
         if (t) {
-          let n = t[1].trim(), r = n.length > 1, i = { type: "list", raw: "", ordered: r, start: r ? +n.slice(0, -1) : "", loose: false, items: [] };
-          n = r ? `\\d{1,9}\\${n.slice(-1)}` : `\\${n}`, this.options.pedantic && (n = r ? n : "[*+-]");
-          let s = this.rules.other.listItemRegex(n), a = false;
+          let n2 = t[1].trim(), r2 = n2.length > 1, i = { type: "list", raw: "", ordered: r2, start: r2 ? +n2.slice(0, -1) : "", loose: false, items: [] };
+          n2 = r2 ? `\\d{1,9}\\${n2.slice(-1)}` : `\\${n2}`, this.options.pedantic && (n2 = r2 ? n2 : "[*+-]");
+          let s = this.rules.other.listItemRegex(n2), a = false;
           for (; e; ) {
             let l = false, p = "", c2 = "";
             if (!(t = s.exec(e)) || this.rules.block.hr.test(e)) break;
@@ -67586,18 +68790,18 @@ ${c2}` : c2;
       def(e) {
         let t = this.rules.block.def.exec(e);
         if (t) {
-          let n = t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), r = t[2] ? t[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", i = t[3] ? t[3].substring(1, t[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : t[3];
-          return { type: "def", tag: n, raw: t[0], href: r, title: i };
+          let n2 = t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), r2 = t[2] ? t[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", i = t[3] ? t[3].substring(1, t[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : t[3];
+          return { type: "def", tag: n2, raw: t[0], href: r2, title: i };
         }
       }
       table(e) {
         let t = this.rules.block.table.exec(e);
         if (!t || !this.rules.other.tableDelimiter.test(t[2])) return;
-        let n = V(t[1]), r = t[2].replace(this.rules.other.tableAlignChars, "").split("|"), i = t[3]?.trim() ? t[3].replace(this.rules.other.tableRowBlankLine, "").split(`
+        let n2 = V(t[1]), r2 = t[2].replace(this.rules.other.tableAlignChars, "").split("|"), i = t[3]?.trim() ? t[3].replace(this.rules.other.tableRowBlankLine, "").split(`
 `) : [], s = { type: "table", raw: t[0], header: [], align: [], rows: [] };
-        if (n.length === r.length) {
-          for (let a of r) this.rules.other.tableAlignRight.test(a) ? s.align.push("right") : this.rules.other.tableAlignCenter.test(a) ? s.align.push("center") : this.rules.other.tableAlignLeft.test(a) ? s.align.push("left") : s.align.push(null);
-          for (let a = 0; a < n.length; a++) s.header.push({ text: n[a], tokens: this.lexer.inline(n[a]), header: true, align: s.align[a] });
+        if (n2.length === r2.length) {
+          for (let a of r2) this.rules.other.tableAlignRight.test(a) ? s.align.push("right") : this.rules.other.tableAlignCenter.test(a) ? s.align.push("center") : this.rules.other.tableAlignLeft.test(a) ? s.align.push("left") : s.align.push(null);
+          for (let a = 0; a < n2.length; a++) s.header.push({ text: n2[a], tokens: this.lexer.inline(n2[a]), header: true, align: s.align[a] });
           for (let a of i) s.rows.push(V(a, s.header.length).map((o, l) => ({ text: o, tokens: this.lexer.inline(o), header: false, align: s.align[l] })));
           return s;
         }
@@ -67605,16 +68809,16 @@ ${c2}` : c2;
       lheading(e) {
         let t = this.rules.block.lheading.exec(e);
         if (t) {
-          let n = t[1].trim();
-          return { type: "heading", raw: t[0], depth: t[2].charAt(0) === "=" ? 1 : 2, text: n, tokens: this.lexer.inline(n) };
+          let n2 = t[1].trim();
+          return { type: "heading", raw: t[0], depth: t[2].charAt(0) === "=" ? 1 : 2, text: n2, tokens: this.lexer.inline(n2) };
         }
       }
       paragraph(e) {
         let t = this.rules.block.paragraph.exec(e);
         if (t) {
-          let n = t[1].charAt(t[1].length - 1) === `
+          let n2 = t[1].charAt(t[1].length - 1) === `
 ` ? t[1].slice(0, -1) : t[1];
-          return { type: "paragraph", raw: t[0], text: n, tokens: this.lexer.inline(n) };
+          return { type: "paragraph", raw: t[0], text: n2, tokens: this.lexer.inline(n2) };
         }
       }
       text(e) {
@@ -67632,11 +68836,11 @@ ${c2}` : c2;
       link(e) {
         let t = this.rules.inline.link.exec(e);
         if (t) {
-          let n = t[2].trim();
-          if (!this.options.pedantic && this.rules.other.startAngleBracket.test(n)) {
-            if (!this.rules.other.endAngleBracket.test(n)) return;
-            let s = I(n.slice(0, -1), "\\");
-            if ((n.length - s.length) % 2 === 0) return;
+          let n2 = t[2].trim();
+          if (!this.options.pedantic && this.rules.other.startAngleBracket.test(n2)) {
+            if (!this.rules.other.endAngleBracket.test(n2)) return;
+            let s = I(n2.slice(0, -1), "\\");
+            if ((n2.length - s.length) % 2 === 0) return;
           } else {
             let s = de(t[2], "()");
             if (s === -2) return;
@@ -67645,42 +68849,42 @@ ${c2}` : c2;
               t[2] = t[2].substring(0, s), t[0] = t[0].substring(0, o).trim(), t[3] = "";
             }
           }
-          let r = t[2], i = "";
+          let r2 = t[2], i = "";
           if (this.options.pedantic) {
-            let s = this.rules.other.pedanticHrefTitle.exec(r);
-            s && (r = s[1], i = s[3]);
+            let s = this.rules.other.pedanticHrefTitle.exec(r2);
+            s && (r2 = s[1], i = s[3]);
           } else i = t[3] ? t[3].slice(1, -1) : "";
-          return r = r.trim(), this.rules.other.startAngleBracket.test(r) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n) ? r = r.slice(1) : r = r.slice(1, -1)), fe(t, { href: r && r.replace(this.rules.inline.anyPunctuation, "$1"), title: i && i.replace(this.rules.inline.anyPunctuation, "$1") }, t[0], this.lexer, this.rules);
+          return r2 = r2.trim(), this.rules.other.startAngleBracket.test(r2) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n2) ? r2 = r2.slice(1) : r2 = r2.slice(1, -1)), fe(t, { href: r2 && r2.replace(this.rules.inline.anyPunctuation, "$1"), title: i && i.replace(this.rules.inline.anyPunctuation, "$1") }, t[0], this.lexer, this.rules);
         }
       }
       reflink(e, t) {
-        let n;
-        if ((n = this.rules.inline.reflink.exec(e)) || (n = this.rules.inline.nolink.exec(e))) {
-          let r = (n[2] || n[1]).replace(this.rules.other.multipleSpaceGlobal, " "), i = t[r.toLowerCase()];
+        let n2;
+        if ((n2 = this.rules.inline.reflink.exec(e)) || (n2 = this.rules.inline.nolink.exec(e))) {
+          let r2 = (n2[2] || n2[1]).replace(this.rules.other.multipleSpaceGlobal, " "), i = t[r2.toLowerCase()];
           if (!i) {
-            let s = n[0].charAt(0);
+            let s = n2[0].charAt(0);
             return { type: "text", raw: s, text: s };
           }
-          return fe(n, i, n[0], this.lexer, this.rules);
+          return fe(n2, i, n2[0], this.lexer, this.rules);
         }
       }
-      emStrong(e, t, n = "") {
-        let r = this.rules.inline.emStrongLDelim.exec(e);
-        if (!r || !r[1] && !r[2] && !r[3] && !r[4] || r[4] && n.match(this.rules.other.unicodeAlphaNumeric)) return;
-        if (!(r[1] || r[3] || "") || !n || this.rules.inline.punctuation.exec(n)) {
-          let s = [...r[0]].length - 1, a, o, l = s, p = 0, c2 = r[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
-          for (c2.lastIndex = 0, t = t.slice(-1 * e.length + s); (r = c2.exec(t)) !== null; ) {
-            if (a = r[1] || r[2] || r[3] || r[4] || r[5] || r[6], !a) continue;
-            if (o = [...a].length, r[3] || r[4]) {
+      emStrong(e, t, n2 = "") {
+        let r2 = this.rules.inline.emStrongLDelim.exec(e);
+        if (!r2 || !r2[1] && !r2[2] && !r2[3] && !r2[4] || r2[4] && n2.match(this.rules.other.unicodeAlphaNumeric)) return;
+        if (!(r2[1] || r2[3] || "") || !n2 || this.rules.inline.punctuation.exec(n2)) {
+          let s = [...r2[0]].length - 1, a, o, l = s, p = 0, c2 = r2[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
+          for (c2.lastIndex = 0, t = t.slice(-1 * e.length + s); (r2 = c2.exec(t)) !== null; ) {
+            if (a = r2[1] || r2[2] || r2[3] || r2[4] || r2[5] || r2[6], !a) continue;
+            if (o = [...a].length, r2[3] || r2[4]) {
               l += o;
               continue;
-            } else if ((r[5] || r[6]) && s % 3 && !((s + o) % 3)) {
+            } else if ((r2[5] || r2[6]) && s % 3 && !((s + o) % 3)) {
               p += o;
               continue;
             }
             if (l -= o, l > 0) continue;
             o = Math.min(o, o + l + p);
-            let d = [...r[0]][0].length, h = e.slice(0, s + r.index + d + o);
+            let d = [...r2[0]][0].length, h = e.slice(0, s + r2.index + d + o);
             if (Math.min(s, o) % 2) {
               let f = h.slice(1, -1);
               return { type: "em", raw: h, text: f, tokens: this.lexer.inlineTokens(f) };
@@ -67693,28 +68897,28 @@ ${c2}` : c2;
       codespan(e) {
         let t = this.rules.inline.code.exec(e);
         if (t) {
-          let n = t[2].replace(this.rules.other.newLineCharGlobal, " "), r = this.rules.other.nonSpaceChar.test(n), i = this.rules.other.startingSpaceChar.test(n) && this.rules.other.endingSpaceChar.test(n);
-          return r && i && (n = n.substring(1, n.length - 1)), { type: "codespan", raw: t[0], text: n };
+          let n2 = t[2].replace(this.rules.other.newLineCharGlobal, " "), r2 = this.rules.other.nonSpaceChar.test(n2), i = this.rules.other.startingSpaceChar.test(n2) && this.rules.other.endingSpaceChar.test(n2);
+          return r2 && i && (n2 = n2.substring(1, n2.length - 1)), { type: "codespan", raw: t[0], text: n2 };
         }
       }
       br(e) {
         let t = this.rules.inline.br.exec(e);
         if (t) return { type: "br", raw: t[0] };
       }
-      del(e, t, n = "") {
-        let r = this.rules.inline.delLDelim.exec(e);
-        if (!r) return;
-        if (!(r[1] || "") || !n || this.rules.inline.punctuation.exec(n)) {
-          let s = [...r[0]].length - 1, a, o, l = s, p = this.rules.inline.delRDelim;
-          for (p.lastIndex = 0, t = t.slice(-1 * e.length + s); (r = p.exec(t)) !== null; ) {
-            if (a = r[1] || r[2] || r[3] || r[4] || r[5] || r[6], !a || (o = [...a].length, o !== s)) continue;
-            if (r[3] || r[4]) {
+      del(e, t, n2 = "") {
+        let r2 = this.rules.inline.delLDelim.exec(e);
+        if (!r2) return;
+        if (!(r2[1] || "") || !n2 || this.rules.inline.punctuation.exec(n2)) {
+          let s = [...r2[0]].length - 1, a, o, l = s, p = this.rules.inline.delRDelim;
+          for (p.lastIndex = 0, t = t.slice(-1 * e.length + s); (r2 = p.exec(t)) !== null; ) {
+            if (a = r2[1] || r2[2] || r2[3] || r2[4] || r2[5] || r2[6], !a || (o = [...a].length, o !== s)) continue;
+            if (r2[3] || r2[4]) {
               l += o;
               continue;
             }
             if (l -= o, l > 0) continue;
             o = Math.min(o, o + l);
-            let c2 = [...r[0]][0].length, d = e.slice(0, s + r.index + c2 + o), h = d.slice(s, -s);
+            let c2 = [...r2[0]][0].length, d = e.slice(0, s + r2.index + c2 + o), h = d.slice(s, -s);
             return { type: "del", raw: d, text: h, tokens: this.lexer.inlineTokens(h) };
           }
         }
@@ -67722,30 +68926,30 @@ ${c2}` : c2;
       autolink(e) {
         let t = this.rules.inline.autolink.exec(e);
         if (t) {
-          let n, r;
-          return t[2] === "@" ? (n = t[1], r = "mailto:" + n) : (n = t[1], r = n), { type: "link", raw: t[0], text: n, href: r, tokens: [{ type: "text", raw: n, text: n }] };
+          let n2, r2;
+          return t[2] === "@" ? (n2 = t[1], r2 = "mailto:" + n2) : (n2 = t[1], r2 = n2), { type: "link", raw: t[0], text: n2, href: r2, tokens: [{ type: "text", raw: n2, text: n2 }] };
         }
       }
       url(e) {
         let t;
         if (t = this.rules.inline.url.exec(e)) {
-          let n, r;
-          if (t[2] === "@") n = t[0], r = "mailto:" + n;
+          let n2, r2;
+          if (t[2] === "@") n2 = t[0], r2 = "mailto:" + n2;
           else {
             let i;
             do
               i = t[0], t[0] = this.rules.inline._backpedal.exec(t[0])?.[0] ?? "";
             while (i !== t[0]);
-            n = t[0], t[1] === "www." ? r = "http://" + t[0] : r = t[0];
+            n2 = t[0], t[1] === "www." ? r2 = "http://" + t[0] : r2 = t[0];
           }
-          return { type: "link", raw: t[0], text: n, href: r, tokens: [{ type: "text", raw: n, text: n }] };
+          return { type: "link", raw: t[0], text: n2, href: r2, tokens: [{ type: "text", raw: n2, text: n2 }] };
         }
       }
       inlineText(e) {
         let t = this.rules.inline.text.exec(e);
         if (t) {
-          let n = this.lexer.state.inRawBlock;
-          return { type: "text", raw: t[0], text: t[0], escaped: n };
+          let n2 = this.lexer.state.inRawBlock;
+          return { type: "text", raw: t[0], text: t[0], escaped: n2 };
         }
       }
     };
@@ -67773,70 +68977,70 @@ ${c2}` : c2;
         e = e.replace(m.carriageReturn, `
 `), this.blockTokens(e, this.tokens);
         for (let t = 0; t < this.inlineQueue.length; t++) {
-          let n = this.inlineQueue[t];
-          this.inlineTokens(n.src, n.tokens);
+          let n2 = this.inlineQueue[t];
+          this.inlineTokens(n2.src, n2.tokens);
         }
         return this.inlineQueue = [], this.tokens;
       }
-      blockTokens(e, t = [], n = false) {
+      blockTokens(e, t = [], n2 = false) {
         for (this.tokenizer.lexer = this, this.options.pedantic && (e = e.replace(m.tabCharGlobal, "    ").replace(m.spaceLine, "")); e; ) {
-          let r;
-          if (this.options.extensions?.block?.some((s) => (r = s.call({ lexer: this }, e, t)) ? (e = e.substring(r.raw.length), t.push(r), true) : false)) continue;
-          if (r = this.tokenizer.space(e)) {
-            e = e.substring(r.raw.length);
+          let r2;
+          if (this.options.extensions?.block?.some((s) => (r2 = s.call({ lexer: this }, e, t)) ? (e = e.substring(r2.raw.length), t.push(r2), true) : false)) continue;
+          if (r2 = this.tokenizer.space(e)) {
+            e = e.substring(r2.raw.length);
             let s = t.at(-1);
-            r.raw.length === 1 && s !== void 0 ? s.raw += `
-` : t.push(r);
+            r2.raw.length === 1 && s !== void 0 ? s.raw += `
+` : t.push(r2);
             continue;
           }
-          if (r = this.tokenizer.code(e)) {
-            e = e.substring(r.raw.length);
-            let s = t.at(-1);
-            s?.type === "paragraph" || s?.type === "text" ? (s.raw += (s.raw.endsWith(`
-`) ? "" : `
-`) + r.raw, s.text += `
-` + r.text, this.inlineQueue.at(-1).src = s.text) : t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.fences(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.heading(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.hr(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.blockquote(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.list(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.html(e)) {
-            e = e.substring(r.raw.length), t.push(r);
-            continue;
-          }
-          if (r = this.tokenizer.def(e)) {
-            e = e.substring(r.raw.length);
+          if (r2 = this.tokenizer.code(e)) {
+            e = e.substring(r2.raw.length);
             let s = t.at(-1);
             s?.type === "paragraph" || s?.type === "text" ? (s.raw += (s.raw.endsWith(`
 `) ? "" : `
-`) + r.raw, s.text += `
-` + r.raw, this.inlineQueue.at(-1).src = s.text) : this.tokens.links[r.tag] || (this.tokens.links[r.tag] = { href: r.href, title: r.title }, t.push(r));
+`) + r2.raw, s.text += `
+` + r2.text, this.inlineQueue.at(-1).src = s.text) : t.push(r2);
             continue;
           }
-          if (r = this.tokenizer.table(e)) {
-            e = e.substring(r.raw.length), t.push(r);
+          if (r2 = this.tokenizer.fences(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
             continue;
           }
-          if (r = this.tokenizer.lheading(e)) {
-            e = e.substring(r.raw.length), t.push(r);
+          if (r2 = this.tokenizer.heading(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.hr(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.blockquote(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.list(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.html(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.def(e)) {
+            e = e.substring(r2.raw.length);
+            let s = t.at(-1);
+            s?.type === "paragraph" || s?.type === "text" ? (s.raw += (s.raw.endsWith(`
+`) ? "" : `
+`) + r2.raw, s.text += `
+` + r2.raw, this.inlineQueue.at(-1).src = s.text) : this.tokens.links[r2.tag] || (this.tokens.links[r2.tag] = { href: r2.href, title: r2.title }, t.push(r2));
+            continue;
+          }
+          if (r2 = this.tokenizer.table(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
+            continue;
+          }
+          if (r2 = this.tokenizer.lheading(e)) {
+            e = e.substring(r2.raw.length), t.push(r2);
             continue;
           }
           let i = e;
@@ -67846,21 +69050,21 @@ ${c2}` : c2;
               o = l.call({ lexer: this }, a), typeof o == "number" && o >= 0 && (s = Math.min(s, o));
             }), s < 1 / 0 && s >= 0 && (i = e.substring(0, s + 1));
           }
-          if (this.state.top && (r = this.tokenizer.paragraph(i))) {
+          if (this.state.top && (r2 = this.tokenizer.paragraph(i))) {
             let s = t.at(-1);
-            n && s?.type === "paragraph" ? (s.raw += (s.raw.endsWith(`
+            n2 && s?.type === "paragraph" ? (s.raw += (s.raw.endsWith(`
 `) ? "" : `
-`) + r.raw, s.text += `
-` + r.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r), n = i.length !== e.length, e = e.substring(r.raw.length);
+`) + r2.raw, s.text += `
+` + r2.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r2), n2 = i.length !== e.length, e = e.substring(r2.raw.length);
             continue;
           }
-          if (r = this.tokenizer.text(e)) {
-            e = e.substring(r.raw.length);
+          if (r2 = this.tokenizer.text(e)) {
+            e = e.substring(r2.raw.length);
             let s = t.at(-1);
             s?.type === "text" ? (s.raw += (s.raw.endsWith(`
 `) ? "" : `
-`) + r.raw, s.text += `
-` + r.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r);
+`) + r2.raw, s.text += `
+` + r2.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = s.text) : t.push(r2);
             continue;
           }
           if (e) {
@@ -67878,15 +69082,15 @@ ${c2}` : c2;
       }
       inlineTokens(e, t = []) {
         this.tokenizer.lexer = this;
-        let n = e, r = null;
+        let n2 = e, r2 = null;
         if (this.tokens.links) {
           let o = Object.keys(this.tokens.links);
-          if (o.length > 0) for (; (r = this.tokenizer.rules.inline.reflinkSearch.exec(n)) !== null; ) o.includes(r[0].slice(r[0].lastIndexOf("[") + 1, -1)) && (n = n.slice(0, r.index) + "[" + "a".repeat(r[0].length - 2) + "]" + n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
+          if (o.length > 0) for (; (r2 = this.tokenizer.rules.inline.reflinkSearch.exec(n2)) !== null; ) o.includes(r2[0].slice(r2[0].lastIndexOf("[") + 1, -1)) && (n2 = n2.slice(0, r2.index) + "[" + "a".repeat(r2[0].length - 2) + "]" + n2.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
         }
-        for (; (r = this.tokenizer.rules.inline.anyPunctuation.exec(n)) !== null; ) n = n.slice(0, r.index) + "++" + n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
+        for (; (r2 = this.tokenizer.rules.inline.anyPunctuation.exec(n2)) !== null; ) n2 = n2.slice(0, r2.index) + "++" + n2.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
         let i;
-        for (; (r = this.tokenizer.rules.inline.blockSkip.exec(n)) !== null; ) i = r[2] ? r[2].length : 0, n = n.slice(0, r.index + i) + "[" + "a".repeat(r[0].length - i - 2) + "]" + n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
-        n = this.options.hooks?.emStrongMask?.call({ lexer: this }, n) ?? n;
+        for (; (r2 = this.tokenizer.rules.inline.blockSkip.exec(n2)) !== null; ) i = r2[2] ? r2[2].length : 0, n2 = n2.slice(0, r2.index + i) + "[" + "a".repeat(r2[0].length - i - 2) + "]" + n2.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
+        n2 = this.options.hooks?.emStrongMask?.call({ lexer: this }, n2) ?? n2;
         let s = false, a = "";
         for (; e; ) {
           s || (a = ""), s = false;
@@ -67910,7 +69114,7 @@ ${c2}` : c2;
             o.type === "text" && p?.type === "text" ? (p.raw += o.raw, p.text += o.text) : t.push(o);
             continue;
           }
-          if (o = this.tokenizer.emStrong(e, n, a)) {
+          if (o = this.tokenizer.emStrong(e, n2, a)) {
             e = e.substring(o.raw.length), t.push(o);
             continue;
           }
@@ -67922,7 +69126,7 @@ ${c2}` : c2;
             e = e.substring(o.raw.length), t.push(o);
             continue;
           }
-          if (o = this.tokenizer.del(e, n, a)) {
+          if (o = this.tokenizer.del(e, n2, a)) {
             e = e.substring(o.raw.length), t.push(o);
             continue;
           }
@@ -67967,11 +69171,11 @@ ${c2}` : c2;
       space(e) {
         return "";
       }
-      code({ text: e, lang: t, escaped: n }) {
-        let r = (t || "").match(m.notSpaceStart)?.[0], i = e.replace(m.endingNewline, "") + `
+      code({ text: e, lang: t, escaped: n2 }) {
+        let r2 = (t || "").match(m.notSpaceStart)?.[0], i = e.replace(m.endingNewline, "") + `
 `;
-        return r ? '<pre><code class="language-' + T(r) + '">' + (n ? i : T(i, true)) + `</code></pre>
-` : "<pre><code>" + (n ? i : T(i, true)) + `</code></pre>
+        return r2 ? '<pre><code class="language-' + T(r2) + '">' + (n2 ? i : T(i, true)) + `</code></pre>
+` : "<pre><code>" + (n2 ? i : T(i, true)) + `</code></pre>
 `;
       }
       blockquote({ tokens: e }) {
@@ -67994,14 +69198,14 @@ ${this.parser.parse(e)}</blockquote>
 `;
       }
       list(e) {
-        let t = e.ordered, n = e.start, r = "";
+        let t = e.ordered, n2 = e.start, r2 = "";
         for (let a = 0; a < e.items.length; a++) {
           let o = e.items[a];
-          r += this.listitem(o);
+          r2 += this.listitem(o);
         }
-        let i = t ? "ol" : "ul", s = t && n !== 1 ? ' start="' + n + '"' : "";
+        let i = t ? "ol" : "ul", s = t && n2 !== 1 ? ' start="' + n2 + '"' : "";
         return "<" + i + s + `>
-` + r + "</" + i + `>
+` + r2 + "</" + i + `>
 `;
       }
       listitem(e) {
@@ -68016,20 +69220,20 @@ ${this.parser.parse(e)}</blockquote>
 `;
       }
       table(e) {
-        let t = "", n = "";
-        for (let i = 0; i < e.header.length; i++) n += this.tablecell(e.header[i]);
-        t += this.tablerow({ text: n });
-        let r = "";
+        let t = "", n2 = "";
+        for (let i = 0; i < e.header.length; i++) n2 += this.tablecell(e.header[i]);
+        t += this.tablerow({ text: n2 });
+        let r2 = "";
         for (let i = 0; i < e.rows.length; i++) {
           let s = e.rows[i];
-          n = "";
-          for (let a = 0; a < s.length; a++) n += this.tablecell(s[a]);
-          r += this.tablerow({ text: n });
+          n2 = "";
+          for (let a = 0; a < s.length; a++) n2 += this.tablecell(s[a]);
+          r2 += this.tablerow({ text: n2 });
         }
-        return r && (r = `<tbody>${r}</tbody>`), `<table>
+        return r2 && (r2 = `<tbody>${r2}</tbody>`), `<table>
 <thead>
 ` + t + `</thead>
-` + r + `</table>
+` + r2 + `</table>
 `;
       }
       tablerow({ text: e }) {
@@ -68038,8 +69242,8 @@ ${e}</tr>
 `;
       }
       tablecell(e) {
-        let t = this.parser.parseInline(e.tokens), n = e.header ? "th" : "td";
-        return (e.align ? `<${n} align="${e.align}">` : `<${n}>`) + t + `</${n}>
+        let t = this.parser.parseInline(e.tokens), n2 = e.header ? "th" : "td";
+        return (e.align ? `<${n2} align="${e.align}">` : `<${n2}>`) + t + `</${n2}>
 `;
       }
       strong({ tokens: e }) {
@@ -68057,19 +69261,19 @@ ${e}</tr>
       del({ tokens: e }) {
         return `<del>${this.parser.parseInline(e)}</del>`;
       }
-      link({ href: e, title: t, tokens: n }) {
-        let r = this.parser.parseInline(n), i = J(e);
-        if (i === null) return r;
+      link({ href: e, title: t, tokens: n2 }) {
+        let r2 = this.parser.parseInline(n2), i = J(e);
+        if (i === null) return r2;
         e = i;
         let s = '<a href="' + e + '"';
-        return t && (s += ' title="' + T(t) + '"'), s += ">" + r + "</a>", s;
+        return t && (s += ' title="' + T(t) + '"'), s += ">" + r2 + "</a>", s;
       }
-      image({ href: e, title: t, text: n, tokens: r }) {
-        r && (n = this.parser.parseInline(r, this.parser.textRenderer));
+      image({ href: e, title: t, text: n2, tokens: r2 }) {
+        r2 && (n2 = this.parser.parseInline(r2, this.parser.textRenderer));
         let i = J(e);
-        if (i === null) return T(n);
+        if (i === null) return T(n2);
         e = i;
-        let s = `<img src="${e}" alt="${T(n)}"`;
+        let s = `<img src="${e}" alt="${T(n2)}"`;
         return t && (s += ` title="${T(t)}"`), s += ">", s;
       }
       text(e) {
@@ -68124,16 +69328,16 @@ ${e}</tr>
       parse(e) {
         this.renderer.parser = this;
         let t = "";
-        for (let n = 0; n < e.length; n++) {
-          let r = e[n];
-          if (this.options.extensions?.renderers?.[r.type]) {
-            let s = r, a = this.options.extensions.renderers[s.type].call({ parser: this }, s);
+        for (let n2 = 0; n2 < e.length; n2++) {
+          let r2 = e[n2];
+          if (this.options.extensions?.renderers?.[r2.type]) {
+            let s = r2, a = this.options.extensions.renderers[s.type].call({ parser: this }, s);
             if (a !== false || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "def", "paragraph", "text"].includes(s.type)) {
               t += a || "";
               continue;
             }
           }
-          let i = r;
+          let i = r2;
           switch (i.type) {
             case "space": {
               t += this.renderer.space(i);
@@ -68194,60 +69398,60 @@ ${e}</tr>
       }
       parseInline(e, t = this.renderer) {
         this.renderer.parser = this;
-        let n = "";
-        for (let r = 0; r < e.length; r++) {
-          let i = e[r];
+        let n2 = "";
+        for (let r2 = 0; r2 < e.length; r2++) {
+          let i = e[r2];
           if (this.options.extensions?.renderers?.[i.type]) {
             let a = this.options.extensions.renderers[i.type].call({ parser: this }, i);
             if (a !== false || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(i.type)) {
-              n += a || "";
+              n2 += a || "";
               continue;
             }
           }
           let s = i;
           switch (s.type) {
             case "escape": {
-              n += t.text(s);
+              n2 += t.text(s);
               break;
             }
             case "html": {
-              n += t.html(s);
+              n2 += t.html(s);
               break;
             }
             case "link": {
-              n += t.link(s);
+              n2 += t.link(s);
               break;
             }
             case "image": {
-              n += t.image(s);
+              n2 += t.image(s);
               break;
             }
             case "checkbox": {
-              n += t.checkbox(s);
+              n2 += t.checkbox(s);
               break;
             }
             case "strong": {
-              n += t.strong(s);
+              n2 += t.strong(s);
               break;
             }
             case "em": {
-              n += t.em(s);
+              n2 += t.em(s);
               break;
             }
             case "codespan": {
-              n += t.codespan(s);
+              n2 += t.codespan(s);
               break;
             }
             case "br": {
-              n += t.br(s);
+              n2 += t.br(s);
               break;
             }
             case "del": {
-              n += t.del(s);
+              n2 += t.del(s);
               break;
             }
             case "text": {
-              n += t.text(s);
+              n2 += t.text(s);
               break;
             }
             default: {
@@ -68257,7 +69461,7 @@ ${e}</tr>
             }
           }
         }
-        return n;
+        return n2;
       }
     };
     P = class {
@@ -68302,34 +69506,34 @@ ${e}</tr>
         this.use(...e);
       }
       walkTokens(e, t) {
-        let n = [];
-        for (let r of e) switch (n = n.concat(t.call(this, r)), r.type) {
+        let n2 = [];
+        for (let r2 of e) switch (n2 = n2.concat(t.call(this, r2)), r2.type) {
           case "table": {
-            let i = r;
-            for (let s of i.header) n = n.concat(this.walkTokens(s.tokens, t));
-            for (let s of i.rows) for (let a of s) n = n.concat(this.walkTokens(a.tokens, t));
+            let i = r2;
+            for (let s of i.header) n2 = n2.concat(this.walkTokens(s.tokens, t));
+            for (let s of i.rows) for (let a of s) n2 = n2.concat(this.walkTokens(a.tokens, t));
             break;
           }
           case "list": {
-            let i = r;
-            n = n.concat(this.walkTokens(i.items, t));
+            let i = r2;
+            n2 = n2.concat(this.walkTokens(i.items, t));
             break;
           }
           default: {
-            let i = r;
+            let i = r2;
             this.defaults.extensions?.childTokens?.[i.type] ? this.defaults.extensions.childTokens[i.type].forEach((s) => {
               let a = i[s].flat(1 / 0);
-              n = n.concat(this.walkTokens(a, t));
-            }) : i.tokens && (n = n.concat(this.walkTokens(i.tokens, t)));
+              n2 = n2.concat(this.walkTokens(a, t));
+            }) : i.tokens && (n2 = n2.concat(this.walkTokens(i.tokens, t)));
           }
         }
-        return n;
+        return n2;
       }
       use(...e) {
         let t = this.defaults.extensions || { renderers: {}, childTokens: {} };
-        return e.forEach((n) => {
-          let r = { ...n };
-          if (r.async = this.defaults.async || r.async || false, n.extensions && (n.extensions.forEach((i) => {
+        return e.forEach((n2) => {
+          let r2 = { ...n2 };
+          if (r2.async = this.defaults.async || r2.async || false, n2.extensions && (n2.extensions.forEach((i) => {
             if (!i.name) throw new Error("extension name required");
             if ("renderer" in i) {
               let s = t.renderers[i.name];
@@ -68344,38 +69548,38 @@ ${e}</tr>
               s ? s.unshift(i.tokenizer) : t[i.level] = [i.tokenizer], i.start && (i.level === "block" ? t.startBlock ? t.startBlock.push(i.start) : t.startBlock = [i.start] : i.level === "inline" && (t.startInline ? t.startInline.push(i.start) : t.startInline = [i.start]));
             }
             "childTokens" in i && i.childTokens && (t.childTokens[i.name] = i.childTokens);
-          }), r.extensions = t), n.renderer) {
+          }), r2.extensions = t), n2.renderer) {
             let i = this.defaults.renderer || new y(this.defaults);
-            for (let s in n.renderer) {
+            for (let s in n2.renderer) {
               if (!(s in i)) throw new Error(`renderer '${s}' does not exist`);
               if (["options", "parser"].includes(s)) continue;
-              let a = s, o = n.renderer[a], l = i[a];
+              let a = s, o = n2.renderer[a], l = i[a];
               i[a] = (...p) => {
                 let c2 = o.apply(i, p);
                 return c2 === false && (c2 = l.apply(i, p)), c2 || "";
               };
             }
-            r.renderer = i;
+            r2.renderer = i;
           }
-          if (n.tokenizer) {
+          if (n2.tokenizer) {
             let i = this.defaults.tokenizer || new w(this.defaults);
-            for (let s in n.tokenizer) {
+            for (let s in n2.tokenizer) {
               if (!(s in i)) throw new Error(`tokenizer '${s}' does not exist`);
               if (["options", "rules", "lexer"].includes(s)) continue;
-              let a = s, o = n.tokenizer[a], l = i[a];
+              let a = s, o = n2.tokenizer[a], l = i[a];
               i[a] = (...p) => {
                 let c2 = o.apply(i, p);
                 return c2 === false && (c2 = l.apply(i, p)), c2;
               };
             }
-            r.tokenizer = i;
+            r2.tokenizer = i;
           }
-          if (n.hooks) {
+          if (n2.hooks) {
             let i = this.defaults.hooks || new P();
-            for (let s in n.hooks) {
+            for (let s in n2.hooks) {
               if (!(s in i)) throw new Error(`hook '${s}' does not exist`);
               if (["options", "block"].includes(s)) continue;
-              let a = s, o = n.hooks[a], l = i[a];
+              let a = s, o = n2.hooks[a], l = i[a];
               P.passThroughHooks.has(s) ? i[a] = (p) => {
                 if (this.defaults.async && P.passThroughHooksRespectAsync.has(s)) return (async () => {
                   let d = await o.call(i, p);
@@ -68392,16 +69596,16 @@ ${e}</tr>
                 return c2 === false && (c2 = l.apply(i, p)), c2;
               };
             }
-            r.hooks = i;
+            r2.hooks = i;
           }
-          if (n.walkTokens) {
-            let i = this.defaults.walkTokens, s = n.walkTokens;
-            r.walkTokens = function(a) {
+          if (n2.walkTokens) {
+            let i = this.defaults.walkTokens, s = n2.walkTokens;
+            r2.walkTokens = function(a) {
               let o = [];
               return o.push(s.call(this, a)), i && (o = o.concat(i.call(this, a))), o;
             };
           }
-          this.defaults = { ...this.defaults, ...r };
+          this.defaults = { ...this.defaults, ...r2 };
         }), this;
       }
       setOptions(e) {
@@ -68414,20 +69618,20 @@ ${e}</tr>
         return b.parse(e, t ?? this.defaults);
       }
       parseMarkdown(e) {
-        return (n, r) => {
-          let i = { ...r }, s = { ...this.defaults, ...i }, a = this.onError(!!s.silent, !!s.async);
+        return (n2, r2) => {
+          let i = { ...r2 }, s = { ...this.defaults, ...i }, a = this.onError(!!s.silent, !!s.async);
           if (this.defaults.async === true && i.async === false) return a(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
-          if (typeof n > "u" || n === null) return a(new Error("marked(): input parameter is undefined or null"));
-          if (typeof n != "string") return a(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n) + ", string expected"));
+          if (typeof n2 > "u" || n2 === null) return a(new Error("marked(): input parameter is undefined or null"));
+          if (typeof n2 != "string") return a(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n2) + ", string expected"));
           if (s.hooks && (s.hooks.options = s, s.hooks.block = e), s.async) return (async () => {
-            let o = s.hooks ? await s.hooks.preprocess(n) : n, p = await (s.hooks ? await s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(o, s), c2 = s.hooks ? await s.hooks.processAllTokens(p) : p;
+            let o = s.hooks ? await s.hooks.preprocess(n2) : n2, p = await (s.hooks ? await s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(o, s), c2 = s.hooks ? await s.hooks.processAllTokens(p) : p;
             s.walkTokens && await Promise.all(this.walkTokens(c2, s.walkTokens));
             let h = await (s.hooks ? await s.hooks.provideParser(e) : e ? b.parse : b.parseInline)(c2, s);
             return s.hooks ? await s.hooks.postprocess(h) : h;
           })().catch(a);
           try {
-            s.hooks && (n = s.hooks.preprocess(n));
-            let l = (s.hooks ? s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(n, s);
+            s.hooks && (n2 = s.hooks.preprocess(n2));
+            let l = (s.hooks ? s.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(n2, s);
             s.hooks && (l = s.hooks.processAllTokens(l)), s.walkTokens && this.walkTokens(l, s.walkTokens);
             let c2 = (s.hooks ? s.hooks.provideParser(e) : e ? b.parse : b.parseInline)(l, s);
             return s.hooks && (c2 = s.hooks.postprocess(c2)), c2;
@@ -68437,14 +69641,14 @@ ${e}</tr>
         };
       }
       onError(e, t) {
-        return (n) => {
-          if (n.message += `
+        return (n2) => {
+          if (n2.message += `
 Please report this to https://github.com/markedjs/marked.`, e) {
-            let r = "<p>An error occurred:</p><pre>" + T(n.message + "", true) + "</pre>";
-            return t ? Promise.resolve(r) : r;
+            let r2 = "<p>An error occurred:</p><pre>" + T(n2.message + "", true) + "</pre>";
+            return t ? Promise.resolve(r2) : r2;
           }
-          if (t) return Promise.reject(n);
-          throw n;
+          if (t) return Promise.reject(n2);
+          throw n2;
         };
       }
     };
@@ -72683,10 +73887,10 @@ var init_types4 = __esm({
           ...errorUtil.errToObj(message)
         });
       }
-      length(len, message) {
+      length(len2, message) {
         return this._addCheck({
           kind: "length",
-          value: len,
+          value: len2,
           ...errorUtil.errToObj(message)
         });
       }
@@ -73541,10 +74745,10 @@ var init_types4 = __esm({
           maxLength: { value: maxLength, message: errorUtil.toString(message) }
         });
       }
-      length(len, message) {
+      length(len2, message) {
         return new _ZodArray({
           ...this._def,
-          exactLength: { value: len, message: errorUtil.toString(message) }
+          exactLength: { value: len2, message: errorUtil.toString(message) }
         });
       }
       nonempty(message) {
@@ -77385,7 +78589,7 @@ var init_protocol = __esm({
             }
             await this.notification(notification, notificationOptions);
           },
-          sendRequest: async (r, resultSchema, options) => {
+          sendRequest: async (r2, resultSchema, options) => {
             if (abortController.signal.aborted) {
               throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
             }
@@ -77397,7 +78601,7 @@ var init_protocol = __esm({
             if (effectiveTaskId && taskStore) {
               await taskStore.updateTaskStatus(effectiveTaskId, "input_required");
             }
-            return await this.request(r, resultSchema, requestOptions);
+            return await this.request(r2, resultSchema, requestOptions);
           },
           authInfo: extra?.authInfo,
           requestId: request.id,
@@ -80208,7 +81412,7 @@ function idleLine(id, seq, skipped = "") {
   return `nothing new on ${id} (seq ${seq}${skipped ? `; ${skipped}` : ""}) \u2014 wait again with since: ${seq}`;
 }
 function createMcpServer(client = new CanvasClient(), opts = {}) {
-  const server = new McpServer({ name: "unprose", version: "0.30.1" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
+  const server = new McpServer({ name: "unprose", version: "0.31.0" }, { instructions: `${ABOUT} When the person asks what Unprose can do, or how to start, call unprose_help. ${LOOP_HELP} The person's draft annotation (a comment with data.annotation.draft) is a proposal to the agent holding the files: judge it in its thread and apply it when it is sound \u2014 they wrote it, so that counts as consent. A TODO (data.todo) is a note to confirm something with someone else, not a question to you; its answer comes back as a reply.` });
   let extra = {};
   const seenContext = /* @__PURE__ */ new Map();
   const contextLines = (id, c2) => {
@@ -80226,7 +81430,7 @@ function createMcpServer(client = new CanvasClient(), opts = {}) {
     description: "What Unprose can do \u2014 the diagrams, the tools, the comment loop and the ways to start (slash commands / prompts). Call it when the person asks what Unprose is, what it can do, or how to begin; pass the answer on in their language.",
     inputSchema: {}
   }, async () => {
-    const version2 = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2e3), headers: { "user-agent": userAgent(opts.remote ? "remote-mcp" : "mcp") } }).then((r) => r.ok ? r.json() : {}).then((j2) => j2.version).catch(() => void 0);
+    const version2 = await fetch(`${client.baseUrl}/api/version`, { signal: AbortSignal.timeout(2e3), headers: { "user-agent": userAgent(opts.remote ? "remote-mcp" : "mcp") } }).then((r2) => r2.ok ? r2.json() : {}).then((j2) => j2.version).catch(() => void 0);
     return text(helpText({ designTools: !!extra.designTools, prompts: extra.prompts ?? [], canvas: client.publicUrl, version: version2, remote: opts.remote }));
   });
   server.registerTool("canvas_list_boards", {
@@ -80254,13 +81458,13 @@ ${CONTENT_HELP}`,
     }
   }, async ({ title, kind, content, meta: meta3, project }) => {
     const board = await client.createBoard({ title, kind, content, meta: meta3, author: "agent", ...project ?? opts.project ? { project: project ?? opts.project } : {} });
-    const n = Object.keys(board.items).length;
+    const n2 = Object.keys(board.items).length;
     const url2 = client.boardUrl(board.id);
     const opened = opts.openBrowser !== false && process.platform === "darwin" && process.env.AWD_CANVAS_NO_OPEN !== "1";
     if (opened)
       execFile3("open", [url2], () => {
       });
-    return text(`created board ${board.id} (${kind}, ${n} items, seq ${board.seq})${opened ? " and opened it in the browser" : " \u2014 give the person this link"}
+    return text(`created board ${board.id} (${kind}, ${n2} items, seq ${board.seq})${opened ? " and opened it in the browser" : " \u2014 give the person this link"}
 url: ${url2}
 Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watching" while you do.`);
   });
@@ -80281,8 +81485,8 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
       includeHidden: external_exports.boolean().optional().describe("also list what hidden frames hold (the person hid their contents on the board; by default each is one line saying how many items it holds)")
     }
   }, async ({ id, format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars, includeHidden }) => {
-    const r = await client.read(id, { format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars, includeHidden });
-    return text(r.text);
+    const r2 = await client.read(id, { format, frame, types, ids, text: q2, fields, limit: limit2, cursor, maxChars, includeHidden });
+    return text(r2.text);
   });
   server.registerTool("canvas_apply", {
     title: "Apply raw ops",
@@ -80297,14 +81501,14 @@ Now call canvas_wait with since=${board.seq} \u2014 the UI shows "agent is watch
     let all = ops;
     const skipped = [];
     if (locks.length) {
-      const r2 = lockOps(await client.getBoard(id), locks);
-      skipped.push(...r2.skipped);
-      all = [...ops.filter((o) => o.kind !== "lock" && o.kind !== "unlock"), ...r2.ops];
+      const r3 = lockOps(await client.getBoard(id), locks);
+      skipped.push(...r3.skipped);
+      all = [...ops.filter((o) => o.kind !== "lock" && o.kind !== "unlock"), ...r3.ops];
     }
     if (!all.length)
       return text(["nothing to apply", ...skipped.map((x2) => `  skipped ${x2}`)].join("\n"));
-    const r = await client.apply(id, all, "agent", note ?? (locks.length === ops.length ? `${locks[0].kind === "lock" ? "locked" : "unlocked"} the layout of ${all.length} item(s)` : void 0));
-    return text([`applied ${all.length} op(s); board seq is now ${r.seq}`, ...skipped.map((x2) => `  skipped ${x2}`)].join("\n"));
+    const r2 = await client.apply(id, all, "agent", note ?? (locks.length === ops.length ? `${locks[0].kind === "lock" ? "locked" : "unlocked"} the layout of ${all.length} item(s)` : void 0));
+    return text([`applied ${all.length} op(s); board seq is now ${r2.seq}`, ...skipped.map((x2) => `  skipped ${x2}`)].join("\n"));
   });
   server.registerTool("canvas_add_items", {
     title: "Render a template onto an existing board",
@@ -80323,8 +81527,8 @@ ${CONTENT_HELP}`,
     const { ops } = await client.template(id, kind, content, at3, scope);
     if (!ops.length)
       return text("template produced no items");
-    const r = await client.apply(id, ops, "agent", note);
-    return text(`rendered ${ops.length} item(s) (${ops.filter((o) => o.kind === "add").length} new); board seq is now ${r.seq}`);
+    const r2 = await client.apply(id, ops, "agent", note);
+    return text(`rendered ${ops.length} item(s) (${ops.filter((o) => o.kind === "add").length} new); board seq is now ${r2.seq}`);
   });
   server.registerTool("canvas_diff", {
     title: "What changed since seq",
@@ -80345,16 +81549,16 @@ ${CONTENT_HELP}`,
   }, async ({ id, since, from, author: rawAuthor, frame, kinds, summary, last, limit: limit2, cursor, maxChars }) => {
     const names = Array.isArray(from) ? from : void 0;
     const author = names ? "all" : from === "person" ? "user" : from ?? rawAuthor ?? "user";
-    const r = await client.diff(id, since, author === "all" ? void 0 : author, { frame, kinds, summary, last, limit: limit2, cursor, maxChars, ...names ? { from: names } : {} });
-    if (!r.count)
-      return text(`no ${author === "all" ? "" : author + " "}changes${frame || names || kinds ? " matching the filters" : ""} since seq ${since} (board seq ${r.seq})`);
-    if (r.summary)
-      return text(`${r.summary}
+    const r2 = await client.diff(id, since, author === "all" ? void 0 : author, { frame, kinds, summary, last, limit: limit2, cursor, maxChars, ...names ? { from: names } : {} });
+    if (!r2.count)
+      return text(`no ${author === "all" ? "" : author + " "}changes${frame || names || kinds ? " matching the filters" : ""} since seq ${since} (board seq ${r2.seq})`);
+    if (r2.summary)
+      return text(`${r2.summary}
 All lines: canvas_diff without summary (paged), or narrow with frame / from / kinds.`);
-    const page = r.nextCursor ? `
-${r.more ?? `more lines \u2014 cursor "${r.nextCursor}"`}` : "";
-    return text(`${r.count} change(s), board seq now ${r.seq}${r.total && r.total > r.lines.length ? ` \u2014 ${r.lines.length} of ${r.total} lines` : ""}:
-${r.lines.join("\n")}${page}`);
+    const page = r2.nextCursor ? `
+${r2.more ?? `more lines \u2014 cursor "${r2.nextCursor}"`}` : "";
+    return text(`${r2.count} change(s), board seq now ${r2.seq}${r2.total && r2.total > r2.lines.length ? ` \u2014 ${r2.lines.length} of ${r2.total} lines` : ""}:
+${r2.lines.join("\n")}${page}`);
   });
   server.registerTool("canvas_wait", {
     title: "Wait for the user to change the board",
@@ -80382,20 +81586,20 @@ ${r.lines.join("\n")}${page}`);
       void extra2.sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: s, total: timeoutSec, message: `watching ${id} (${s}s)` } }).catch(() => {
       });
     }, PROGRESS_MS) : void 0;
-    let r;
+    let r2;
     try {
-      r = await client.wait(id, since, timeoutSec * 1e3, from === "person" ? "user" : "others", quietSec * 1e3, wake, listen, { frame, kinds, summary, maxChars, ...names ? { from: names } : {} }, { signal: extra2?.signal, untilMention, contextOnce: !!opts.remote });
+      r2 = await client.wait(id, since, timeoutSec * 1e3, from === "person" ? "user" : "others", quietSec * 1e3, wake, listen, { frame, kinds, summary, maxChars, ...names ? { from: names } : {} }, { signal: extra2?.signal, untilMention, contextOnce: !!opts.remote });
     } finally {
       if (progress)
         clearInterval(progress);
     }
-    const head = contextLines(id, r.context ?? void 0);
-    if (r.timedOut) {
-      const skipped = [r.notForYou ? `${r.notForYou} change(s) for others` : "", r.notMentioned ? `${r.notMentioned} not addressed to you` : ""].filter(Boolean).join(", ");
-      return text([...head, idleLine(id, r.seq, skipped)].join("\n"));
+    const head = contextLines(id, r2.context ?? void 0);
+    if (r2.timedOut) {
+      const skipped = [r2.notForYou ? `${r2.notForYou} change(s) for others` : "", r2.notMentioned ? `${r2.notMentioned} not addressed to you` : ""].filter(Boolean).join(", ");
+      return text([...head, idleLine(id, r2.seq, skipped)].join("\n"));
     }
-    const elsewhere = r.notForYou ? [`(${r.notForYou} change(s) on this board were for another agent${r.answeredBy && r.answeredBy !== "any agent" ? ` \u2014 it is answered by ${r.answeredBy}` : ""}; canvas_diff shows them, listen: 'all' wakes on them)`] : [];
-    return text([...head, `${from === "person" ? "user changed the board" : "the board changed"} (seq ${r.seq}):`, ...r.lines, ...elsewhere].join("\n"));
+    const elsewhere = r2.notForYou ? [`(${r2.notForYou} change(s) on this board were for another agent${r2.answeredBy && r2.answeredBy !== "any agent" ? ` \u2014 it is answered by ${r2.answeredBy}` : ""}; canvas_diff shows them, listen: 'all' wakes on them)`] : [];
+    return text([...head, `${from === "person" ? "user changed the board" : "the board changed"} (seq ${r2.seq}):`, ...r2.lines, ...elsewhere].join("\n"));
   });
   server.registerTool("canvas_focus", {
     title: "Show the person something on the board",
@@ -80407,11 +81611,11 @@ ${r.lines.join("\n")}${page}`);
       note: external_exports.string().max(500).optional()
     }
   }, async ({ id, ids, frame, note }) => {
-    const r = await client.focus(id, { ids, frame, note });
-    const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r.focus.ids[0], ...frame ? { frame } : {} });
-    const hidden = r.hidden?.length ? `
-Note: ${r.hidden.map((f) => `"${f.title}"`).join(", ")} ${r.hidden.length === 1 ? "is a hidden frame" : "are hidden frames"} (the person hid the contents): their page shows ${r.hidden.length === 1 ? "it" : "them"} collapsed instead of what you asked for \u2014 ask them to Show it if they should look inside` : "";
-    return text((r.viewers ? `shown on ${r.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`) + hidden);
+    const r2 = await client.focus(id, { ids, frame, note });
+    const link = client.boardUrl(id, frame && !ids?.length ? { frame } : { focus: r2.focus.ids[0], ...frame ? { frame } : {} });
+    const hidden = r2.hidden?.length ? `
+Note: ${r2.hidden.map((f) => `"${f.title}"`).join(", ")} ${r2.hidden.length === 1 ? "is a hidden frame" : "are hidden frames"} (the person hid the contents): their page shows ${r2.hidden.length === 1 ? "it" : "them"} collapsed instead of what you asked for \u2014 ask them to Show it if they should look inside` : "";
+    return text((r2.viewers ? `shown on ${r2.viewers} open page(s). Link: ${link}` : `no page has this board open right now \u2014 send the person this link instead: ${link}`) + hidden);
   });
   server.registerTool("canvas_snapshot", {
     title: "See the board (an image of a frame, items or the whole board)",
@@ -80450,11 +81654,11 @@ ${svg2}`);
       limit: external_exports.number().int().min(1).max(500).optional().describe("findings to list (default 60)")
     }
   }, async ({ id, frame, limit: limit2 }) => {
-    const r = await client.layout(id, frame, limit2 ?? 60);
-    const lines = r.lines;
-    if (!r.findings.length)
-      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r.checked} items${r.wires ? ` and ${r.wires} wires` : ""} checked${r.hidden ? ` (${r.hidden} in hidden frames not checked)` : ""} \u2014 nothing overlaps, collides, is cut off or out of place.`);
-    return text((lines ?? r.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
+    const r2 = await client.layout(id, frame, limit2 ?? 60);
+    const lines = r2.lines;
+    if (!r2.findings.length)
+      return text(`layout of ${frame ? `frame ${frame}` : "the board"}: ${r2.checked} items${r2.wires ? ` and ${r2.wires} wires` : ""} checked${r2.hidden ? ` (${r2.hidden} in hidden frames not checked)` : ""} \u2014 nothing overlaps, collides, is cut off or out of place.`);
+    return text((lines ?? r2.findings.map((f) => `- [${f.kind}] ${f.message} #${f.id} \u2014 ${f.suggestion}`)).join("\n"));
   });
   if (!opts.remote) {
     server.registerTool("canvas_approve", {
@@ -80467,8 +81671,8 @@ ${svg2}`);
         board: external_exports.string().optional().describe("the board you are working on: the approval is written to its change feed")
       }
     }, async ({ code, scope, name, board }) => {
-      const r = await client.approve(code, { scope, name, board });
-      return text(`${r.audit}.${r.approved ? ` It connects as "${name ?? r.approved.name}" with ${r.approved.scope} access; the person can revoke it on Connected agents.` : ""}${r.seq !== void 0 ? ` Logged on board ${board} (seq ${r.seq}).` : ""}`);
+      const r2 = await client.approve(code, { scope, name, board });
+      return text(`${r2.audit}.${r2.approved ? ` It connects as "${name ?? r2.approved.name}" with ${r2.approved.scope} access; the person can revoke it on Connected agents.` : ""}${r2.seq !== void 0 ? ` Logged on board ${board} (seq ${r2.seq}).` : ""}`);
     });
   }
   server.registerTool("canvas_context", {
@@ -80562,31 +81766,31 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
     const status = await client.handover(board);
     const ho = status.handover;
     if (ready) {
-      const r = await client.handoverReady(board, { ...keys?.length ? { keys } : {} });
+      const r2 = await client.handoverReady(board, { ...keys?.length ? { keys } : {} });
       const before = new Map((ho?.keys ?? []).map((k2) => [k2.key, k2.ready?.at]));
-      const marked = r.handover.keys.filter((k2) => k2.ready && k2.ready.at !== before.get(k2.key));
+      const marked = r2.handover.keys.filter((k2) => k2.ready && k2.ready.at !== before.get(k2.key));
       const files = marked.flatMap((k2) => Object.entries(k2.ready?.files ?? {}).map(([p, sha]) => `${p} ${sha.slice(0, 7)}`));
-      const left = handoverWaiting(r.handover);
+      const left = handoverWaiting(r2.handover);
       return text([
-        `Marked ready for ${displayName(r.handover.to)}: ${marked.map((k2) => `\xAB${k2.title ?? k2.key}\xBB`).join(", ") || "(nothing new)"}${files.length ? ` \u2014 ${files.join(", ")}` : ""} (board seq ${r.seq}).`,
-        r.open.length ? `Open proposals on them: ${r.open.join(", ")} \u2014 settle them in their threads if you can (apply after the person agrees, or say why not); whatever is still open goes to ${displayName(r.handover.to)} after the handover.` : "No open proposals on them.",
-        left ? `Still waiting: ${left}.` : `Every file is ready: ${displayName(r.handover.to)} accepts next (canvas_handover({ accept: true })). Propose from then on (canvas_files \u2192 canvas_propose_edit); you cannot redraw them any more after that.`
+        `Marked ready for ${displayName(r2.handover.to)}: ${marked.map((k2) => `\xAB${k2.title ?? k2.key}\xBB`).join(", ") || "(nothing new)"}${files.length ? ` \u2014 ${files.join(", ")}` : ""} (board seq ${r2.seq}).`,
+        r2.open.length ? `Open proposals on them: ${r2.open.join(", ")} \u2014 settle them in their threads if you can (apply after the person agrees, or say why not); whatever is still open goes to ${displayName(r2.handover.to)} after the handover.` : "No open proposals on them.",
+        left ? `Still waiting: ${left}.` : `Every file is ready: ${displayName(r2.handover.to)} accepts next (canvas_handover({ accept: true })). Propose from then on (canvas_files \u2192 canvas_propose_edit); you cannot redraw them any more after that.`
       ].join("\n"));
     }
     if (accept) {
-      const r = await client.handoverAccept(board, { ...repo ? { repo } : {}, ...remote ? { remote } : {} });
-      const titles = r.keys.map((k2) => `\xAB${ho?.keys.find((x2) => x2.key === k2)?.title ?? k2}\xBB`).join(", ");
+      const r2 = await client.handoverAccept(board, { ...repo ? { repo } : {}, ...remote ? { remote } : {} });
+      const titles = r2.keys.map((k2) => `\xAB${ho?.keys.find((x2) => x2.key === k2)?.title ?? k2}\xBB`).join(", ");
       const how = opts.remote ? `design_draw({ name, content, board: "${board}" }) with your copy's text` : `design_draw({ file, board: "${board}" }) from your copy`;
       return text([
-        `You hold the files of ${titles} now${ho ? ` (handed over from ${handoverFroms(ho).map(displayName).join(", ")})` : ""} \u2014 board seq ${r.seq}. Proposals on them come to you, and only you redraw them; apply a proposal only after the person agrees in its thread.`,
+        `You hold the files of ${titles} now${ho ? ` (handed over from ${handoverFroms(ho).map(displayName).join(", ")})` : ""} \u2014 board seq ${r2.seq}. Proposals on them come to you, and only you redraw them; apply a proposal only after the person agrees in its thread.`,
         `Next: read each file below with canvas_files({ id: "${board}", path }), write it into your repo at that path (a repo you keep \u2014 e.g. commit it), and redraw once from your copy: ${how}. From then on the file in your repo is the truth.`,
         "Files:",
-        ...r.files.map((f) => `- ${f.path}	base ${f.sha}	${f.lines} lines`)
+        ...r2.files.map((f) => `- ${f.path}	base ${f.sha}	${f.lines} lines`)
       ].join("\n"));
     }
     if (cancel) {
-      const r = await client.handoverCancel(board, { ...reason ? { reason } : {} });
-      return text(`Cancelled the handover (board seq ${r.seq}); the files stay with ${ho ? handoverFroms(ho).map(displayName).join(", ") : "their holders"}.`);
+      const r2 = await client.handoverCancel(board, { ...reason ? { reason } : {} });
+      return text(`Cancelled the handover (board seq ${r2.seq}); the files stay with ${ho ? handoverFroms(ho).map(displayName).join(", ") : "their holders"}.`);
     }
     const holders = status.holders.map((h) => `- ${h.key}${h.title ? ` \xAB${h.title}\xBB` : ""}${h.source ? ` (${h.source})` : ""}: held by ${displayName(h.holder.agent)}${h.holder.from ? ` (handed over from ${displayName(h.holder.from)})` : ""}`);
     return text([
@@ -80622,21 +81826,21 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
         const loose2 = all.filter((i) => isTodo(i) && !i.target).length;
         const at3 = target ? {} : { x: Math.min(0, ...all.map((i) => i.x)), y: Math.min(0, ...all.map((i) => i.y)) - 110 * (loose2 + 1), w: 260, h: 90 };
         const { ops } = await client.template(board, "freeform", { items: [{ ...newTodo(id, t, { on, ask }), ...at3 }] });
-        const r = await client.apply(board, ops, "agent", `TODO: ${t.trim().slice(0, 80)}`);
-        return text(`Opened TODO ${id}${target ? ` on ${aboutText(target)}` : ""}: "${t.trim()}"${ask?.trim() ? ` \u2014 ask ${ask.trim()}` : ""} (board seq ${r.seq}). It wakes nobody; when someone checks it off with an answer, the answer comes to the board's "Answered by" agent as a reply in its thread.`);
+        const r2 = await client.apply(board, ops, "agent", `TODO: ${t.trim().slice(0, 80)}`);
+        return text(`Opened TODO ${id}${target ? ` on ${aboutText(target)}` : ""}: "${t.trim()}"${ask?.trim() ? ` \u2014 ask ${ask.trim()}` : ""} (board seq ${r2.seq}). It wakes nobody; when someone checks it off with an answer, the answer comes to the board's "Answered by" agent as a reply in its thread.`);
       }
       if (done !== void 0) {
         const { update, reply } = todoDoneOps(b2, done, answer);
         const ops = [update, ...reply ? (await client.template(board, "freeform", { items: [{ ...reply, id: `${done}.answer.${rand()}` }] })).ops : []];
-        const r = await client.apply(board, ops, "agent", `checked off TODO ${done}`);
-        const posted = r.change?.ops.find((o) => o.kind === "add" && o.item.type === "comment");
+        const r2 = await client.apply(board, ops, "agent", `checked off TODO ${done}`);
+        const posted = r2.change?.ops.find((o) => o.kind === "add" && o.item.type === "comment");
         const to = posted && posted.kind === "add" && Array.isArray(posted.item.data?.to) ? posted.item.data.to : void 0;
         const who = to === void 0 ? "every agent watching (nobody answers this board yet)" : to.length ? to.map(displayName).join(", ") : "nobody else (you answer this board)";
-        return text(`Checked off TODO ${done} "${b2.items[done].text ?? ""}"${reply ? ` with the answer "${answer.trim()}" \u2014 posted in its thread; it goes to ${who}, which decides whether the design changes` : " without an answer: nobody is notified"} (board seq ${r.seq}).`);
+        return text(`Checked off TODO ${done} "${b2.items[done].text ?? ""}"${reply ? ` with the answer "${answer.trim()}" \u2014 posted in its thread; it goes to ${who}, which decides whether the design changes` : " without an answer: nobody is notified"} (board seq ${r2.seq}).`);
       }
       if (reopen !== void 0) {
-        const r = await client.apply(board, [todoReopenOp(b2, reopen)], "agent", `reopened TODO ${reopen}`);
-        return text(`Reopened TODO ${reopen} "${b2.items[reopen].text ?? ""}" (board seq ${r.seq}).`);
+        const r2 = await client.apply(board, [todoReopenOp(b2, reopen)], "agent", `reopened TODO ${reopen}`);
+        return text(`Reopened TODO ${reopen} "${b2.items[reopen].text ?? ""}" (board seq ${r2.seq}).`);
       }
     } catch (e) {
       if (e instanceof TodoError)
@@ -80657,12 +81861,12 @@ Reply in the thread (canvas_add_items comment with target "${cid}") to go on \u2
       about: external_exports.array(external_exports.string()).optional().describe("tool names or item ids it is about")
     }
   }, async ({ text: t, kind, title, board, about }) => {
-    const r = await client.sendFeedback({ text: t, ...kind ? { kind } : {}, ...title ? { title } : {}, ...board ? { board } : {}, ...about?.length ? { about } : {} });
-    const thanks = `thanks \u2014 recorded as ${r.id}; the owner sees it on the Connected agents page.`;
-    if (!r.issue)
+    const r2 = await client.sendFeedback({ text: t, ...kind ? { kind } : {}, ...title ? { title } : {}, ...board ? { board } : {}, ...about?.length ? { about } : {} });
+    const thanks = `thanks \u2014 recorded as ${r2.id}; the owner sees it on the Connected agents page.`;
+    if (!r2.issue)
       return text(thanks);
     return text(`${thanks}
-If the person wants it tracked on GitHub, they can open this prefilled issue, check it holds nothing private (it will be public) and submit it: ${r.issue}
+If the person wants it tracked on GitHub, they can open this prefilled issue, check it holds nothing private (it will be public) and submit it: ${r2.issue}
 Do not file it yourself unless they ask you to and you have your own GitHub access.`);
   });
   server.registerTool("unprose_feedback_list", {
@@ -80707,11 +81911,11 @@ ${f.text}`);
       wires: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), event: external_exports.string(), condition: external_exports.string().optional(), remove: external_exports.boolean().optional() })).optional().describe("workflow boards: wires the edit adds or removes, by workflow node id \u2014 drawn dashed until the applied file is redrawn")
     }
   }, async ({ id, file: file2, base, diff, newText, note, about, wires }) => {
-    const r = await client.propose(id, { file: file2, base, diff, newText, note, about, wires });
-    const moved = r.offsets.some((o) => o !== 0) ? ` (some hunks applied ${r.offsets.map((o) => o > 0 ? `+${o}` : String(o)).join(", ")} lines from where they said)` : "";
-    return text(`proposed an edit to ${r.file} (+${r.added} \u2212${r.removed})${moved} as comment ${r.comment} on ${r.about.join(", ") || "the board"}; board seq ${r.seq}.
-Link: ${client.boardUrl(id, r.about[0] ? { focus: r.about[0] } : {})}
-The file is unchanged until whoever has it applies the edit after the person agrees. Tell the person, then canvas_wait (since ${r.seq}) for their answer in thread ${r.comment}.`);
+    const r2 = await client.propose(id, { file: file2, base, diff, newText, note, about, wires });
+    const moved = r2.offsets.some((o) => o !== 0) ? ` (some hunks applied ${r2.offsets.map((o) => o > 0 ? `+${o}` : String(o)).join(", ")} lines from where they said)` : "";
+    return text(`proposed an edit to ${r2.file} (+${r2.added} \u2212${r2.removed})${moved} as comment ${r2.comment} on ${r2.about.join(", ") || "the board"}; board seq ${r2.seq}.
+Link: ${client.boardUrl(id, r2.about[0] ? { focus: r2.about[0] } : {})}
+The file is unchanged until whoever has it applies the edit after the person agrees. Tell the person, then canvas_wait (since ${r2.seq}) for their answer in thread ${r2.comment}.`);
   });
   server.registerTool("canvas_open", { title: "Open a board in the browser", description: opts.openBrowser === false ? "The board URL, to give the person." : "Print the board URL and open it in the default browser (macOS).", inputSchema: { id: external_exports.string() } }, async ({ id }) => {
     const url2 = client.boardUrl(id);
@@ -80741,7 +81945,7 @@ async function connectWithCode(base, client, name) {
   const until = Date.now() + (j2.expires_in ?? 600) * 1e3;
   let interval = Math.max(5, j2.interval ?? 5) * 1e3;
   while (Date.now() < until) {
-    await new Promise((r) => setTimeout(r, interval));
+    await new Promise((r2) => setTimeout(r2, interval));
     const t = await fetch(`${base}/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": userAgent("mcp") }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: j2.device_code }) }).catch(() => void 0);
     const body = await t?.json().catch(() => ({})) ?? {};
     if (body.access_token) {
@@ -80774,15 +81978,15 @@ function shortHost(host = os5.hostname()) {
   return h.slice(0, 24).replace(/-+$/, "") || "host";
 }
 function clientWord(clientName, env = process.env) {
-  const n = (clientName ?? "").toLowerCase();
+  const n2 = (clientName ?? "").toLowerCase();
   for (const w2 of ["codex", "claude", "cursor", "gemini", "opencode", "windsurf", "cline", "goose", "zed"])
-    if (n.includes(w2))
+    if (n2.includes(w2))
       return w2;
   if (env.CLAUDECODE || env.CLAUDE_CODE_ENTRYPOINT)
     return "claude";
   if (Object.keys(env).some((k2) => k2.startsWith("CODEX_")))
     return "codex";
-  const slug3 = n.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
+  const slug3 = n2.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
   return slug3 || "agent";
 }
 function defaultAgentName(clientName, env = process.env, host = os5.hostname()) {
@@ -80835,7 +82039,7 @@ async function runMcp(extend2) {
   if (needsPairing) {
     const until = Date.now() + 3e3;
     while (!server.server.getClientVersion() && Date.now() < until)
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r2) => setTimeout(r2, 50));
     void connectWithCode(base, client, defaultAgentName(server.server.getClientVersion()?.name));
   }
 }
@@ -80911,22 +82115,6 @@ var init_read = __esm({
   }
 });
 
-// packages/canvas/dist/shown.js
-var init_shown = __esm({
-  "packages/canvas/dist/shown.js"() {
-    init_hidden();
-    init_model();
-  }
-});
-
-// packages/canvas/dist/wireGeometry.js
-var init_wireGeometry = __esm({
-  "packages/canvas/dist/wireGeometry.js"() {
-    init_textMetrics();
-    init_edgeLabel();
-  }
-});
-
 // packages/canvas/dist/snapshot.js
 var DS_GLYPHS;
 var init_snapshot = __esm({
@@ -80954,20 +82142,6 @@ var init_snapshot = __esm({
     };
     DS_GLYPHS.message = DS_GLYPHS.email;
     DS_GLYPHS.information = DS_GLYPHS.info;
-  }
-});
-
-// packages/canvas/dist/layoutCheck.js
-var init_layoutCheck = __esm({
-  "packages/canvas/dist/layoutCheck.js"() {
-    init_annotations();
-    init_hidden();
-    init_model();
-    init_shown();
-    init_textMetrics();
-    init_edgeLabel();
-    init_wireGeometry();
-    init_uiMock();
   }
 });
 
@@ -81142,13 +82316,13 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
     const errors = findings.filter((x2) => x2.severity === "error");
     if (errors.length)
       return fail([`not drawn: ${errors.length} lint error(s) in ${file2}`, ...errors.map(findingLine)].join("\n"));
-    const r = await drawDesign(f, { board, ...at3 ? { at: at3 } : {}, ...applied ? { applied } : {} });
+    const r2 = await drawDesign(f, { board, ...at3 ? { at: at3 } : {}, ...applied ? { applied } : {} });
     const notes = findings.filter((x2) => x2.severity !== "error");
     return text2([
-      `\u2714 ${path22.basename(f)} \u2192 frame ${r.key} on ${r.base}/b/${r.boardId}?frame=${encodeURIComponent(r.key)} (seq ${r.seq})`,
-      ...r.applied ? [`\u2714 answered "Applied to ${r.applied.file ?? file2}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`] : [],
+      `\u2714 ${path22.basename(f)} \u2192 frame ${r2.key} on ${r2.base}/b/${r2.boardId}?frame=${encodeURIComponent(r2.key)} (seq ${r2.seq})`,
+      ...r2.applied ? [`\u2714 answered "Applied to ${r2.applied.file ?? file2}" in thread ${applied}${r2.applied.notes.length ? ` (${r2.applied.notes.join("; ")})` : ""}`] : [],
       ...notes.map(findingLine),
-      ...unresolvedReport(r.unresolvedTraces),
+      ...unresolvedReport(r2.unresolvedTraces),
       ...d.kind === "domain-story" ? tellBack(d.content) : []
     ].join("\n"));
   }));
@@ -81161,8 +82335,8 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
       board: external_exports.string().describe('The board with the story map frame (id or "title:<title>")')
     }
   }, async ({ from, into, board }) => guard(async () => {
-    const r = await proposeStoriesToBoard(abs(from), abs(into), { board });
-    return text2(`\u2714 ${r.proposed} story proposal(s) on ${r.base}/b/${r.boardId}${r.skipped ? ` (${r.skipped} already proposed)` : ""}${r.candidates === 0 ? " \u2014 nothing new: every command already has a story" : ""}. The story-map file is unchanged until the person accepts them.`);
+    const r2 = await proposeStoriesToBoard(abs(from), abs(into), { board });
+    return text2(`\u2714 ${r2.proposed} story proposal(s) on ${r2.base}/b/${r2.boardId}${r2.skipped ? ` (${r2.skipped} already proposed)` : ""}${r2.candidates === 0 ? " \u2014 nothing new: every command already has a story" : ""}. The story-map file is unchanged until the person accepts them.`);
   }));
   server.registerTool("design_egon", {
     title: "Egon.io import / export",
@@ -81177,9 +82351,9 @@ Draw (or refresh) one diagram frame from its file. What a redraw keeps: a locked
       exportEgonFile(abs(file2), abs(out));
       return text2(`\u2714 ${file2} \u2192 ${out}; open it in Egon.io (https://egon.io) with Import`);
     }
-    const r = importEgonFile(abs(file2), abs(out));
+    const r2 = importEgonFile(abs(file2), abs(out));
     const { findings } = lintFile(abs(out));
-    return text2([`\u2714 ${file2} \u2192 ${out} (${r.sentences} sentence(s)); draw it with design_draw`, ...r.warnings.map((w2) => `\u26A0 ${w2}`), ...findings.map(findingLine)].join("\n"));
+    return text2([`\u2714 ${file2} \u2192 ${out} (${r2.sentences} sentence(s)); draw it with design_draw`, ...r2.warnings.map((w2) => `\u26A0 ${w2}`), ...findings.map(findingLine)].join("\n"));
   }));
   const prompts = [];
   if (o.prompts !== false) {
@@ -81227,7 +82401,7 @@ var HELP = `awd \u2014 small event-driven agent workflows
   awd studio  (--project <dir> | <workflow.yaml>) [--canvas URL] [--model opus|sonnet|fable|haiku] [--permission-mode auto] [--interval 2s] [--max-sessions 3] [--idle-close 30m] [--warm]
               one process per project: every board in it, one Claude session per board (a fork while it is busy)
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
-  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--applied <proposal thread id>] [--dry-run [--limit N]]
+  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--project personal|<id>] [--relayout] [--applied <proposal thread id>] [--dry-run [--limit N]]
               --dry-run: the redraw preview \u2014 added / updated / removed / kept where you moved it / kept (locked) /
               proposals held / items not from this file, per frame (docs/diagrams.md "What a redraw keeps"); writes nothing
               --applied: you applied that proposal (after the person agreed): answers "Applied to <file>" in its thread;
@@ -81288,14 +82462,14 @@ function need(args2, i, what) {
 }
 function cmdLint(file2) {
   const { def: def2 } = loadWorkflow(file2);
-  const r = lint(def2);
-  for (const w2 of r.warnings)
+  const r2 = lint(def2);
+  for (const w2 of r2.warnings)
     console.log(`${c.yellow("warn ")} ${w2.where}: ${w2.message}`);
-  for (const e of r.errors)
+  for (const e of r2.errors)
     console.log(`${c.red("error")} ${e.where}: ${e.message}`);
-  const summary = `${def2.name}: ${def2.triggers.length} triggers, ${def2.steps.length} steps \u2014 ${r.errors.length} errors, ${r.warnings.length} warnings`;
-  console.log(r.ok ? c.green(summary) : c.red(summary));
-  return r.ok;
+  const summary = `${def2.name}: ${def2.triggers.length} triggers, ${def2.steps.length} steps \u2014 ${r2.errors.length} errors, ${r2.warnings.length} warnings`;
+  console.log(r2.ok ? c.green(summary) : c.red(summary));
+  return r2.ok;
 }
 async function cmdGraph(file2, flags2) {
   const { def: def2 } = loadWorkflow(file2);
@@ -81307,11 +82481,11 @@ async function cmdGraph(file2, flags2) {
         console.log(line);
       return;
     }
-    const r = await pushGraphToCanvas(def2, { canvas: str5(flags2.canvas), runtime: str5(flags2.runtime), file: file2, ...applied ? { applied } : {} });
-    const n = toGraph(def2).nodes.length;
-    console.log(`${c.green("\u2714")} ${def2.name} \u2014 workflow.yaml \u2192 ${r.base}/b/${r.boardId}  (seq ${r.seq}, ${n} nodes, with block details)`);
-    if (r.applied)
-      console.log(`${c.green("\u2714")} answered "Applied to ${r.applied.file}" in thread ${applied}${r.applied.notes.length ? ` (${r.applied.notes.join("; ")})` : ""}`);
+    const r2 = await pushGraphToCanvas(def2, { canvas: str5(flags2.canvas), runtime: str5(flags2.runtime), file: file2, ...applied ? { applied } : {} });
+    const n2 = toGraph(def2).nodes.length;
+    console.log(`${c.green("\u2714")} ${def2.name} \u2014 workflow.yaml \u2192 ${r2.base}/b/${r2.boardId}  (seq ${r2.seq}, ${n2} nodes, with block details)`);
+    if (r2.applied)
+      console.log(`${c.green("\u2714")} answered "Applied to ${r2.applied.file}" in thread ${applied}${r2.applied.notes.length ? ` (${r2.applied.notes.join("; ")})` : ""}`);
     return;
   }
   if (flags2.json)
@@ -81392,20 +82566,20 @@ async function cmdReflect(file2, flags2) {
   const cards = decisions.map(cardForPattern);
   if (!cards.length)
     return console.log(c.dim("no pattern past the threshold \u2014 nothing to put on the board"));
-  const r = await canvasCards({ base: str5(flags2.canvas) }).upsertCards(board, cards, str5(flags2.column) ?? "Backlog");
+  const r2 = await canvasCards({ base: str5(flags2.canvas) }).upsertCards(board, cards, str5(flags2.column) ?? "Backlog");
   if (flags2.json)
-    return console.log(JSON.stringify(r, null, 2));
-  console.log(`${c.green("\u2714")} ${r.created.length} card(s) created, ${r.updated.length} updated, ${cards.length - r.created.length - r.updated.length} unchanged \u2192 ${r.url}`);
+    return console.log(JSON.stringify(r2, null, 2));
+  console.log(`${c.green("\u2714")} ${r2.created.length} card(s) created, ${r2.updated.length} updated, ${cards.length - r2.created.length - r2.updated.length} unchanged \u2192 ${r2.url}`);
   for (const card of cards)
     console.log(`  ${c.dim(card.id)} ${card.title} ${c.dim(`(${card.count}\xD7)`)}`);
 }
 async function cmdRun(file2, flags2) {
   const wf = loadWorkflow(file2, { storeDir: str5(flags2["store-dir"]) });
-  const r = lint(wf.def);
-  for (const w2 of r.warnings)
+  const r2 = lint(wf.def);
+  for (const w2 of r2.warnings)
     console.log(`${c.yellow("warn ")} ${w2.where}: ${w2.message}`);
-  if (!r.ok) {
-    for (const e of r.errors)
+  if (!r2.ok) {
+    for (const e of r2.errors)
       console.log(`${c.red("error")} ${e.where}: ${e.message}`);
     process.exit(1);
   }
@@ -81481,16 +82655,16 @@ function cmdReplay(file2, eventsFile, flags2) {
     if (flags2.key && k2 !== flags2.key)
       continue;
     console.log(c.bold(`\u2500\u2500 ${k2}`));
-    const r = replay(wf.def, k2, evs, { roles: wf.roles, agents: wf.agents });
-    for (const step of r.steps) {
-      console.log(`  ${c.dim(step.event.ts.slice(11, 19))} ${step.event.type}${step.event.data !== void 0 ? " " + c.dim(short3(step.event.data)) : ""}`);
+    const r2 = replay(wf.def, k2, evs, { roles: wf.roles, agents: wf.agents });
+    for (const step of r2.steps) {
+      console.log(`  ${c.dim(step.event.ts.slice(11, 19))} ${step.event.type}${step.event.data !== void 0 ? " " + c.dim(short4(step.event.data)) : ""}`);
       for (const cmd2 of step.commands)
         console.log(`      ${c.yellow("\u2192")} ${describe3(cmd2)}`);
     }
-    printRun(r.state);
+    printRun(r2.state);
   }
 }
-function short3(v2) {
+function short4(v2) {
   const s = JSON.stringify(v2) ?? "";
   return s.length > 80 ? s.slice(0, 77) + "\u2026" : s;
 }
@@ -81499,7 +82673,7 @@ function describe3(cmd2) {
     case "run_script":
       return `run_script ${cmd2.step}: ${cmd2.cmd}`;
     case "call_ai":
-      return `call_ai ${cmd2.step} @${cmd2.agent ?? cmd2.role ?? "model"}${cmd2.runner ? " via " + cmd2.runner : ""} input=${short3(cmd2.input)}`;
+      return `call_ai ${cmd2.step} @${cmd2.agent ?? cmd2.role ?? "model"}${cmd2.runner ? " via " + cmd2.runner : ""} input=${short4(cmd2.input)}`;
     case "wait_human":
       return `wait_human ${cmd2.step} on ${cmd2.resumeOn.join("|")}`;
     case "emit":
@@ -81569,9 +82743,9 @@ async function runGolden(wf, g2) {
   if ((g2.mode ?? "replay") === "replay") {
     const events = g2.events.map(mk);
     const key = g2.key ?? events[0]?.key ?? "k";
-    const r = replay(wf.def, key, events.map((e) => ({ ...e, key })), { roles: wf.roles, agents: wf.agents });
-    state = r.state;
-    commands = r.steps.flatMap((s) => s.commands);
+    const r2 = replay(wf.def, key, events.map((e) => ({ ...e, key })), { roles: wf.roles, agents: wf.agents });
+    state = r2.state;
+    commands = r2.steps.flatMap((s) => s.commands);
   } else {
     const rt = createRuntime({ workflow: wf, store: "memory", worker: new FakeWorker(wf.fixturesDir, g2.fixtures ?? {}), port: false, cron: false, timerIntervalMs: 20 });
     const { store, engine } = rt;
@@ -81600,17 +82774,17 @@ async function runGolden(wf, g2) {
   if (ex.vars) {
     for (const [k2, v2] of Object.entries(ex.vars))
       if (!partialMatch(state.vars[k2], v2))
-        problems.push(`vars.${k2}: expected ${short3(v2)}, got ${short3(state.vars[k2])}`);
+        problems.push(`vars.${k2}: expected ${short4(v2)}, got ${short4(state.vars[k2])}`);
   }
   if (ex.state && !partialMatch(state, ex.state))
-    problems.push(`state does not match ${short3(ex.state)}`);
+    problems.push(`state does not match ${short4(ex.state)}`);
   if (ex.commands) {
     let i = 0;
     for (const want of ex.commands) {
       while (i < commands.length && !partialMatch(commands[i], want))
         i++;
       if (i >= commands.length) {
-        problems.push(`command not found (in order): ${short3(want)}
+        problems.push(`command not found (in order): ${short4(want)}
       produced: ${commands.map(describe3).join(" | ") || "(none)"}`);
         break;
       }
@@ -81625,7 +82799,7 @@ async function runGolden(wf, g2) {
       while (i < produced.length && !partialMatch(produced[i], want))
         i++;
       if (i >= produced.length) {
-        problems.push(`event not found (in order): ${short3(want)}
+        problems.push(`event not found (in order): ${short4(want)}
       produced: ${produced.map((e) => e.type).join(" | ") || "(none)"}`);
         break;
       }

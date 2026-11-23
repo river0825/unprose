@@ -6,6 +6,34 @@ behaviour). Each released version is tagged `vX.Y.Z` on GitHub, with these notes
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-11-17
+
+### Added
+- **Kinds of note in a domain story** (docs/diagrams.md §6b "Kinds of note"): `kind:` on an annotation — `note`
+  (default), `pain`, `assumption`, `decision`. A pain point is drawn red, an assumption yellow, an open decision blue,
+  on the page and in the snapshot, and the legend names the kinds the story uses. The lint knows the field (another
+  kind is an error) and hints at a note that names its kind in words ("痛點：…", "Assumption: …") without `kind`.
+- **`awd design draw --project personal`** (or `--project <project id>`): a board looked up by `title:` is found or
+  created there and the file's repository is not registered as a project — no `.unprose/` in a repo that only holds
+  the design file.
+- **`awd design draw --relayout`**: lays the whole frame out again from the file, the items the person moved too
+  (locked ones stay).
+
+### Changed
+- **The lint draws a domain story and says what the drawing shows** (`awd design lint`, and printed by `awd design
+  draw` / `design_draw`): group outlines that overlap although the groups share no member
+  (`group-outlines-overlap` — sentences grouped by number around one hub actor), a line through a pictogram
+  (`line-through`), and `layout.actors: repeat` that draws no actor again (`repeat-no-effect`, with `drawAgain` as the
+  way to force one). `awd design draw` now prints the lint's warnings instead of only counting them.
+- **A redraw says what it did**: `awd design draw` on an existing frame prints the counts (`redraw: 29 updated · 1
+  kept where the person moved it · 30 unchanged`) and, when `layout:` changed in the file, how many items moved to the
+  new layout and how many kept their place — a changed layout is no longer silent.
+
+### Fixed
+- **A domain-story note's dashed line no longer runs through a pictogram**: a note is placed where the line to what
+  it explains passes no other pictogram or note.
+- README: the list of diagrams names domain stories (and UI mocks).
+
 ## [0.30.1] — 2026-10-30
 
 ### Fixed
@@ -1109,7 +1137,8 @@ First public version.
 - A plugin for Claude Code (skill + MCP server) and setup for Codex and other MCP clients (`AGENTS.md`,
   `docs/agents-setup.md`). Apache-2.0.
 
-[Unreleased]: https://github.com/river0825/unprose/compare/v0.30.1...HEAD
+[Unreleased]: https://github.com/river0825/unprose/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/river0825/unprose/compare/v0.30.1...v0.31.0
 [0.30.1]: https://github.com/river0825/unprose/compare/v0.30.0...v0.30.1
 [0.30.0]: https://github.com/river0825/unprose/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/river0825/unprose/compare/v0.28.0...v0.29.0

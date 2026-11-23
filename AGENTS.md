@@ -72,7 +72,7 @@ the canvas; agents on other machines or in the cloud can use the canvas's own en
 
 | Goal | Command |
 |---|---|
-| Draw / refresh a diagram frame | `node scripts/awd.mjs design draw design/<file>.yaml --board "title:<board>"` |
+| Draw / refresh a diagram frame | `node scripts/awd.mjs design draw design/<file>.yaml --board "title:<board>"` (`--project personal`: the board goes to the personal space and the file's repo is not registered; `--relayout`: lay the frame out again from the file) |
 | Check a diagram (schema + EventStorming grammar) | `node scripts/awd.mjs design lint design/<file>.yaml` |
 | Story candidates from EventStorming | `node scripts/awd.mjs design propose-stories design/x.es.yaml --into design/x.story-map.yaml --board …` |
 | A workflow as a board | `node scripts/awd.mjs graph <workflow.yaml> --canvas` |

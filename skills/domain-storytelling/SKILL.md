@@ -122,7 +122,7 @@ You advise; whoever holds the file changes it after the person agrees.
 ## With Unprose
 
 `design/<name>.domain-story.yaml` (docs/diagrams.md §6b): `scope`, `actors`, `workObjects`, numbered `sentences`
-(`actor`, `verb`, `object`, `to`, `toLabel`, `note`, `drawAgain`), `groups`, `annotations`, `icons` of your own. A note is named after
+(`actor`, `verb`, `object`, `to`, `toLabel`, `note`, `drawAgain`), `groups`, `annotations` (`kind: pain | assumption | decision` draws a note in that kind's colour — use it for pain points, things you assumed and decisions still open, instead of a "Pain:" prefix), `icons` of your own. A note is named after
 what it is on; give a second note on the same element an `id`, so adding a note never moves another on the board.
 **Draw icons for the domain's things.** The built-in work-object icons (document, thing, digital, folder, call, email,
 conversation, info) are generic, and a work object without a `kind` is a document; when most of a story's things

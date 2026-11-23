@@ -21,7 +21,7 @@ const HELP = `awd — small event-driven agent workflows
   awd studio  (--project <dir> | <workflow.yaml>) [--canvas URL] [--model opus|sonnet|fable|haiku] [--permission-mode auto] [--interval 2s] [--max-sessions 3] [--idle-close 30m] [--warm]
               one process per project: every board in it, one Claude session per board (a fork while it is busy)
               draws the board with block details; each "Discuss with AI" comment opens / prompts a Claude session in a herdr tab
-  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--applied <proposal thread id>] [--dry-run [--limit N]]
+  awd design  draw <design/<name>.<kind>.yaml> --board <id | title:...> [--canvas URL] [--project personal|<id>] [--relayout] [--applied <proposal thread id>] [--dry-run [--limit N]]
               --dry-run: the redraw preview — added / updated / removed / kept where you moved it / kept (locked) /
               proposals held / items not from this file, per frame (docs/diagrams.md "What a redraw keeps"); writes nothing
               --applied: you applied that proposal (after the person agreed): answers "Applied to <file>" in its thread;

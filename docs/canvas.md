@@ -345,7 +345,10 @@ on the canvas's machine; its boards are stored in `<project>/.unprose/boards/`:
 - **Registering a project:** `awd-canvas serve --project <dir>` (repeatable); the Claude Code plugin
   registers the session's project (`CLAUDE_PROJECT_DIR`, else the working directory, lifted to its git
   top level) at session start and when the MCP server starts; `awd design draw` / `awd graph --canvas`
-  register the design or workflow file's project. The registry is kept in `<personal dir>/.projects.json`;
+  register the design or workflow file's project — unless the draw says where the board goes:
+  `awd design draw <file> --board "title:…" --project personal` finds or creates the board in the personal space
+  (or `--project <project id>` in that project) and registers nothing, so a repository that only holds the design
+  file gets no `.unprose/`. The registry is kept in `<personal dir>/.projects.json`;
   a project's id is the slug of its directory name (`-2`, `-3` … on a clash).
 - **Which folder is a file's project** (`repoRoot`, `packages/cli/src/graphCanvas.ts`): the nearest folder above
   the file with `.git` or `.unprose/boards`; else the nearest with a project file (`package.json`, `AGENTS.md`,
